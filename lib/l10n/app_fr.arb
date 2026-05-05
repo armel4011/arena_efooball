@@ -1,0 +1,52 @@
+{
+  "@@locale": "fr",
+
+  "appName": "ARENA",
+  "@appName": {
+    "description": "App name shown in titles."
+  },
+
+  "commonContinue": "Continuer",
+  "@commonContinue": {
+    "description": "Generic continue CTA."
+  },
+  "commonCancel": "Annuler",
+  "commonConfirm": "Confirmer",
+  "commonRetry": "Réessayer",
+  "commonClose": "Fermer",
+  "commonSave": "Enregistrer",
+  "commonNext": "Suivant",
+  "commonBack": "Retour",
+  "commonStart": "Commencer",
+  "commonSkip": "Passer",
+  "commonLoading": "Chargement…",
+  "commonError": "Une erreur est survenue",
+
+  "onboardingSlide1Title": "BIENVENUE\nSUR ARENA",
+  "@onboardingSlide1Title": {
+    "description": "Onboarding slide 1 (welcome) — Orbitron, line break preserved."
+  },
+  "onboardingSlide1Body": "La plateforme africaine de tournois e-sport mobile sur eFootball, FIFA Mobile et EA SPORTS FC Mobile.",
+
+  "onboardingSlide2Title": "BRACKETS\nAUTOMATIQUES",
+  "onboardingSlide2Body": "Single élimination, phase de groupes, round robin — l’app gère le tirage et les avancées.",
+
+  "onboardingSlide3Title": "CODE DE\nROOM PARTAGÉ",
+  "onboardingSlide3Body": "Tu partages ton code eFootball, vous jouez le match, puis vous validez le score à deux.",
+
+  "onboardingSlide4Title": "GAINS DU\nTOP 4",
+  "onboardingSlide4Body": "Versement direct vers ton MTN MoMo, Orange Money ou Wave dès la fin du tournoi.",
+
+  "languageFrench": "Français",
+  "languageEnglish": "English",
+  "languageArabic": "العربية",
+
+  "currencyFormatPositive": "{amount} {symbol}",
+  "@currencyFormatPositive": {
+    "description": "How to compose a positive currency amount.",
+    "placeholders": {
+      "amount": { "type": "String" },
+      "symbol": { "type": "String" }
+    }
+  }
+}

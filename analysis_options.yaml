@@ -1,0 +1,21 @@
+include: package:very_good_analysis/analysis_options.yaml
+
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - "**/*.gr.dart"
+    - "**/generated/**"
+    - "build/**"
+  errors:
+    invalid_annotation_target: ignore
+
+linter:
+  rules:
+    # Project-specific overrides
+    public_member_api_docs: false
+    lines_longer_than_80_chars: false
+    avoid_redundant_argument_values: false
+    document_ignores: false
+    # We group deps by PHASE, not alphabetically — see pubspec.yaml.
+    sort_pub_dependencies: false

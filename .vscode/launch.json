@@ -1,0 +1,51 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "ARENA — User (debug)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main_user.dart",
+      "args": ["--flavor", "user"]
+    },
+    {
+      "name": "ARENA — User (profile)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "profile",
+      "program": "lib/main_user.dart",
+      "args": ["--flavor", "user"]
+    },
+    {
+      "name": "ARENA — User (release)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "release",
+      "program": "lib/main_user.dart",
+      "args": ["--flavor", "user"]
+    },
+    {
+      "name": "ARENA Admin — (debug)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main_admin.dart",
+      "args": ["--flavor", "admin"]
+    },
+    {
+      "name": "ARENA Admin — (profile)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "profile",
+      "program": "lib/main_admin.dart",
+      "args": ["--flavor", "admin"]
+    },
+    {
+      "name": "ARENA Admin — (release)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "release",
+      "program": "lib/main_admin.dart",
+      "args": ["--flavor", "admin"]
+    }
+  ]
+}

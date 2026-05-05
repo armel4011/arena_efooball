@@ -1,0 +1,9 @@
+targets:
+  $default:
+    builders:
+      json_serializable:
+        options:
+          # Postgres uses snake_case columns; Dart fields are camelCase.
+          field_rename: snake
+          explicit_to_json: true
+          include_if_null: false

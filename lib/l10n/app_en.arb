@@ -1,0 +1,36 @@
+{
+  "@@locale": "en",
+
+  "appName": "ARENA",
+
+  "commonContinue": "Continue",
+  "commonCancel": "Cancel",
+  "commonConfirm": "Confirm",
+  "commonRetry": "Retry",
+  "commonClose": "Close",
+  "commonSave": "Save",
+  "commonNext": "Next",
+  "commonBack": "Back",
+  "commonStart": "Start",
+  "commonSkip": "Skip",
+  "commonLoading": "Loading…",
+  "commonError": "Something went wrong",
+
+  "onboardingSlide1Title": "WELCOME\nTO ARENA",
+  "onboardingSlide1Body": "Africa's mobile e-sport tournament platform for eFootball, FIFA Mobile and EA SPORTS FC Mobile.",
+
+  "onboardingSlide2Title": "AUTOMATIC\nBRACKETS",
+  "onboardingSlide2Body": "Single elimination, group stage, round robin — the app handles seeding and progression.",
+
+  "onboardingSlide3Title": "SHARED\nROOM CODE",
+  "onboardingSlide3Body": "Share your eFootball room code, play the match, then both confirm the score.",
+
+  "onboardingSlide4Title": "TOP 4\nPRIZES",
+  "onboardingSlide4Body": "Direct payout to MTN MoMo, Orange Money or Wave as soon as the tournament ends.",
+
+  "languageFrench": "Français",
+  "languageEnglish": "English",
+  "languageArabic": "العربية",
+
+  "currencyFormatPositive": "{symbol}{amount}"
+}

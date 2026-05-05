@@ -1,0 +1,36 @@
+{
+  "@@locale": "ar",
+
+  "appName": "أرينا",
+
+  "commonContinue": "متابعة",
+  "commonCancel": "إلغاء",
+  "commonConfirm": "تأكيد",
+  "commonRetry": "إعادة المحاولة",
+  "commonClose": "إغلاق",
+  "commonSave": "حفظ",
+  "commonNext": "التالي",
+  "commonBack": "رجوع",
+  "commonStart": "ابدأ",
+  "commonSkip": "تخطّي",
+  "commonLoading": "جارٍ التحميل…",
+  "commonError": "حدث خطأ",
+
+  "onboardingSlide1Title": "مرحبًا\nبك في أرينا",
+  "onboardingSlide1Body": "منصة بطولات الرياضات الإلكترونية المتنقلة في أفريقيا لـ eFootball وFIFA Mobile وEA SPORTS FC Mobile.",
+
+  "onboardingSlide2Title": "أقواس\nتلقائية",
+  "onboardingSlide2Body": "إقصائي، دور المجموعات، دوري — التطبيق يتكفّل بالقرعة والتقدّم.",
+
+  "onboardingSlide3Title": "رمز غرفة\nمشترك",
+  "onboardingSlide3Body": "تشارك رمز غرفتك، تلعبان المباراة، ثم تؤكدان النتيجة معًا.",
+
+  "onboardingSlide4Title": "جوائز\nالأربعة الأوائل",
+  "onboardingSlide4Body": "تحويل مباشر إلى MTN MoMo أو Orange Money أو Wave فور انتهاء البطولة.",
+
+  "languageFrench": "Français",
+  "languageEnglish": "English",
+  "languageArabic": "العربية",
+
+  "currencyFormatPositive": "{amount} {symbol}"
+}
