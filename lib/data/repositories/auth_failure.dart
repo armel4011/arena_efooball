@@ -53,6 +53,11 @@ class NetworkFailure extends AuthFailure {
   const NetworkFailure([Object? cause]) : super('network', cause);
 }
 
+/// Supabase rate limit hit (typically email confirmation, statusCode=429).
+class RateLimitedFailure extends AuthFailure {
+  const RateLimitedFailure([Object? cause]) : super('rate_limited', cause);
+}
+
 class UnknownAuthFailure extends AuthFailure {
   const UnknownAuthFailure([Object? cause]) : super('unknown', cause);
 }

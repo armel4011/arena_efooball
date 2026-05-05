@@ -19,6 +19,8 @@ String authFailureToMessage(AuthFailure failure) {
       "Ce compte est administrateur. Télécharge l'app ARENA Admin.",
     NetworkFailure() =>
       'Pas de connexion. Vérifie ton réseau et réessaie.',
+    RateLimitedFailure() =>
+      'Trop de tentatives. Patiente quelques minutes avant de réessayer.',
     InvalidInvitationCodeFailure() =>
       "Code d'invitation invalide, expiré, ou déjà utilisé.",
     InvalidTotpCodeFailure() =>

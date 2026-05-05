@@ -33,12 +33,31 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
   bool _marketingAccepted = false;
   int _step = 0;
 
+  late final List<TextEditingController> _ctrls = [
+    _emailCtrl,
+    _passwordCtrl,
+    _passwordConfirmCtrl,
+    _usernameCtrl,
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    for (final c in _ctrls) {
+      c.addListener(_onFieldChanged);
+    }
+  }
+
+  void _onFieldChanged() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void dispose() {
-    _emailCtrl.dispose();
-    _passwordCtrl.dispose();
-    _passwordConfirmCtrl.dispose();
-    _usernameCtrl.dispose();
+    for (final c in _ctrls) {
+      c.removeListener(_onFieldChanged);
+      c.dispose();
+    }
     super.dispose();
   }
 

@@ -156,6 +156,11 @@ class AuthRepository {
     if (msg.contains('banned') || msg.contains('blocked')) {
       return UserBannedFailure(e);
     }
+    if (code == '429' ||
+        msg.contains('rate limit') ||
+        msg.contains('over_email_send_rate_limit')) {
+      return RateLimitedFailure(e);
+    }
     if (code == '422' || code == '400') {
       return InvalidCredentialsFailure(e);
     }
