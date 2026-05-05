@@ -35,7 +35,7 @@ Rollout progressif :
 
 ## État du projet
 
-> Mis à jour le 2026-05-05 — après lecture des prompts révisés.
+> Mis à jour le 2026-05-06 — phase 2 (auth user) terminée.
 
 ### ✅ Phases terminées
 
@@ -46,12 +46,11 @@ Rollout progressif :
 | **1** | Theme (`arena_colors/theme/typography`) + 7 widgets partagés | ✅ |
 | **1bis** | i18n FR/EN/AR + currency + feature flags | ✅ |
 | **0 backend** | 26 tables Supabase + RLS + indexes + seed config V1.0 | ✅ |
+| **2** | Auth user (login, register, forgot/reset, link, CGU) + deep link `com.arena.app://reset-password` | ✅ |
 
-### 🟡 Phase en cours
-
-| Phase | Domaine | Reste à faire |
-|---|---|---|
-| **2** | Auth user | `ForgotPasswordPage`, `ResetPasswordPage`, `LinkExistingAccountPage`, `CGUAcceptancePage`. SSO Google/Apple deferred (lib commentées dans `pubspec.yaml`). |
+> SSO Google/Apple reportés en **PHASE 2.3** (libs `google_sign_in` /
+> `sign_in_with_apple` commentées dans `pubspec.yaml`). La page
+> `LinkExistingAccountPage` est wired mais inerte jusque-là.
 
 ### ⏭️ Phases à venir
 
@@ -71,7 +70,7 @@ Rollout progressif :
 | **12.5** | Edge Functions (16) + pg_cron + automatisation | 10-12h |
 | **13** | Polish + tests + lancement V1.0 | 5-6h |
 
-**Total V1.0 restant** : ~50h. Voir le master prompt section "ROADMAP" pour le détail.
+**Total V1.0 restant** : ~45h. Voir le master prompt section "ROADMAP" pour le détail.
 
 ---
 
@@ -159,9 +158,10 @@ flutter test
 flutter test integration_test
 ```
 
-Couverture actuelle : modèles freezed, widgets partagés, services i18n
-(6 fichiers, ~450 lignes). Auth/onboarding non testés — à compléter en
-Phase 13.
+Couverture actuelle (51 tests) : modèles freezed, widgets partagés,
+services i18n, router redirect (onboarding → splash → home), et les
+4 pages auth de la phase 2 (`forgot/reset/link/cgu`). Auth admin (TOTP,
+invitation) à couvrir en phase 2bis.
 
 ---
 

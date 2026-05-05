@@ -3,6 +3,7 @@ import 'package:arena/core/i18n/i18n_service.dart';
 import 'package:arena/core/i18n/supported_locale.dart';
 import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/services/bootstrap.dart';
+import 'package:arena/core/services/deep_link_service.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -17,11 +18,36 @@ Future<void> main() async {
   );
 }
 
-class ArenaUserApp extends ConsumerWidget {
+class ArenaUserApp extends ConsumerStatefulWidget {
   const ArenaUserApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ArenaUserApp> createState() => _ArenaUserAppState();
+}
+
+class _ArenaUserAppState extends ConsumerState<ArenaUserApp> {
+  DeepLinkService? _deepLinkService;
+
+  @override
+  void initState() {
+    super.initState();
+    // Wire the deep link listener after the first frame so the router is
+    // fully built. Supabase already hydrates the recovery session via its
+    // own internal listener — we only forward navigation.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final router = ref.read(userRouterProvider);
+      _deepLinkService = DeepLinkService(router: router)..start();
+    });
+  }
+
+  @override
+  void dispose() {
+    _deepLinkService?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final locale = ref.watch(currentLocaleProvider);
     final router = ref.watch(userRouterProvider);
 
