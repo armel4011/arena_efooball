@@ -27,10 +27,16 @@ class ArenaTextField extends StatelessWidget {
     this.inputFormatters,
     this.autofocus = false,
     this.validator,
+    this.minLines,
+    this.maxLines = 1,
     super.key,
-  }) : assert(
+  })  : assert(
           controller == null || initialValue == null,
           'Pass either a controller or initialValue, not both.',
+        ),
+        assert(
+          !obscureText || maxLines == 1,
+          'obscureText is incompatible with multiline inputs.',
         );
 
   final String? label;
@@ -50,6 +56,14 @@ class ArenaTextField extends StatelessWidget {
   final List<TextInputFormatter>? inputFormatters;
   final bool autofocus;
   final FormFieldValidator<String>? validator;
+
+  /// Minimum number of lines the field will occupy. `null` keeps the
+  /// default single-line layout.
+  final int? minLines;
+
+  /// Maximum lines before the field starts scrolling internally. Set to
+  /// `null` for an unbounded auto-grow input.
+  final int? maxLines;
 
   @override
   Widget build(BuildContext context) {
@@ -72,6 +86,8 @@ class ArenaTextField extends StatelessWidget {
           inputFormatters: inputFormatters,
           autofocus: autofocus,
           validator: validator,
+          minLines: minLines,
+          maxLines: maxLines,
           style: ArenaTypography.bodyLarge,
           cursorColor: Theme.of(context).colorScheme.primary,
           decoration: InputDecoration(

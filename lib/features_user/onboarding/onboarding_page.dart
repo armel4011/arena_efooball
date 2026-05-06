@@ -1,8 +1,8 @@
 import 'package:arena/core/theme/arena_colors.dart';
+import 'package:arena/core/theme/arena_typography.dart';
 import 'package:arena/features_user/onboarding/onboarding_slide.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_onboarding_slider/flutter_onboarding_slider.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 /// First-launch onboarding — 4 illustrated slides.
 ///
@@ -66,10 +66,8 @@ class OnboardingPage extends StatelessWidget {
       controllerColor: ArenaColors.primary,
       skipTextButton: Text(
         'PASSER',
-        style: GoogleFonts.nunito(
+        style: ArenaTypography.labelLarge.copyWith(
           color: ArenaColors.textMuted,
-          fontSize: 14,
-          fontWeight: FontWeight.w700,
           letterSpacing: 1.5,
         ),
       ),
@@ -81,11 +79,9 @@ class OnboardingPage extends StatelessWidget {
           borderRadius: BorderRadius.all(Radius.circular(28)),
         ),
       ),
-      finishButtonTextStyle: GoogleFonts.orbitron(
-        fontSize: 14,
-        fontWeight: FontWeight.w800,
-        letterSpacing: 2,
+      finishButtonTextStyle: ArenaTypography.labelLarge.copyWith(
         color: Colors.white,
+        letterSpacing: 2,
       ),
       onFinish: onFinish,
     );

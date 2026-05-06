@@ -5,6 +5,7 @@ import 'package:arena/core/theme/arena_typography.dart';
 import 'package:arena/data/models/chat_channel.dart';
 import 'package:arena/data/models/chat_message.dart';
 import 'package:arena/data/repositories/chat_repository.dart';
+import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:arena/features_shared/widgets/error_state.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
@@ -209,21 +210,14 @@ class _MessageInput extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Expanded(
-            child: TextField(
+            child: ArenaTextField(
               controller: controller,
+              hint: 'Écris un message…',
+              enabled: !sending,
               minLines: 1,
               maxLines: 4,
               maxLength: 2000,
-              enabled: !sending,
               textInputAction: TextInputAction.newline,
-              decoration: InputDecoration(
-                hintText: 'Écris un message…',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                isDense: true,
-                counterText: '',
-              ),
             ),
           ),
           const SizedBox(width: ArenaSpacing.sm),

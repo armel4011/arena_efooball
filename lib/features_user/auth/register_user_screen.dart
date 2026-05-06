@@ -391,7 +391,10 @@ class _CountryPicker extends StatelessWidget {
                 value: c.code,
                 child: Row(
                   children: [
-                    Text(c.flag, style: const TextStyle(fontSize: 20)),
+                    Text(
+                      c.flag,
+                      style: ArenaTypography.bodyLarge.copyWith(fontSize: 20),
+                    ),
                     const SizedBox(width: ArenaSpacing.sm),
                     Text(c.name, style: ArenaTypography.bodyLarge),
                   ],
@@ -422,7 +425,6 @@ class _ConsentTile extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: ArenaSpacing.xs),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Checkbox(
             value: value,
@@ -433,22 +435,21 @@ class _ConsentTile extends StatelessWidget {
           Expanded(
             child: GestureDetector(
               onTap: onChanged == null ? null : () => onChanged!(!value),
-              child: Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Text.rich(
-                  TextSpan(
-                    children: [
-                      TextSpan(text: title),
-                      if (mandatory)
-                        const TextSpan(
-                          text: ' *',
-                          style: TextStyle(color: ArenaColors.danger),
+              child: Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(text: title),
+                    if (mandatory)
+                      TextSpan(
+                        text: ' *',
+                        style: ArenaTypography.bodySmall.copyWith(
+                          color: ArenaColors.danger,
                         ),
-                    ],
-                  ),
-                  style: ArenaTypography.bodySmall.copyWith(
-                    color: ArenaColors.text,
-                  ),
+                      ),
+                  ],
+                ),
+                style: ArenaTypography.bodySmall.copyWith(
+                  color: ArenaColors.text,
                 ),
               ),
             ),

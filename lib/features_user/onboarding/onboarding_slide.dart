@@ -1,6 +1,7 @@
 import 'package:arena/core/theme/arena_colors.dart';
+import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/core/theme/arena_typography.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 /// Visual content for a single onboarding slide.
 ///
@@ -37,29 +38,25 @@ class OnboardingSlide extends StatelessWidget {
     final bg = iconBackground ?? accentColor.withValues(alpha: 0.12);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+      padding: const EdgeInsets.symmetric(
+        horizontal: ArenaSpacing.xl,
+        vertical: ArenaSpacing.lg,
+      ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           _IllustrationRing(color: accentColor, fill: bg, icon: icon),
-          const SizedBox(height: 48),
+          const SizedBox(height: ArenaSpacing.xxl),
           Text(
             title,
             textAlign: TextAlign.center,
-            style: GoogleFonts.orbitron(
-              fontSize: 26,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 2,
-              color: ArenaColors.text,
-            ),
+            style: ArenaTypography.headlineLarge,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: ArenaSpacing.md),
           Text(
             description,
             textAlign: TextAlign.center,
-            style: GoogleFonts.nunito(
-              fontSize: 16,
-              height: 1.5,
+            style: ArenaTypography.bodyLarge.copyWith(
               color: ArenaColors.textMuted,
             ),
           ),
