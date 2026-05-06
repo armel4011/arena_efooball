@@ -35,7 +35,7 @@ Rollout progressif :
 
 ## État du projet
 
-> Mis à jour le 2026-05-06 — phase 2 (auth user) terminée.
+> Mis à jour le 2026-05-06 — phases 2 + 2bis (auth user + admin) terminées côté Flutter.
 
 ### ✅ Phases terminées
 
@@ -47,16 +47,21 @@ Rollout progressif :
 | **1bis** | i18n FR/EN/AR + currency + feature flags | ✅ |
 | **0 backend** | 26 tables Supabase + RLS + indexes + seed config V1.0 | ✅ |
 | **2** | Auth user (login, register, forgot/reset, link, CGU) + deep link `com.arena.app://reset-password` | ✅ |
+| **2bis** | Auth admin (splash, login, invitation, TOTP setup/verify) — Flutter only, 4 Edge Functions différées en 12.5 | ✅ |
 
-> SSO Google/Apple reportés en **PHASE 2.3** (libs `google_sign_in` /
+> **SSO Google/Apple** reportés en **PHASE 2.3** (libs `google_sign_in` /
 > `sign_in_with_apple` commentées dans `pubspec.yaml`). La page
 > `LinkExistingAccountPage` est wired mais inerte jusque-là.
+>
+> **Edge Functions admin** différées en **PHASE 12.5** :
+> `register-admin`, `setup-totp`, `verify-totp-setup`, `admin-verify-totp`.
+> Sans elles, l'invitation et le TOTP affichent un message "feature
+> pending" via `BackendUnavailableFailure`.
 
 ### ⏭️ Phases à venir
 
 | Phase | Domaine | Estimation |
 |---|---|---|
-| **2bis** | Auth admin (splash, login, invitation, TOTP setup/verify) | 4-5h |
 | **3** | Layout + HomePage joueur | 1-2h |
 | **4** | Compétitions (liste + détail + bracket) | 3-4h |
 | **5** | Match Room (code → config → score → validation) | 2-3h |
@@ -70,7 +75,7 @@ Rollout progressif :
 | **12.5** | Edge Functions (16) + pg_cron + automatisation | 10-12h |
 | **13** | Polish + tests + lancement V1.0 | 5-6h |
 
-**Total V1.0 restant** : ~45h. Voir le master prompt section "ROADMAP" pour le détail.
+**Total V1.0 restant** : ~40h (incluant 4 Edge Functions admin reportées en 12.5). Voir le master prompt section "ROADMAP" pour le détail.
 
 ---
 
@@ -158,10 +163,12 @@ flutter test
 flutter test integration_test
 ```
 
-Couverture actuelle (51 tests) : modèles freezed, widgets partagés,
-services i18n, router redirect (onboarding → splash → home), et les
-4 pages auth de la phase 2 (`forgot/reset/link/cgu`). Auth admin (TOTP,
-invitation) à couvrir en phase 2bis.
+Couverture actuelle (68 tests) : modèles freezed, widgets partagés,
+services i18n, router redirect (onboarding → splash → home), 4 pages
+auth user (`forgot/reset/link/cgu`), et 4 écrans admin
+(`login/invitation/totp_setup/totp_verify`). Le happy-path complet
+d'invitation admin sera couvert via test d'intégration une fois
+l'Edge Function `register-admin` livrée (PHASE 12.5).
 
 ---
 
