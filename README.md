@@ -35,7 +35,7 @@ Rollout progressif :
 
 ## État du projet
 
-> Mis à jour le 2026-05-06 — phase 5 (Match Room : code room → score collaboratif → validation auto) terminée.
+> Mis à jour le 2026-05-06 — phase 6 (Chat 1-on-1 : Supabase Realtime + bubbles WhatsApp-style) terminée.
 
 ### ✅ Phases terminées
 
@@ -51,6 +51,7 @@ Rollout progressif :
 | **3** | Layout joueur (`MainLayout` + 4 tabs avec `IndexedStack`) + HomePage (header, sections phase-aware, stats depuis `profile.stats`, pull-to-refresh) | ✅ |
 | **4** | Compétitions : modèles freezed (`Competition`, `ArenaMatch`, `Standings*`), repos Supabase, `CompetitionsListPage` filtrable, `CompetitionDetailPage` (4 tabs, CTA inscription), `BracketView` (matches par round) et `GroupStandingsView` (DataTable) | ✅ |
 | **5** | Match Room (`MatchRoomPage` + route `/match/:id`) : 5.B nav depuis bracket, 5.C partage de code room (claim home seat) + clipboard, 5.D saisie collaborative du score (stream `match_events` + auto-commit/dispute). Migration RLS `20260506200001` qui autorise les joueurs participants à updater leur match en attendant les Edge Functions (12.5). | ✅ |
+| **6** | Chat 1-on-1 par match : `ChatPage` + route `/chat/match/:id`, `ChatRepository` (`ensureMatchChannel`, `watchMessages`, `sendMessage`), bubbles WhatsApp-style (newest en bas, self à droite). Migration RLS `20260506200002` (player INSERT du channel + `chat_channels`/`chat_messages` ajoutés à la publication realtime). Agora RTM (présence/typing) reporté en 12.5. | ✅ |
 
 > **SSO Google/Apple** reportés en **PHASE 2.3** (libs `google_sign_in` /
 > `sign_in_with_apple` commentées dans `pubspec.yaml`). La page
@@ -76,7 +77,6 @@ Rollout progressif :
 
 | Phase | Domaine | Estimation |
 |---|---|---|
-| **6** | Chat hybride (Supabase Realtime + Agora RTM) | 3-4h |
 | **8** | Anti-cheat (recording + bouton flottant) + streaming Agora | 6-7h |
 | **9** | Profil + settings + suppression compte (RGPD) | 3h |
 | **10** | Notifications push (FCM) | 2h |
@@ -86,7 +86,7 @@ Rollout progressif :
 | **12.5** | Edge Functions (16) + pg_cron + automatisation | 10-12h |
 | **13** | Polish + tests + lancement V1.0 | 5-6h |
 
-**Total V1.0 restant** : ~31h (incluant 4 Edge Functions admin reportées en 12.5 et les 4 Edge Functions match-room que la phase 5 contourne via RLS dev). Voir le master prompt section "ROADMAP" pour le détail.
+**Total V1.0 restant** : ~28h (incluant 4 Edge Functions admin reportées en 12.5, les 4 Edge Functions match-room que la phase 5 contourne via RLS dev, et `moderate_chat_message` que la phase 6 contourne aussi). Voir le master prompt section "ROADMAP" pour le détail.
 
 ---
 
@@ -105,7 +105,7 @@ lib/
 └── l10n/generated/          # ARB compilés (FR / EN / AR)
 
 supabase/
-├── migrations/              # 9 migrations SQL (26 tables, RLS, indexes, phase-5 player-write RLS)
+├── migrations/              # 10 migrations SQL (26 tables, RLS, indexes, phase-5/6 player-write RLS + realtime publication)
 ├── seeds/                   # Dev fixtures (ex. dev_phase5_match_room.sql)
 └── functions/               # Edge Functions (à venir Phase 12.5)
 ```
