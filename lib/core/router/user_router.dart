@@ -11,6 +11,7 @@ import 'package:arena/features_user/auth/reset_password_page.dart';
 import 'package:arena/features_user/auth/splash_user_screen.dart';
 import 'package:arena/features_user/competitions/competition_detail_page.dart';
 import 'package:arena/features_user/home/main_layout.dart';
+import 'package:arena/features_user/match/match_room_page.dart';
 import 'package:arena/features_user/onboarding/onboarding_page.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -30,11 +31,15 @@ abstract final class UserRoutes {
   static const linkAccount = '/link-account';
   static const cguAcceptance = '/cgu-acceptance';
   static const competitionDetail = '/competitions/:id';
+  static const matchRoom = '/match/:id';
   static const devPreview = '/dev/preview';
 
   /// Builds the concrete `/competitions/<id>` URL — go_router parses
   /// `:id` server-side, but `context.go` needs a real path.
   static String competitionPath(String id) => '/competitions/$id';
+
+  /// Builds the concrete `/match/<id>` URL.
+  static String matchPath(String id) => '/match/$id';
 
   /// Routes the user can be on without being authenticated.
   static const unauthenticated = <String>{
@@ -167,6 +172,13 @@ final userRouterProvider = Provider<GoRouter>((ref) {
         name: 'user.competitionDetail',
         builder: (context, state) => CompetitionDetailPage(
           competitionId: state.pathParameters['id'] ?? '',
+        ),
+      ),
+      GoRoute(
+        path: UserRoutes.matchRoom,
+        name: 'user.matchRoom',
+        builder: (context, state) => MatchRoomPage(
+          matchId: state.pathParameters['id'] ?? '',
         ),
       ),
       GoRoute(

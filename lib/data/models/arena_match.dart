@@ -31,6 +31,7 @@ sealed class ArenaMatch with _$ArenaMatch {
     @MatchStatusConverter()
     @Default(MatchStatus.pending)
     MatchStatus status,
+    String? homePlayerId,
     String? roomCode,
     String? nextMatchId,
     DateTime? scheduledAt,

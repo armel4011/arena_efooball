@@ -1,3 +1,4 @@
+import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/theme/arena_colors.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/core/theme/arena_typography.dart';
@@ -9,6 +10,7 @@ import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:arena/features_shared/widgets/error_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 /// PHASE 4.D — Bracket view for a competition.
 ///
@@ -122,6 +124,7 @@ class _MatchRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ArenaCard(
+      onTap: () => context.go(UserRoutes.matchPath(match.id)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
