@@ -55,6 +55,11 @@ class MatchRoomPage extends ConsumerWidget {
     final async = ref.watch(matchByIdProvider(matchId));
     final selfId = ref.watch(currentSessionProvider)?.user.id;
 
+    final selfRole = async.value == null
+        ? MatchRole.observer
+        : MatchRole.resolve(match: async.value!, selfId: selfId);
+    final isPlayer = selfRole != MatchRole.observer;
+
     return PopScope(
       // The bracket reads `competitionMatchesProvider` as a Future (no
       // realtime), so a status change made here would otherwise need a
@@ -79,6 +84,15 @@ class MatchRoomPage extends ConsumerWidget {
               }
             },
           ),
+          actions: [
+            if (isPlayer)
+              IconButton(
+                icon: const Icon(Icons.chat_outlined),
+                tooltip: 'Chat avec ton adversaire',
+                onPressed: () =>
+                    context.push(UserRoutes.matchChatPath(matchId)),
+              ),
+          ],
         ),
         body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),

@@ -9,6 +9,7 @@ import 'package:arena/features_user/auth/login_user_screen.dart';
 import 'package:arena/features_user/auth/register_user_screen.dart';
 import 'package:arena/features_user/auth/reset_password_page.dart';
 import 'package:arena/features_user/auth/splash_user_screen.dart';
+import 'package:arena/features_user/chat/chat_page.dart';
 import 'package:arena/features_user/competitions/competition_detail_page.dart';
 import 'package:arena/features_user/home/main_layout.dart';
 import 'package:arena/features_user/match/match_room_page.dart';
@@ -32,6 +33,7 @@ abstract final class UserRoutes {
   static const cguAcceptance = '/cgu-acceptance';
   static const competitionDetail = '/competitions/:id';
   static const matchRoom = '/match/:id';
+  static const matchChat = '/chat/match/:id';
   static const devPreview = '/dev/preview';
 
   /// Builds the concrete `/competitions/<id>` URL — go_router parses
@@ -40,6 +42,9 @@ abstract final class UserRoutes {
 
   /// Builds the concrete `/match/<id>` URL.
   static String matchPath(String id) => '/match/$id';
+
+  /// Builds the concrete `/chat/match/<id>` URL.
+  static String matchChatPath(String matchId) => '/chat/match/$matchId';
 
   /// Routes the user can be on without being authenticated.
   static const unauthenticated = <String>{
@@ -178,6 +183,13 @@ final userRouterProvider = Provider<GoRouter>((ref) {
         path: UserRoutes.matchRoom,
         name: 'user.matchRoom',
         builder: (context, state) => MatchRoomPage(
+          matchId: state.pathParameters['id'] ?? '',
+        ),
+      ),
+      GoRoute(
+        path: UserRoutes.matchChat,
+        name: 'user.matchChat',
+        builder: (context, state) => ChatPage(
           matchId: state.pathParameters['id'] ?? '',
         ),
       ),
