@@ -64,4 +64,5 @@ secrets/
 # Local debugging artifacts
 error image/
 .tmp_screenshots/
+.claude_tmp_screen.png
 

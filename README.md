@@ -35,7 +35,7 @@ Rollout progressif :
 
 ## État du projet
 
-> Mis à jour le 2026-05-06 — phase 4 (compétitions : liste + détail + bracket + classement) terminée.
+> Mis à jour le 2026-05-06 — phase 5 (Match Room : code room → score collaboratif → validation auto) terminée.
 
 ### ✅ Phases terminées
 
@@ -50,6 +50,7 @@ Rollout progressif :
 | **2bis** | Auth admin (splash, login, invitation, TOTP setup/verify) — Flutter only, 4 Edge Functions différées en 12.5 | ✅ |
 | **3** | Layout joueur (`MainLayout` + 4 tabs avec `IndexedStack`) + HomePage (header, sections phase-aware, stats depuis `profile.stats`, pull-to-refresh) | ✅ |
 | **4** | Compétitions : modèles freezed (`Competition`, `ArenaMatch`, `Standings*`), repos Supabase, `CompetitionsListPage` filtrable, `CompetitionDetailPage` (4 tabs, CTA inscription), `BracketView` (matches par round) et `GroupStandingsView` (DataTable) | ✅ |
+| **5** | Match Room (`MatchRoomPage` + route `/match/:id`) : 5.B nav depuis bracket, 5.C partage de code room (claim home seat) + clipboard, 5.D saisie collaborative du score (stream `match_events` + auto-commit/dispute). Migration RLS `20260506200001` qui autorise les joueurs participants à updater leur match en attendant les Edge Functions (12.5). | ✅ |
 
 > **SSO Google/Apple** reportés en **PHASE 2.3** (libs `google_sign_in` /
 > `sign_in_with_apple` commentées dans `pubspec.yaml`). La page
@@ -60,17 +61,21 @@ Rollout progressif :
 > Sans elles, l'invitation et le TOTP affichent un message "feature
 > pending" via `BackendUnavailableFailure`.
 >
-> **Phase 4 — dettes assumées** : les tabs *Participants* et *Prix* du
-> détail compétition affichent encore un placeholder, et le bracket /
-> classement affichent les joueurs sous forme `Joueur abc123…`. La
-> jointure `profiles` (nom + avatar) sera ajoutée quand la phase 5
-> (Match Room) sortira, ou en passe de polish (phase 13).
+> **Phase 4 / 5 — dettes assumées** : les tabs *Participants* et *Prix*
+> du détail compétition affichent encore un placeholder, et le bracket /
+> classement / match-room affichent les joueurs sous forme
+> `Joueur abc123…`. La jointure `profiles` (nom + avatar) est reportée
+> à la phase 13 (polish). Le bracket reste sur `FutureProvider` +
+> pull-to-refresh + invalidation au retour de la match-room (le
+> `StreamProvider` triggerait un ANR sur émulateur Android x86 vu les
+> 3 channels Realtime simultanés). Un seed dev
+> `supabase/seeds/dev_phase5_match_room.sql` crée 2 comptes test et
+> 7 matches couvrant chaque écran phase 5.
 
 ### ⏭️ Phases à venir
 
 | Phase | Domaine | Estimation |
 |---|---|---|
-| **5** | Match Room (code → config → score → validation) | 2-3h |
 | **6** | Chat hybride (Supabase Realtime + Agora RTM) | 3-4h |
 | **8** | Anti-cheat (recording + bouton flottant) + streaming Agora | 6-7h |
 | **9** | Profil + settings + suppression compte (RGPD) | 3h |
@@ -81,7 +86,7 @@ Rollout progressif :
 | **12.5** | Edge Functions (16) + pg_cron + automatisation | 10-12h |
 | **13** | Polish + tests + lancement V1.0 | 5-6h |
 
-**Total V1.0 restant** : ~34h (incluant 4 Edge Functions admin reportées en 12.5). Voir le master prompt section "ROADMAP" pour le détail.
+**Total V1.0 restant** : ~31h (incluant 4 Edge Functions admin reportées en 12.5 et les 4 Edge Functions match-room que la phase 5 contourne via RLS dev). Voir le master prompt section "ROADMAP" pour le détail.
 
 ---
 
@@ -100,7 +105,8 @@ lib/
 └── l10n/generated/          # ARB compilés (FR / EN / AR)
 
 supabase/
-├── migrations/              # 6 migrations SQL (26 tables, RLS, indexes)
+├── migrations/              # 9 migrations SQL (26 tables, RLS, indexes, phase-5 player-write RLS)
+├── seeds/                   # Dev fixtures (ex. dev_phase5_match_room.sql)
 └── functions/               # Edge Functions (à venir Phase 12.5)
 ```
 
