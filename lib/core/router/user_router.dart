@@ -9,8 +9,8 @@ import 'package:arena/features_user/auth/login_user_screen.dart';
 import 'package:arena/features_user/auth/register_user_screen.dart';
 import 'package:arena/features_user/auth/reset_password_page.dart';
 import 'package:arena/features_user/auth/splash_user_screen.dart';
+import 'package:arena/features_user/home/main_layout.dart';
 import 'package:arena/features_user/onboarding/onboarding_page.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -100,7 +100,7 @@ final userRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: UserRoutes.home,
         name: 'user.home',
-        builder: (context, state) => const _UserHomePlaceholder(),
+        builder: (context, state) => const MainLayout(),
       ),
       GoRoute(
         path: UserRoutes.onboarding,
@@ -171,47 +171,4 @@ class LinkAccountArgs {
   const LinkAccountArgs({required this.email, required this.providerLabel});
   final String? email;
   final String providerLabel;
-}
-
-class _UserHomePlaceholder extends ConsumerWidget {
-  const _UserHomePlaceholder();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final profile = ref.watch(currentProfileProvider).value;
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Bonjour ${profile?.username ?? ''}'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => ref.read(signOutProvider)(),
-          ),
-        ],
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text('Authentifié ✓'),
-              const SizedBox(height: 16),
-              Text('Pays : ${profile?.countryCode ?? '-'}'),
-              Text('Rôle : ${profile?.role.value ?? '-'}'),
-              const SizedBox(height: 16),
-              const Text(
-                'PHASE 3 — Layout principal + HomePage joueur viendra ici',
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () => context.go(UserRoutes.devPreview),
-                child: const Text('Dev preview'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }

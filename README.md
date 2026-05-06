@@ -35,7 +35,7 @@ Rollout progressif :
 
 ## État du projet
 
-> Mis à jour le 2026-05-06 — phases 2 + 2bis (auth user + admin) terminées côté Flutter.
+> Mis à jour le 2026-05-06 — phase 3 (layout + HomePage joueur) terminée.
 
 ### ✅ Phases terminées
 
@@ -48,6 +48,7 @@ Rollout progressif :
 | **0 backend** | 26 tables Supabase + RLS + indexes + seed config V1.0 | ✅ |
 | **2** | Auth user (login, register, forgot/reset, link, CGU) + deep link `com.arena.app://reset-password` | ✅ |
 | **2bis** | Auth admin (splash, login, invitation, TOTP setup/verify) — Flutter only, 4 Edge Functions différées en 12.5 | ✅ |
+| **3** | Layout joueur (`MainLayout` + 4 tabs avec `IndexedStack`) + HomePage (header, sections phase-aware, stats depuis `profile.stats`, pull-to-refresh) | ✅ |
 
 > **SSO Google/Apple** reportés en **PHASE 2.3** (libs `google_sign_in` /
 > `sign_in_with_apple` commentées dans `pubspec.yaml`). La page
@@ -62,7 +63,6 @@ Rollout progressif :
 
 | Phase | Domaine | Estimation |
 |---|---|---|
-| **3** | Layout + HomePage joueur | 1-2h |
 | **4** | Compétitions (liste + détail + bracket) | 3-4h |
 | **5** | Match Room (code → config → score → validation) | 2-3h |
 | **6** | Chat hybride (Supabase Realtime + Agora RTM) | 3-4h |
@@ -75,7 +75,7 @@ Rollout progressif :
 | **12.5** | Edge Functions (16) + pg_cron + automatisation | 10-12h |
 | **13** | Polish + tests + lancement V1.0 | 5-6h |
 
-**Total V1.0 restant** : ~40h (incluant 4 Edge Functions admin reportées en 12.5). Voir le master prompt section "ROADMAP" pour le détail.
+**Total V1.0 restant** : ~38h (incluant 4 Edge Functions admin reportées en 12.5). Voir le master prompt section "ROADMAP" pour le détail.
 
 ---
 
@@ -163,12 +163,14 @@ flutter test
 flutter test integration_test
 ```
 
-Couverture actuelle (68 tests) : modèles freezed, widgets partagés,
+Couverture actuelle (78 tests) : modèles freezed, widgets partagés,
 services i18n, router redirect (onboarding → splash → home), 4 pages
-auth user (`forgot/reset/link/cgu`), et 4 écrans admin
-(`login/invitation/totp_setup/totp_verify`). Le happy-path complet
-d'invitation admin sera couvert via test d'intégration une fois
-l'Edge Function `register-admin` livrée (PHASE 12.5).
+auth user (`forgot/reset/link/cgu`), 4 écrans admin
+(`login/invitation/totp_setup/totp_verify`), et le shell joueur
+phase 3 (`MainLayout` navigation entre tabs + `HomePage` rendering &
+stats). Le happy-path complet d'invitation admin sera couvert via
+test d'intégration une fois l'Edge Function `register-admin` livrée
+(PHASE 12.5).
 
 ---
 
