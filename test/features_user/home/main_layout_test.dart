@@ -1,4 +1,6 @@
+import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/profile.dart';
+import 'package:arena/data/repositories/competition_repository.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/home/main_layout.dart';
 import 'package:flutter/material.dart';
@@ -15,6 +17,10 @@ Profile _player() => const Profile(
 Widget _scoped() => ProviderScope(
       overrides: [
         currentProfileProvider.overrideWith((ref) async => _player()),
+        // Stub the competitions stream so the page mounts without
+        // touching Supabase (which isn't initialized in widget tests).
+        competitionsListProvider
+            .overrideWith((ref, _) => Stream<List<Competition>>.value([])),
       ],
       child: const MaterialApp(home: MainLayout()),
     );
@@ -28,7 +34,8 @@ void main() {
     expect(find.text('MARADONA'), findsOneWidget);
   });
 
-  testWidgets('switching to the Compétitions tab shows the PHASE 4 panel',
+  testWidgets(
+      'switching to the Compétitions tab mounts the list (empty state here)',
       (tester) async {
     await tester.pumpWidget(_scoped());
     await tester.pumpAndSettle();
@@ -36,8 +43,12 @@ void main() {
     await tester.tap(find.text('Compétitions'));
     await tester.pumpAndSettle();
 
-    expect(find.text('COMPÉTITIONS'), findsWidgets);
-    expect(find.text('PHASE 4'), findsOneWidget);
+    // AppBar title + the empty-state copy from CompetitionsListPage.
+    expect(find.text('COMPÉTITIONS'), findsOneWidget);
+    expect(find.text('Aucune compétition'), findsOneWidget);
+    // The 4 game filter chips should also be there: "Tous" + 3 games.
+    expect(find.text('Tous'), findsOneWidget);
+    expect(find.text('eFootball'), findsOneWidget);
   });
 
   testWidgets('switching to the Chat tab shows the PHASE 6 panel',

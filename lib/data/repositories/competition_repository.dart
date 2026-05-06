@@ -1,0 +1,80 @@
+import 'package:arena/data/models/competition.dart';
+import 'package:arena/data/models/competition_enums.dart';
+import 'package:arena/data/repositories/profile_repository.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+/// CRUD + Realtime over the `competitions` table.
+///
+/// Read-only from the User app — competitions are created server-side by
+/// admins (PHASE 11). The User app only needs `list / getById / watch`.
+class CompetitionRepository {
+  const CompetitionRepository(this._client);
+
+  static const _table = 'competitions';
+
+  final SupabaseClient _client;
+
+  /// Single fetch — typically not used directly by UI (prefer [watch]),
+  /// but handy for tests and for one-shot lookups.
+  Future<List<Competition>> list({GameType? game}) async {
+    final query = _client.from(_table).select();
+    final filtered = game == null ? query : query.eq('game', game.value);
+    final rows = await filtered.order('start_date', ascending: true);
+    return [
+      for (final row in rows as List<dynamic>)
+        Competition.fromJson(row as Map<String, dynamic>),
+    ];
+  }
+
+  Future<Competition?> getById(String id) async {
+    final row =
+        await _client.from(_table).select().eq('id', id).maybeSingle();
+    if (row == null) return null;
+    return Competition.fromJson(row);
+  }
+
+  /// Realtime stream of competitions. The Supabase `.stream()` API does
+  /// not support arbitrary `where` chaining — we filter by [game]
+  /// client-side instead, which keeps the stream simple and avoids
+  /// reconnections when the filter changes.
+  Stream<List<Competition>> watch({GameType? game}) {
+    return _client
+        .from(_table)
+        .stream(primaryKey: ['id'])
+        .order('start_date')
+        .map((rows) {
+          final list = [for (final row in rows) Competition.fromJson(row)];
+          if (game == null) return list;
+          return list.where((c) => c.game == game).toList(growable: false);
+        });
+  }
+
+  /// Realtime stream of a single competition. Emits `null` if the row
+  /// doesn't exist (yet).
+  Stream<Competition?> watchById(String id) {
+    return _client
+        .from(_table)
+        .stream(primaryKey: ['id'])
+        .eq('id', id)
+        .map((rows) => rows.isEmpty ? null : Competition.fromJson(rows.first));
+  }
+}
+
+final competitionRepositoryProvider = Provider<CompetitionRepository>((ref) {
+  return CompetitionRepository(ref.watch(supabaseClientProvider));
+});
+
+/// Realtime list of competitions, optionally filtered by game.
+///
+/// Use `competitionsListProvider(null)` for the unfiltered stream.
+final competitionsListProvider =
+    StreamProvider.family<List<Competition>, GameType?>((ref, game) {
+  return ref.watch(competitionRepositoryProvider).watch(game: game);
+});
+
+/// Realtime stream of one competition by id.
+final competitionByIdProvider =
+    StreamProvider.family<Competition?, String>((ref, id) {
+  return ref.watch(competitionRepositoryProvider).watchById(id);
+});

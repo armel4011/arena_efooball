@@ -1,0 +1,71 @@
+import 'package:arena/data/models/competition_enums.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'competition.freezed.dart';
+part 'competition.g.dart';
+
+/// Mirror of the `competitions` table.
+///
+/// Snake-case columns are mapped automatically via `fieldRename: snake`.
+/// Custom converters bridge Postgres enum strings (`'efootball'`,
+/// `'registration_open'`, `'single_elimination'`) and Dart enums.
+@Freezed(fromJson: true, toJson: true)
+sealed class Competition with _$Competition {
+  const factory Competition({
+    // ─── required ──────────────────────────────────────────────────────────
+    required String id,
+    required String name,
+    @GameTypeConverter() required GameType game,
+    @TournamentFormatConverter() required TournamentFormat format,
+    required DateTime startDate,
+
+    // ─── defaults ──────────────────────────────────────────────────────────
+    @CompetitionStatusConverter()
+    @Default(CompetitionStatus.draft)
+    CompetitionStatus status,
+    @Default(2) int maxPlayers,
+    @Default(0) int currentPlayers,
+    @Default(0) double registrationFee,
+    @Default('XAF') String registrationCurrency,
+    @Default(10) double commissionPct,
+    @Default(0) double prizePoolLocal,
+    @Default(0) double sponsorBonusLocal,
+
+    // ─── optional / nullable ───────────────────────────────────────────────
+    String? description,
+    String? bannerUrl,
+    DateTime? registrationOpensAt,
+    DateTime? registrationClosesAt,
+    DateTime? endDate,
+    String? prizePoolCurrency,
+    String? createdBy,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) = _Competition;
+
+  const Competition._();
+
+  factory Competition.fromJson(Map<String, dynamic> json) =>
+      _$CompetitionFromJson(json);
+
+  // ─── Computed helpers ────────────────────────────────────────────────────
+
+  /// `true` when registration is officially open AND there's still room.
+  bool get canRegister =>
+      status.isRegistrationOpen && currentPlayers < maxPlayers;
+
+  /// `true` once the bracket / group phase has started.
+  bool get hasStarted => status.isOngoing || status.isCompleted;
+
+  /// `currentPlayers / maxPlayers`, clamped to [0, 1].
+  double get fillRatio {
+    if (maxPlayers <= 0) return 0;
+    final r = currentPlayers / maxPlayers;
+    return r.clamp(0, 1).toDouble();
+  }
+
+  int get spotsLeft {
+    final left = maxPlayers - currentPlayers;
+    return left < 0 ? 0 : left;
+  }
+}

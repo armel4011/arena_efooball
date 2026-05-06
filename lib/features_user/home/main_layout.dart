@@ -2,6 +2,7 @@ import 'package:arena/core/theme/arena_colors.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/core/theme/arena_typography.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
+import 'package:arena/features_user/competitions/competitions_list_page.dart';
 import 'package:arena/features_user/home/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,12 +25,7 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
 
   static const _pages = <Widget>[
     HomePage(),
-    _PhasePlaceholder(
-      phase: 'PHASE 4',
-      title: 'COMPÉTITIONS',
-      subtitle: 'Liste, détail et brackets — à venir.',
-      icon: Icons.sports_esports_outlined,
-    ),
+    CompetitionsListPage(),
     _PhasePlaceholder(
       phase: 'PHASE 6',
       title: 'CHAT',
