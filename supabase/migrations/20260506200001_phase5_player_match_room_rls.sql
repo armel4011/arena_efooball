@@ -49,3 +49,21 @@ create policy "match_events_player_insert"
 
 comment on policy "match_events_player_insert" on public.match_events is
   'PHASE 5 — Either seated player may post `score_submitted` (and other) events on their own match. Same caveat: PHASE 12.5 Edge Functions will eventually own this write path.';
+
+-- ─── Realtime publication ─────────────────────────────────────────────────
+-- The migration that introduced `streams` + `competition_registrations`
+-- forgot to add `matches` and `match_events` to the realtime publication.
+-- Without this, `MatchRepository.watchById` and `watchScoreSubmissions`
+-- only ever emit the initial snapshot — score validation across two
+-- devices never converges because each client misses the other's INSERT.
+do $$
+begin
+  alter publication supabase_realtime add table public.matches;
+exception when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  alter publication supabase_realtime add table public.match_events;
+exception when duplicate_object then null;
+end $$;
