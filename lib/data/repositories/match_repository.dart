@@ -16,9 +16,6 @@ class MatchRepository {
   // ─── Reads ─────────────────────────────────────────────────────────────
 
   /// All matches of a competition, sorted by round then match_number.
-  ///
-  /// Not exposed as a Realtime stream — the bracket changes infrequently
-  /// and a manual `invalidate()` on pull-to-refresh keeps things simple.
   Future<List<ArenaMatch>> listForCompetition(String competitionId) async {
     final rows = await _client
         .from(_table)
@@ -30,6 +27,27 @@ class MatchRepository {
       for (final row in rows as List<dynamic>)
         ArenaMatch.fromJson(row as Map<String, dynamic>),
     ];
+  }
+
+  /// Realtime stream of every match in a competition. Sorting is done
+  /// client-side because Supabase `.stream()` only accepts a single
+  /// `.order()` clause (we want round + match_number).
+  Stream<List<ArenaMatch>> watchForCompetition(String competitionId) {
+    return _client
+        .from(_table)
+        .stream(primaryKey: ['id'])
+        .eq('competition_id', competitionId)
+        .map(
+          (rows) => [
+            for (final row in rows) ArenaMatch.fromJson(row),
+          ]..sort(_byRoundThenMatchNumber),
+        );
+  }
+
+  static int _byRoundThenMatchNumber(ArenaMatch a, ArenaMatch b) {
+    final byRound = (a.round ?? 0).compareTo(b.round ?? 0);
+    if (byRound != 0) return byRound;
+    return (a.matchNumber ?? 0).compareTo(b.matchNumber ?? 0);
   }
 
   /// Realtime stream of a single match. Emits `null` if the row doesn't
@@ -136,6 +154,15 @@ final matchRepositoryProvider = Provider<MatchRepository>((ref) {
 });
 
 /// All matches of a competition, keyed by competition id.
+///
+/// Backed by [MatchRepository.listForCompetition] (one-shot) rather than
+/// [MatchRepository.watchForCompetition]. We tried streaming the bracket
+/// realtime in V1.0 but with `matchByIdProvider` + `matchScoreSubmissionsProvider`
+/// already running on the open match room, having a third Realtime stream
+/// on the bracket pushed the emulator into ANR territory and triggered
+/// "Reading from a closed socket" exceptions on dispose. Pull-to-refresh
+/// is enough for the bracket — the rare admin/live dashboard that *does*
+/// need a streamed bracket can use `watchForCompetition` directly.
 final competitionMatchesProvider =
     FutureProvider.family<List<ArenaMatch>, String>((ref, competitionId) {
   return ref.watch(matchRepositoryProvider).listForCompetition(competitionId);

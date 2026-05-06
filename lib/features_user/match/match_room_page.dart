@@ -1,3 +1,4 @@
+import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/theme/arena_colors.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/core/theme/arena_typography.dart';
@@ -13,6 +14,7 @@ import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 /// PHASE 5 — Match Room shell.
 ///
@@ -31,9 +33,32 @@ class MatchRoomPage extends ConsumerWidget {
     final async = ref.watch(matchByIdProvider(matchId));
     final selfId = ref.watch(currentSessionProvider)?.user.id;
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('MATCH ROOM')),
-      body: async.when(
+    return PopScope(
+      // The bracket reads `competitionMatchesProvider` as a Future (no
+      // realtime), so a status change made here would otherwise need a
+      // manual pull-to-refresh to show up. We invalidate the whole
+      // family on every exit path — AppBar back, system back gesture,
+      // and the deep-link fallback below — so the bracket re-fetches on
+      // its next build.
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) ref.invalidate(competitionMatchesProvider);
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('MATCH ROOM'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              ref.invalidate(competitionMatchesProvider);
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go(UserRoutes.home);
+              }
+            },
+          ),
+        ),
+        body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorState(
           description: e.toString(),
@@ -50,6 +75,7 @@ class MatchRoomPage extends ConsumerWidget {
           final role = MatchRole.resolve(match: m, selfId: selfId);
           return _MatchRoomBody(match: m, role: role);
         },
+        ),
       ),
     );
   }
@@ -530,6 +556,18 @@ class _RoomReadyViewState extends ConsumerState<_RoomReadyView> {
     // rebuilds — no local state to flip back.
   }
 
+  Future<void> _copyCode(String code) async {
+    final messenger = ScaffoldMessenger.of(context);
+    await Clipboard.setData(ClipboardData(text: code));
+    if (!mounted) return;
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text('Code copié dans le presse-papier'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final code = widget.match.roomCode;
@@ -571,14 +609,29 @@ class _RoomReadyViewState extends ConsumerState<_RoomReadyView> {
               vertical: ArenaSpacing.lg,
               horizontal: ArenaSpacing.md,
             ),
-            child: Center(
-              child: SelectableText(
-                code ?? '—',
-                style: ArenaTypography.displayMedium.copyWith(
-                  fontSize: 40,
-                  letterSpacing: 4,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: SelectableText(
+                    code ?? '—',
+                    textAlign: TextAlign.center,
+                    style: ArenaTypography.displayMedium.copyWith(
+                      fontSize: 40,
+                      letterSpacing: 4,
+                    ),
+                  ),
                 ),
-              ),
+                if (code != null) ...[
+                  const SizedBox(width: ArenaSpacing.sm),
+                  IconButton(
+                    icon: const Icon(Icons.copy_outlined),
+                    tooltip: 'Copier le code',
+                    color: ArenaColors.textMuted,
+                    onPressed: () => _copyCode(code),
+                  ),
+                ],
+              ],
             ),
           ),
           const SizedBox(height: ArenaSpacing.lg),

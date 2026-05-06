@@ -124,7 +124,7 @@ class _MatchRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ArenaCard(
-      onTap: () => context.go(UserRoutes.matchPath(match.id)),
+      onTap: () => context.push(UserRoutes.matchPath(match.id)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
