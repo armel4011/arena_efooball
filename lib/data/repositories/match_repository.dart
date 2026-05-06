@@ -110,17 +110,34 @@ class MatchRepository {
   /// (cf. [watchScoreSubmissions]) — the first writer doesn't get to
   /// silently overwrite the second's view. A successful matching pair
   /// is then committed via [commitScore].
+  ///
+  /// When [decidedByPenalties] is `true`, [penaltyP1] and [penaltyP2]
+  /// must be provided and they're stamped on the payload alongside the
+  /// regulation-time score. Penalties only make sense for knockout
+  /// matches — the form hides the toggle for group-stage rows.
   Future<void> submitScore({
     required String matchId,
     required String byProfileId,
     required int scoreP1,
     required int scoreP2,
+    bool decidedByPenalties = false,
+    int? penaltyP1,
+    int? penaltyP2,
   }) async {
+    final payload = <String, dynamic>{
+      'score1': scoreP1,
+      'score2': scoreP2,
+      if (decidedByPenalties) ...{
+        'via_penalties': true,
+        'penalty1': penaltyP1,
+        'penalty2': penaltyP2,
+      },
+    };
     await _client.from(_eventsTable).insert({
       'match_id': matchId,
       'type': 'score_submitted',
       'created_by': byProfileId,
-      'payload': {'score1': scoreP1, 'score2': scoreP2},
+      'payload': payload,
     });
   }
 

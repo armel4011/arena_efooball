@@ -16,6 +16,28 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+/// In-flight optimistic score submissions, keyed by matchId. Lives
+/// outside the widget tree so a player who taps SOUMETTRE, steps back
+/// to the bracket and re-enters the match room still sees the "waiting
+/// for opponent" UI — instead of being shown the entry form again
+/// (and worst-case double-submitting).
+///
+/// The realtime stream of `match_events` is the source of truth; this
+/// provider only fills the gap between "we just inserted" and "the
+/// stream echoed it back" — typically a few hundred ms, but the gap
+/// also covers the entire time the widget is unmounted.
+final _pendingScoreSubmissionProvider =
+    StateProvider.family<Map<String, dynamic>?, String>((ref, matchId) => null);
+
+/// Same idea as [_pendingScoreSubmissionProvider] but for the share-code
+/// step: holds the room code we just posted while the realtime stream
+/// catches up to `status = ready`. Persisting it across remounts means
+/// stepping back to the bracket and re-entering the room still shows
+/// the "code partagé" interstitial instead of dropping back to the
+/// empty share form.
+final _pendingRoomCodeProvider =
+    StateProvider.family<String?, String>((ref, matchId) => null);
+
 /// PHASE 5 — Match Room shell.
 ///
 /// Watches the match in realtime and dispatches to a status-specific
@@ -454,12 +476,20 @@ class _ShareCodeFormState extends ConsumerState<_ShareCodeForm> {
       });
       return;
     }
-    // The realtime stream flips the match to `ready` and rebuilds the
-    // body — no need to navigate or update local state on success.
+    if (!mounted) return;
+    ref
+        .read(_pendingRoomCodeProvider(widget.match.id).notifier)
+        .state = raw;
+    setState(() => _submitting = false);
   }
 
   @override
   Widget build(BuildContext context) {
+    final optimisticCode =
+        ref.watch(_pendingRoomCodeProvider(widget.match.id));
+    if (optimisticCode != null) {
+      return _CodeSharedInterstitial(code: optimisticCode);
+    }
     return SingleChildScrollView(
       padding: const EdgeInsets.all(ArenaSpacing.lg),
       child: Column(
@@ -682,6 +712,9 @@ class _ScoreFlowView extends ConsumerStatefulWidget {
 class _ScoreFlowViewState extends ConsumerState<_ScoreFlowView> {
   final _myScoreCtrl = TextEditingController();
   final _oppScoreCtrl = TextEditingController();
+  final _myPenCtrl = TextEditingController();
+  final _oppPenCtrl = TextEditingController();
+  bool _viaPenalties = false;
   bool _submitting = false;
   String? _error;
   bool _resolutionTriggered = false;
@@ -690,10 +723,19 @@ class _ScoreFlowViewState extends ConsumerState<_ScoreFlowView> {
   void dispose() {
     _myScoreCtrl.dispose();
     _oppScoreCtrl.dispose();
+    _myPenCtrl.dispose();
+    _oppPenCtrl.dispose();
     super.dispose();
   }
 
   bool get _isPlayer1 => widget.role == MatchRole.player1;
+
+  /// Group-stage matches stay on the regulation-time score (draws are
+  /// allowed). Only knockout matches expose the "decided by penalties"
+  /// toggle. We use `groupId` as the marker because it's set by the
+  /// admin when the match belongs to a group, and left null for every
+  /// knockout slot.
+  bool get _isKnockout => widget.match.groupId == null;
 
   Future<void> _submit() async {
     final my = int.tryParse(_myScoreCtrl.text.trim());
@@ -702,6 +744,36 @@ class _ScoreFlowViewState extends ConsumerState<_ScoreFlowView> {
       setState(() => _error = 'Scores attendus entre 0 et 99.');
       return;
     }
+
+    int? myPen;
+    int? oppPen;
+    if (_viaPenalties) {
+      if (my != opp) {
+        setState(() {
+          _error = 'Le score réglementaire doit être à égalité avant'
+              ' les tirs au but.';
+        });
+        return;
+      }
+      myPen = int.tryParse(_myPenCtrl.text.trim());
+      oppPen = int.tryParse(_oppPenCtrl.text.trim());
+      if (myPen == null ||
+          oppPen == null ||
+          myPen < 0 ||
+          oppPen < 0 ||
+          myPen > 30 ||
+          oppPen > 30) {
+        setState(() => _error = 'Tirs au but attendus entre 0 et 30.');
+        return;
+      }
+      if (myPen == oppPen) {
+        setState(() {
+          _error = 'Les tirs au but ne peuvent pas finir à égalité.';
+        });
+        return;
+      }
+    }
+
     final selfId = ref.read(currentSessionProvider)?.user.id;
     if (selfId == null) return;
 
@@ -709,6 +781,8 @@ class _ScoreFlowViewState extends ConsumerState<_ScoreFlowView> {
     // not "me / opponent" — flip when the user is on the player2 seat.
     final s1 = _isPlayer1 ? my : opp;
     final s2 = _isPlayer1 ? opp : my;
+    final pen1 = _viaPenalties ? (_isPlayer1 ? myPen : oppPen) : null;
+    final pen2 = _viaPenalties ? (_isPlayer1 ? oppPen : myPen) : null;
 
     setState(() {
       _submitting = true;
@@ -721,6 +795,9 @@ class _ScoreFlowViewState extends ConsumerState<_ScoreFlowView> {
             byProfileId: selfId,
             scoreP1: s1,
             scoreP2: s2,
+            decidedByPenalties: _viaPenalties,
+            penaltyP1: pen1,
+            penaltyP2: pen2,
           );
     } catch (e) {
       if (!mounted) return;
@@ -728,8 +805,24 @@ class _ScoreFlowViewState extends ConsumerState<_ScoreFlowView> {
         _submitting = false;
         _error = 'Impossible de soumettre : $e';
       });
+      return;
     }
-    // The realtime stream rebuilds us into the waiting / resolving state.
+    if (!mounted) return;
+    ref
+        .read(_pendingScoreSubmissionProvider(widget.match.id).notifier)
+        .state = {
+      'created_by': selfId,
+      'payload': {
+        'score1': s1,
+        'score2': s2,
+        if (_viaPenalties) ...{
+          'via_penalties': true,
+          'penalty1': pen1,
+          'penalty2': pen2,
+        },
+      },
+    };
+    setState(() => _submitting = false);
   }
 
   Future<void> _resolve(
@@ -744,13 +837,31 @@ class _ScoreFlowViewState extends ConsumerState<_ScoreFlowView> {
     final s2B = pl2['score2'] as int?;
     if (s1A == null || s2A == null || s1B == null || s2B == null) return;
 
-    final concordant = s1A == s1B && s2A == s2B;
+    final viaPenA = pl1['via_penalties'] == true;
+    final viaPenB = pl2['via_penalties'] == true;
+    final pen1A = pl1['penalty1'] as int?;
+    final pen2A = pl1['penalty2'] as int?;
+    final pen1B = pl2['penalty1'] as int?;
+    final pen2B = pl2['penalty2'] as int?;
+
+    final regulationConcordant = s1A == s1B && s2A == s2B;
+    final penaltiesConcordant = viaPenA == viaPenB &&
+        (!viaPenA || (pen1A == pen1B && pen2A == pen2B));
+    final concordant = regulationConcordant && penaltiesConcordant;
+
     final repo = ref.read(matchRepositoryProvider);
 
     try {
       if (concordant) {
         String? winner;
-        if (s1A > s2A) {
+        if (viaPenA && pen1A != null && pen2A != null) {
+          // Regulation tied — decide on penalties.
+          if (pen1A > pen2A) {
+            winner = widget.match.player1Id;
+          } else if (pen2A > pen1A) {
+            winner = widget.match.player2Id;
+          }
+        } else if (s1A > s2A) {
           winner = widget.match.player1Id;
         } else if (s2A > s1A) {
           winner = widget.match.player2Id;
@@ -802,6 +913,15 @@ class _ScoreFlowViewState extends ConsumerState<_ScoreFlowView> {
         for (final s in submissions) {
           final by = s['created_by'] as String?;
           if (by != null) byPlayer[by] = s;
+        }
+        // Optimistic merge: if we just posted but the realtime stream
+        // hasn't echoed back yet — or we've come back to this room
+        // after stepping away — fall back to the matchId-keyed state
+        // provider so the UI reflects the in-flight submission.
+        final optimistic =
+            ref.watch(_pendingScoreSubmissionProvider(widget.match.id));
+        if (optimistic != null && !byPlayer.containsKey(selfId)) {
+          byPlayer[selfId] = optimistic;
         }
         final mine = byPlayer[selfId];
         final p1Sub = widget.match.player1Id == null
@@ -876,7 +996,9 @@ class _ScoreFlowViewState extends ConsumerState<_ScoreFlowView> {
                   hint: '0',
                   controller: _oppScoreCtrl,
                   keyboardType: TextInputType.number,
-                  textInputAction: TextInputAction.done,
+                  textInputAction: _isKnockout
+                      ? TextInputAction.next
+                      : TextInputAction.done,
                   maxLength: 2,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   enabled: !_submitting,
@@ -884,6 +1006,66 @@ class _ScoreFlowViewState extends ConsumerState<_ScoreFlowView> {
               ),
             ],
           ),
+          if (_isKnockout) ...[
+            const SizedBox(height: ArenaSpacing.md),
+            SwitchListTile.adaptive(
+              title: Text(
+                'Match décidé aux tirs au but',
+                style: ArenaTypography.bodyMedium,
+              ),
+              subtitle: Text(
+                'À cocher uniquement si le score réglementaire'
+                ' est à égalité.',
+                style: ArenaTypography.bodyMedium.copyWith(
+                  color: ArenaColors.textMuted,
+                  fontSize: 12,
+                ),
+              ),
+              value: _viaPenalties,
+              contentPadding: EdgeInsets.zero,
+              onChanged: _submitting
+                  ? null
+                  : (v) => setState(() {
+                        _viaPenalties = v;
+                        if (!v) {
+                          _myPenCtrl.clear();
+                          _oppPenCtrl.clear();
+                        }
+                      }),
+            ),
+            if (_viaPenalties) ...[
+              const SizedBox(height: ArenaSpacing.sm),
+              Row(
+                children: [
+                  Expanded(
+                    child: ArenaTextField(
+                      label: 'Mes tirs au but',
+                      hint: '0',
+                      controller: _myPenCtrl,
+                      keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.next,
+                      maxLength: 2,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      enabled: !_submitting,
+                    ),
+                  ),
+                  const SizedBox(width: ArenaSpacing.md),
+                  Expanded(
+                    child: ArenaTextField(
+                      label: 'Tirs adversaire',
+                      hint: '0',
+                      controller: _oppPenCtrl,
+                      keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.done,
+                      maxLength: 2,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      enabled: !_submitting,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
           if (_error != null) ...[
             const SizedBox(height: ArenaSpacing.sm),
             Text(
@@ -912,6 +1094,13 @@ class _ScoreFlowViewState extends ConsumerState<_ScoreFlowView> {
     final s2 = pl['score2'] as int? ?? 0;
     final myGoals = _isPlayer1 ? s1 : s2;
     final oppGoals = _isPlayer1 ? s2 : s1;
+    final viaPen = pl['via_penalties'] == true;
+    final myPen = viaPen
+        ? (_isPlayer1 ? pl['penalty1'] as int? : pl['penalty2'] as int?)
+        : null;
+    final oppPen = viaPen
+        ? (_isPlayer1 ? pl['penalty2'] as int? : pl['penalty1'] as int?)
+        : null;
 
     return Padding(
       padding: const EdgeInsets.all(ArenaSpacing.lg),
@@ -935,6 +1124,16 @@ class _ScoreFlowViewState extends ConsumerState<_ScoreFlowView> {
             textAlign: TextAlign.center,
             style: ArenaTypography.headlineMedium,
           ),
+          if (viaPen && myPen != null && oppPen != null) ...[
+            const SizedBox(height: ArenaSpacing.xs),
+            Text(
+              'Aux tirs au but : $myPen — $oppPen',
+              textAlign: TextAlign.center,
+              style: ArenaTypography.bodyMedium.copyWith(
+                color: ArenaColors.textMuted,
+              ),
+            ),
+          ],
           const SizedBox(height: ArenaSpacing.md),
           Text(
             bothSubmitted
@@ -954,6 +1153,62 @@ class _ScoreFlowViewState extends ConsumerState<_ScoreFlowView> {
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Optimistic interstitial shown after the room code POST succeeds, until
+/// the realtime stream pushes the new `status = ready` and the parent
+/// swaps in [_RoomReadyView]. Without it, the user sees the loading
+/// spinner on the form until the stream catches up — usually fast, but
+/// noticeable on slow links.
+class _CodeSharedInterstitial extends StatelessWidget {
+  const _CodeSharedInterstitial({required this.code});
+
+  final String code;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(ArenaSpacing.lg),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.check_circle,
+            size: 56,
+            color: ArenaColors.success,
+          ),
+          const SizedBox(height: ArenaSpacing.md),
+          Text(
+            'CODE PARTAGÉ',
+            style: ArenaTypography.labelLarge.copyWith(
+              color: ArenaColors.textMuted,
+            ),
+          ),
+          const SizedBox(height: ArenaSpacing.sm),
+          Text(
+            code,
+            style: ArenaTypography.displayMedium.copyWith(
+              fontSize: 40,
+              letterSpacing: 4,
+            ),
+          ),
+          const SizedBox(height: ArenaSpacing.lg),
+          const SizedBox(
+            width: 24,
+            height: 24,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          const SizedBox(height: ArenaSpacing.sm),
+          Text(
+            'Synchronisation avec ton adversaire…',
+            style: ArenaTypography.bodyMedium.copyWith(
+              color: ArenaColors.textMuted,
+            ),
+          ),
         ],
       ),
     );
