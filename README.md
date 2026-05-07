@@ -35,7 +35,7 @@ Rollout progressif :
 
 ## État du projet
 
-> Mis à jour le 2026-05-07 — phase 8 (anti-cheat recording + streaming Agora sélectif + auto-finals) terminée.
+> Mis à jour le 2026-05-07 — phase 9 (profil + settings + suppression compte RGPD) terminée.
 
 ### ✅ Phases terminées
 
@@ -53,6 +53,7 @@ Rollout progressif :
 | **5** | Match Room (`MatchRoomPage` + route `/match/:id`) : 5.B nav depuis bracket, 5.C partage de code room (claim home seat) + clipboard, 5.D saisie collaborative du score (stream `match_events` + auto-commit/dispute). Migration RLS `20260506200001` qui autorise les joueurs participants à updater leur match en attendant les Edge Functions (12.5). | ✅ |
 | **6** | Chat 1-on-1 par match : `ChatPage` + route `/chat/match/:id`, `ChatRepository` (`ensureMatchChannel`, `watchMessages`, `sendMessage`), bubbles WhatsApp-style (newest en bas, self à droite). Migration RLS `20260506200002` (player INSERT du channel + `chat_channels`/`chat_messages` ajoutés à la publication realtime). Agora RTM (présence/typing) reporté en 12.5. | ✅ |
 | **8** | Anti-cheat + streaming Agora sélectif. **8.1** permissions natives (`permissions_service`) + manifest Android/iOS étendus. **8.2** `game_detector_service` (eFootball / EA FC, polling 2s via `installed_apps` + `app_usage`). **8.3** `recording_service` (auto-stop 25 min) + `recording_uploader` + `manual_video_upload_service` vers bucket privé `match-recordings/{matchId}/{playerId}/...mp4` (cap 500 MB). **8.4** overlay isolate (`flutter_overlay_window`) — bouton 72dp rouge, timer MM:SS, drag-to-side, IPC typé, tap court = MainActivity.bringMainActivityToFront() (Kotlin MethodChannel), tap long = 3 actions. **8.5** `match_recording_coordinator` orchestre la grace window (2 min) → `markForfeit()` (status=forfeited, winner_id=opponent, event logged). **8.7** streaming Agora sélectif : `agora_streaming_service` + `agora_token_client` + Edge Function `get_agora_token` (déployée — App Certificate jamais sur le client), `LiveStreamsPage` + `WatchStreamPage` + `StartStreamingBanner`, compteur viewers temps réel via Supabase Realtime presence. Auto-finals : trigger DB `auto_publish_final_match` (status→ongoing × `bracket_nodes.is_grand_final` ⇒ `is_streamed`/`auto_final` + flip `streams.is_public` HOME), trigger catch-up `auto_publish_late_stream` sur INSERT. Migrations `20260507100001` (storage bucket + 5 RLS), `20260507100002` (streams player RLS), `20260507100003` (auto-finals triggers). | ✅ |
+| **9** | Profil joueur + paramètres + suppression compte RGPD. **9.1** `PlayerProfilePage` (tab 3 du `MainLayout`) — header avatar coloré + username + pays/email, stats card (V/D/N + ratio + buts), 5 derniers matchs cliquables, pull-to-refresh. `EditProfilePage` (route `/profile/edit`) — username 3-20 chars, palette 12 couleurs, dropdown 13 pays V1.0 francophones. `MatchStatsRepository.foldMatches()` calcule W/L/D + buts client-side depuis `matches.status='completed'`. **9.2** `SettingsPage` (route `/settings`) 4 sections : Préférences (langue via `LanguageSwitcher`, devise read-only, switch `marketing_consent`), Compte (changer email/mdp via `auth.updateUser`, méthodes connexion en placeholder PHASE 2.3), Confidentialité (export = placeholder, suppression compte → 9.3), Aide & Infos (revoir intro reset `OnboardingFlagController`). **9.3** `DeleteAccountPage` (route `/profile/delete`) workflow 4 étapes : avertissement → vérif gains pending → confirmation password (re-auth) + tape littéral "SUPPRIMER" → soft-delete via `requestAccountDeletion()` (set `account_deletion_requested_at` / `deleted_at` / `account_deletion_reason` / `is_active=false`) + sign-out. **9.4** Export ZIP données = placeholder snackbar (Edge Function `export_user_data` reportée en 12.5). | ✅ |
 
 > **SSO Google/Apple** reportés en **PHASE 2.3** (libs `google_sign_in` /
 > `sign_in_with_apple` commentées dans `pubspec.yaml`). La page
@@ -86,21 +87,36 @@ Rollout progressif :
 > (d) Tests sur device physique (Android avec eFootball installé)
 > obligatoires avant V1.0 — l'émulateur ne reproduit pas les permissions
 > MEDIA_PROJECTION / SYSTEM_ALERT_WINDOW à l'identique.
+>
+> **Phase 9 — dettes assumées** : (a) **Edge Function `cleanup_deleted_
+> accounts`** (cron 24h, anonymise les comptes après 30 jours) reportée
+> en **PHASE 12.5**. Tant qu'elle n'existe pas, les rows soft-deleted
+> restent en DB indéfiniment — les politiques RLS existantes filtrent
+> déjà sur `deleted_at IS NULL` donc aucune fuite côté client. (b)
+> **Edge Function `export_user_data`** (génère ZIP `profile.json` /
+> `matches.json` / `payments.json` / `chat_messages.json`, lien email
+> 24h) reportée en 12.5 — le bouton "Télécharger mes données" affiche
+> un snackbar placeholder. (c) **Email de confirmation suppression**
+> reporté en 12.5 (idem ZIP). (d) **Stats temps réel** : la PHASE 12.5
+> Edge Function `recalculate_player_stats` mettra à jour
+> `profiles.stats jsonb` après chaque match clos, en attendant le
+> profil recompute client-side à chaque ouverture (volume V1.0 OK).
+> (e) **Méthodes de connexion (Google/Apple)** affichées en placeholder
+> dans Settings, en attendant **PHASE 2.3**.
 
 ### ⏭️ Phases à venir
 
 | Phase | Domaine | Estimation |
 |---|---|---|
 | **8b** | iOS Live Activity (Dynamic Island) — Apple Dev requis | 1h |
-| **9** | Profil + settings + suppression compte (RGPD) | 3h |
 | **10** | Notifications push (FCM) — inclut notif HOME "ton match est en live" | 2h |
 | **11** | Espace admin (dashboard, comp, matchs, bracket, disputes) | 4-5h |
 | **11bis** | Paiements CinetPay + NowPayments + payouts | 5-6h |
 | **12** | Espace super-admin | 2h |
-| **12.5** | Edge Functions (16) + pg_cron + automatisation | 10-12h |
+| **12.5** | Edge Functions (18) + pg_cron + automatisation | 11-13h |
 | **13** | Polish + tests + lancement V1.0 | 5-6h |
 
-**Total V1.0 restant** : ~22h (incluant 4 Edge Functions admin reportées en 12.5, les 4 Edge Functions match-room que la phase 5 contourne via RLS dev, `moderate_chat_message` que la phase 6 contourne aussi, et la projection viewers count que la phase 8.7 contourne via presence). Voir le master prompt section "ROADMAP" pour le détail.
+**Total V1.0 restant** : ~19h (Edge Functions admin + match-room + `moderate_chat_message` + viewers count projection + `cleanup_deleted_accounts` + `export_user_data` + `recalculate_player_stats` toutes regroupées en 12.5). Voir le master prompt section "ROADMAP" pour le détail.
 
 ---
 
@@ -189,19 +205,21 @@ flutter test
 flutter test integration_test
 ```
 
-Couverture actuelle (143 tests) : modèles freezed, widgets partagés,
+Couverture actuelle (150 tests) : modèles freezed, widgets partagés,
 services i18n, router redirect (onboarding → splash → home), 4 pages
 auth user (`forgot/reset/link/cgu`), 4 écrans admin
 (`login/invitation/totp_setup/totp_verify`), shell joueur phase 3
 (`MainLayout` + `HomePage`), phase 4 (`CompetitionsListPage` filtre +
 cards, `CompetitionDetailPage` tabs + CTA, `BracketView` groupage par
-round, `GroupStandingsView` DataTable), phase 6 (`ChatPage`), et phase
-8 (recording state machine, coordinator pause/forfeit grace,
-overlay controller IPC, manual upload, game detector, agora streaming
-state machine, permissions service). Le happy-path complet d'invitation
-admin sera couvert via test d'intégration une fois l'Edge Function
-`register-admin` livrée (PHASE 12.5). Tests sur device physique
-(Android + jeu installé) obligatoires en phase 13 avant lancement.
+round, `GroupStandingsView` DataTable), phase 6 (`ChatPage`), phase 8
+(recording state machine, coordinator pause/forfeit grace, overlay
+controller IPC, manual upload, game detector, agora streaming state
+machine, permissions service), et phase 9 (`MatchStatsRepository.
+foldMatches` W/L/D/buts sous toutes les perspectives + tab Profil dans
+`MainLayout`). Le happy-path complet d'invitation admin sera couvert
+via test d'intégration une fois l'Edge Function `register-admin`
+livrée (PHASE 12.5). Tests sur device physique (Android + jeu installé)
+obligatoires en phase 13 avant lancement.
 
 ---
 
