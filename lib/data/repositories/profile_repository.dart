@@ -37,6 +37,28 @@ class ProfileRepository {
     return Profile.fromJson(row);
   }
 
+  /// Soft-deletes the account: stamps `account_deletion_requested_at`,
+  /// `deleted_at`, optional `account_deletion_reason`, and flips
+  /// `is_active = false` so the profile drops out of every "active
+  /// players" RLS clause without losing the row immediately.
+  ///
+  /// The Edge Function `cleanup_deleted_accounts` (PHASE 12.5, cron 24h)
+  /// will permanently anonymise rows whose `account_deletion_requested_at`
+  /// is older than 30 days. Until then the user can come back and undo
+  /// — though no UI surfaces that today.
+  Future<void> requestAccountDeletion({
+    required String id,
+    String? reason,
+  }) async {
+    final now = DateTime.now().toUtc().toIso8601String();
+    await _client.from(_table).update({
+      'account_deletion_requested_at': now,
+      'deleted_at': now,
+      'account_deletion_reason': reason,
+      'is_active': false,
+    }).eq('id', id);
+  }
+
   /// Stream of the profile row matching [id]. Powered by Supabase
   /// Realtime, pushes updates whenever the row changes server-side.
   Stream<Profile?> watch(String id) {
