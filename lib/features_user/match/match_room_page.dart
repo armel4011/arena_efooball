@@ -11,6 +11,9 @@ import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:arena/features_shared/widgets/error_state.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
+import 'package:arena/features_user/match/widgets/manual_upload_button.dart';
+import 'package:arena/features_user/match/widgets/match_recording_lifecycle.dart';
+import 'package:arena/features_user/streaming/start_streaming_banner.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -109,7 +112,7 @@ class MatchRoomPage extends ConsumerWidget {
             );
           }
           final role = MatchRole.resolve(match: m, selfId: selfId);
-          return _MatchRoomBody(match: m, role: role);
+          return _MatchRoomBody(match: m, role: role, selfId: selfId);
         },
         ),
       ),
@@ -147,16 +150,32 @@ enum MatchRole {
 }
 
 class _MatchRoomBody extends StatelessWidget {
-  const _MatchRoomBody({required this.match, required this.role});
+  const _MatchRoomBody({
+    required this.match,
+    required this.role,
+    required this.selfId,
+  });
 
   final ArenaMatch match;
   final MatchRole role;
+  final String? selfId;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
         _Header(match: match, role: role),
+        // PHASE 8 wiring — anti-cheat lifecycle indicator (recording /
+        // paused / forfeit) sits right under the header so the player
+        // always sees what the coordinator is doing. Renders a no-op
+        // SizedBox.shrink() for observers and on iOS, so it costs
+        // nothing when not relevant.
+        MatchRecordingLifecycle(match: match, selfId: selfId),
+        // PHASE 8.7 — admin-driven live streaming banner. Hidden by
+        // default; surfaces a CTA when the admin flips
+        // `streams.is_public = true` for this match's HOME row.
+        if (role != MatchRole.observer)
+          StartStreamingBanner(matchId: match.id),
         const Divider(height: 1, thickness: 1, color: ArenaColors.border),
         Expanded(child: _bodyForStatus(match.status)),
       ],
@@ -187,15 +206,8 @@ class _MatchRoomBody extends StatelessWidget {
                       ' valider le score.',
                 )
               : _ScoreFlowView(match: match, role: role),
-        MatchStatus.disputed => const _PlaceholderView(
-            phase: 'PHASE 12.5',
-            icon: Icons.gavel,
-            title: 'Litige en cours',
-            description: 'Vos scores ne concordent pas. Un admin va'
-                ' trancher. Ce flux automatique arrive avec le bot'
-                " d'arbitrage de la phase 12.5.",
-          ),
-        MatchStatus.completed => _CompletedView(match: match),
+        MatchStatus.disputed => _DisputedView(match: match, selfId: selfId),
+        MatchStatus.completed => _CompletedView(match: match, selfId: selfId),
         MatchStatus.cancelled => const _PlaceholderView(
             phase: '—',
             icon: Icons.block,
@@ -386,9 +398,14 @@ class _PlaceholderView extends StatelessWidget {
 }
 
 class _CompletedView extends StatelessWidget {
-  const _CompletedView({required this.match});
+  const _CompletedView({required this.match, required this.selfId});
 
   final ArenaMatch match;
+  final String? selfId;
+
+  bool get _isPlayer =>
+      selfId != null &&
+      (selfId == match.player1Id || selfId == match.player2Id);
 
   @override
   Widget build(BuildContext context) {
@@ -426,6 +443,55 @@ class _CompletedView extends StatelessWidget {
                 color: ArenaColors.textMuted,
               ),
             ),
+          if (_isPlayer) ...[
+            const SizedBox(height: ArenaSpacing.xl),
+            ManualUploadButton(matchId: match.id, playerId: selfId!),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// PHASE 5/8 — Dispute placeholder with the manual-upload CTA so the
+/// player can hand a video to the admin even before the arbitration
+/// bot lands (PHASE 12.5).
+class _DisputedView extends StatelessWidget {
+  const _DisputedView({required this.match, required this.selfId});
+
+  final ArenaMatch match;
+  final String? selfId;
+
+  bool get _isPlayer =>
+      selfId != null &&
+      (selfId == match.player1Id || selfId == match.player2Id);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(ArenaSpacing.lg),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.gavel, size: 56, color: ArenaColors.danger),
+          const SizedBox(height: ArenaSpacing.md),
+          Text(
+            'LITIGE EN COURS',
+            style: ArenaTypography.labelLarge,
+          ),
+          const SizedBox(height: ArenaSpacing.sm),
+          Text(
+            'Vos scores ne concordent pas. Un admin va trancher. Tu peux '
+            'envoyer une vidéo du match pour appuyer ta version.',
+            textAlign: TextAlign.center,
+            style: ArenaTypography.bodyMedium.copyWith(
+              color: ArenaColors.textMuted,
+            ),
+          ),
+          if (_isPlayer) ...[
+            const SizedBox(height: ArenaSpacing.xl),
+            ManualUploadButton(matchId: match.id, playerId: selfId!),
+          ],
         ],
       ),
     );

@@ -14,6 +14,8 @@ import 'package:arena/features_user/competitions/competition_detail_page.dart';
 import 'package:arena/features_user/home/main_layout.dart';
 import 'package:arena/features_user/match/match_room_page.dart';
 import 'package:arena/features_user/onboarding/onboarding_page.dart';
+import 'package:arena/features_user/streaming/live_streams_page.dart';
+import 'package:arena/features_user/streaming/watch_stream_page.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -34,6 +36,8 @@ abstract final class UserRoutes {
   static const competitionDetail = '/competitions/:id';
   static const matchRoom = '/match/:id';
   static const matchChat = '/chat/match/:id';
+  static const liveStreams = '/streams';
+  static const watchStream = '/streams/watch/:id';
   static const devPreview = '/dev/preview';
 
   /// Builds the concrete `/competitions/<id>` URL — go_router parses
@@ -45,6 +49,10 @@ abstract final class UserRoutes {
 
   /// Builds the concrete `/chat/match/<id>` URL.
   static String matchChatPath(String matchId) => '/chat/match/$matchId';
+
+  /// Builds the concrete `/streams/watch/<matchId>` URL — points at
+  /// the Agora viewer for a publicly streamed match (PHASE 8.7).
+  static String watchStreamPath(String matchId) => '/streams/watch/$matchId';
 
   /// Routes the user can be on without being authenticated.
   static const unauthenticated = <String>{
@@ -190,6 +198,18 @@ final userRouterProvider = Provider<GoRouter>((ref) {
         path: UserRoutes.matchChat,
         name: 'user.matchChat',
         builder: (context, state) => ChatPage(
+          matchId: state.pathParameters['id'] ?? '',
+        ),
+      ),
+      GoRoute(
+        path: UserRoutes.liveStreams,
+        name: 'user.liveStreams',
+        builder: (context, state) => const LiveStreamsPage(),
+      ),
+      GoRoute(
+        path: UserRoutes.watchStream,
+        name: 'user.watchStream',
+        builder: (context, state) => WatchStreamPage(
           matchId: state.pathParameters['id'] ?? '',
         ),
       ),

@@ -1,0 +1,73 @@
+import 'package:arena/core/services/manual_video_upload_service.dart';
+import 'package:arena/core/services/recording_uploader.dart';
+import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+/// CTA "Envoyer une vidéo de preuve" — used after a match completes
+/// or when a dispute is opened, so the player can upload an
+/// independent recording (gallery / external app) for admin review.
+///
+/// Reuses the same `streams` + Storage pipeline as the auto-recording
+/// flow, so the dispute admin only ever has to inspect one place.
+class ManualUploadButton extends ConsumerStatefulWidget {
+  const ManualUploadButton({
+    required this.matchId,
+    required this.playerId,
+    this.label = 'Envoyer une vidéo de preuve',
+    super.key,
+  });
+
+  final String matchId;
+  final String playerId;
+  final String label;
+
+  @override
+  ConsumerState<ManualUploadButton> createState() => _ManualUploadButtonState();
+}
+
+class _ManualUploadButtonState extends ConsumerState<ManualUploadButton> {
+  bool _busy = false;
+
+  Future<void> _onTap() async {
+    setState(() => _busy = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final outcome =
+          await ref.read(manualVideoUploadServiceProvider).pickAndUpload(
+                matchId: widget.matchId,
+                playerId: widget.playerId,
+              );
+      if (!mounted) return;
+      if (outcome.cancelled) {
+        // Quiet on cancel — the user already knows they tapped Cancel.
+        return;
+      }
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Vidéo envoyée. Merci !')),
+      );
+    } on RecordingUploadException catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text('Échec : ${e.message}')));
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text('Erreur : $e')));
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ArenaButton(
+      label: widget.label,
+      icon: Icons.upload_file,
+      variant: ArenaButtonVariant.secondary,
+      isLoading: _busy,
+      onPressed: _onTap,
+      fullWidth: true,
+    );
+  }
+}

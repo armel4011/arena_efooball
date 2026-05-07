@@ -5,6 +5,7 @@ import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/services/bootstrap.dart';
 import 'package:arena/core/services/deep_link_service.dart';
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/features_user/recording/overlay/recording_overlay.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,6 +17,18 @@ Future<void> main() async {
     bundleId: 'com.arena.app',
     builder: ArenaUserApp.new,
   );
+}
+
+/// Entry point for the `flutter_overlay_window` isolate.
+///
+/// Spawned by the OverlayService when the recording starts (PHASE 8.4).
+/// Runs in its own Flutter engine — providers / Supabase / SharedPrefs
+/// from the main isolate are unreachable; data only crosses through
+/// `FlutterOverlayWindow.shareData` / `overlayListener`.
+@pragma('vm:entry-point')
+void overlayMain() {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const RecordingOverlayApp());
 }
 
 class ArenaUserApp extends ConsumerStatefulWidget {
