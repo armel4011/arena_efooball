@@ -164,6 +164,55 @@ class MatchRepository {
   Future<void> flagDisputed(String matchId) async {
     await _client.from(_table).update({'status': 'disputed'}).eq('id', matchId);
   }
+
+  /// Marks the match as forfeited by [forfeitingPlayerId]: status flips
+  /// to `forfeited`, the winner becomes [opponentId], and the
+  /// `finished_at` timestamp is stamped now.
+  ///
+  /// PHASE 8.5 — triggered either by the player tapping "Arrêter
+  /// (forfait)" in the overlay's long-press menu, or automatically
+  /// when the 2-minute pause grace expires. We also drop a
+  /// `forfeit_declared` event into `match_events` so the admin can
+  /// trace why the row flipped.
+  Future<void> markForfeit({
+    required String matchId,
+    required String forfeitingPlayerId,
+    required String opponentId,
+    String? reason,
+  }) async {
+    await _client.from(_table).update({
+      'status': 'forfeited',
+      'winner_id': opponentId,
+      'finished_at': DateTime.now().toUtc().toIso8601String(),
+    }).eq('id', matchId);
+
+    await recordEvent(
+      matchId: matchId,
+      type: 'forfeit_declared',
+      byProfileId: forfeitingPlayerId,
+      payload: {
+        'opponent_id': opponentId,
+        if (reason != null) 'reason': reason,
+      },
+    );
+  }
+
+  /// Generic `match_events` insert. Players may post any event whose
+  /// `created_by` is themselves (RLS enforced — see migration
+  /// `20260506200001_phase5_player_match_room_rls.sql`).
+  Future<void> recordEvent({
+    required String matchId,
+    required String type,
+    required String byProfileId,
+    Map<String, dynamic>? payload,
+  }) async {
+    await _client.from(_eventsTable).insert({
+      'match_id': matchId,
+      'type': type,
+      'created_by': byProfileId,
+      'payload': payload ?? <String, dynamic>{},
+    });
+  }
 }
 
 final matchRepositoryProvider = Provider<MatchRepository>((ref) {
