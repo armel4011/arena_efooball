@@ -60,7 +60,7 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
 
       // Session present — but TOTP must be set up & verified before
       // granting access to the admin home / dashboard.
-      final profile = ref.read(currentProfileProvider).value;
+      final profile = ref.read(currentProfileProvider).valueOrNull;
       if (profile == null) return null; // Still hydrating, let the screen render.
 
       if (!profile.isAdmin) {
@@ -124,7 +124,7 @@ class _AdminHomePlaceholder extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final profile = ref.watch(currentProfileProvider).value;
+    final profile = ref.watch(currentProfileProvider).valueOrNull;
     return Scaffold(
       appBar: AppBar(
         title: Text('Admin — ${profile?.username ?? ''}'),

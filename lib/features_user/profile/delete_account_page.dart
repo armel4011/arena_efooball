@@ -60,7 +60,7 @@ class _DeleteAccountPageState extends ConsumerState<DeleteAccountPage> {
   }
 
   Future<void> _checkPendingEarnings() async {
-    final profile = ref.read(currentProfileProvider).value;
+    final profile = ref.read(currentProfileProvider).valueOrNull;
     if (profile == null) {
       setState(() => _checkingPayments = false);
       return;
@@ -88,7 +88,7 @@ class _DeleteAccountPageState extends ConsumerState<DeleteAccountPage> {
   }
 
   Future<void> _submit() async {
-    final profile = ref.read(currentProfileProvider).value;
+    final profile = ref.read(currentProfileProvider).valueOrNull;
     if (profile == null) return;
     setState(() {
       _submitting = true;

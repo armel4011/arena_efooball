@@ -110,7 +110,14 @@ final userRouterProvider = Provider<GoRouter>((ref) {
 
       // Authenticated. Force CGU acceptance for legacy / SSO accounts
       // that landed here without a `cgu_accepted_at` stamp.
-      final profile = ref.read(currentProfileProvider).value;
+      //
+      // Use `valueOrNull` (not `value`) so a transient profile fetch
+      // failure — typically a SocketException when the device DNS goes
+      // out — doesn't throw inside the router redirect and spam the
+      // console on every refresh tick. Treating the error as "profile
+      // not loaded yet" keeps redirects idempotent until the fetch
+      // recovers.
+      final profile = ref.read(currentProfileProvider).valueOrNull;
       if (profile != null && !profile.hasAcceptedCgu) {
         return loc == UserRoutes.cguAcceptance
             ? null

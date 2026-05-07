@@ -18,7 +18,7 @@ class HomePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final profile = ref.watch(currentProfileProvider).value;
+    final profile = ref.watch(currentProfileProvider).valueOrNull;
 
     return RefreshIndicator(
       onRefresh: () async {

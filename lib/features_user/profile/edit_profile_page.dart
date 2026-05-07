@@ -52,7 +52,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   @override
   void initState() {
     super.initState();
-    final profile = ref.read(currentProfileProvider).value;
+    final profile = ref.read(currentProfileProvider).valueOrNull;
     _usernameCtrl = TextEditingController(text: profile?.username ?? '');
     _avatarColor = profile?.avatarColor ?? AvatarPalette.colors.first;
     _countryCode = profile?.countryCode ?? 'CM';
@@ -66,7 +66,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
 
   Future<void> _save() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
-    final profile = ref.read(currentProfileProvider).value;
+    final profile = ref.read(currentProfileProvider).valueOrNull;
     if (profile == null) return;
 
     setState(() {

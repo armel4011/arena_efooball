@@ -77,7 +77,7 @@ class _PreferencesSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final profile = ref.watch(currentProfileProvider).value;
+    final profile = ref.watch(currentProfileProvider).valueOrNull;
 
     return ArenaCard(
       padding: EdgeInsets.zero,
@@ -137,7 +137,7 @@ class _AccountSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final profile = ref.watch(currentProfileProvider).value;
+    final profile = ref.watch(currentProfileProvider).valueOrNull;
 
     return ArenaCard(
       padding: EdgeInsets.zero,
