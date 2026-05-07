@@ -18,9 +18,10 @@ environment:
 #   - PHASE 2   : google_sign_in, sign_in_with_apple, reactive_forms
 #   - PHASE 2bis: otp, qr_flutter
 #   - PHASE 6   : agora_rtm
-#   - PHASE 8   : agora_rtc_engine, flutter_screen_recording,
+#   - PHASE 8a (active) : agora_rtc_engine, flutter_screen_recording,
 #                 flutter_overlay_window, installed_apps, app_usage,
-#                 flutter_foreground_task, live_activities
+#                 flutter_foreground_task, permission_handler, file_picker
+#   - PHASE 8b (Apple Dev requis) : live_activities
 #   - PHASE 10  : firebase_core, firebase_messaging
 #   - PHASE 11bis: webview_flutter
 # ─────────────────────────────────────────────────────────────────
@@ -82,6 +83,16 @@ dependencies:
   otp: ^3.1.4
   qr_flutter: ^4.1.0
 
+  # ─── PHASE 8 — Anti-cheat + Streaming Agora sélectif ───────
+  agora_rtc_engine: ^6.6.3
+  flutter_screen_recording: ^2.0.25
+  flutter_overlay_window: ^0.5.0
+  installed_apps: ^2.1.1
+  app_usage: ^4.1.0
+  flutter_foreground_task: ^9.2.2
+  permission_handler: ^11.3.1
+  file_picker: ^8.1.2
+
   # ─── DEFERRED (à activer dans leur PHASE) ──────────────────
   #
   # PHASE 2.3 — Social SSO (native config required)
@@ -91,13 +102,7 @@ dependencies:
   # PHASE 6 — Chat présence
   # agora_rtm: ^2.2.6
   #
-  # PHASE 8 — Streaming + Anti-cheat
-  # agora_rtc_engine: ^6.6.3
-  # flutter_screen_recording: ^2.0.25
-  # flutter_overlay_window: ^0.5.0
-  # installed_apps: ^2.1.1
-  # app_usage: ^4.1.0
-  # flutter_foreground_task: ^9.2.2
+  # PHASE 8b — iOS Live Activity (requiert compte Apple Developer)
   # live_activities: ^2.4.9
   #
   # PHASE 10 — Push notifications
@@ -106,6 +111,22 @@ dependencies:
   #
   # PHASE 11bis — Paiements
   # webview_flutter: ^4.10.0
+
+# ─────────────────────────────────────────────────────────────────
+# DEPENDENCY OVERRIDES — résolution conflits transitifs PHASE 8
+# ─────────────────────────────────────────────────────────────────
+# Deux conflits côté Phase 8 :
+#   1. `ffi` — agora_rtc_engine épingle ^1.1.2, sentry_flutter ^9 veut ^2.0.0.
+#      ffi 2.x est rétro-compatible 1.x pour l'API utilisée par Agora
+#      (Pointer, Struct, allocators).
+#   2. `js` — agora_rtc_engine veut ^0.6.3, flutter_screen_recording (web)
+#      veut ^0.7.1. js 0.7 reste backward compatible pour l'interop JS
+#      qu'Agora utilise côté web (qui n'est de toute façon pas une cible
+#      build de l'app, on est mobile-only).
+# À retester à chaque bump d'Agora, Sentry ou flutter_screen_recording.
+dependency_overrides:
+  ffi: ^2.1.0
+  js: ^0.7.1
 
 dev_dependencies:
   flutter_test:

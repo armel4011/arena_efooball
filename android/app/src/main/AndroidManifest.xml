@@ -1,4 +1,40 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- =========================================================
+         PHASE 8 — Anti-cheat + Streaming permissions
+         ========================================================= -->
+
+    <!-- Recording d'écran (MediaProjection API) -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+
+    <!-- Bouton flottant overlay par-dessus eFootball -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <!-- Required by flutter_overlay_window's foreground service on
+         Android 14+ (targetSdk 34). The "specialUse" subtype must
+         be paired with a textual rationale shown in app store reviews. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
+    <!-- Détection du jeu lancé (app_usage) -->
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
+
+    <!-- Notifications (Android 13+ runtime + foreground service notif) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Upload manuel d'une vidéo depuis la galerie (Android 13+) -->
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <!-- Fallback Android 12 et inférieur -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+
+    <!-- Internet (Agora streaming + Supabase upload) -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
     <application
         android:label="@string/app_name"
         android:name="${applicationName}"
@@ -41,6 +77,20 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- PHASE 8.4 — flutter_overlay_window foreground service.
+             Hosts the floating "ARENA recording" button rendered on
+             top of eFootball. The "specialUse" subtype is the only
+             FGS subtype that fits an anti-cheat overlay on
+             Android 14+. -->
+        <service
+            android:name="flutter.overlay.window.flutter_overlay_window.OverlayService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="anti_cheat_overlay_during_match" />
+        </service>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
@@ -52,5 +102,12 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+
+        <!-- PHASE 8.2 — Détection de l'installation des jeux ciblés.
+             `installed_apps` interroge ces packages spécifiques sans
+             requérir QUERY_ALL_PACKAGES (banni Play Store sauf cas
+             validés). -->
+        <package android:name="jp.konami.pesam" />        <!-- eFootball -->
+        <package android:name="com.ea.gp.fifamobile" />   <!-- FIFA / EA FC Mobile -->
     </queries>
 </manifest>
