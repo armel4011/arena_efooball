@@ -4,6 +4,7 @@ import 'package:arena/core/theme/arena_typography.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/competitions/competitions_list_page.dart';
 import 'package:arena/features_user/home/home_page.dart';
+import 'package:arena/features_user/profile/player_profile_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -32,12 +33,7 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
       subtitle: 'Salons hybrides Supabase Realtime + Agora RTM — à venir.',
       icon: Icons.chat_bubble_outline,
     ),
-    _PhasePlaceholder(
-      phase: 'PHASE 9',
-      title: 'PROFIL',
-      subtitle: 'Settings, suppression compte (RGPD), badges — à venir.',
-      icon: Icons.person_outline,
-    ),
+    PlayerProfilePage(),
   ];
 
   @override

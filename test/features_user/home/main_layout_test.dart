@@ -1,6 +1,9 @@
+import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/models/competition.dart';
+import 'package:arena/data/models/player_stats.dart';
 import 'package:arena/data/models/profile.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
+import 'package:arena/data/repositories/match_stats_repository.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/home/main_layout.dart';
 import 'package:flutter/material.dart';
@@ -21,6 +24,12 @@ Widget _scoped() => ProviderScope(
         // touching Supabase (which isn't initialized in widget tests).
         competitionsListProvider
             .overrideWith((ref, _) => Stream<List<Competition>>.value([])),
+        // Stub the profile-tab providers so PlayerProfilePage doesn't
+        // try to hit Supabase at mount time.
+        playerStatsProvider
+            .overrideWith((ref, _) async => const PlayerStats.empty()),
+        playerRecentMatchesProvider
+            .overrideWith((ref, _) async => const <ArenaMatch>[]),
       ],
       child: const MaterialApp(home: MainLayout()),
     );
@@ -74,7 +83,10 @@ void main() {
     await tester.tap(find.text('Profil'));
     await tester.pumpAndSettle();
 
-    expect(find.text('PHASE 9'), findsOneWidget);
+    // PlayerProfilePage shows the username and the stats label, plus
+    // the AppBar exposes the logout button on tab 3.
+    expect(find.text('Maradona'), findsOneWidget);
+    expect(find.text('STATS'), findsOneWidget);
     expect(find.byIcon(Icons.logout), findsOneWidget);
   });
 
@@ -83,6 +95,7 @@ void main() {
     await tester.pumpWidget(_scoped());
     await tester.pumpAndSettle();
 
+    // Home tab shows the uppercase greeting.
     expect(find.text('MARADONA'), findsOneWidget);
 
     await tester.tap(find.text('Profil'));

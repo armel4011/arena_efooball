@@ -14,6 +14,9 @@ import 'package:arena/features_user/competitions/competition_detail_page.dart';
 import 'package:arena/features_user/home/main_layout.dart';
 import 'package:arena/features_user/match/match_room_page.dart';
 import 'package:arena/features_user/onboarding/onboarding_page.dart';
+import 'package:arena/features_user/profile/delete_account_page.dart';
+import 'package:arena/features_user/profile/edit_profile_page.dart';
+import 'package:arena/features_user/settings/settings_page.dart';
 import 'package:arena/features_user/streaming/live_streams_page.dart';
 import 'package:arena/features_user/streaming/watch_stream_page.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -38,6 +41,9 @@ abstract final class UserRoutes {
   static const matchChat = '/chat/match/:id';
   static const liveStreams = '/streams';
   static const watchStream = '/streams/watch/:id';
+  static const profileEdit = '/profile/edit';
+  static const profileDelete = '/profile/delete';
+  static const settings = '/settings';
   static const devPreview = '/dev/preview';
 
   /// Builds the concrete `/competitions/<id>` URL — go_router parses
@@ -212,6 +218,21 @@ final userRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => WatchStreamPage(
           matchId: state.pathParameters['id'] ?? '',
         ),
+      ),
+      GoRoute(
+        path: UserRoutes.profileEdit,
+        name: 'user.profileEdit',
+        builder: (context, state) => const EditProfilePage(),
+      ),
+      GoRoute(
+        path: UserRoutes.profileDelete,
+        name: 'user.profileDelete',
+        builder: (context, state) => const DeleteAccountPage(),
+      ),
+      GoRoute(
+        path: UserRoutes.settings,
+        name: 'user.settings',
+        builder: (context, state) => const SettingsPage(),
       ),
       GoRoute(
         path: UserRoutes.devPreview,
