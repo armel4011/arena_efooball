@@ -1,0 +1,147 @@
+{
+  "$schema": "https://arena.app/schemas/screens-manifest-v2.json",
+  "version": "2.0",
+  "totalScreens": 54,
+  "userScreens": 35,
+  "adminScreens": 19,
+  "implementationStrategy": {
+    "approach": "single-session-with-compact",
+    "wave_size": 14,
+    "checkpoint_every_n_screens": 7,
+    "compact_after_each_wave": true,
+    "validation_after_each_wave": true
+  },
+  "executionOrder": [
+    {
+      "wave": 0,
+      "name": "FOUNDATIONS",
+      "screens": [],
+      "tasks": [
+        "Audit code existant (Phase 9) vs preview HTML",
+        "Backup du code actuel via git tag pre-arena-v2-rebuild",
+        "Création/mise à jour de lib/core/theme/arena_theme.dart",
+        "Extraction des 17 widgets partagés dans lib/shared/widgets/",
+        "Création de la widget gallery dev (route /_dev/widgets)"
+      ],
+      "estimatedDurationMinutes": 90,
+      "checkpoint": "Lance flutter run, navigue vers /_dev/widgets, valide visuellement les 17 widgets vs preview HTML"
+    },
+    {
+      "wave": 1,
+      "name": "USER · ONBOARDING & AUTH (8) + CORE (6 premiers)",
+      "screens": [
+        {"id": "#1", "name": "OnboardingPage", "path": "lib/features_user/onboarding/onboarding_page.dart", "complexity": "low", "phaseRef": "0.5"},
+        {"id": "#2", "name": "SplashUserScreen", "path": "lib/features_user/auth/splash_user_screen.dart", "complexity": "low", "phaseRef": "2"},
+        {"id": "#3", "name": "LoginUserScreen", "path": "lib/features_user/auth/login_user_screen.dart", "complexity": "medium", "phaseRef": "2.1+2.3"},
+        {"id": "#4", "name": "RegisterUserScreen", "path": "lib/features_user/auth/register_user_screen.dart", "complexity": "medium", "phaseRef": "2.1+2.4", "notes": "3-step stepper"},
+        {"id": "#5", "name": "ForgotPasswordPage", "path": "lib/features_user/auth/forgot_password_page.dart", "complexity": "low", "phaseRef": "2.2"},
+        {"id": "#6", "name": "ResetPasswordPage", "path": "lib/features_user/auth/reset_password_page.dart", "complexity": "medium", "phaseRef": "2.2", "notes": "deep link arenaapp://reset-password"},
+        {"id": "#7", "name": "LinkExistingAccountPage", "path": "lib/features_user/auth/link_existing_account_page.dart", "complexity": "medium", "phaseRef": "2.3"},
+        {"id": "#8", "name": "CGUAcceptancePage", "path": "lib/features_user/auth/cgu_acceptance_page.dart", "complexity": "low", "phaseRef": "2.4"},
+        {"id": "#9", "name": "HomePage", "path": "lib/features_user/home/home_page.dart", "complexity": "high", "phaseRef": "3", "notes": "bottom nav: Home/Comp/Chat/Profil"},
+        {"id": "#10", "name": "CompetitionsListPage", "path": "lib/features_user/competitions/competitions_list_page.dart", "complexity": "medium", "phaseRef": "4"},
+        {"id": "#11", "name": "CompetitionDetailPage", "path": "lib/features_user/competitions/competition_detail_page.dart", "complexity": "high", "phaseRef": "4", "notes": "4 tabs"},
+        {"id": "#12", "name": "RegistrationConfirmPage", "path": "lib/features_user/competitions/registration_confirm_page.dart", "complexity": "low", "phaseRef": "4+11bis"},
+        {"id": "#13", "name": "MatchRoomPage", "path": "lib/features_user/match_room/match_room_page.dart", "complexity": "critical", "phaseRef": "5", "star": true, "notes": "LE COEUR ARENA - 4-step stepper"},
+        {"id": "#14", "name": "MatchHistoryPage", "path": "lib/features_user/profile/match_history_page.dart", "complexity": "medium", "phaseRef": "9"}
+      ],
+      "compactAfter": true,
+      "checkpoint": "git commit -m 'wave 1 — auth + core 1/2'. Lance simulateur, teste login → home → comp list."
+    },
+    {
+      "wave": 2,
+      "name": "USER · CORE (5 derniers) + BRACKET (2) + STREAMING (2) + PROFIL (5)",
+      "screens": [
+        {"id": "#15", "name": "MessagesInboxPage", "path": "lib/features_user/chat/messages_inbox_page.dart", "complexity": "medium", "phaseRef": "6"},
+        {"id": "#16", "name": "ChatPage", "path": "lib/features_user/chat/chat_page.dart", "complexity": "high", "phaseRef": "6", "notes": "with room_code bubble (cyan)"},
+        {"id": "#17", "name": "MatchInProgressOverlay", "path": "lib/features_user/recording/match_in_progress_overlay.dart", "complexity": "high", "phaseRef": "8", "notes": "72dp floating button overlay, requires flutter_overlay_window"},
+        {"id": "#18", "name": "RecordingErrorPage", "path": "lib/features_user/recording/recording_error_page.dart", "complexity": "low", "phaseRef": "8"},
+        {"id": "#19", "name": "NotificationsPage", "path": "lib/features_user/notifications/notifications_page.dart", "complexity": "medium", "phaseRef": "10"},
+        {"id": "#20", "name": "BracketViewPage", "path": "lib/features_user/bracket/bracket_view_page.dart", "complexity": "high", "phaseRef": "4"},
+        {"id": "#21", "name": "GroupStandingsPage", "path": "lib/features_user/bracket/group_standings_page.dart", "complexity": "medium", "phaseRef": "4"},
+        {"id": "#22", "name": "LiveStreamsPage", "path": "lib/features_user/streaming/live_streams_page.dart", "complexity": "medium", "phaseRef": "8.7"},
+        {"id": "#23", "name": "WatchStreamPage", "path": "lib/features_user/streaming/watch_stream_page.dart", "complexity": "high", "phaseRef": "8.7", "notes": "Agora RTC subscriber + chat"},
+        {"id": "#24", "name": "PlayerProfilePage", "path": "lib/features_user/profile/player_profile_page.dart", "complexity": "medium", "phaseRef": "9.1"},
+        {"id": "#25", "name": "EditProfilePage", "path": "lib/features_user/profile/edit_profile_page.dart", "complexity": "medium", "phaseRef": "9.1"},
+        {"id": "#26", "name": "SettingsPage", "path": "lib/features_user/profile/settings_page.dart", "complexity": "medium", "phaseRef": "9.2"},
+        {"id": "#27", "name": "DeleteAccountPage", "path": "lib/features_user/profile/delete_account_page.dart", "complexity": "medium", "phaseRef": "9.3"},
+        {"id": "#28", "name": "AboutPage", "path": "lib/features_user/profile/about_page.dart", "complexity": "low", "phaseRef": "9"}
+      ],
+      "compactAfter": true,
+      "checkpoint": "git commit -m 'wave 2 — core complet + bracket + streaming + profil'. Test full navigation user."
+    },
+    {
+      "wave": 3,
+      "name": "USER · PAIEMENTS (7) + ADMIN · AUTH (5)",
+      "screens": [
+        {"id": "P1", "name": "PaymentMethodPickerPage", "path": "lib/features_user/payments/payment_method_picker_page.dart", "complexity": "medium", "phaseRef": "11bis"},
+        {"id": "P2", "name": "MobileMoneyDetailsPage", "path": "lib/features_user/payments/mobile_money_details_page.dart", "complexity": "medium", "phaseRef": "11bis"},
+        {"id": "P3", "name": "PaymentProcessingPage", "path": "lib/features_user/payments/payment_processing_page.dart", "complexity": "high", "phaseRef": "11bis", "notes": "WebView CinetPay/NowPayments"},
+        {"id": "P4", "name": "PaymentSuccessPage", "path": "lib/features_user/payments/payment_success_page.dart", "complexity": "low", "phaseRef": "11bis"},
+        {"id": "P5", "name": "PaymentFailedPage", "path": "lib/features_user/payments/payment_failed_page.dart", "complexity": "low", "phaseRef": "11bis"},
+        {"id": "P6", "name": "PaymentHistoryPage", "path": "lib/features_user/payments/payment_history_page.dart", "complexity": "medium", "phaseRef": "11bis"},
+        {"id": "P7", "name": "PayoutKYCPage", "path": "lib/features_user/payouts/payout_kyc_page.dart", "complexity": "high", "phaseRef": "11bis", "notes": "image upload + Supabase Storage"},
+        {"id": "A1", "name": "SplashAdminScreen", "path": "lib/features_admin/auth_admin/splash_admin_screen.dart", "complexity": "low", "phaseRef": "2bis"},
+        {"id": "A2", "name": "LoginAdminScreen", "path": "lib/features_admin/auth_admin/login_admin_screen.dart", "complexity": "medium", "phaseRef": "2bis"},
+        {"id": "A3", "name": "InvitationRedeemScreen", "path": "lib/features_admin/auth_admin/invitation_redeem_screen.dart", "complexity": "medium", "phaseRef": "2bis"},
+        {"id": "A4", "name": "TOTPSetupScreen", "path": "lib/features_admin/auth_admin/totp_setup_screen.dart", "complexity": "high", "phaseRef": "2bis", "notes": "QR + 10 backup codes"},
+        {"id": "A5", "name": "TOTPVerifyScreen", "path": "lib/features_admin/auth_admin/totp_verify_screen.dart", "complexity": "medium", "phaseRef": "2bis"}
+      ],
+      "compactAfter": true,
+      "checkpoint": "git commit -m 'wave 3 — paiements + admin auth'. Test flow paiement complet."
+    },
+    {
+      "wave": 4,
+      "name": "ADMIN · CORE (5) + OPS (4) + SUPER (4) + AUDIT (1)",
+      "screens": [
+        {"id": "A6", "name": "AdminDashboardPage", "path": "lib/features_admin/dashboard/admin_dashboard_page.dart", "complexity": "high", "phaseRef": "11"},
+        {"id": "A7", "name": "AdminCompetitionsListPage", "path": "lib/features_admin/competitions_admin/admin_competitions_list_page.dart", "complexity": "medium", "phaseRef": "11"},
+        {"id": "A8", "name": "CreateCompetitionPage", "path": "lib/features_admin/competitions_admin/create_competition_page.dart", "complexity": "high", "phaseRef": "11", "notes": "5-step stepper"},
+        {"id": "A9", "name": "AdminCompetitionDetailPage", "path": "lib/features_admin/competitions_admin/admin_competition_detail_page.dart", "complexity": "high", "phaseRef": "11", "notes": "5 admin tabs"},
+        {"id": "A10", "name": "AdminMatchesListPage", "path": "lib/features_admin/matches_admin/admin_matches_list_page.dart", "complexity": "medium", "phaseRef": "11"},
+        {"id": "A11", "name": "AdminBracketManagementPage", "path": "lib/features_admin/bracket_admin/admin_bracket_management_page.dart", "complexity": "high", "phaseRef": "11"},
+        {"id": "A12", "name": "AdminStreamModerationPage", "path": "lib/features_admin/streams_admin/admin_stream_moderation_page.dart", "complexity": "critical", "phaseRef": "11", "notes": "multi-Agora subscriber 6 streams"},
+        {"id": "A13", "name": "AdminPayoutsPage", "path": "lib/features_admin/payouts_admin/admin_payouts_page.dart", "complexity": "critical", "phaseRef": "11", "star": true, "notes": "5 auto-controls + batch anti-error"},
+        {"id": "A14", "name": "AdminDisputesPage", "path": "lib/features_admin/disputes_admin/admin_disputes_page.dart", "complexity": "high", "phaseRef": "11", "notes": "replay + chat + 3 buttons + justification"},
+        {"id": "SA1", "name": "SuperAdminDashboard", "path": "lib/features_admin/super_admin/super_admin_dashboard.dart", "complexity": "high", "phaseRef": "12", "notes": "fl_chart KPIs"},
+        {"id": "SA2", "name": "SuperAdminInvitations", "path": "lib/features_admin/super_admin/super_admin_invitations.dart", "complexity": "medium", "phaseRef": "12"},
+        {"id": "SA3", "name": "SuperAdminUsers", "path": "lib/features_admin/super_admin/super_admin_users.dart", "complexity": "high", "phaseRef": "12", "notes": "ban/unban/audit"},
+        {"id": "SA4", "name": "SuperAdminRevenue", "path": "lib/features_admin/super_admin/super_admin_revenue.dart", "complexity": "high", "phaseRef": "12", "notes": "CSV export"},
+        {"id": "A15", "name": "AdminAuditLogPage", "path": "lib/features_admin/audit/admin_audit_log_page.dart", "complexity": "medium", "phaseRef": "11", "notes": "v2.0 NEW"}
+      ],
+      "compactAfter": false,
+      "checkpoint": "git commit -m 'wave 4 — admin complet'. Audit final visuel des 54 écrans."
+    }
+  ],
+  "trackingFile": "screens_progress.json",
+  "globalCheckpoints": [
+    {
+      "name": "PRE_FLIGHT",
+      "trigger": "before_wave_0",
+      "actions": [
+        "git status (must be clean)",
+        "git tag pre-arena-v2-rebuild",
+        "flutter clean && flutter pub get"
+      ]
+    },
+    {
+      "name": "MID_FLIGHT",
+      "trigger": "after_wave_2",
+      "actions": [
+        "Visual diff: simulateur user app vs arena_v2.html (10 écrans aléatoires)",
+        "Riverpod providers tree review (no orphan)",
+        "Run flutter analyze (warnings == 0)"
+      ]
+    },
+    {
+      "name": "FINAL",
+      "trigger": "after_wave_4",
+      "actions": [
+        "Build user app (release)",
+        "Build admin app (release)",
+        "Visual diff complet 54 écrans",
+        "Generate goldens for regression"
+      ]
+    }
+  ]
+}

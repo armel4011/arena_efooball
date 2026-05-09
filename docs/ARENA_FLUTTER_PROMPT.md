@@ -1,6 +1,17 @@
 # 🎮 ARENA — Prompt Maître pour Flutter + Claude + Cursor
 
-> **📝 Version 1.1** (mai 2026) — corrections de cohérence avec `ARENA_MASTER_PROMPT.md`
+> **📝 Version 2.0** (mai 2026) — corrections de cohérence avec `ARENA_MASTER_PROMPT.md` v2.0
+>
+> **Changelog v2.0** :
+> - ✅ Design tokens migrés vers DESIGN_KIT canonique (couleurs + polices)
+>   - Polices : Bebas Neue + Space Grotesk + Instrument Serif + JetBrains Mono
+>     (avant : Orbitron + Nunito + Fira Code)
+>   - Couleurs : void #0A0A0F, carbon #14141C, signalBlue #4C7AFF, neonRed #FF2D55,
+>     statusOk #00C896 (avant : bg #07080F, surface #11131C, secondary #FF3D5A,
+>     success #0FE893)
+> - ✅ Décompte écrans corrigé : 47 → **54** (35 USER + 19 ADMIN)
+> - ✅ Nouvelles références : `arena_v2.html` (preview), `ARENA_54_ECRANS.md` (spec),
+>   `lib/core/theme/arena_theme.dart` (implémentation Dart)
 >
 > **Changelog v1.1** :
 > - ✅ Numérotation des tables nettoyée : **1 → 26** continue (avant : `6 BIS`, `14 TER`, etc.)
@@ -125,7 +136,7 @@ Tu dois :
 | **Live Activity (iOS 16.1+)** | `live_activities` ^2.0 | Notification persistante côté iOS |
 | **Notifications** | `firebase_messaging` ^15.0 + `flutter_local_notifications` | Push background + toasts in-app |
 | **Auth sociale** | `google_sign_in` + `sign_in_with_apple` | Imposé |
-| **Polices** | `google_fonts` ^6.2 | Charge Orbitron/Nunito/Fira Code |
+| **Polices** | `google_fonts` ^6.2 | Charge Bebas Neue / Space Grotesk / Instrument Serif / JetBrains Mono |
 | **Modèles de données** | `freezed` ^2.5 + `json_serializable` | Immutabilité, copyWith, fromJson auto |
 | **Stockage local** | `flutter_secure_storage` (tokens) + `shared_preferences` (prefs) | Standard |
 | **Validation forms** | `reactive_forms` ^17.0 OU validation manuelle | Au choix |
@@ -135,7 +146,7 @@ Tu dois :
 | **Format devises** | `intl` `NumberFormat.currency` | Affichage devise localisé (1 234,56 € vs $1,234.56) |
 | **Fuseaux horaires** | `timezone` ^0.9 | Convertir les `timestamptz` Supabase en heure locale joueur |
 | **RTL support** | Built-in Flutter (`Directionality`) | Auto pour arabe, mais widgets custom à tester |
-| **Polices arabes** | `google_fonts` (Cairo, Tajawal) | Pour le texte arabe (Orbitron ne supporte pas l'arabe) |
+| **Polices arabes** | `google_fonts` (Cairo, Tajawal) | Pour le texte arabe (Bebas Neue ne supporte pas l'arabe) |
 | **Paiements Afrique francophone** | `webview_flutter` ^4.7 + CinetPay API | CEMAC + UEMOA : MoMo MTN, Orange Money, Wave, Moov |
 | **Paiements Afrique anglophone + Maghreb** | `flutterwave_standard` ^1.0 + WebView | NG, GH, KE, ZA, MA, EG, RW, UG, TZ : cartes locales, M-Pesa, NGN bank transfer, USSD |
 | **Paiements crypto (mondial fallback)** | `webview_flutter` + NowPayments API | USDT (TRC20), BTC, ETH |
@@ -516,36 +527,52 @@ Créer `.vscode/launch.json` pour avoir les 2 configs en un clic :
 
 ---
 
-## 🎨 IDENTITÉ VISUELLE (à respecter strictement)
+## 🎨 IDENTITÉ VISUELLE (DESIGN_KIT canonique — v2.0 mai 2026)
 
 ```dart
-// core/theme/colors.dart
+// core/theme/arena_theme.dart (source unique de vérité)
+// Voir aussi : ARENA_DESIGN_KIT.md + arena_v2.html (preview HTML)
 class ArenaColors {
-  static const background = Color(0xFF07080F);      // Fond principal
-  static const surface = Color(0xFF11131C);         // Cartes
-  static const surfaceLight = Color(0xFF1A1D2A);    // Cartes hover
+  ArenaColors._();
 
-  static const primary = Color(0xFF4C7AFF);         // Bleu électrique
-  static const secondary = Color(0xFFFF3D5A);       // Rouge live/urgent
-  static const success = Color(0xFF0FE893);         // Vert
-  static const warning = Color(0xFFFFAA00);         // Ambre
+  // Backgrounds
+  static const void_ = Color(0xFF0A0A0F);          // bg principal
+  static const carbon = Color(0xFF14141C);         // surface (cards)
+  static const carbon2 = Color(0xFF1C1C26);        // élévations
+
+  // Brand
+  static const signalBlue = Color(0xFF4C7AFF);     // USER primary (bleu signal)
+  static const neonRed = Color(0xFFFF2D55);        // ADMIN/LIVE secondary
+
+  // Status
+  static const statusOk = Color(0xFF00C896);
+  static const statusWarn = Color(0xFFFFB020);
 
   // Couleurs jeux
-  static const efootball = Color(0xFF18E8D4);       // Cyan
-  static const fifa = Color(0xFFFFAA00);            // Ambre
-  static const fcMobile = Color(0xFFFF6A1A);        // Orange
+  static const gameEfoot = Color(0xFF00B4D8);      // eFootball (cyan)
+  static const gameFifa = Color(0xFF06D6A0);       // FIFA Mobile (vert)
+  static const gameFc = Color(0xFFF77F00);         // EA SPORTS FC Mobile (orange)
 
   // Texte
-  static const textPrimary = Color(0xFFEEF1F8);
-  static const textSecondary = Color(0xFF8A93A6);
-  static const textMuted = Color(0xFF555B6E);
+  static const bone = Color(0xFFF5F5F0);           // texte principal
+  static const silver = Color(0xFF8B8B95);         // texte secondaire
+  static const silverDim = Color(0xFF5A5A65);      // texte tertiaire
+
+  // Borders
+  static const border = Color(0x0FFFFFFF);         // 6% white
+  static const borderHi = Color(0x1FFFFFFF);       // 12% white
 }
 ```
 
-**Polices (via `google_fonts`) :**
-- `Orbitron` → titres, codes match, badges
-- `Nunito` → texte courant
-- `Fira Code` → scores, codes room, IDs
+> ⚠️ **Note historique** : la v1.0 utilisait des tokens différents (bg #07080F, surface #11131C, secondary #FF3D5A, success #0FE893, gameFifa orange). Si du code Phase 9 utilise encore ces anciens tokens, ils devront être migrés vers les nouveaux noms.
+
+**Polices (via `google_fonts` ^6.2 — DESIGN_KIT canonique) :**
+- `Bebas Neue` → titres (h1, h2, hero, scores, app bar)
+- `Space Grotesk` → texte courant, body, boutons, labels
+- `Instrument Serif` (italic) → taglines, accents typographiques
+- `JetBrains Mono` → scores, codes room, IDs, montants
+
+> ⚠️ **Note historique** : la v1.0 prescrivait Orbitron/Nunito/Fira Code. La v2.0 s'aligne sur ARENA_DESIGN_KIT.md et la preview arena_v2.html.
 
 **Style UI :**
 - Theme **dark only**
@@ -562,8 +589,8 @@ class ArenaColors {
 
 | Langue | Code | Police | RTL | Architecture | V1.0 | V1.1 | V1.2 |
 |---|---|---|---|---|---|---|---|
-| Français | `fr` | Nunito + Orbitron | Non | ✅ Coder | ✅ Activé | ✅ | ✅ |
-| English | `en` | Nunito + Orbitron | Non | ✅ Coder | ⏸️ Désactivé | ✅ Activé | ✅ |
+| Français | `fr` | Space Grotesk + Bebas Neue | Non | ✅ Coder | ✅ Activé | ✅ | ✅ |
+| English | `en` | Space Grotesk + Bebas Neue | Non | ✅ Coder | ⏸️ Désactivé | ✅ Activé | ✅ |
 | العربية | `ar` | Cairo + Tajawal | Oui | ✅ Coder | ⏸️ Désactivé | ⏸️ | ✅ Activé |
 
 **Logique d'activation** :
@@ -763,7 +790,7 @@ ARENA supporte **3 formats configurables** par l'admin lors de la création de l
 - Chaque match est une **carte cliquable** (tap → ouvre bottom sheet avec détails)
 - Animations Hero entre la liste des matchs et le détail
 - Lignes de connexion animées entre les rounds (subtilité : elles s'illuminent quand un match avance)
-- Couleurs : vainqueur en vert (`#0FE893`), perdant en rouge atténué, en cours en bleu (`#4C7AFF`)
+- Couleurs : vainqueur en vert (`#00C896`), perdant en rouge atténué, en cours en bleu (`#4C7AFF`)
 - Le joueur connecté voit **son propre nom mis en évidence** dans tout le bracket (badge "TOI")
 - Pour les groupes : tableau de classement classique avec points / GF / GC / Diff
 
@@ -2564,7 +2591,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
 
 **À créer :**
 - `core/theme/colors.dart` (palette ARENA)
-- `core/theme/typography.dart` (Orbitron/Nunito/Fira Code via google_fonts)
+- `core/theme/typography.dart` (Bebas Neue / Space Grotesk / Instrument Serif / JetBrains Mono via google_fonts)
 - `core/theme/theme.dart` (ThemeData dark complet)
 - `core/router/app_router.dart` (GoRouter avec routes vides pour l'instant)
 - `core/widgets/arena_button.dart` (3 variantes : primary, ghost, danger)
@@ -2807,7 +2834,7 @@ TextTheme buildTextTheme(Locale locale) {
 - [ ] Le widget `LocalizedAmount(amountUsd: 5.0)` affiche `2 800 XAF` pour un user CM
 - [ ] Les taux de change se mettent à jour automatiquement
 - [ ] Le code utilise `EdgeInsetsDirectional` partout (RTL-ready)
-- [ ] Polices Cairo/Tajawal chargées si AR activé (sinon Nunito/Orbitron)
+- [ ] Polices Cairo/Tajawal chargées si AR activé (sinon Space Grotesk/Bebas Neue)
 
 ---
 
@@ -3124,7 +3151,7 @@ serve(async (req) => {
 **Écran `SplashAdminScreen`** :
 - Background rouge sombre (différencié de l'app User)
 - Logo ARENA Admin (avec icône bouclier)
-- Titre "ARENA Admin" en Orbitron
+- Titre "ARENA Admin" en Bebas Neue
 - Sous-titre "Accès Administrateur"
 - 2 boutons :
   - "SE CONNECTER" → `LoginAdminScreen`
@@ -3835,8 +3862,8 @@ Créer le bouton flottant compact qui reste visible par-dessus toutes les apps.
 
 **Spec UI** (selon ton choix : compact) :
 - Taille : 72dp × 72dp (cercle parfait)
-- Background : gradient rouge (`#FF3D5A` → `#FF6A1A`) avec glow
-- Contenu : point rouge pulsant + timer Fira Code "MM:SS"
+- Background : gradient rouge (`#FF2D55` → `#FF6A1A`) avec glow
+- Contenu : point rouge pulsant + timer JetBrains Mono "MM:SS"
 - Glissable (l'utilisateur peut le déplacer où il veut)
 - Tap court → ouvre ARENA en premier plan
 - Tap long → demande de stop (déclenche dialogue de verrouillage)
@@ -3891,8 +3918,8 @@ class _ArenaRecOverlayState extends State<ArenaRecOverlay> {
           width: 72, height: 72,
           decoration: BoxDecoration(
             shape: BoxShape.CIRCLE,
-            gradient: LinearGradient(colors: [Color(0xFFFF3D5A), Color(0xFFFF6A1A)]),
-            boxShadow: [BoxShadow(color: Color(0xFFFF3D5A).withOpacity(0.6), blurRadius: 20)],
+            gradient: LinearGradient(colors: [Color(0xFFFF2D55), Color(0xFFFF6A1A)]),
+            boxShadow: [BoxShadow(color: Color(0xFFFF2D55).withOpacity(0.6), blurRadius: 20)],
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,

@@ -5,9 +5,19 @@ import 'package:arena/core/i18n/i18n_service.dart';
 import 'package:arena/core/theme/arena_colors.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/core/theme/arena_typography.dart';
+import 'package:arena/features_shared/widgets/arena_app_bar.dart';
+import 'package:arena/features_shared/widgets/arena_avatar.dart';
+import 'package:arena/features_shared/widgets/arena_badge.dart';
+import 'package:arena/features_shared/widgets/arena_banner.dart';
+import 'package:arena/features_shared/widgets/arena_bottom_nav.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_card.dart';
+import 'package:arena/features_shared/widgets/arena_dialog.dart';
+import 'package:arena/features_shared/widgets/arena_divider.dart';
+import 'package:arena/features_shared/widgets/arena_floating_button.dart';
 import 'package:arena/features_shared/widgets/arena_loading_indicator.dart';
+import 'package:arena/features_shared/widgets/arena_phone_frame.dart';
+import 'package:arena/features_shared/widgets/arena_stepper.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:arena/features_shared/widgets/error_state.dart';
@@ -68,8 +78,318 @@ class DevPreviewPage extends StatelessWidget {
             title: 'ÉTATS VIDES / ERREUR',
             child: _StatesGallery(),
           ),
+          SizedBox(height: ArenaSpacing.xl),
+          _Section(title: 'AVATARS', child: _AvatarsGallery()),
+          SizedBox(height: ArenaSpacing.xl),
+          _Section(title: 'BADGES', child: _BadgesGallery()),
+          SizedBox(height: ArenaSpacing.xl),
+          _Section(title: 'APP BAR', child: _AppBarGallery()),
+          SizedBox(height: ArenaSpacing.xl),
+          _Section(title: 'BOTTOM NAV', child: _BottomNavGallery()),
+          SizedBox(height: ArenaSpacing.xl),
+          _Section(title: 'STEPPER', child: _StepperGallery()),
+          SizedBox(height: ArenaSpacing.xl),
+          _Section(title: 'BANNERS GAME', child: _BannerGallery()),
+          SizedBox(height: ArenaSpacing.xl),
+          _Section(title: 'FLOATING BTN (#17)', child: _FloatingBtnGallery()),
+          SizedBox(height: ArenaSpacing.xl),
+          _Section(title: 'DIVIDER', child: _DividerGallery()),
+          SizedBox(height: ArenaSpacing.xl),
+          _Section(title: 'DIALOG', child: _DialogGallery()),
+          SizedBox(height: ArenaSpacing.xl),
+          _Section(title: 'PHONE FRAME', child: _PhoneFrameGallery()),
           SizedBox(height: ArenaSpacing.xxl),
         ],
+      ),
+    );
+  }
+}
+
+class _AvatarsGallery extends StatelessWidget {
+  const _AvatarsGallery();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('SIZES', style: ArenaText.inputLabel),
+        const SizedBox(height: ArenaSpacing.sm),
+        const Wrap(
+          spacing: ArenaSpacing.md,
+          runSpacing: ArenaSpacing.md,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            ArenaAvatar(initials: 'KM', size: ArenaAvatarSize.sm),
+            ArenaAvatar(initials: 'KM'),
+            ArenaAvatar(initials: 'KM', size: ArenaAvatarSize.lg),
+            ArenaAvatar(initials: 'KM', size: ArenaAvatarSize.xl),
+          ],
+        ),
+        const SizedBox(height: ArenaSpacing.md),
+        Text('COLORS (8)', style: ArenaText.inputLabel),
+        const SizedBox(height: ArenaSpacing.sm),
+        Wrap(
+          spacing: ArenaSpacing.sm,
+          runSpacing: ArenaSpacing.sm,
+          children: [
+            for (final c in ArenaAvatarColor.values)
+              ArenaAvatar(initials: c.name.substring(0, 2), color: c),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _BadgesGallery extends StatelessWidget {
+  const _BadgesGallery();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Wrap(
+      spacing: ArenaSpacing.sm,
+      runSpacing: ArenaSpacing.sm,
+      children: [
+        ArenaBadge(label: 'live', variant: ArenaBadgeVariant.live),
+        ArenaBadge(label: 'success', variant: ArenaBadgeVariant.success),
+        ArenaBadge(label: 'info', variant: ArenaBadgeVariant.info),
+        ArenaBadge(label: 'warn', variant: ArenaBadgeVariant.warn),
+        ArenaBadge(label: 'danger', variant: ArenaBadgeVariant.danger),
+        ArenaBadge(label: 'bronze', variant: ArenaBadgeVariant.tierBronze),
+        ArenaBadge(label: 'neutre'),
+      ],
+    );
+  }
+}
+
+class _AppBarGallery extends StatelessWidget {
+  const _AppBarGallery();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      children: [
+        ArenaAppBar(
+          title: 'Compétitions',
+          showBack: false,
+          actions: [
+            Icon(Icons.search, color: ArenaColors.silver, size: 20),
+            SizedBox(width: ArenaSpacing.sm),
+            Icon(Icons.tune, color: ArenaColors.silver, size: 20),
+          ],
+        ),
+        SizedBox(height: ArenaSpacing.sm),
+        ArenaAppBar(title: 'Détail compétition', bordered: true),
+      ],
+    );
+  }
+}
+
+class _BottomNavGallery extends StatefulWidget {
+  const _BottomNavGallery();
+
+  @override
+  State<_BottomNavGallery> createState() => _BottomNavGalleryState();
+}
+
+class _BottomNavGalleryState extends State<_BottomNavGallery> {
+  int _index = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return ArenaBottomNav(
+      currentIndex: _index,
+      onTap: (i) => setState(() => _index = i),
+      items: const [
+        ArenaBottomNavItem(icon: Icons.home_outlined, label: 'Home'),
+        ArenaBottomNavItem(icon: Icons.emoji_events_outlined, label: 'Comp'),
+        ArenaBottomNavItem(icon: Icons.chat_bubble_outline, label: 'Chat'),
+        ArenaBottomNavItem(icon: Icons.person_outline, label: 'Profil'),
+      ],
+    );
+  }
+}
+
+class _StepperGallery extends StatelessWidget {
+  const _StepperGallery();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Step 1/4', style: ArenaText.inputLabel),
+        const SizedBox(height: ArenaSpacing.xs),
+        const ArenaStepper(totalSteps: 4, currentStep: 0),
+        const SizedBox(height: ArenaSpacing.md),
+        Text('Step 3/4', style: ArenaText.inputLabel),
+        const SizedBox(height: ArenaSpacing.xs),
+        const ArenaStepper(totalSteps: 4, currentStep: 2),
+        const SizedBox(height: ArenaSpacing.md),
+        Text('Step 5/5 (final)', style: ArenaText.inputLabel),
+        const SizedBox(height: ArenaSpacing.xs),
+        const ArenaStepper(totalSteps: 5, currentStep: 4),
+      ],
+    );
+  }
+}
+
+class _BannerGallery extends StatelessWidget {
+  const _BannerGallery();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      children: [
+        ArenaBanner(
+          game: ArenaBannerGame.efoot,
+          title: 'Cameroon eFootball Cup',
+          subtitle: '12 / 16 joueurs · Cagnotte 25 000 XAF',
+        ),
+        SizedBox(height: ArenaSpacing.sm),
+        ArenaBanner(
+          game: ArenaBannerGame.fifa,
+          title: 'FIFA Mobile Africa',
+          subtitle: '8 / 32 joueurs · Cagnotte 50 000 XAF',
+        ),
+        SizedBox(height: ArenaSpacing.sm),
+        ArenaBanner(
+          game: ArenaBannerGame.fc,
+          title: 'EA SPORTS FC Mobile',
+          subtitle: 'Bientôt · 64 places',
+        ),
+      ],
+    );
+  }
+}
+
+class _FloatingBtnGallery extends StatelessWidget {
+  const _FloatingBtnGallery();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: ArenaFloatingButton(
+        onTap: () {},
+        timer: '04:32',
+      ),
+    );
+  }
+}
+
+class _DividerGallery extends StatelessWidget {
+  const _DividerGallery();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: ArenaSpacing.sm),
+          color: ArenaColors.carbon,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: ArenaSpacing.md,
+                  vertical: ArenaSpacing.sm,
+                ),
+                child: Text('Section A', style: ArenaText.body),
+              ),
+              const ArenaDivider(),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: ArenaSpacing.md,
+                  vertical: ArenaSpacing.sm,
+                ),
+                child: Text('Section B', style: ArenaText.body),
+              ),
+              const ArenaDivider(hi: true, indent: 16, endIndent: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: ArenaSpacing.md,
+                  vertical: ArenaSpacing.sm,
+                ),
+                child: Text('Section C', style: ArenaText.body),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DialogGallery extends StatelessWidget {
+  const _DialogGallery();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: ArenaButton(
+        label: 'Ouvrir le dialog',
+        onPressed: () {
+          ArenaDialog.show<void>(
+            context,
+            title: 'Long press sur le bouton',
+            content: const Text(
+              'Choisis une action sur ton match en cours.',
+            ),
+            actions: [
+              ArenaButton(
+                label: 'Continuer',
+                onPressed: () => Navigator.maybePop(context),
+                fullWidth: true,
+              ),
+              ArenaButton(
+                label: 'Pause',
+                onPressed: () => Navigator.maybePop(context),
+                variant: ArenaButtonVariant.secondary,
+                fullWidth: true,
+              ),
+              ArenaButton(
+                label: 'Forfait',
+                onPressed: () => Navigator.maybePop(context),
+                variant: ArenaButtonVariant.danger,
+                fullWidth: true,
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _PhoneFrameGallery extends StatelessWidget {
+  const _PhoneFrameGallery();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: ArenaPhoneFrame(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            ArenaSpacing.lg,
+            48,
+            ArenaSpacing.lg,
+            ArenaSpacing.lg,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const ArenaLogo(fontSize: 36, letterSpacing: 4),
+              const SizedBox(height: ArenaSpacing.md),
+              Text('PIXEL-PERFECT FRAME', style: ArenaText.h2),
+              const SizedBox(height: ArenaSpacing.sm),
+              Text(
+                'Wraps any screen for /_dev visual reference.',
+                style: ArenaText.bodyMuted,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

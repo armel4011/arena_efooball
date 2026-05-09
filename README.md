@@ -270,5 +270,5 @@ Détails dans `ARENA_MASTER_PROMPT.md` — partie "Conformité légale".
 
 ## Liens internes
 
-- [`ARENA_MASTER_PROMPT.md`](./ARENA_MASTER_PROMPT.md) — vision, architecture, roadmap, 47 écrans, 21 phases
+- [`ARENA_MASTER_PROMPT.md`](./ARENA_MASTER_PROMPT.md) — vision, architecture, roadmap, 54 écrans, 21 phases
 - [`ARENA_FLUTTER_PROMPT.md`](./ARENA_FLUTTER_PROMPT.md) — détails techniques, SQL complet, Edge Functions, Freezed, RLS

@@ -4,13 +4,24 @@
 > Écrit comme par un développeur senior Flutter avec 10 ans d'expérience.
 > Optimisé pour un workflow **Claude Code + Cursor** sur Windows.
 
+> **Version 2.0 (mai 2026)** — corrections appliquées :
+> - Décompte écrans corrigé : 47 → **54** (35 USER + 19 ADMIN)
+> - Design tokens migrés vers DESIGN_KIT canonique :
+>   - couleurs : `void #0A0A0F`, `carbon #14141C`, `signalBlue #4C7AFF`, `neonRed #FF2D55`, `statusOk #00C896`
+>   - polices : **Bebas Neue** + **Space Grotesk** + **Instrument Serif** + **JetBrains Mono**
+> - Nouvelles références obligatoires :
+>   - `arena_v2.html` (preview HTML des 54 écrans — référence visuelle ⭐)
+>   - `ARENA_54_ECRANS.md` (spec détaillée — référence fonctionnelle ⭐)
+>   - `lib/core/theme/arena_theme.dart` (implémentation Dart canonique)
+> - Ajout `AdminAuditLogPage` (19e écran admin)
+
 ---
 
 ## 📖 SOMMAIRE
 
 1. [🎯 Vision du projet & Comment utiliser ce document](#partie-1--vision)
 2. [🏗️ Architecture technique complète](#partie-2--architecture)
-3. [📱 Inventaire des 47 écrans](#partie-3--47-écrans)
+3. [📱 Inventaire des 54 écrans](#partie-3--54-écrans)
 4. [🗄️ Schéma de base de données complet](#partie-4--base-de-données)
 5. [⚡ Edge Functions Supabase](#partie-5--edge-functions)
 6. [🚀 Roadmap : 21 phases de développement](#partie-6--roadmap-21-phases)
@@ -415,13 +426,16 @@ flutter build apk --flavor admin --release              → Build admin.apk
 | **Tests unitaires/widgets** | `flutter_test` (SDK) + `mocktail` | ^1.0 |
 | **Tests intégration** | `integration_test` (SDK) | - |
 
-### Polices imposées
+### Polices imposées (DESIGN_KIT canonique — v2.0 mai 2026)
 
 | Police | Usage | Lib |
 |--------|-------|-----|
-| **Orbitron** (700, 800) | Headers, titles | `google_fonts` |
-| **Nunito** (400, 600, 700) | Body, paragraphs | `google_fonts` |
-| **Fira Code** | Codes room, scores | `google_fonts` |
+| **Bebas Neue** | Headers, titles, scores, app bar titles | `google_fonts` |
+| **Space Grotesk** (400, 500, 600, 700) | Body, paragraphs, boutons, labels | `google_fonts` |
+| **Instrument Serif** (italic) | Taglines, accents typographiques | `google_fonts` |
+| **JetBrains Mono** (400, 500, 600) | Codes room, scores, montants, IDs | `google_fonts` |
+
+> ⚠️ **Note historique** : la v1.0 de ce document prescrivait Orbitron/Nunito/Fira Code. La v2.0 s'aligne sur ARENA_DESIGN_KIT.md (canonique) et arena_v2.html (preview de référence).
 
 ### Build & Déploiement
 
@@ -668,60 +682,75 @@ arena/
 
 ## 🎨 Identité visuelle (à respecter strictement)
 
-### Palette de couleurs
+### Palette de couleurs (DESIGN_KIT canonique — v2.0 mai 2026)
 
 ```dart
+// ⚠️ Source de vérité : lib/core/theme/arena_theme.dart
+// Voir aussi : ARENA_DESIGN_KIT.md + arena_v2.html (preview)
 class ArenaColors {
+  ArenaColors._();
+
   // Backgrounds
-  static const bg = Color(0xFF07080F);          // Très sombre
-  static const surface = Color(0xFF11131C);     // Cartes
-  static const surfaceLight = Color(0xFF1A1D2A); // Cartes elevées
-  
+  static const void_ = Color(0xFF0A0A0F);          // --void (bg principal)
+  static const carbon = Color(0xFF14141C);         // --carbon (surface cards)
+  static const carbon2 = Color(0xFF1C1C26);        // --carbon-2 (élévations)
+
   // Brand
-  static const primary = Color(0xFF4C7AFF);     // Bleu (USER)
-  static const secondary = Color(0xFFFF3D5A);   // Rouge (ADMIN/LIVE)
-  
+  static const signalBlue = Color(0xFF4C7AFF);     // USER primary
+  static const neonRed = Color(0xFFFF2D55);        // ADMIN/LIVE secondary
+
   // Game colors
-  static const efootball = Color(0xFF18E8D4);   // Cyan
-  static const fifa = Color(0xFFFFAA00);        // Orange
-  static const fcMobile = Color(0xFFFF6A1A);    // Orange-rouge
-  
+  static const gameEfoot = Color(0xFF00B4D8);      // eFootball (cyan)
+  static const gameFifa = Color(0xFF06D6A0);       // FIFA Mobile (vert)
+  static const gameFc = Color(0xFFF77F00);         // EA SPORTS FC Mobile (orange)
+
   // States
-  static const success = Color(0xFF0FE893);     // Vert
-  static const warning = Color(0xFFFFAA00);     // Orange
-  static const danger = Color(0xFFFF3D5A);      // Rouge
-  
+  static const statusOk = Color(0xFF00C896);       // succès
+  static const statusWarn = Color(0xFFFFB020);     // warning
+  static const statusLive = Color(0xFFFF2D55);     // = neonRed
+
   // Text
-  static const text = Color(0xFFEEF1F8);        // Blanc cassé
-  static const textMuted = Color(0xFF8A93A6);   // Gris clair
-  static const textFaint = Color(0xFF555B6E);   // Gris foncé
-  
+  static const bone = Color(0xFFF5F5F0);           // texte principal
+  static const silver = Color(0xFF8B8B95);         // texte secondaire
+  static const silverDim = Color(0xFF5A5A65);      // texte tertiaire
+
   // Borders
-  static const border = Color(0x264C7AFF);      // 15% opacity bleu
+  static const border = Color(0x0FFFFFFF);         // 6% white
+  static const borderHi = Color(0x1FFFFFFF);       // 12% white
 }
 ```
+
+> ⚠️ **Note historique** : la v1.0 utilisait `bg #07080F`, `surface #11131C`, `secondary #FF3D5A`, `success #0FE893`. La v2.0 s'aligne sur ARENA_DESIGN_KIT.md (canonique) et arena_v2.html (preview de référence).
 
 ### Theme Flutter
 
 ```dart
+// ⚠️ Implémentation complète dans lib/core/theme/arena_theme.dart
+// Voici la version simplifiée pour référence :
 final arenaThemeData = ThemeData.dark().copyWith(
-  scaffoldBackgroundColor: ArenaColors.bg,
-  colorScheme: ColorScheme.dark(
-    primary: ArenaColors.primary,
-    secondary: ArenaColors.secondary,
-    surface: ArenaColors.surface,
-    error: ArenaColors.danger,
+  scaffoldBackgroundColor: ArenaColors.void_,
+  colorScheme: const ColorScheme.dark(
+    primary: ArenaColors.signalBlue,
+    secondary: ArenaColors.neonRed,
+    surface: ArenaColors.carbon,
+    error: ArenaColors.neonRed,
   ),
-  textTheme: GoogleFonts.nunitoTextTheme(
+  textTheme: GoogleFonts.spaceGroteskTextTheme(
     ThemeData.dark().textTheme.copyWith(
-      headlineLarge: GoogleFonts.orbitron(
+      headlineLarge: GoogleFonts.bebasNeue(
         fontSize: 28,
-        fontWeight: FontWeight.w800,
-        letterSpacing: 3,
+        letterSpacing: 2,
       ),
     ),
   ),
 );
+
+// Pour la version production complète (helpers, decorations, animations)
+// utiliser : import 'lib/core/theme/arena_theme.dart';
+//   - buildArenaTheme() : ThemeData
+//   - ArenaColors, ArenaText, ArenaSpacing, ArenaRadius
+//   - arenaGlowCardDecoration(), arenaDangerCardDecoration(), etc.
+//   - ArenaLogo, ArenaPulseDot
 ```
 
 ### Spacing & sizing
@@ -742,29 +771,32 @@ final arenaThemeData = ThemeData.dark().copyWith(
 ---
 
 
-# PARTIE 3 — 47 ÉCRANS
+# PARTIE 3 — 54 ÉCRANS
+
+> ⚠️ **v2.0 mai 2026** : décompte corrigé (47 → 54). La v1.0 annonçait 47 écrans en titre mais l'addition réelle des sections totalisait 54 (35 USER + 19 ADMIN). Voir `ARENA_54_ECRANS.md` pour la spec détaillée et `arena_v2.html` pour la preview visuelle complète.
 
 ## 📱 Récapitulatif global
 
 | App | Catégorie | Nombre |
 |-----|-----------|--------|
 | **APP USER** | Onboarding & Auth | 8 écrans |
-| **APP USER** | Core (home, comp, match, chat) | 11 écrans |
+| **APP USER** | Core (home, comp, match, chat, notifications) | 11 écrans |
 | **APP USER** | Bracket | 2 écrans |
 | **APP USER** | Streaming | 2 écrans |
 | **APP USER** | Profil & Settings | 5 écrans |
 | **APP USER** | Paiements & Payouts | 7 écrans |
-| **APP USER** | Notifications | 1 écran |
+| **Sous-total USER** | | **35 écrans** |
 | **APP ADMIN** | Auth | 5 écrans |
 | **APP ADMIN** | Core (dashboard, comp, matchs) | 5 écrans |
-| **APP ADMIN** | Bracket management | 1 écran |
-| **APP ADMIN** | Disputes, Streams, Payouts | 3 écrans |
+| **APP ADMIN** | Bracket / Streams / Payouts / Disputes | 4 écrans |
 | **APP ADMIN** | Super-Admin | 4 écrans |
-| **TOTAL** | | **🎯 47 écrans** |
+| **APP ADMIN** | Audit & journal (v2.0) | 1 écran |
+| **Sous-total ADMIN** | | **19 écrans** |
+| **TOTAL** | | **🎯 54 écrans** |
 
 ---
 
-## 📱 APP USER (28 écrans)
+## 📱 APP USER (35 écrans)
 
 ### Onboarding & Auth (8 écrans)
 
@@ -1884,7 +1916,7 @@ Mettre en place le **design system** (couleurs, polices, theme), le **routeur** 
 
 ### 📋 Livrables
 - [ ] `lib/core/theme/arena_colors.dart` (palette complète)
-- [ ] `lib/core/theme/arena_typography.dart` (Orbitron, Nunito, Fira Code)
+- [ ] `lib/core/theme/arena_typography.dart` (Bebas Neue, Space Grotesk, Instrument Serif, JetBrains Mono)
 - [ ] `lib/core/theme/arena_theme.dart` (ThemeData)
 - [ ] `lib/core/router/user_router.dart` (GoRouter user)
 - [ ] `lib/core/router/admin_router.dart` (GoRouter admin)
@@ -1917,7 +1949,7 @@ Crée une page de "preview" temporaire qui affiche tous les widgets pour les tes
 
 - [ ] Page preview affiche tous les widgets
 - [ ] Couleurs respectent la palette
-- [ ] Polices Orbitron/Nunito/Fira Code chargent
+- [ ] Polices Bebas Neue / Space Grotesk / Instrument Serif / JetBrains Mono chargent
 - [ ] Theme dark partout
 - [ ] GoRouter configuré (même si routes vides)
 
@@ -2135,7 +2167,7 @@ Crée :
 2. lib/features_user/home/home_page.dart
 3. Cards/widgets nécessaires
 
-UI : suit le design de arena_41_screens.html (mockup HomePage).
+UI : suit le design de arena_v2.html (preview HTML des 54 écrans, écran #9 HomePage).
 ```
 
 ### ✅ Critères d'acceptation
@@ -3504,7 +3536,8 @@ Recommandé (bonne pratique) :
 | `ARENA_MASTER_PROMPT.md` | **CE FICHIER** — Référence master | ~3000 |
 | `ARENA_FLUTTER_PROMPT.md` | Détails techniques approfondis | ~6500 |
 | `GUIDE_PHASE_0.md` | Guide pas-à-pas Phase 0 | ~870 |
-| `arena_41_screens.html` | Mockups 47 écrans | ~2270 |
+| `arena_v2.html` | Preview HTML des 54 écrans (référence visuelle ⭐) | ~3500 |
+| `ARENA_54_ECRANS.md` | Spec détaillée des 54 écrans (référence fonctionnelle ⭐) | ~1820 |
 | `arena_brackets_schemas.html` | Documentation brackets (3 formats) | ~1830 |
 | `arena_match_config.html` | Mockup config phase de groupes | ~700 |
 | `arena_automation.html` | Visualisation automatisation 5 axes | ~1500 |
@@ -3618,7 +3651,7 @@ Ce document est ton **référentiel master**. Reviens-y à chaque étape.
 À ce stade, tu as :
 - ✅ Une vision claire du projet
 - ✅ Une architecture professionnelle
-- ✅ Un inventaire de 47 écrans
+- ✅ Un inventaire de 54 écrans (35 USER + 19 ADMIN)
 - ✅ Un schéma de 26 tables SQL
 - ✅ 16 Edge Functions documentées
 - ✅ 21 phases de développement structurées

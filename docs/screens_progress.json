@@ -1,0 +1,179 @@
+{
+  "$schema": "https://arena.app/schemas/screens-progress-v2.json",
+  "version": "2.0",
+  "lastUpdate": "2026-05-09T01:00:00Z",
+  "currentWave": 1,
+  "currentPhase": "WAVE_0_COMPLETE",
+  "wave0Foundations": {
+    "pubspecDedupe": "done",
+    "tagPreArenaV2Rebuild": "done @ 9de8f3c",
+    "flutterPubGet": "done",
+    "themeCompatLayer": "done — ArenaColors v1 aliases (bg/surface/primary/text/textMuted/textFaint/success/warning/danger/efootball/fifa/fcMobile…) + ArenaRadius button/card/pill BorderRadius + ArenaTypography class + arenaUserTheme/arenaAdminTheme top-level finals; arena_colors.dart and arena_typography.dart now thin export shims",
+    "sharedWidgetsAdded": [
+      "lib/features_shared/widgets/arena_avatar.dart (8 colors x 4 sizes)",
+      "lib/features_shared/widgets/arena_badge.dart (7 variants + live pulse)",
+      "lib/features_shared/widgets/arena_app_bar.dart (56dp transparent, opt back/actions)",
+      "lib/features_shared/widgets/arena_bottom_nav.dart (4 tabs, active glow)",
+      "lib/features_shared/widgets/arena_phone_frame.dart (300x620 iOS bezel)",
+      "lib/features_shared/widgets/arena_stepper.dart (todo/active/done bars)",
+      "lib/features_shared/widgets/arena_banner.dart (3 game gradients)",
+      "lib/features_shared/widgets/arena_floating_button.dart (72dp, pulse 1500ms)",
+      "lib/features_shared/widgets/arena_divider.dart (border / borderHi)",
+      "lib/features_shared/widgets/arena_dialog.dart (blur backdrop + slide-up)"
+    ],
+    "devGalleryRoute": "/_dev/widgets (renamed from /dev/preview, both routers)",
+    "devGallerySectionsAdded": [
+      "AVATARS (sizes + 8 colors)", "BADGES (7 variants)", "APP BAR (with/without back+border)",
+      "BOTTOM NAV (tappable demo)", "STEPPER (3 progress states)", "BANNERS GAME (efoot/fifa/fc)",
+      "FLOATING BTN (#17, animated)", "DIVIDER (default + hi)", "DIALOG (button to open)",
+      "PHONE FRAME (wraps a sample)"
+    ],
+    "analyzeStatus": "0 errors, 0 warnings (117 info lints stylistic pre-existing)"
+  },
+  "stats": {
+    "done": 0,
+    "inProgress": 0,
+    "todo": 54,
+    "wave0Foundations": "complete",
+    "wave0Widgets": "10/10 done"
+  },
+  "blockers": [
+    {
+      "id": "BLK-1",
+      "severity": "blocker",
+      "status": "resolved",
+      "summary": "pubspec.yaml — clé `google_fonts` dupliquée (lignes 34 + 67), `flutter analyze` ne tourne pas (YAML parse error).",
+      "fix": "Supprimer la 2e occurrence ligne 67."
+    },
+    {
+      "id": "BLK-2",
+      "severity": "blocker",
+      "status": "resolved",
+      "summary": "Codebase ne compile pas : 499 erreurs (495 ambiguous_import sur ArenaColors entre arena_colors.dart v1 et arena_theme.dart v2 + 4 undefined arenaUserTheme/arenaAdminTheme). Le commit 9de8f3c a introduit le v2 sans migrer le legacy.",
+      "fix": "(1) Ajout d'alias legacy dans v2 ArenaColors (bg/surface/primary/text/textMuted/textFaint/success/warning/danger/efootball/fifa/fcMobile…) qui pointent vers les const v2 (carbon/bone/signalBlue/…). (2) Ajout BorderRadius button/card/pill dans ArenaRadius. (3) Ajout class ArenaTypography re-émettant Bebas/Space Grotesk/JetBrains Mono sous les noms v1 (displayLarge/headlineLarge/bodyMedium/labelLarge/codeLarge…). (4) Ajout top-level finals arenaUserTheme/arenaAdminTheme. (5) arena_colors.dart et arena_typography.dart deviennent des re-exports de arena_theme.dart. Résultat : 0 errors, 0 warnings (117 info-level lints stylistiques pré-existants restent)."
+    }
+  ],
+  "wave1Audit": {
+    "existingAtCorrectPath": [
+      {"id": "#1",  "name": "OnboardingPage",        "path": "lib/features_user/onboarding/onboarding_page.dart"},
+      {"id": "#2",  "name": "SplashUserScreen",      "path": "lib/features_user/auth/splash_user_screen.dart"},
+      {"id": "#3",  "name": "LoginUserScreen",       "path": "lib/features_user/auth/login_user_screen.dart"},
+      {"id": "#4",  "name": "RegisterUserScreen",    "path": "lib/features_user/auth/register_user_screen.dart"},
+      {"id": "#5",  "name": "ForgotPasswordPage",    "path": "lib/features_user/auth/forgot_password_page.dart"},
+      {"id": "#6",  "name": "ResetPasswordPage",     "path": "lib/features_user/auth/reset_password_page.dart"},
+      {"id": "#7",  "name": "LinkExistingAccountPage","path": "lib/features_user/auth/link_existing_account_page.dart"},
+      {"id": "#8",  "name": "CGUAcceptancePage",     "path": "lib/features_user/auth/cgu_acceptance_page.dart"},
+      {"id": "#9",  "name": "HomePage",              "path": "lib/features_user/home/home_page.dart"},
+      {"id": "#10", "name": "CompetitionsListPage",  "path": "lib/features_user/competitions/competitions_list_page.dart"},
+      {"id": "#11", "name": "CompetitionDetailPage", "path": "lib/features_user/competitions/competition_detail_page.dart"}
+    ],
+    "toMoveOrRename": [
+      {
+        "id": "#13", "name": "MatchRoomPage",
+        "currentPath": "lib/features_user/match/match_room_page.dart",
+        "expectedPath": "lib/features_user/match_room/match_room_page.dart",
+        "action": "rename folder match → match_room (ATTENTION: 2 widgets de support à déplacer aussi : match_recording_lifecycle.dart, manual_upload_button.dart)"
+      }
+    ],
+    "toCreate": [
+      {
+        "id": "#12", "name": "RegistrationConfirmPage",
+        "expectedPath": "lib/features_user/competitions/registration_confirm_page.dart",
+        "phaseRef": "4+11bis",
+        "complexity": "low"
+      },
+      {
+        "id": "#14", "name": "MatchHistoryPage",
+        "expectedPath": "lib/features_user/profile/match_history_page.dart",
+        "phaseRef": "9",
+        "complexity": "medium",
+        "notes": "Phase 9 actuelle affiche déjà '5 derniers matchs cliquables' dans PlayerProfilePage — extraire la liste vers cet écran dédié."
+      }
+    ]
+  },
+  "wave2QuickAudit": {
+    "missing": ["#15 MessagesInboxPage", "#17 MatchInProgressOverlay", "#18 RecordingErrorPage", "#19 NotificationsPage", "#28 AboutPage"],
+    "toMoveOrRename": [
+      {"id": "#20", "current": "lib/features_user/competitions/bracket_view_page.dart", "expected": "lib/features_user/bracket/bracket_view_page.dart"},
+      {"id": "#21", "current": "lib/features_user/competitions/group_standings_view.dart", "expected": "lib/features_user/bracket/group_standings_page.dart", "notes": "renommé View → Page"},
+      {"id": "#26", "current": "lib/features_user/settings/settings_page.dart", "expected": "lib/features_user/profile/settings_page.dart"}
+    ]
+  },
+  "phase9FilesToPreserve": [
+    "lib/features_user/profile/player_profile_page.dart",
+    "lib/features_user/profile/edit_profile_page.dart",
+    "lib/features_user/profile/delete_account_page.dart",
+    "lib/features_user/profile/avatar_palette.dart",
+    "lib/features_user/settings/settings_page.dart"
+  ],
+  "supportFilesToKeep": [
+    "lib/features_user/onboarding/onboarding_gate.dart",
+    "lib/features_user/onboarding/onboarding_slide.dart",
+    "lib/features_user/auth/auth_providers.dart",
+    "lib/features_user/auth/widgets/auth_failure_message.dart",
+    "lib/features_user/competitions/widgets/competition_card.dart",
+    "lib/features_user/home/main_layout.dart",
+    "lib/features_user/match/widgets/match_recording_lifecycle.dart",
+    "lib/features_user/match/widgets/manual_upload_button.dart",
+    "lib/features_user/recording/game_detector_debug_page.dart",
+    "lib/features_user/recording/overlay/recording_overlay.dart",
+    "lib/features_user/recording/overlay/recording_overlay_messages.dart",
+    "lib/features_user/streaming/start_streaming_banner.dart"
+  ],
+  "screens": [
+    {"id": "#1",  "status": "todo", "filePath": "lib/features_user/onboarding/onboarding_page.dart"},
+    {"id": "#2",  "status": "todo", "filePath": "lib/features_user/auth/splash_user_screen.dart"},
+    {"id": "#3",  "status": "todo", "filePath": "lib/features_user/auth/login_user_screen.dart"},
+    {"id": "#4",  "status": "todo", "filePath": "lib/features_user/auth/register_user_screen.dart"},
+    {"id": "#5",  "status": "todo", "filePath": "lib/features_user/auth/forgot_password_page.dart"},
+    {"id": "#6",  "status": "todo", "filePath": "lib/features_user/auth/reset_password_page.dart"},
+    {"id": "#7",  "status": "todo", "filePath": "lib/features_user/auth/link_existing_account_page.dart"},
+    {"id": "#8",  "status": "todo", "filePath": "lib/features_user/auth/cgu_acceptance_page.dart"},
+    {"id": "#9",  "status": "todo", "filePath": "lib/features_user/home/home_page.dart"},
+    {"id": "#10", "status": "todo", "filePath": "lib/features_user/competitions/competitions_list_page.dart"},
+    {"id": "#11", "status": "todo", "filePath": "lib/features_user/competitions/competition_detail_page.dart"},
+    {"id": "#12", "status": "todo", "filePath": "lib/features_user/competitions/registration_confirm_page.dart", "needsCreate": true},
+    {"id": "#13", "status": "todo", "filePath": "lib/features_user/match_room/match_room_page.dart", "needsMove": "lib/features_user/match/match_room_page.dart"},
+    {"id": "#14", "status": "todo", "filePath": "lib/features_user/profile/match_history_page.dart", "needsCreate": true},
+    {"id": "#15", "status": "todo", "filePath": "lib/features_user/chat/messages_inbox_page.dart", "needsCreate": true},
+    {"id": "#16", "status": "todo", "filePath": "lib/features_user/chat/chat_page.dart"},
+    {"id": "#17", "status": "todo", "filePath": "lib/features_user/recording/match_in_progress_overlay.dart", "needsCreate": true},
+    {"id": "#18", "status": "todo", "filePath": "lib/features_user/recording/recording_error_page.dart", "needsCreate": true},
+    {"id": "#19", "status": "todo", "filePath": "lib/features_user/notifications/notifications_page.dart", "needsCreate": true},
+    {"id": "#20", "status": "todo", "filePath": "lib/features_user/bracket/bracket_view_page.dart", "needsMove": "lib/features_user/competitions/bracket_view_page.dart"},
+    {"id": "#21", "status": "todo", "filePath": "lib/features_user/bracket/group_standings_page.dart", "needsMove": "lib/features_user/competitions/group_standings_view.dart"},
+    {"id": "#22", "status": "todo", "filePath": "lib/features_user/streaming/live_streams_page.dart"},
+    {"id": "#23", "status": "todo", "filePath": "lib/features_user/streaming/watch_stream_page.dart"},
+    {"id": "#24", "status": "todo", "filePath": "lib/features_user/profile/player_profile_page.dart"},
+    {"id": "#25", "status": "todo", "filePath": "lib/features_user/profile/edit_profile_page.dart"},
+    {"id": "#26", "status": "todo", "filePath": "lib/features_user/profile/settings_page.dart", "needsMove": "lib/features_user/settings/settings_page.dart"},
+    {"id": "#27", "status": "todo", "filePath": "lib/features_user/profile/delete_account_page.dart"},
+    {"id": "#28", "status": "todo", "filePath": "lib/features_user/profile/about_page.dart", "needsCreate": true},
+    {"id": "P1",  "status": "todo", "filePath": "lib/features_user/payments/payment_method_picker_page.dart", "needsCreate": true},
+    {"id": "P2",  "status": "todo", "filePath": "lib/features_user/payments/mobile_money_details_page.dart", "needsCreate": true},
+    {"id": "P3",  "status": "todo", "filePath": "lib/features_user/payments/payment_processing_page.dart", "needsCreate": true},
+    {"id": "P4",  "status": "todo", "filePath": "lib/features_user/payments/payment_success_page.dart", "needsCreate": true},
+    {"id": "P5",  "status": "todo", "filePath": "lib/features_user/payments/payment_failed_page.dart", "needsCreate": true},
+    {"id": "P6",  "status": "todo", "filePath": "lib/features_user/payments/payment_history_page.dart", "needsCreate": true},
+    {"id": "P7",  "status": "todo", "filePath": "lib/features_user/payouts/payout_kyc_page.dart", "needsCreate": true},
+    {"id": "A1",  "status": "todo", "filePath": "lib/features_admin/auth_admin/splash_admin_screen.dart"},
+    {"id": "A2",  "status": "todo", "filePath": "lib/features_admin/auth_admin/login_admin_screen.dart"},
+    {"id": "A3",  "status": "todo", "filePath": "lib/features_admin/auth_admin/invitation_redeem_screen.dart"},
+    {"id": "A4",  "status": "todo", "filePath": "lib/features_admin/auth_admin/totp_setup_screen.dart"},
+    {"id": "A5",  "status": "todo", "filePath": "lib/features_admin/auth_admin/totp_verify_screen.dart"},
+    {"id": "A6",  "status": "todo", "filePath": "lib/features_admin/dashboard/admin_dashboard_page.dart", "needsCreate": true},
+    {"id": "A7",  "status": "todo", "filePath": "lib/features_admin/competitions_admin/admin_competitions_list_page.dart", "needsCreate": true},
+    {"id": "A8",  "status": "todo", "filePath": "lib/features_admin/competitions_admin/create_competition_page.dart", "needsCreate": true},
+    {"id": "A9",  "status": "todo", "filePath": "lib/features_admin/competitions_admin/admin_competition_detail_page.dart", "needsCreate": true},
+    {"id": "A10", "status": "todo", "filePath": "lib/features_admin/matches_admin/admin_matches_list_page.dart", "needsCreate": true},
+    {"id": "A11", "status": "todo", "filePath": "lib/features_admin/bracket_admin/admin_bracket_management_page.dart", "needsCreate": true},
+    {"id": "A12", "status": "todo", "filePath": "lib/features_admin/streams_admin/admin_stream_moderation_page.dart", "needsCreate": true},
+    {"id": "A13", "status": "todo", "filePath": "lib/features_admin/payouts_admin/admin_payouts_page.dart", "needsCreate": true},
+    {"id": "A14", "status": "todo", "filePath": "lib/features_admin/disputes_admin/admin_disputes_page.dart", "needsCreate": true},
+    {"id": "SA1", "status": "todo", "filePath": "lib/features_admin/super_admin/super_admin_dashboard.dart", "needsCreate": true},
+    {"id": "SA2", "status": "todo", "filePath": "lib/features_admin/super_admin/super_admin_invitations.dart", "needsCreate": true},
+    {"id": "SA3", "status": "todo", "filePath": "lib/features_admin/super_admin/super_admin_users.dart", "needsCreate": true},
+    {"id": "SA4", "status": "todo", "filePath": "lib/features_admin/super_admin/super_admin_revenue.dart", "needsCreate": true},
+    {"id": "A15", "status": "todo", "filePath": "lib/features_admin/audit/admin_audit_log_page.dart", "needsCreate": true}
+  ]
+}

@@ -22,7 +22,7 @@ abstract final class AdminRoutes {
   static const invitation = '/invitation';
   static const totpSetup = '/totp/setup';
   static const totpVerify = '/totp/verify';
-  static const devPreview = '/dev/preview';
+  static const devPreview = '/_dev/widgets';
 
   /// Routes reachable while not yet fully authenticated (no session OR
   /// session without TOTP confirmation).

@@ -44,7 +44,7 @@ abstract final class UserRoutes {
   static const profileEdit = '/profile/edit';
   static const profileDelete = '/profile/delete';
   static const settings = '/settings';
-  static const devPreview = '/dev/preview';
+  static const devPreview = '/_dev/widgets';
 
   /// Builds the concrete `/competitions/<id>` URL — go_router parses
   /// `:id` server-side, but `context.go` needs a real path.

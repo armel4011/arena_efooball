@@ -4,7 +4,6 @@ import 'package:arena/data/models/profile.dart';
 import 'package:arena/data/repositories/auth_failure.dart';
 import 'package:arena/data/repositories/auth_repository.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
-import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
