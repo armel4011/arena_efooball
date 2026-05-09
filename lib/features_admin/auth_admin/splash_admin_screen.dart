@@ -1,7 +1,5 @@
 import 'package:arena/core/router/admin_router.dart';
-import 'package:arena/core/theme/arena_colors.dart';
 import 'package:arena/core/theme/arena_theme.dart';
-import 'package:arena/core/theme/arena_typography.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -30,45 +28,56 @@ class SplashAdminScreen extends StatelessWidget {
                   height: 120,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: ArenaColors.secondary.withValues(alpha: 0.12),
+                    color: ArenaColors.neonRed.withValues(alpha: 0.12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: ArenaColors.neonRed.withValues(alpha: 0.35),
+                        blurRadius: 32,
+                        spreadRadius: -4,
+                      ),
+                    ],
                   ),
                   child: const Icon(
                     Icons.shield,
                     size: 64,
-                    color: ArenaColors.secondary,
+                    color: ArenaColors.neonRed,
                   ),
                 ),
               ),
               const SizedBox(height: ArenaSpacing.lg),
-              Text(
-                'ARENA ADMIN',
-                style: ArenaTypography.displayLarge,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: ArenaSpacing.sm),
-              Text(
-                'Accès administrateur',
-                style: ArenaTypography.bodyMedium.copyWith(
-                  color: ArenaColors.textMuted,
+              const Center(child: ArenaLogo(fontSize: 46, letterSpacing: 6)),
+              const SizedBox(height: 4),
+              Center(
+                child: Text(
+                  'admin console',
+                  style: ArenaText.serifAccent
+                      .copyWith(color: ArenaColors.neonRed),
                 ),
-                textAlign: TextAlign.center,
               ),
               const Spacer(flex: 3),
               ArenaButton(
                 label: 'SE CONNECTER',
+                variant: ArenaButtonVariant.danger,
                 fullWidth: true,
                 size: ArenaButtonSize.large,
                 onPressed: () => context.go(AdminRoutes.login),
               ),
-              const SizedBox(height: ArenaSpacing.md),
+              const SizedBox(height: ArenaSpacing.sm),
               ArenaButton(
-                label: 'JE SUIS INVITÉ',
+                label: "🎟 J'AI UN CODE D'INVITATION",
                 fullWidth: true,
                 size: ArenaButtonSize.large,
                 variant: ArenaButtonVariant.secondary,
                 onPressed: () => context.go(AdminRoutes.invitation),
               ),
-              const SizedBox(height: ArenaSpacing.xl),
+              const SizedBox(height: ArenaSpacing.md),
+              Center(
+                child: Text(
+                  'v1.0.0 · build 4287',
+                  style: ArenaText.monoSmall,
+                ),
+              ),
+              const SizedBox(height: ArenaSpacing.lg),
             ],
           ),
         ),

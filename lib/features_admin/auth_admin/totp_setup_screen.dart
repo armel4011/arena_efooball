@@ -1,9 +1,8 @@
 import 'package:arena/core/router/admin_router.dart';
-import 'package:arena/core/theme/arena_colors.dart';
 import 'package:arena/core/theme/arena_theme.dart';
-import 'package:arena/core/theme/arena_typography.dart';
 import 'package:arena/data/repositories/auth_failure.dart';
 import 'package:arena/features_admin/auth_admin/admin_auth_providers.dart';
+import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_user/auth/widgets/auth_failure_message.dart';
@@ -61,10 +60,7 @@ class _TotpSetupScreenState extends ConsumerState<TotpSetupScreen> {
     final showBackup = backupCodes != null && backupCodes.isNotEmpty;
 
     return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: const Text('Configuration TOTP'),
-      ),
+      appBar: const ArenaAppBar(title: 'Configurer 2FA', showBack: false),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(ArenaSpacing.lg),

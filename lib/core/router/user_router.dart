@@ -17,6 +17,14 @@ import 'package:arena/features_user/home/main_layout.dart';
 import 'package:arena/features_user/match_room/match_room_page.dart';
 import 'package:arena/features_user/notifications/notifications_page.dart';
 import 'package:arena/features_user/onboarding/onboarding_page.dart';
+import 'package:arena/features_user/payments/mobile_money_details_page.dart';
+import 'package:arena/features_user/payments/payment_failed_page.dart';
+import 'package:arena/features_user/payments/payment_history_page.dart';
+import 'package:arena/features_user/payments/payment_method.dart';
+import 'package:arena/features_user/payments/payment_method_picker_page.dart';
+import 'package:arena/features_user/payments/payment_processing_page.dart';
+import 'package:arena/features_user/payments/payment_success_page.dart';
+import 'package:arena/features_user/payouts/payout_kyc_page.dart';
 import 'package:arena/features_user/profile/about_page.dart';
 import 'package:arena/features_user/profile/delete_account_page.dart';
 import 'package:arena/features_user/profile/edit_profile_page.dart';
@@ -58,6 +66,13 @@ abstract final class UserRoutes {
   static const about = '/about';
   static const recordingError = '/recording/error';
   static const matchInProgressPreview = '/recording/preview';
+  static const paymentMethodPicker = '/payments/method';
+  static const paymentMomoDetails = '/payments/momo';
+  static const paymentProcessing = '/payments/processing';
+  static const paymentSuccess = '/payments/success';
+  static const paymentFailed = '/payments/failed';
+  static const paymentHistory = '/payments/history';
+  static const payoutKyc = '/payouts/kyc';
   static const devPreview = '/_dev/widgets';
 
   /// Builds the concrete `/competitions/<id>/register/confirm` URL.
@@ -307,6 +322,72 @@ final userRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const MatchInProgressOverlay(),
       ),
       GoRoute(
+        path: UserRoutes.paymentMethodPicker,
+        name: 'user.paymentMethodPicker',
+        builder: (context, state) {
+          final extra = state.extra as PaymentPickerArgs?;
+          return PaymentMethodPickerPage(
+            amountXaf: extra?.amountXaf ?? 0,
+            contextLabel: extra?.contextLabel ?? '',
+          );
+        },
+      ),
+      GoRoute(
+        path: UserRoutes.paymentMomoDetails,
+        name: 'user.paymentMomoDetails',
+        builder: (context, state) {
+          final extra = state.extra as PaymentMomoArgs?;
+          return MobileMoneyDetailsPage(
+            method: extra?.method ?? PaymentMethod.mtnMoMo,
+            amountXaf: extra?.amountXaf ?? 0,
+          );
+        },
+      ),
+      GoRoute(
+        path: UserRoutes.paymentProcessing,
+        name: 'user.paymentProcessing',
+        builder: (context, state) {
+          final extra = state.extra as PaymentProcessingArgs?;
+          return PaymentProcessingPage(
+            method: extra?.method ?? PaymentMethod.mtnMoMo,
+            amountXaf: extra?.amountXaf ?? 0,
+            reference: extra?.reference ?? 'CP-PENDING',
+            maskedPhone: extra?.maskedPhone ?? '+••• •• •• ••',
+          );
+        },
+      ),
+      GoRoute(
+        path: UserRoutes.paymentSuccess,
+        name: 'user.paymentSuccess',
+        builder: (context, state) {
+          final extra = state.extra as PaymentResultArgs?;
+          return PaymentSuccessPage(
+            amountXaf: extra?.amountXaf ?? 0,
+            method: extra?.method ?? PaymentMethod.mtnMoMo,
+            transactionId: extra?.transactionId ?? '—',
+            dateLabel: extra?.dateLabel ?? '',
+          );
+        },
+      ),
+      GoRoute(
+        path: UserRoutes.paymentFailed,
+        name: 'user.paymentFailed',
+        builder: (context, state) => const PaymentFailedPage(),
+      ),
+      GoRoute(
+        path: UserRoutes.paymentHistory,
+        name: 'user.paymentHistory',
+        builder: (context, state) => const PaymentHistoryPage(),
+      ),
+      GoRoute(
+        path: UserRoutes.payoutKyc,
+        name: 'user.payoutKyc',
+        builder: (context, state) {
+          final extra = state.extra as PayoutKycArgs?;
+          return PayoutKycPage(pendingAmountXaf: extra?.pendingAmountXaf ?? 0);
+        },
+      ),
+      GoRoute(
         path: UserRoutes.devPreview,
         name: 'user.dev.preview',
         builder: (context, state) => const DevPreviewPage(),
@@ -321,6 +402,62 @@ class LinkAccountArgs {
   const LinkAccountArgs({required this.email, required this.providerLabel});
   final String? email;
   final String providerLabel;
+}
+
+/// Args carried into `PaymentMethodPickerPage` (P1).
+class PaymentPickerArgs {
+  const PaymentPickerArgs({
+    required this.amountXaf,
+    required this.contextLabel,
+  });
+
+  final int amountXaf;
+  final String contextLabel;
+}
+
+/// Args carried into `MobileMoneyDetailsPage` (P2) once the picker
+/// returns a mobile-money [PaymentMethod].
+class PaymentMomoArgs {
+  const PaymentMomoArgs({required this.method, required this.amountXaf});
+  final PaymentMethod method;
+  final int amountXaf;
+}
+
+/// Args carried into `PaymentProcessingPage` (P3).
+class PaymentProcessingArgs {
+  const PaymentProcessingArgs({
+    required this.method,
+    required this.amountXaf,
+    required this.reference,
+    required this.maskedPhone,
+  });
+
+  final PaymentMethod method;
+  final int amountXaf;
+  final String reference;
+  final String maskedPhone;
+}
+
+/// Args carried into `PaymentSuccessPage` (P4).
+class PaymentResultArgs {
+  const PaymentResultArgs({
+    required this.method,
+    required this.amountXaf,
+    required this.transactionId,
+    required this.dateLabel,
+  });
+
+  final PaymentMethod method;
+  final int amountXaf;
+  final String transactionId;
+  final String dateLabel;
+}
+
+/// Args carried into `PayoutKycPage` (P7) when a payout > 100 000 XAF
+/// triggers the regulatory KYC funnel.
+class PayoutKycArgs {
+  const PayoutKycArgs({required this.pendingAmountXaf});
+  final int pendingAmountXaf;
 }
 
 /// Args carried into `RegistrationConfirmPage` (#12). The competition page

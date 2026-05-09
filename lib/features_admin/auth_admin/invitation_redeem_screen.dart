@@ -1,9 +1,8 @@
 import 'package:arena/core/router/admin_router.dart';
-import 'package:arena/core/theme/arena_colors.dart';
 import 'package:arena/core/theme/arena_theme.dart';
-import 'package:arena/core/theme/arena_typography.dart';
 import 'package:arena/data/repositories/auth_failure.dart';
 import 'package:arena/features_admin/auth_admin/admin_auth_providers.dart';
+import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_user/auth/widgets/auth_failure_message.dart';
@@ -120,11 +119,9 @@ class _InvitationRedeemScreenState
         : null;
 
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go(AdminRoutes.splash),
-        ),
+      appBar: ArenaAppBar(
+        title: 'Code invitation',
+        onBack: () => context.go(AdminRoutes.splash),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
