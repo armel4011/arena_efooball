@@ -3,6 +3,7 @@ import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/auth_failure.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
+import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_stepper.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
@@ -28,6 +29,7 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
   final _usernameCtrl = TextEditingController();
 
   String _countryCode = 'CM';
+  ArenaAvatarColor _avatarColor = ArenaAvatarColor.blue;
   bool _cguAccepted = false;
   bool _privacyAccepted = false;
   bool _marketingAccepted = false;
@@ -59,6 +61,11 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
       c.dispose();
     }
     super.dispose();
+  }
+
+  String _initialFromUsername() {
+    final v = _usernameCtrl.text.trim();
+    return v.isEmpty ? '?' : v[0].toUpperCase();
   }
 
   void _next() => setState(() => _step += 1);
@@ -134,6 +141,9 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
                     usernameCtrl: _usernameCtrl,
                     countryCode: _countryCode,
                     onCountry: (c) => setState(() => _countryCode = c),
+                    avatarColor: _avatarColor,
+                    onAvatarColor: (c) => setState(() => _avatarColor = c),
+                    initial: _initialFromUsername(),
                     cgu: _cguAccepted,
                     privacy: _privacyAccepted,
                     marketing: _marketingAccepted,
@@ -263,6 +273,9 @@ class _ProfileStep extends StatelessWidget {
     required this.usernameCtrl,
     required this.countryCode,
     required this.onCountry,
+    required this.avatarColor,
+    required this.onAvatarColor,
+    required this.initial,
     required this.cgu,
     required this.privacy,
     required this.marketing,
@@ -277,6 +290,9 @@ class _ProfileStep extends StatelessWidget {
   final TextEditingController usernameCtrl;
   final String countryCode;
   final ValueChanged<String> onCountry;
+  final ArenaAvatarColor avatarColor;
+  final ValueChanged<ArenaAvatarColor> onAvatarColor;
+  final String initial;
   final bool cgu;
   final bool privacy;
   final bool marketing;
@@ -334,6 +350,15 @@ class _ProfileStep extends StatelessWidget {
             isLoading: isLoading,
           ),
           const SizedBox(height: ArenaSpacing.md),
+          Text("COULEUR D'AVATAR", style: ArenaText.inputLabel),
+          const SizedBox(height: ArenaSpacing.sm),
+          _AvatarColorPicker(
+            initial: initial,
+            selected: avatarColor,
+            onSelect: onAvatarColor,
+            disabled: isLoading,
+          ),
+          const SizedBox(height: ArenaSpacing.md),
           _ConsentTile(
             title: "J'accepte les Conditions Générales d'Utilisation",
             value: cgu,
@@ -374,6 +399,39 @@ class _Country {
   final String code;
   final String name;
   final String flag;
+}
+
+class _AvatarColorPicker extends StatelessWidget {
+  const _AvatarColorPicker({
+    required this.initial,
+    required this.selected,
+    required this.onSelect,
+    required this.disabled,
+  });
+
+  final String initial;
+  final ArenaAvatarColor selected;
+  final ValueChanged<ArenaAvatarColor> onSelect;
+  final bool disabled;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: ArenaSpacing.sm,
+      runSpacing: ArenaSpacing.sm,
+      children: [
+        for (final c in ArenaAvatarColor.values)
+          GestureDetector(
+            onTap: disabled ? null : () => onSelect(c),
+            child: ArenaAvatar(
+              initials: c == selected ? initial : '',
+              color: c,
+              selected: c == selected,
+            ),
+          ),
+      ],
+    );
+  }
 }
 
 class _CountryPicker extends StatelessWidget {

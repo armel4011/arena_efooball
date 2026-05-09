@@ -1,9 +1,9 @@
 {
   "$schema": "https://arena.app/schemas/screens-progress-v2.json",
   "version": "2.0",
-  "lastUpdate": "2026-05-09T09:00:00Z",
+  "lastUpdate": "2026-05-10T00:00:00Z",
   "currentWave": null,
-  "currentPhase": "ALL_WAVES_COMPLETE",
+  "currentPhase": "ALL_WAVES_COMPLETE_AND_POLISHED",
   "wave0Foundations": {
     "pubspecDedupe": "done",
     "tagPreArenaV2Rebuild": "done @ 9de8f3c",
@@ -42,14 +42,14 @@
     "wave4": "14/14 done — admin core 5 (dashboard/comp list/comp create/comp detail/matches list) + admin ops 4 (bracket/streams/payouts/disputes) + audit log + super-admin 4 (dashboard/invitations/users/revenue) shipped"
   },
   "wave1PolishBacklog": [
-    "#1 Onboarding — DONE (rebuild done in this session, native PageView + 4 emoji slides + custom dots)",
-    "#2 Splash — add the 3-col stat grid (joueurs/tournois/XAF cumulés)",
-    "#3 Login — placeholder Google/Apple SSO secondary buttons (PHASE 2.3) + 'OU' divider",
-    "#4 Register — replace inline country dropdown with ArenaAvatar(selected) color picker on step 2 (per v2 #4 spec)",
-    "#7 LinkAccount — wrap warning section in arenaWarningCardDecoration() per v2 spec",
-    "#9 Home — tier ArenaBadge in header, ArenaBanner for live streams, 3-col stat grid, news cards horizontal scroll",
-    "#10 CompetitionsListPage — 2 chip rows (game + status), full-bleed ArenaBanner cards (no padding) per v2 spec",
-    "#11 CompetitionDetail — full-bleed ArenaBanner header (game gradient), bigger Bebas h2 22px title, refined 4-tab bar"
+    "#1 Onboarding — DONE (wave 1 — native PageView + 4 emoji slides + custom dots)",
+    "#2 Splash — DONE (radial wash + 3-col stat grid 12 048 / 342 / 1.2M XAF + tagline 'e-sport panafricain')",
+    "#3 Login — DONE (OU divider + Google + Apple SSO secondary buttons with PHASE 2.3 placeholder)",
+    "#4 Register — DONE (ArenaAvatar 8-color picker on step 2 with selected ring + initial inside)",
+    "#7 LinkAccount — DONE (warning header in arenaWarningCardDecoration + carbon methods card)",
+    "#9 Home — DONE (header with tier ArenaBadge + notif counter, horizontal upcoming-matches scroller, full-bleed live stream card with gradient + dim, game filter chips, ArenaBanner for active comp, 3-col stat grid)",
+    "#10 CompetitionsListPage — DONE (2 chip rows: jeu / statut + full-bleed ArenaBanner cards with capacity badge trailing)",
+    "#11 CompetitionDetail — DONE (full-bleed ArenaBanner header with game gradient + 22px Bebas title + status/game pills + refined sleek 4-tab bar with signalBlue underline)"
   ],
   "blockers": [
     {

@@ -115,6 +115,24 @@ class _LoginUserScreenState extends ConsumerState<LoginUserScreen> {
                   onPressed: _submit,
                 ),
                 const SizedBox(height: ArenaSpacing.lg),
+                const _OrDivider(),
+                const SizedBox(height: ArenaSpacing.md),
+                ArenaButton(
+                  label: '🔵 Continuer avec Google',
+                  fullWidth: true,
+                  size: ArenaButtonSize.large,
+                  variant: ArenaButtonVariant.secondary,
+                  onPressed: isLoading ? null : () => _ssoSnack(context),
+                ),
+                const SizedBox(height: ArenaSpacing.sm),
+                ArenaButton(
+                  label: '🍎 Continuer avec Apple',
+                  fullWidth: true,
+                  size: ArenaButtonSize.large,
+                  variant: ArenaButtonVariant.secondary,
+                  onPressed: isLoading ? null : () => _ssoSnack(context),
+                ),
+                const SizedBox(height: ArenaSpacing.lg),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -142,6 +160,35 @@ class _LoginUserScreenState extends ConsumerState<LoginUserScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  void _ssoSnack(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Connexion sociale Google/Apple : disponible en PHASE 2.3.',
+        ),
+      ),
+    );
+  }
+}
+
+class _OrDivider extends StatelessWidget {
+  const _OrDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        const Expanded(child: Divider(color: ArenaColors.border, height: 1)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: ArenaSpacing.md),
+          child: Text('OU', style: ArenaText.small),
+        ),
+        const Expanded(child: Divider(color: ArenaColors.border, height: 1)),
+      ],
     );
   }
 }

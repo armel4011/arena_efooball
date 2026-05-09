@@ -64,13 +64,18 @@ class _DetailBody extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _Header(competition: competition),
-          const TabBar(
-            isScrollable: true,
-            tabs: [
-              Tab(text: 'Infos'),
-              Tab(text: 'Participants'),
-              Tab(text: 'Bracket'),
-              Tab(text: 'Prix'),
+          TabBar(
+            labelStyle: ArenaText.button,
+            unselectedLabelStyle: ArenaText.button,
+            labelColor: ArenaColors.bone,
+            unselectedLabelColor: ArenaColors.silver,
+            indicatorColor: ArenaColors.signalBlue,
+            indicatorWeight: 2,
+            tabs: const [
+              Tab(text: 'INFOS'),
+              Tab(text: 'PARTICIP.'),
+              Tab(text: 'BRACKET'),
+              Tab(text: 'PRIX'),
             ],
           ),
           Expanded(
@@ -112,24 +117,14 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = _accentForGame(competition.game);
     return Container(
       padding: const EdgeInsets.fromLTRB(
         ArenaSpacing.lg,
-        ArenaSpacing.lg,
+        ArenaSpacing.xl - 2,
         ArenaSpacing.lg,
         ArenaSpacing.md,
       ),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            accent.withValues(alpha: 0.18),
-            ArenaColors.bg,
-          ],
-        ),
-      ),
+      decoration: BoxDecoration(gradient: _gradientFor(competition.game)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -138,69 +133,81 @@ class _Header extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: ArenaSpacing.sm,
-                  vertical: 4,
+                  vertical: 3,
                 ),
                 decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.16),
-                  borderRadius: ArenaRadius.pill,
+                  color: Colors.black.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(ArenaRadius.round),
+                ),
+                child: Text(
+                  _statusLabel(competition.status),
+                  style: ArenaText.badge.copyWith(color: Colors.white),
+                ),
+              ),
+              const SizedBox(width: ArenaSpacing.xs),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: ArenaSpacing.sm,
+                  vertical: 3,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  borderRadius: BorderRadius.circular(ArenaRadius.round),
                 ),
                 child: Text(
                   competition.game.label.toUpperCase(),
-                  style: ArenaTypography.labelLarge.copyWith(
-                    color: accent,
-                    fontSize: 11,
-                  ),
+                  style: ArenaText.badge.copyWith(color: Colors.white),
                 ),
               ),
-              const SizedBox(width: ArenaSpacing.sm),
-              _StatusPill(status: competition.status),
             ],
           ),
-          const SizedBox(height: ArenaSpacing.sm),
+          const SizedBox(height: ArenaSpacing.xs + 2),
           Text(
             competition.name.toUpperCase(),
-            style: ArenaTypography.displayMedium,
+            style: ArenaText.h2.copyWith(
+              color: Colors.white,
+              fontSize: 22,
+              letterSpacing: 2,
+            ),
           ),
-          const SizedBox(height: ArenaSpacing.sm),
-          Row(
-            children: [
-              const Icon(
-                Icons.event_outlined,
-                size: 16,
-                color: ArenaColors.textMuted,
-              ),
-              const SizedBox(width: ArenaSpacing.xs),
-              Text(
-                _formatDateRange(competition.startDate, competition.endDate),
-                style: ArenaTypography.bodyMedium.copyWith(
-                  color: ArenaColors.textMuted,
-                ),
-              ),
-              const SizedBox(width: ArenaSpacing.md),
-              const Icon(
-                Icons.people_outline,
-                size: 16,
-                color: ArenaColors.textMuted,
-              ),
-              const SizedBox(width: ArenaSpacing.xs),
-              Text(
-                '${competition.currentPlayers} / ${competition.maxPlayers}',
-                style: ArenaTypography.bodyMedium.copyWith(
-                  color: ArenaColors.textMuted,
-                ),
-              ),
-            ],
+          const SizedBox(height: 2),
+          Text(
+            _subtitleFor(competition),
+            style: ArenaText.bodyMuted.copyWith(
+              color: Colors.white.withValues(alpha: 0.9),
+              fontSize: 11,
+            ),
           ),
         ],
       ),
     );
   }
 
-  static Color _accentForGame(GameType g) => switch (g) {
-        GameType.efootball => ArenaColors.efootball,
-        GameType.fifaMobile => ArenaColors.fifa,
-        GameType.eaSportsFc => ArenaColors.fcMobile,
+  static LinearGradient _gradientFor(GameType g) => switch (g) {
+        GameType.efootball => ArenaColors.bannerEfoot,
+        GameType.fifaMobile => ArenaColors.bannerFifa,
+        GameType.eaSportsFc => ArenaColors.bannerFc,
       };
+
+  static String _statusLabel(CompetitionStatus s) => switch (s) {
+        CompetitionStatus.draft => 'BROUILLON',
+        CompetitionStatus.registrationOpen => 'OPEN',
+        CompetitionStatus.registrationClosed => 'COMPLET',
+        CompetitionStatus.ongoing => 'EN COURS',
+        CompetitionStatus.completed => 'TERMINÉ',
+        CompetitionStatus.cancelled => 'ANNULÉ',
+      };
+
+  static String _subtitleFor(Competition c) {
+    final dateLabel = _formatDateRange(c.startDate, c.endDate);
+    if (c.prizePoolLocal > 0) {
+      final pool = '${_money(c.prizePoolLocal)} '
+          '${c.prizePoolCurrency ?? c.registrationCurrency}';
+      return '$dateLabel · Récompense $pool · '
+          '${c.currentPlayers}/${c.maxPlayers}';
+    }
+    return '$dateLabel · ${c.currentPlayers}/${c.maxPlayers}';
+  }
 
   static String _formatDateRange(DateTime start, DateTime? end) {
     final s = DateFormat('d MMM y', 'fr').format(start.toLocal());
@@ -208,6 +215,8 @@ class _Header extends StatelessWidget {
     final e = DateFormat('d MMM y', 'fr').format(end.toLocal());
     return '$s — $e';
   }
+
+  static String _money(double v) => NumberFormat.decimalPattern('fr').format(v);
 }
 
 class _InfosTab extends StatelessWidget {
@@ -367,39 +376,3 @@ class _RegistrationCta extends StatelessWidget {
   }
 }
 
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({required this.status});
-
-  final CompetitionStatus status;
-
-  @override
-  Widget build(BuildContext context) {
-    final (label, color) = switch (status) {
-      CompetitionStatus.draft => ('BROUILLON', ArenaColors.textMuted),
-      CompetitionStatus.registrationOpen =>
-        ('INSCRIPTIONS', ArenaColors.success),
-      CompetitionStatus.registrationClosed =>
-        ('COMPLET', ArenaColors.warning),
-      CompetitionStatus.ongoing => ('EN COURS', ArenaColors.success),
-      CompetitionStatus.completed => ('TERMINÉ', ArenaColors.textMuted),
-      CompetitionStatus.cancelled => ('ANNULÉ', ArenaColors.danger),
-    };
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: ArenaSpacing.sm,
-        vertical: 4,
-      ),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.16),
-        borderRadius: ArenaRadius.pill,
-      ),
-      child: Text(
-        label,
-        style: ArenaTypography.labelLarge.copyWith(
-          color: color,
-          fontSize: 11,
-        ),
-      ),
-    );
-  }
-}

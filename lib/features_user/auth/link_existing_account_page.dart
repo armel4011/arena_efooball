@@ -42,51 +42,73 @@ class LinkExistingAccountPage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: ArenaSpacing.xl),
-              Center(
-                child: Container(
-                  width: 96,
-                  height: 96,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: ArenaColors.warning.withValues(alpha: 0.12),
-                  ),
-                  child: const Icon(
-                    Icons.merge_type_outlined,
-                    color: ArenaColors.warning,
-                    size: 48,
-                  ),
+              Container(
+                padding: const EdgeInsets.all(ArenaSpacing.lg),
+                decoration: arenaWarningCardDecoration(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Text('⚠️', style: TextStyle(fontSize: 22)),
+                        const SizedBox(width: ArenaSpacing.sm),
+                        Expanded(
+                          child: Text(
+                            'Compte déjà existant',
+                            style: ArenaText.h3,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: ArenaSpacing.sm),
+                    Text(emailLine, style: ArenaText.body),
+                  ],
                 ),
               ),
               const SizedBox(height: ArenaSpacing.lg),
               Text(
-                'COMPTE EXISTANT DÉTECTÉ',
-                style: ArenaTypography.displayMedium,
-                textAlign: TextAlign.center,
+                'MÉTHODES EXISTANTES',
+                style: ArenaText.inputLabel,
               ),
               const SizedBox(height: ArenaSpacing.sm),
-              Text(
-                emailLine,
-                style: ArenaTypography.bodyMedium.copyWith(
-                  color: ArenaColors.textMuted,
+              Container(
+                padding: const EdgeInsets.all(ArenaSpacing.md),
+                decoration: BoxDecoration(
+                  color: ArenaColors.carbon,
+                  borderRadius: BorderRadius.circular(ArenaRadius.lg),
+                  border: Border.all(color: ArenaColors.border),
                 ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: ArenaSpacing.md),
-              Text(
-                'Choisis comment continuer :',
-                style: ArenaTypography.bodyMedium.copyWith(
-                  color: ArenaColors.textMuted,
+                child: Row(
+                  children: [
+                    const Text('📧', style: TextStyle(fontSize: 18)),
+                    const SizedBox(width: ArenaSpacing.sm),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Email + mot de passe',
+                            style: ArenaText.body
+                                .copyWith(fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Choisis comment continuer ci-dessous.',
+                            style: ArenaText.bodyMuted,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                textAlign: TextAlign.center,
               ),
               const SizedBox(height: ArenaSpacing.xl),
               ArenaButton(
-                label: 'LIER LES DEUX COMPTES',
+                label: '🔗 LIER LES DEUX COMPTES',
                 fullWidth: true,
                 size: ArenaButtonSize.large,
-                // PHASE 2.3 — wire to AuthRepository.linkProviderToCurrentUser
                 onPressed: () {
+                  // PHASE 2.3 — wire to AuthRepository.linkProviderToCurrentUser
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text(
@@ -96,7 +118,7 @@ class LinkExistingAccountPage extends StatelessWidget {
                   );
                 },
               ),
-              const SizedBox(height: ArenaSpacing.md),
+              const SizedBox(height: ArenaSpacing.sm),
               ArenaButton(
                 label: 'ME CONNECTER AVEC MOT DE PASSE',
                 fullWidth: true,
@@ -104,10 +126,12 @@ class LinkExistingAccountPage extends StatelessWidget {
                 variant: ArenaButtonVariant.secondary,
                 onPressed: () => context.go(UserRoutes.login),
               ),
-              const SizedBox(height: ArenaSpacing.md),
-              TextButton(
+              const SizedBox(height: ArenaSpacing.sm),
+              ArenaButton(
+                label: 'Annuler',
+                variant: ArenaButtonVariant.ghost,
+                fullWidth: true,
                 onPressed: () => context.go(UserRoutes.login),
-                child: const Text('Annuler'),
               ),
             ],
           ),
