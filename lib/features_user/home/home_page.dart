@@ -2,7 +2,7 @@ import 'package:arena/core/theme/arena_colors.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/core/theme/arena_typography.dart';
 import 'package:arena/data/models/profile.dart';
-import 'package:arena/features_shared/widgets/arena_card.dart';
+import 'package:arena/features_shared/widgets/arena_glass_card.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,49 +20,93 @@ class HomePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(currentProfileProvider).valueOrNull;
 
-    return RefreshIndicator(
-      onRefresh: () async {
-        ref.invalidate(currentProfileProvider);
-        await ref.read(currentProfileProvider.future);
-      },
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(ArenaSpacing.lg),
-        children: [
-          _Header(profile: profile),
-          const SizedBox(height: ArenaSpacing.xl),
-          const _SectionTitle('Compétitions actives'),
-          const SizedBox(height: ArenaSpacing.sm),
-          const _ComingSoonPanel(
-            phase: 'PHASE 4',
-            description: 'Liste des tournois en cours sur eFootball, FIFA'
-                ' Mobile et EA SPORTS FC Mobile.',
-            icon: Icons.sports_esports_outlined,
+    return Stack(
+      children: [
+        const Positioned.fill(child: _AmbientBackdrop()),
+        RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(currentProfileProvider);
+            await ref.read(currentProfileProvider.future);
+          },
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(ArenaSpacing.lg),
+            children: [
+              _Header(profile: profile),
+              const SizedBox(height: ArenaSpacing.xl),
+              const _SectionTitle('Compétitions actives'),
+              const SizedBox(height: ArenaSpacing.sm),
+              const _ComingSoonPanel(
+                phase: 'PHASE 4',
+                description: 'Liste des tournois en cours sur eFootball, FIFA'
+                    ' Mobile et EA SPORTS FC Mobile.',
+                icon: Icons.sports_esports_outlined,
+              ),
+              const SizedBox(height: ArenaSpacing.xl),
+              const _SectionTitle('Prochains matchs'),
+              const SizedBox(height: ArenaSpacing.sm),
+              const _ComingSoonPanel(
+                phase: 'PHASE 5',
+                description: 'Tes matchs à jouer (code room, adversaire,'
+                    ' deadline) apparaîtront ici.',
+                icon: Icons.calendar_today_outlined,
+              ),
+              const SizedBox(height: ArenaSpacing.xl),
+              const _SectionTitle('Lives en cours'),
+              const SizedBox(height: ArenaSpacing.sm),
+              const _ComingSoonPanel(
+                phase: 'PHASE 8',
+                description: 'Streaming Agora des finales — bientôt diffusé en'
+                    ' direct.',
+                icon: Icons.live_tv_outlined,
+              ),
+              const SizedBox(height: ArenaSpacing.xl),
+              const _SectionTitle('Tes stats'),
+              const SizedBox(height: ArenaSpacing.sm),
+              _StatsBlock(profile: profile),
+              const SizedBox(height: ArenaSpacing.xl),
+            ],
           ),
-          const SizedBox(height: ArenaSpacing.xl),
-          const _SectionTitle('Prochains matchs'),
-          const SizedBox(height: ArenaSpacing.sm),
-          const _ComingSoonPanel(
-            phase: 'PHASE 5',
-            description: 'Tes matchs à jouer (code room, adversaire,'
-                ' deadline) apparaîtront ici.',
-            icon: Icons.calendar_today_outlined,
+        ),
+      ],
+    );
+  }
+}
+
+/// Soft radial wash behind the page so the glass cards have something to
+/// refract. Without it [BackdropFilter] just blurs flat black.
+class _AmbientBackdrop extends StatelessWidget {
+  const _AmbientBackdrop();
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: RadialGradient(
+            center: const Alignment(-0.4, -1.1),
+            radius: 1.4,
+            colors: [
+              ArenaColors.primary.withValues(alpha: 0.28),
+              ArenaColors.primary.withValues(alpha: 0.08),
+              Colors.transparent,
+            ],
+            stops: const [0.0, 0.35, 1.0],
           ),
-          const SizedBox(height: ArenaSpacing.xl),
-          const _SectionTitle('Lives en cours'),
-          const SizedBox(height: ArenaSpacing.sm),
-          const _ComingSoonPanel(
-            phase: 'PHASE 8',
-            description: 'Streaming Agora des finales — bientôt diffusé en'
-                ' direct.',
-            icon: Icons.live_tv_outlined,
+        ),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: RadialGradient(
+              center: const Alignment(1.1, 0.6),
+              radius: 1.2,
+              colors: [
+                ArenaColors.efootball.withValues(alpha: 0.14),
+                Colors.transparent,
+              ],
+              stops: const [0.0, 1.0],
+            ),
           ),
-          const SizedBox(height: ArenaSpacing.xl),
-          const _SectionTitle('Tes stats'),
-          const SizedBox(height: ArenaSpacing.sm),
-          _StatsBlock(profile: profile),
-          const SizedBox(height: ArenaSpacing.xl),
-        ],
+        ),
       ),
     );
   }
@@ -88,6 +132,17 @@ class _Header extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: avatarColor,
+            boxShadow: [
+              BoxShadow(
+                color: avatarColor.withValues(alpha: 0.55),
+                blurRadius: 22,
+                spreadRadius: -2,
+              ),
+            ],
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.18),
+              width: 1.5,
+            ),
           ),
           alignment: Alignment.center,
           child: Text(
@@ -164,7 +219,7 @@ class _ComingSoonPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ArenaCard(
+    return ArenaGlassCard(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -261,6 +316,7 @@ class _StatsBlock extends StatelessWidget {
           icon: Icons.bar_chart_outlined,
           accent: Theme.of(context).colorScheme.primary,
           fullWidth: true,
+          glow: played > 0,
         ),
       ],
     );
@@ -281,6 +337,7 @@ class _StatCard extends StatelessWidget {
     required this.icon,
     this.accent,
     this.fullWidth = false,
+    this.glow = false,
   });
 
   final String label;
@@ -288,11 +345,13 @@ class _StatCard extends StatelessWidget {
   final IconData icon;
   final Color? accent;
   final bool fullWidth;
+  final bool glow;
 
   @override
   Widget build(BuildContext context) {
     final tone = accent ?? ArenaColors.textMuted;
-    return ArenaCard(
+    return ArenaGlassCard(
+      glowColor: glow ? tone : null,
       child: Row(
         children: [
           Icon(icon, color: tone, size: fullWidth ? 28 : 22),

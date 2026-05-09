@@ -92,10 +92,42 @@ class ArenaButton extends StatelessWidget {
       ),
     );
 
+    final glow = _glowColor(scheme);
+    final wrapped = glow == null
+        ? button
+        : DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: ArenaRadius.button,
+              boxShadow: [
+                BoxShadow(
+                  color: glow.withValues(alpha: 0.65),
+                  blurRadius: 30,
+                  spreadRadius: 0,
+                  offset: const Offset(0, 6),
+                ),
+                BoxShadow(
+                  color: glow.withValues(alpha: 0.35),
+                  blurRadius: 12,
+                  spreadRadius: -2,
+                ),
+              ],
+            ),
+            child: button,
+          );
+
     if (fullWidth) {
-      return SizedBox(width: double.infinity, child: button);
+      return SizedBox(width: double.infinity, child: wrapped);
     }
-    return button;
+    return wrapped;
+  }
+
+  Color? _glowColor(ColorScheme scheme) {
+    if (_disabled) return null;
+    return switch (variant) {
+      ArenaButtonVariant.primary => scheme.primary,
+      ArenaButtonVariant.danger => ArenaColors.danger,
+      ArenaButtonVariant.secondary || ArenaButtonVariant.ghost => null,
+    };
   }
 
   Color _backgroundColor(ColorScheme scheme) {

@@ -20,7 +20,8 @@ class CompetitionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ArenaCard(
+    final glow = _glowFor(context, competition.status);
+    final card = ArenaCard(
       onTap: onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -123,6 +124,35 @@ class CompetitionCard extends StatelessWidget {
         ],
       ),
     );
+
+    if (glow == null) return card;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: ArenaRadius.card,
+        boxShadow: [
+          BoxShadow(
+            color: glow.withValues(alpha: 0.32),
+            blurRadius: 28,
+            spreadRadius: -4,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: card,
+    );
+  }
+
+  static Color? _glowFor(BuildContext context, CompetitionStatus status) {
+    return switch (status) {
+      CompetitionStatus.registrationOpen =>
+        Theme.of(context).colorScheme.primary,
+      CompetitionStatus.ongoing => ArenaColors.success,
+      CompetitionStatus.registrationClosed => ArenaColors.warning,
+      CompetitionStatus.draft ||
+      CompetitionStatus.completed ||
+      CompetitionStatus.cancelled =>
+        null,
+    };
   }
 
   static String _formatDate(DateTime d) {

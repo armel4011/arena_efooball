@@ -274,7 +274,19 @@ class _PrivacySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ArenaCard(
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: ArenaRadius.card,
+        boxShadow: [
+          BoxShadow(
+            color: ArenaColors.danger.withValues(alpha: 0.18),
+            blurRadius: 28,
+            spreadRadius: -8,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: ArenaCard(
       padding: EdgeInsets.zero,
       child: Column(
         children: [
@@ -314,6 +326,7 @@ class _PrivacySection extends StatelessWidget {
             onTap: () => context.push(UserRoutes.profileDelete),
           ),
         ],
+      ),
       ),
     );
   }

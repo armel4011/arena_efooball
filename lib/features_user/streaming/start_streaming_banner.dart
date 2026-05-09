@@ -46,6 +46,13 @@ class StartStreamingBanner extends ConsumerWidget {
             color: ArenaColors.danger.withValues(alpha: 0.1),
             borderRadius: ArenaRadius.card,
             border: Border.all(color: ArenaColors.danger),
+            boxShadow: [
+              BoxShadow(
+                color: ArenaColors.danger.withValues(alpha: 0.45),
+                blurRadius: 26,
+                spreadRadius: -2,
+              ),
+            ],
           ),
           child: Row(
             children: [

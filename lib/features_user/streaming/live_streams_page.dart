@@ -67,7 +67,19 @@ class _LiveStreamCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ArenaCard(
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: ArenaRadius.card,
+        boxShadow: [
+          BoxShadow(
+            color: ArenaColors.danger.withValues(alpha: 0.32),
+            blurRadius: 28,
+            spreadRadius: -4,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: ArenaCard(
       onTap: () => context.go('/streams/watch/${stream.matchId}'),
       child: Row(
         children: [
@@ -98,6 +110,7 @@ class _LiveStreamCard extends StatelessWidget {
           const Icon(Icons.chevron_right, color: ArenaColors.textMuted),
         ],
       ),
+      ),
     );
   }
 }
@@ -112,6 +125,13 @@ class _LiveBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: ArenaColors.danger,
         borderRadius: BorderRadius.circular(4),
+        boxShadow: [
+          BoxShadow(
+            color: ArenaColors.danger.withValues(alpha: 0.65),
+            blurRadius: 14,
+            spreadRadius: -1,
+          ),
+        ],
       ),
       child: const Row(
         mainAxisSize: MainAxisSize.min,

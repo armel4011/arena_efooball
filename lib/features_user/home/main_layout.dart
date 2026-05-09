@@ -54,31 +54,9 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
         ],
       ),
       body: IndexedStack(index: _currentIndex, children: _pages),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: (i) => setState(() => _currentIndex = i),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Accueil',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.sports_esports_outlined),
-            selectedIcon: Icon(Icons.sports_esports),
-            label: 'Compétitions',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.chat_bubble_outline),
-            selectedIcon: Icon(Icons.chat_bubble),
-            label: 'Chat',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: 'Profil',
-          ),
-        ],
+      bottomNavigationBar: _GlowingNavBar(
+        currentIndex: _currentIndex,
+        onChanged: (i) => setState(() => _currentIndex = i),
       ),
     );
   }
@@ -90,6 +68,96 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
         3 => 'PROFIL',
         _ => 'ARENA',
       };
+}
+
+class _GlowingNavBar extends StatelessWidget {
+  const _GlowingNavBar({
+    required this.currentIndex,
+    required this.onChanged,
+  });
+
+  final int currentIndex;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        boxShadow: [
+          BoxShadow(
+            color: primary.withValues(alpha: 0.22),
+            blurRadius: 36,
+            spreadRadius: -4,
+            offset: const Offset(0, -10),
+          ),
+        ],
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(
+              color: Colors.white.withValues(alpha: 0.06),
+            ),
+          ),
+        ),
+        child: NavigationBarTheme(
+          data: NavigationBarThemeData(
+            backgroundColor: ArenaColors.surface.withValues(alpha: 0.92),
+            surfaceTintColor: Colors.transparent,
+            indicatorColor: primary.withValues(alpha: 0.28),
+            indicatorShape: const StadiumBorder(),
+            iconTheme: WidgetStateProperty.resolveWith(
+              (states) => IconThemeData(
+                color: states.contains(WidgetState.selected)
+                    ? primary
+                    : ArenaColors.textMuted,
+                size: 24,
+              ),
+            ),
+            labelTextStyle: WidgetStateProperty.resolveWith(
+              (states) => ArenaTypography.labelMedium.copyWith(
+                color: states.contains(WidgetState.selected)
+                    ? primary
+                    : ArenaColors.textMuted,
+                fontSize: 11,
+                fontWeight: states.contains(WidgetState.selected)
+                    ? FontWeight.w600
+                    : FontWeight.w500,
+              ),
+            ),
+          ),
+          child: NavigationBar(
+            selectedIndex: currentIndex,
+            onDestinationSelected: onChanged,
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.home_outlined),
+                selectedIcon: Icon(Icons.home),
+                label: 'Accueil',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.sports_esports_outlined),
+                selectedIcon: Icon(Icons.sports_esports),
+                label: 'Compétitions',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.chat_bubble_outline),
+                selectedIcon: Icon(Icons.chat_bubble),
+                label: 'Chat',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.person_outline),
+                selectedIcon: Icon(Icons.person),
+                label: 'Profil',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _PhasePlaceholder extends StatelessWidget {

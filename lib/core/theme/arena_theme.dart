@@ -57,7 +57,10 @@ ThemeData _buildTheme(Color primary) {
     appBarTheme: AppBarTheme(
       backgroundColor: ArenaColors.bg,
       foregroundColor: ArenaColors.text,
-      elevation: 0,
+      elevation: 10,
+      shadowColor: primary.withValues(alpha: 0.55),
+      surfaceTintColor: Colors.transparent,
+      scrolledUnderElevation: 10,
       centerTitle: false,
       titleTextStyle: ArenaTypography.headlineMedium,
       iconTheme: const IconThemeData(color: ArenaColors.text),

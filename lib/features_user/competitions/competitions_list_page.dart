@@ -135,7 +135,7 @@ class _FilterChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
-    return ChoiceChip(
+    final chip = ChoiceChip(
       label: Text(label),
       selected: selected,
       onSelected: (_) => onTap(),
@@ -148,6 +148,21 @@ class _FilterChip extends StatelessWidget {
       side: BorderSide(
         color: selected ? primary : ArenaColors.border,
       ),
+    );
+
+    if (!selected) return chip;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: ArenaRadius.pill,
+        boxShadow: [
+          BoxShadow(
+            color: primary.withValues(alpha: 0.55),
+            blurRadius: 18,
+            spreadRadius: -2,
+          ),
+        ],
+      ),
+      child: chip,
     );
   }
 }

@@ -118,6 +118,17 @@ class _Header extends StatelessWidget {
             decoration: BoxDecoration(
               color: color,
               shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: color.withValues(alpha: 0.55),
+                  blurRadius: 28,
+                  spreadRadius: -2,
+                ),
+              ],
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.18),
+                width: 1.5,
+              ),
             ),
             alignment: Alignment.center,
             child: Text(
@@ -176,48 +187,66 @@ class _StatsCard extends StatelessWidget {
           style: const TextStyle(color: ArenaColors.danger),
         ),
       ),
-      data: (s) => ArenaCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('STATS', style: ArenaTypography.labelMedium),
-            const SizedBox(height: ArenaSpacing.sm),
-            Row(
-              children: [
-                _StatTile(
-                    label: 'V', value: '${s.wins}', color: ArenaColors.success),
-                _StatTile(
-                    label: 'D',
-                    value: '${s.losses}',
-                    color: ArenaColors.danger),
-                _StatTile(
-                    label: 'N',
-                    value: '${s.draws}',
-                    color: ArenaColors.textMuted),
-              ],
-            ),
-            const SizedBox(height: ArenaSpacing.md),
-            _RatioRow(ratio: s.winRatio, totalMatches: s.totalMatches),
-            const SizedBox(height: ArenaSpacing.md),
-            Row(
-              children: [
-                Expanded(
-                  child: _GoalLine(
-                    label: 'Buts marqués',
-                    value: s.goalsScored,
-                    color: ArenaColors.success,
-                  ),
-                ),
-                Expanded(
-                  child: _GoalLine(
-                    label: 'Buts encaissés',
-                    value: s.goalsConceded,
-                    color: ArenaColors.danger,
-                  ),
-                ),
-              ],
+      data: (s) => DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: ArenaRadius.card,
+          boxShadow: [
+            BoxShadow(
+              color: ArenaColors.primary.withValues(alpha: 0.22),
+              blurRadius: 36,
+              spreadRadius: -8,
+              offset: const Offset(0, 10),
             ),
           ],
+        ),
+        child: ArenaCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('STATS', style: ArenaTypography.labelMedium),
+              const SizedBox(height: ArenaSpacing.sm),
+              Row(
+                children: [
+                  _StatTile(
+                    label: 'V',
+                    value: '${s.wins}',
+                    color: ArenaColors.success,
+                  ),
+                  _StatTile(
+                    label: 'D',
+                    value: '${s.losses}',
+                    color: ArenaColors.danger,
+                  ),
+                  _StatTile(
+                    label: 'N',
+                    value: '${s.draws}',
+                    color: ArenaColors.textMuted,
+                  ),
+                ],
+              ),
+              const SizedBox(height: ArenaSpacing.md),
+              _RatioRow(ratio: s.winRatio, totalMatches: s.totalMatches),
+              const SizedBox(height: ArenaSpacing.md),
+              Row(
+                children: [
+                  Expanded(
+                    child: _GoalLine(
+                      label: 'Buts marqués',
+                      value: s.goalsScored,
+                      color: ArenaColors.success,
+                    ),
+                  ),
+                  Expanded(
+                    child: _GoalLine(
+                      label: 'Buts encaissés',
+                      value: s.goalsConceded,
+                      color: ArenaColors.danger,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -444,6 +473,15 @@ class _ResultBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(8),
+        boxShadow: result == _Outcome.draw
+            ? null
+            : [
+                BoxShadow(
+                  color: color.withValues(alpha: 0.55),
+                  blurRadius: 14,
+                  spreadRadius: -2,
+                ),
+              ],
       ),
       alignment: Alignment.center,
       child: Text(

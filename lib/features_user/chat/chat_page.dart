@@ -178,6 +178,16 @@ class _Bubble extends StatelessWidget {
               bottomLeft: Radius.circular(isSelf ? 16 : 4),
               bottomRight: Radius.circular(isSelf ? 4 : 16),
             ),
+            boxShadow: isSelf
+                ? [
+                    BoxShadow(
+                      color: scheme.primary.withValues(alpha: 0.45),
+                      blurRadius: 18,
+                      spreadRadius: -2,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : null,
           ),
           child: Text(
             message.content,
@@ -221,15 +231,32 @@ class _MessageInput extends StatelessWidget {
             ),
           ),
           const SizedBox(width: ArenaSpacing.sm),
-          IconButton.filled(
-            onPressed: sending ? null : onSend,
-            icon: sending
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.send),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: sending
+                  ? null
+                  : [
+                      BoxShadow(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withValues(alpha: 0.55),
+                        blurRadius: 20,
+                        spreadRadius: -2,
+                      ),
+                    ],
+            ),
+            child: IconButton.filled(
+              onPressed: sending ? null : onSend,
+              icon: sending
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.send),
+            ),
           ),
         ],
       ),

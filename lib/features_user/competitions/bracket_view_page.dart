@@ -123,7 +123,8 @@ class _MatchRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ArenaCard(
+    final glow = _glowFor(context, match.status);
+    final card = ArenaCard(
       onTap: () => context.push(UserRoutes.matchPath(match.id)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -168,6 +169,38 @@ class _MatchRow extends StatelessWidget {
         ],
       ),
     );
+
+    if (glow == null) return card;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: ArenaRadius.card,
+        boxShadow: [
+          BoxShadow(
+            color: glow.withValues(alpha: 0.32),
+            blurRadius: 26,
+            spreadRadius: -3,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: card,
+    );
+  }
+
+  static Color? _glowFor(BuildContext context, MatchStatus status) {
+    return switch (status) {
+      MatchStatus.inProgress => ArenaColors.success,
+      MatchStatus.ready => Theme.of(context).colorScheme.primary,
+      MatchStatus.scorePending ||
+      MatchStatus.awaitingValidation =>
+        ArenaColors.warning,
+      MatchStatus.disputed || MatchStatus.forfeited => ArenaColors.danger,
+      MatchStatus.pending ||
+      MatchStatus.scheduled ||
+      MatchStatus.completed ||
+      MatchStatus.cancelled =>
+        null,
+    };
   }
 }
 

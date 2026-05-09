@@ -203,6 +203,16 @@ class _ColorPicker extends StatelessWidget {
                       hex == selected ? ArenaColors.text : ArenaColors.border,
                   width: hex == selected ? 3 : 1,
                 ),
+                boxShadow: hex == selected
+                    ? [
+                        BoxShadow(
+                          color: AvatarPalette.colorFromHex(hex)
+                              .withValues(alpha: 0.65),
+                          blurRadius: 18,
+                          spreadRadius: -2,
+                        ),
+                      ]
+                    : null,
               ),
               child: hex == selected
                   ? const Icon(Icons.check, color: Colors.white, size: 22)

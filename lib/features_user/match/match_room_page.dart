@@ -416,17 +416,33 @@ class _CompletedView extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
-            Icons.emoji_events,
-            size: 64,
+          const _HaloIcon(
+            icon: Icons.emoji_events,
             color: ArenaColors.warning,
+            size: 64,
           ),
           const SizedBox(height: ArenaSpacing.md),
           Text('SCORE FINAL', style: ArenaTypography.labelLarge),
           const SizedBox(height: ArenaSpacing.sm),
-          Text(
-            '$s1 — $s2',
-            style: ArenaTypography.displayMedium.copyWith(fontSize: 48),
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: ArenaSpacing.lg,
+              vertical: ArenaSpacing.sm,
+            ),
+            decoration: BoxDecoration(
+              borderRadius: ArenaRadius.card,
+              boxShadow: [
+                BoxShadow(
+                  color: ArenaColors.warning.withValues(alpha: 0.32),
+                  blurRadius: 36,
+                  spreadRadius: -8,
+                ),
+              ],
+            ),
+            child: Text(
+              '$s1 — $s2',
+              style: ArenaTypography.displayMedium.copyWith(fontSize: 48),
+            ),
           ),
           const SizedBox(height: ArenaSpacing.md),
           if (match.winnerId != null)
@@ -473,7 +489,7 @@ class _DisputedView extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.gavel, size: 56, color: ArenaColors.danger),
+          const _HaloIcon(icon: Icons.gavel, color: ArenaColors.danger),
           const SizedBox(height: ArenaSpacing.md),
           Text(
             'LITIGE EN COURS',
@@ -576,9 +592,8 @@ class _ShareCodeFormState extends ConsumerState<_ShareCodeForm> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: ArenaSpacing.lg),
-          const Icon(
-            Icons.vpn_key_outlined,
-            size: 56,
+          const _HaloIcon(
+            icon: Icons.vpn_key_outlined,
             color: ArenaColors.primary,
           ),
           const SizedBox(height: ArenaSpacing.md),
@@ -699,9 +714,8 @@ class _RoomReadyViewState extends ConsumerState<_RoomReadyView> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: ArenaSpacing.lg),
-          const Icon(
-            Icons.meeting_room_outlined,
-            size: 56,
+          const _HaloIcon(
+            icon: Icons.meeting_room_outlined,
             color: ArenaColors.success,
           ),
           const SizedBox(height: ArenaSpacing.sm),
@@ -713,35 +727,51 @@ class _RoomReadyViewState extends ConsumerState<_RoomReadyView> {
             ),
           ),
           const SizedBox(height: ArenaSpacing.sm),
-          ArenaCard(
-            elevated: true,
-            padding: const EdgeInsets.symmetric(
-              vertical: ArenaSpacing.lg,
-              horizontal: ArenaSpacing.md,
+          DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: ArenaRadius.card,
+              boxShadow: [
+                BoxShadow(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.45),
+                  blurRadius: 32,
+                  spreadRadius: -4,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: SelectableText(
-                    code ?? '—',
-                    textAlign: TextAlign.center,
-                    style: ArenaTypography.displayMedium.copyWith(
-                      fontSize: 40,
-                      letterSpacing: 4,
+            child: ArenaCard(
+              elevated: true,
+              padding: const EdgeInsets.symmetric(
+                vertical: ArenaSpacing.lg,
+                horizontal: ArenaSpacing.md,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: SelectableText(
+                      code ?? '—',
+                      textAlign: TextAlign.center,
+                      style: ArenaTypography.displayMedium.copyWith(
+                        fontSize: 40,
+                        letterSpacing: 4,
+                      ),
                     ),
                   ),
-                ),
-                if (code != null) ...[
-                  const SizedBox(width: ArenaSpacing.sm),
-                  IconButton(
-                    icon: const Icon(Icons.copy_outlined),
-                    tooltip: 'Copier le code',
-                    color: ArenaColors.textMuted,
-                    onPressed: () => _copyCode(code),
-                  ),
+                  if (code != null) ...[
+                    const SizedBox(width: ArenaSpacing.sm),
+                    IconButton(
+                      icon: const Icon(Icons.copy_outlined),
+                      tooltip: 'Copier le code',
+                      color: ArenaColors.textMuted,
+                      onPressed: () => _copyCode(code),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
           const SizedBox(height: ArenaSpacing.lg),
@@ -1034,9 +1064,8 @@ class _ScoreFlowViewState extends ConsumerState<_ScoreFlowView> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: ArenaSpacing.lg),
-          const Icon(
-            Icons.edit_outlined,
-            size: 56,
+          const _HaloIcon(
+            icon: Icons.edit_outlined,
             color: ArenaColors.warning,
           ),
           const SizedBox(height: ArenaSpacing.md),
@@ -1187,9 +1216,8 @@ class _ScoreFlowViewState extends ConsumerState<_ScoreFlowView> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            bothSubmitted ? Icons.hourglass_top : Icons.hourglass_bottom,
-            size: 56,
+          _HaloIcon(
+            icon: bothSubmitted ? Icons.hourglass_top : Icons.hourglass_bottom,
             color: ArenaColors.warning,
           ),
           const SizedBox(height: ArenaSpacing.md),
@@ -1256,9 +1284,8 @@ class _CodeSharedInterstitial extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
-            Icons.check_circle,
-            size: 56,
+          const _HaloIcon(
+            icon: Icons.check_circle,
             color: ArenaColors.success,
           ),
           const SizedBox(height: ArenaSpacing.md),
@@ -1291,6 +1318,40 @@ class _CodeSharedInterstitial extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Hero icon with a soft colored halo behind it. Used as the focal glyph
+/// at the top of every match-room sub-view for a consistent premium feel.
+class _HaloIcon extends StatelessWidget {
+  const _HaloIcon({
+    required this.icon,
+    required this.color,
+    this.size = 56,
+  });
+
+  final IconData icon;
+  final Color color;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size + 24,
+      height: size + 24,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.45),
+            blurRadius: 36,
+            spreadRadius: -4,
+          ),
+        ],
+      ),
+      child: Icon(icon, size: size, color: color),
     );
   }
 }
