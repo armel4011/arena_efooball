@@ -48,6 +48,21 @@ class MatchStatsRepository {
     return [for (final r in rows) ArenaMatch.fromJson(r)];
   }
 
+  /// Returns every match the player has been seated in (any status), newest
+  /// first. Powers the full `MatchHistoryPage` (#14) with its filter chips.
+  Future<List<ArenaMatch>> allMatches(
+    String playerId, {
+    int limit = 100,
+  }) async {
+    final rows = await _client
+        .from(_table)
+        .select()
+        .or('player1_id.eq.$playerId,player2_id.eq.$playerId')
+        .order('scheduled_at', ascending: false)
+        .limit(limit);
+    return [for (final r in rows) ArenaMatch.fromJson(r)];
+  }
+
   /// Pure aggregation kept on the class so tests can hit it without a
   /// SupabaseClient. A draw is encoded as `winner_id = null` on a
   /// completed match (penalty shootouts always set a winner, so this
@@ -107,4 +122,12 @@ final playerRecentMatchesProvider =
     FutureProvider.family.autoDispose<List<ArenaMatch>, String>(
   (ref, playerId) =>
       ref.watch(matchStatsRepositoryProvider).recentMatches(playerId),
+);
+
+/// Powers the full match-history page (#14) — every status, not just
+/// `completed`, so the "En cours" filter has data to render.
+final playerMatchHistoryProvider =
+    FutureProvider.family.autoDispose<List<ArenaMatch>, String>(
+  (ref, playerId) =>
+      ref.watch(matchStatsRepositoryProvider).allMatches(playerId),
 );

@@ -1,9 +1,9 @@
 {
   "$schema": "https://arena.app/schemas/screens-progress-v2.json",
   "version": "2.0",
-  "lastUpdate": "2026-05-09T01:00:00Z",
+  "lastUpdate": "2026-05-09T02:00:00Z",
   "currentWave": 1,
-  "currentPhase": "WAVE_0_COMPLETE",
+  "currentPhase": "WAVE_1_CHECKPOINT_7_OF_14",
   "wave0Foundations": {
     "pubspecDedupe": "done",
     "tagPreArenaV2Rebuild": "done @ 9de8f3c",
@@ -31,11 +31,12 @@
     "analyzeStatus": "0 errors, 0 warnings (117 info lints stylistic pre-existing)"
   },
   "stats": {
-    "done": 0,
+    "done": 7,
     "inProgress": 0,
-    "todo": 54,
+    "todo": 47,
     "wave0Foundations": "complete",
-    "wave0Widgets": "10/10 done"
+    "wave0Widgets": "10/10 done",
+    "wave1": "7/14 — checkpoint #7 reached"
   },
   "blockers": [
     {
@@ -122,19 +123,19 @@
   ],
   "screens": [
     {"id": "#1",  "status": "todo", "filePath": "lib/features_user/onboarding/onboarding_page.dart"},
-    {"id": "#2",  "status": "todo", "filePath": "lib/features_user/auth/splash_user_screen.dart"},
+    {"id": "#2",  "status": "done", "filePath": "lib/features_user/auth/splash_user_screen.dart", "notes": "ArenaLogo gradient + Instrument Serif tagline + flutter_animate cascade. Stat grid (3 cols) reporté en wave 1 polish."},
     {"id": "#3",  "status": "todo", "filePath": "lib/features_user/auth/login_user_screen.dart"},
     {"id": "#4",  "status": "todo", "filePath": "lib/features_user/auth/register_user_screen.dart"},
-    {"id": "#5",  "status": "todo", "filePath": "lib/features_user/auth/forgot_password_page.dart"},
-    {"id": "#6",  "status": "todo", "filePath": "lib/features_user/auth/reset_password_page.dart"},
+    {"id": "#5",  "status": "done", "filePath": "lib/features_user/auth/forgot_password_page.dart", "notes": "ArenaAppBar swap + dropped legacy theme imports."},
+    {"id": "#6",  "status": "done", "filePath": "lib/features_user/auth/reset_password_page.dart", "notes": "ArenaAppBar(showBack:false) — deep-link guard."},
     {"id": "#7",  "status": "todo", "filePath": "lib/features_user/auth/link_existing_account_page.dart"},
-    {"id": "#8",  "status": "todo", "filePath": "lib/features_user/auth/cgu_acceptance_page.dart"},
+    {"id": "#8",  "status": "done", "filePath": "lib/features_user/auth/cgu_acceptance_page.dart", "notes": "ArenaAppBar(showBack:false) + dropped legacy imports."},
     {"id": "#9",  "status": "todo", "filePath": "lib/features_user/home/home_page.dart"},
     {"id": "#10", "status": "todo", "filePath": "lib/features_user/competitions/competitions_list_page.dart"},
     {"id": "#11", "status": "todo", "filePath": "lib/features_user/competitions/competition_detail_page.dart"},
-    {"id": "#12", "status": "todo", "filePath": "lib/features_user/competitions/registration_confirm_page.dart", "needsCreate": true},
-    {"id": "#13", "status": "todo", "filePath": "lib/features_user/match_room/match_room_page.dart", "needsMove": "lib/features_user/match/match_room_page.dart"},
-    {"id": "#14", "status": "todo", "filePath": "lib/features_user/profile/match_history_page.dart", "needsCreate": true},
+    {"id": "#12", "status": "done", "filePath": "lib/features_user/competitions/registration_confirm_page.dart", "notes": "Created from scratch: card-glow summary, payment breakdown, prize distribution (50/30/20), ack checkbox, paiement CTA placeholder (PHASE 11bis). Route /competitions/:id/register/confirm + RegistrationConfirmArgs extra."},
+    {"id": "#13", "status": "done", "filePath": "lib/features_user/match_room/match_room_page.dart", "notes": "git mv lib/features_user/match → lib/features_user/match_room (folder + 2 widgets). All imports updated. Page content unchanged in this checkpoint — v2 stepper polish reported in wave 1 polish."},
+    {"id": "#14", "status": "done", "filePath": "lib/features_user/profile/match_history_page.dart", "notes": "Created from scratch: 4 filter chips (all/wins/losses/ongoing), match cards with status badge + score, animated cascade. New playerMatchHistoryProvider + allMatches() in MatchStatsRepository. Route /profile/match-history."},
     {"id": "#15", "status": "todo", "filePath": "lib/features_user/chat/messages_inbox_page.dart", "needsCreate": true},
     {"id": "#16", "status": "todo", "filePath": "lib/features_user/chat/chat_page.dart"},
     {"id": "#17", "status": "todo", "filePath": "lib/features_user/recording/match_in_progress_overlay.dart", "needsCreate": true},

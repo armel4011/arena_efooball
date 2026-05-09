@@ -1,8 +1,7 @@
 import 'package:arena/core/router/user_router.dart';
-import 'package:arena/core/theme/arena_colors.dart';
 import 'package:arena/core/theme/arena_theme.dart';
-import 'package:arena/core/theme/arena_typography.dart';
 import 'package:arena/data/repositories/auth_failure.dart';
+import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
@@ -66,11 +65,9 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
         : null;
 
     return Scaffold(
-      appBar: AppBar(
-        // No back button — this screen is reached from a deep link, the
-        // user shouldn't be able to bounce back to a recovery URL.
-        automaticallyImplyLeading: false,
-      ),
+      // No back button — this screen is reached from a deep link, the
+      // user shouldn't be able to bounce back to a recovery URL.
+      appBar: const ArenaAppBar(title: '', showBack: false),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(ArenaSpacing.lg),

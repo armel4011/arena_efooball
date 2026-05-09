@@ -11,11 +11,13 @@ import 'package:arena/features_user/auth/reset_password_page.dart';
 import 'package:arena/features_user/auth/splash_user_screen.dart';
 import 'package:arena/features_user/chat/chat_page.dart';
 import 'package:arena/features_user/competitions/competition_detail_page.dart';
+import 'package:arena/features_user/competitions/registration_confirm_page.dart';
 import 'package:arena/features_user/home/main_layout.dart';
-import 'package:arena/features_user/match/match_room_page.dart';
+import 'package:arena/features_user/match_room/match_room_page.dart';
 import 'package:arena/features_user/onboarding/onboarding_page.dart';
 import 'package:arena/features_user/profile/delete_account_page.dart';
 import 'package:arena/features_user/profile/edit_profile_page.dart';
+import 'package:arena/features_user/profile/match_history_page.dart';
 import 'package:arena/features_user/settings/settings_page.dart';
 import 'package:arena/features_user/streaming/live_streams_page.dart';
 import 'package:arena/features_user/streaming/watch_stream_page.dart';
@@ -43,8 +45,14 @@ abstract final class UserRoutes {
   static const watchStream = '/streams/watch/:id';
   static const profileEdit = '/profile/edit';
   static const profileDelete = '/profile/delete';
+  static const matchHistory = '/profile/match-history';
+  static const registrationConfirm = '/competitions/:id/register/confirm';
   static const settings = '/settings';
   static const devPreview = '/_dev/widgets';
+
+  /// Builds the concrete `/competitions/<id>/register/confirm` URL.
+  static String registrationConfirmPath(String id) =>
+      '/competitions/$id/register/confirm';
 
   /// Builds the concrete `/competitions/<id>` URL — go_router parses
   /// `:id` server-side, but `context.go` needs a real path.
@@ -237,6 +245,28 @@ final userRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const DeleteAccountPage(),
       ),
       GoRoute(
+        path: UserRoutes.matchHistory,
+        name: 'user.matchHistory',
+        builder: (context, state) => const MatchHistoryPage(),
+      ),
+      GoRoute(
+        path: UserRoutes.registrationConfirm,
+        name: 'user.registrationConfirm',
+        builder: (context, state) {
+          final extra = state.extra as RegistrationConfirmArgs?;
+          return RegistrationConfirmPage(
+            competitionId: state.pathParameters['id'] ?? '',
+            competitionName: extra?.competitionName ?? 'Compétition',
+            gameLabel: extra?.gameLabel ?? '',
+            gameEmoji: extra?.gameEmoji ?? '🎮',
+            dateLabel: extra?.dateLabel ?? '',
+            formatLabel: extra?.formatLabel ?? '',
+            entryFeeXaf: extra?.entryFeeXaf ?? 0,
+            totalPrizeXaf: extra?.totalPrizeXaf ?? 0,
+          );
+        },
+      ),
+      GoRoute(
         path: UserRoutes.settings,
         name: 'user.settings',
         builder: (context, state) => const SettingsPage(),
@@ -256,4 +286,27 @@ class LinkAccountArgs {
   const LinkAccountArgs({required this.email, required this.providerLabel});
   final String? email;
   final String providerLabel;
+}
+
+/// Args carried into `RegistrationConfirmPage` (#12). The competition page
+/// already has the metadata in memory when the user taps "S'inscrire", so
+/// we forward it via `extra` rather than re-fetching from Supabase.
+class RegistrationConfirmArgs {
+  const RegistrationConfirmArgs({
+    required this.competitionName,
+    required this.gameLabel,
+    required this.gameEmoji,
+    required this.dateLabel,
+    required this.formatLabel,
+    required this.entryFeeXaf,
+    required this.totalPrizeXaf,
+  });
+
+  final String competitionName;
+  final String gameLabel;
+  final String gameEmoji;
+  final String dateLabel;
+  final String formatLabel;
+  final int entryFeeXaf;
+  final int totalPrizeXaf;
 }
