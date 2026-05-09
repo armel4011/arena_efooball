@@ -1,9 +1,9 @@
 {
   "$schema": "https://arena.app/schemas/screens-progress-v2.json",
   "version": "2.0",
-  "lastUpdate": "2026-05-09T07:00:00Z",
-  "currentWave": 4,
-  "currentPhase": "WAVE_3_COMPLETE",
+  "lastUpdate": "2026-05-09T09:00:00Z",
+  "currentWave": null,
+  "currentPhase": "ALL_WAVES_COMPLETE",
   "wave0Foundations": {
     "pubspecDedupe": "done",
     "tagPreArenaV2Rebuild": "done @ 9de8f3c",
@@ -31,14 +31,15 @@
     "analyzeStatus": "0 errors, 0 warnings (117 info lints stylistic pre-existing)"
   },
   "stats": {
-    "done": 40,
+    "done": 54,
     "inProgress": 0,
-    "todo": 14,
+    "todo": 0,
     "wave0Foundations": "complete",
     "wave0Widgets": "10/10 done",
     "wave1": "14/14 done — auth + core 1/2 shipped",
     "wave2": "14/14 done — chat + recording + notifications + bracket + streaming + profile + settings + about shipped",
-    "wave3": "12/12 done — 7 payments + 5 admin auth (splash/login/invitation/totp setup/totp verify) shipped"
+    "wave3": "12/12 done — 7 payments + 5 admin auth (splash/login/invitation/totp setup/totp verify) shipped",
+    "wave4": "14/14 done — admin core 5 (dashboard/comp list/comp create/comp detail/matches list) + admin ops 4 (bracket/streams/payouts/disputes) + audit log + super-admin 4 (dashboard/invitations/users/revenue) shipped"
   },
   "wave1PolishBacklog": [
     "#1 Onboarding — DONE (rebuild done in this session, native PageView + 4 emoji slides + custom dots)",
@@ -174,19 +175,19 @@
     {"id": "A3",  "status": "done", "filePath": "lib/features_admin/auth_admin/invitation_redeem_screen.dart", "notes": "ArenaAppBar swap. PHASE 2bis redeem controller + admin password rules + CGU checkbox intact."},
     {"id": "A4",  "status": "done", "filePath": "lib/features_admin/auth_admin/totp_setup_screen.dart", "notes": "ArenaAppBar swap (showBack:false to lock the wizard). qr_flutter QR + backup codes + ack checkbox intact."},
     {"id": "A5",  "status": "done", "filePath": "lib/features_admin/auth_admin/totp_verify_screen.dart", "notes": "ArenaAppBar swap with onBack→login. 6-digit code input + lockout after 3 fails reported PHASE 2bis backend."},
-    {"id": "A6",  "status": "todo", "filePath": "lib/features_admin/dashboard/admin_dashboard_page.dart", "needsCreate": true},
-    {"id": "A7",  "status": "todo", "filePath": "lib/features_admin/competitions_admin/admin_competitions_list_page.dart", "needsCreate": true},
-    {"id": "A8",  "status": "todo", "filePath": "lib/features_admin/competitions_admin/create_competition_page.dart", "needsCreate": true},
-    {"id": "A9",  "status": "todo", "filePath": "lib/features_admin/competitions_admin/admin_competition_detail_page.dart", "needsCreate": true},
-    {"id": "A10", "status": "todo", "filePath": "lib/features_admin/matches_admin/admin_matches_list_page.dart", "needsCreate": true},
-    {"id": "A11", "status": "todo", "filePath": "lib/features_admin/bracket_admin/admin_bracket_management_page.dart", "needsCreate": true},
-    {"id": "A12", "status": "todo", "filePath": "lib/features_admin/streams_admin/admin_stream_moderation_page.dart", "needsCreate": true},
-    {"id": "A13", "status": "todo", "filePath": "lib/features_admin/payouts_admin/admin_payouts_page.dart", "needsCreate": true},
-    {"id": "A14", "status": "todo", "filePath": "lib/features_admin/disputes_admin/admin_disputes_page.dart", "needsCreate": true},
-    {"id": "SA1", "status": "todo", "filePath": "lib/features_admin/super_admin/super_admin_dashboard.dart", "needsCreate": true},
-    {"id": "SA2", "status": "todo", "filePath": "lib/features_admin/super_admin/super_admin_invitations.dart", "needsCreate": true},
-    {"id": "SA3", "status": "todo", "filePath": "lib/features_admin/super_admin/super_admin_users.dart", "needsCreate": true},
-    {"id": "SA4", "status": "todo", "filePath": "lib/features_admin/super_admin/super_admin_revenue.dart", "needsCreate": true},
-    {"id": "A15", "status": "todo", "filePath": "lib/features_admin/audit/admin_audit_log_page.dart", "needsCreate": true}
+    {"id": "A6",  "status": "done", "filePath": "lib/features_admin/dashboard/admin_dashboard_page.dart", "notes": "Created from scratch: 3-col KPI grid (active comps/matches/disputes) + payouts mini-KPI + 2 alert cards (urgent disputes/payouts >24h) + 3 quick-action CTAs + recent activity feed with avatars. Replaces old _AdminHomePlaceholder. Route AdminRoutes.home."},
+    {"id": "A7",  "status": "done", "filePath": "lib/features_admin/competitions_admin/admin_competitions_list_page.dart", "notes": "Created from scratch: 2 chip rows (status/game) + 3 status-coloured cards with admin CTA row (voir/modifier/annuler). Route /competitions."},
+    {"id": "A8",  "status": "done", "filePath": "lib/features_admin/competitions_admin/create_competition_page.dart", "notes": "Created from scratch: ArenaStepper 5-step wizard, ships Étape 3 (Prix Top 4) — % vs fixed mode toggle, 4 share rows with progress bars by tier color, success card showing 100% total. Route /competitions/create."},
+    {"id": "A9",  "status": "done", "filePath": "lib/features_admin/competitions_admin/admin_competition_detail_page.dart", "notes": "Created from scratch: full-bleed gradient header (FIFA banner) + 6 admin tabs (Infos/Particip./Bracket/Matchs/Disputes/Payouts) + bracket tab with live match glow + admin actions list. Route /competitions/:id."},
+    {"id": "A10", "status": "done", "filePath": "lib/features_admin/matches_admin/admin_matches_list_page.dart", "notes": "Created from scratch: status filter chips (Tous/Pending/In progress/Validated/Disputed) + 4 sample match cards with kind-coloured 3px left border. Route /matches."},
+    {"id": "A11", "status": "done", "filePath": "lib/features_admin/bracket_admin/admin_bracket_management_page.dart", "notes": "Created from scratch: live match card with red glow + 4 admin actions (activer streaming/valider score/marquer dispute/annuler match) + upcoming match card + dimmed semi/final cards with stream-required note. Route /competitions/:id/bracket."},
+    {"id": "A12", "status": "done", "filePath": "lib/features_admin/streams_admin/admin_stream_moderation_page.dart", "notes": "Created from scratch: glow summary card + 2x2 grid of stream tiles (3 active + 1 empty slot) + global cross-stream chat row with ban shortcut + audit warning. Route /streams."},
+    {"id": "A13", "status": "done", "filePath": "lib/features_admin/payouts_admin/admin_payouts_page.dart", "notes": "CRITIQUE — Created from scratch: danger summary card with batch/1×1 mode toggle + 2 payout cards with 5 auto-checks each (KYC/dispute/anti-cheat/ban/MoMo) + batch anti-error gate (must type exact total to validate). Route /payouts."},
+    {"id": "A14", "status": "done", "filePath": "lib/features_admin/disputes_admin/admin_disputes_page.dart", "notes": "Created from scratch: warning header (escalade level + open duration) + scores card with both submitted scores + replay thumbnail + read-only chat preview + 3 verdict CTAs + mandatory justification textarea. Route /disputes/:matchId."},
+    {"id": "SA1", "status": "done", "filePath": "lib/features_admin/super_admin/super_admin_dashboard.dart", "notes": "Created from scratch: gold KPI grid (MAU/DAU/ratio) + green margin card + CustomPainter line chart (signups) + 7-bar revenue chart + top 3 players card + country breakdown with progress bars + Sentry alerts. Route /super."},
+    {"id": "SA2", "status": "done", "filePath": "lib/features_admin/super_admin/super_admin_invitations.dart", "notes": "Created from scratch: 3 code cards (active 2 + used 1) with copy/share/revoke actions + glow generation form (role/email/expiration/uses). Route /super/invitations."},
+    {"id": "SA3", "status": "done", "filePath": "lib/features_admin/super_admin/super_admin_users.dart", "notes": "Created from scratch: search bar + 2 filter chip rows (status/country) + 4 user cards (active/admin/banned/KYC pending) with role-aware action buttons. Route /super/users."},
+    {"id": "SA4", "status": "done", "filePath": "lib/features_admin/super_admin/super_admin_revenue.dart", "notes": "Created from scratch: period+currency chip rows + green income hero + breakdown table (collected/payouts/CinetPay fees/NowPayments fees/net margin) + per-competition table + bar chart placeholder + CSV export CTA. Route /super/revenue."},
+    {"id": "A15", "status": "done", "filePath": "lib/features_admin/audit/admin_audit_log_page.dart", "notes": "Created from scratch: search input + category chips (Toutes/Payouts/Disputes/Bans/Streams) + period chips + log cards with kind-coloured left border + RichText detail + optional quoted justification block + IP/device footer. Route /audit."}
   ]
 }

@@ -1,20 +1,35 @@
 import 'package:arena/core/router/router_refresh.dart';
+import 'package:arena/features_admin/audit/admin_audit_log_page.dart';
 import 'package:arena/features_admin/auth_admin/invitation_redeem_screen.dart';
 import 'package:arena/features_admin/auth_admin/login_admin_screen.dart';
 import 'package:arena/features_admin/auth_admin/splash_admin_screen.dart';
 import 'package:arena/features_admin/auth_admin/totp_setup_screen.dart';
 import 'package:arena/features_admin/auth_admin/totp_verify_screen.dart';
+import 'package:arena/features_admin/bracket_admin/admin_bracket_management_page.dart';
+import 'package:arena/features_admin/competitions_admin/admin_competition_detail_page.dart';
+import 'package:arena/features_admin/competitions_admin/admin_competitions_list_page.dart';
+import 'package:arena/features_admin/competitions_admin/create_competition_page.dart';
+import 'package:arena/features_admin/dashboard/admin_dashboard_page.dart';
+import 'package:arena/features_admin/disputes_admin/admin_disputes_page.dart';
+import 'package:arena/features_admin/matches_admin/admin_matches_list_page.dart';
+import 'package:arena/features_admin/payouts_admin/admin_payouts_page.dart';
+import 'package:arena/features_admin/streams_admin/admin_stream_moderation_page.dart';
+import 'package:arena/features_admin/super_admin/super_admin_dashboard.dart';
+import 'package:arena/features_admin/super_admin/super_admin_invitations.dart';
+import 'package:arena/features_admin/super_admin/super_admin_revenue.dart';
+import 'package:arena/features_admin/super_admin/super_admin_users.dart';
 import 'package:arena/features_shared/presentation/dev_preview_page.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-/// Route names for the Admin app.
+/// Routes for the Admin app.
 ///
 /// PHASE 2bis wires the auth flow (splash, login, invitation, TOTP).
-/// PHASE 11 will add /dashboard, /competitions, /matches, /payouts,
-/// /disputes, /streams.
+/// PHASE 11 adds the operational screens — dashboard, competitions
+/// (list / create / detail), matches, bracket, streams, payouts,
+/// disputes, audit log + super-admin (dashboard, invitations, users,
+/// revenue).
 abstract final class AdminRoutes {
   static const home = '/';
   static const splash = '/splash';
@@ -22,6 +37,25 @@ abstract final class AdminRoutes {
   static const invitation = '/invitation';
   static const totpSetup = '/totp/setup';
   static const totpVerify = '/totp/verify';
+
+  // Admin core
+  static const dashboard = '/';
+  static const competitions = '/competitions';
+  static const competitionsCreate = '/competitions/create';
+  static const competitionDetail = '/competitions/:id';
+  static const matches = '/matches';
+  static const bracket = '/competitions/:id/bracket';
+  static const streams = '/streams';
+  static const payouts = '/payouts';
+  static const disputes = '/disputes/:matchId';
+  static const auditLog = '/audit';
+
+  // Super-admin
+  static const superDashboard = '/super';
+  static const superInvitations = '/super/invitations';
+  static const superUsers = '/super/users';
+  static const superRevenue = '/super/revenue';
+
   static const devPreview = '/_dev/widgets';
 
   /// Routes reachable while not yet fully authenticated (no session OR
@@ -33,6 +67,15 @@ abstract final class AdminRoutes {
     totpSetup,
     totpVerify,
   };
+
+  /// Builds the concrete `/competitions/<id>` URL.
+  static String competitionDetailPath(String id) => '/competitions/$id';
+
+  /// Builds the concrete `/competitions/<id>/bracket` URL.
+  static String bracketPath(String id) => '/competitions/$id/bracket';
+
+  /// Builds the concrete `/disputes/<matchId>` URL.
+  static String disputePath(String matchId) => '/disputes/$matchId';
 }
 
 final adminRouterProvider = Provider<GoRouter>((ref) {
@@ -108,7 +151,78 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AdminRoutes.home,
         name: 'admin.home',
-        builder: (context, state) => const _AdminHomePlaceholder(),
+        builder: (context, state) => const AdminDashboardPage(),
+      ),
+      GoRoute(
+        path: AdminRoutes.competitions,
+        name: 'admin.competitions',
+        builder: (context, state) => const AdminCompetitionsListPage(),
+      ),
+      GoRoute(
+        path: AdminRoutes.competitionsCreate,
+        name: 'admin.competitionsCreate',
+        builder: (context, state) => const CreateCompetitionPage(),
+      ),
+      GoRoute(
+        path: AdminRoutes.competitionDetail,
+        name: 'admin.competitionDetail',
+        builder: (context, state) => AdminCompetitionDetailPage(
+          competitionId: state.pathParameters['id'] ?? '',
+        ),
+      ),
+      GoRoute(
+        path: AdminRoutes.matches,
+        name: 'admin.matches',
+        builder: (context, state) => const AdminMatchesListPage(),
+      ),
+      GoRoute(
+        path: AdminRoutes.bracket,
+        name: 'admin.bracket',
+        builder: (context, state) => AdminBracketManagementPage(
+          competitionId: state.pathParameters['id'] ?? '',
+        ),
+      ),
+      GoRoute(
+        path: AdminRoutes.streams,
+        name: 'admin.streams',
+        builder: (context, state) => const AdminStreamModerationPage(),
+      ),
+      GoRoute(
+        path: AdminRoutes.payouts,
+        name: 'admin.payouts',
+        builder: (context, state) => const AdminPayoutsPage(),
+      ),
+      GoRoute(
+        path: AdminRoutes.disputes,
+        name: 'admin.disputes',
+        builder: (context, state) => AdminDisputesPage(
+          matchId: state.pathParameters['matchId'] ?? '',
+        ),
+      ),
+      GoRoute(
+        path: AdminRoutes.auditLog,
+        name: 'admin.auditLog',
+        builder: (context, state) => const AdminAuditLogPage(),
+      ),
+      GoRoute(
+        path: AdminRoutes.superDashboard,
+        name: 'admin.superDashboard',
+        builder: (context, state) => const SuperAdminDashboard(),
+      ),
+      GoRoute(
+        path: AdminRoutes.superInvitations,
+        name: 'admin.superInvitations',
+        builder: (context, state) => const SuperAdminInvitations(),
+      ),
+      GoRoute(
+        path: AdminRoutes.superUsers,
+        name: 'admin.superUsers',
+        builder: (context, state) => const SuperAdminUsers(),
+      ),
+      GoRoute(
+        path: AdminRoutes.superRevenue,
+        name: 'admin.superRevenue',
+        builder: (context, state) => const SuperAdminRevenue(),
       ),
       GoRoute(
         path: AdminRoutes.devPreview,
@@ -118,33 +232,3 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
-
-class _AdminHomePlaceholder extends ConsumerWidget {
-  const _AdminHomePlaceholder();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final profile = ref.watch(currentProfileProvider).valueOrNull;
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Admin — ${profile?.username ?? ''}'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => ref.read(signOutProvider)(),
-          ),
-        ],
-      ),
-      body: const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text(
-            'PHASE 11 — Admin dashboard / competitions / matches'
-            ' / payouts / disputes viendront ici.',
-            textAlign: TextAlign.center,
-          ),
-        ),
-      ),
-    );
-  }
-}
