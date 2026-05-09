@@ -1,5 +1,4 @@
-import 'package:arena/core/theme/arena_colors.dart';
-import 'package:arena/core/theme/arena_typography.dart';
+import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/features_user/onboarding/onboarding_slide.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_onboarding_slider/flutter_onboarding_slider.dart';

@@ -1,8 +1,6 @@
-import 'package:arena/core/router/user_router.dart';
-import 'package:arena/core/theme/arena_colors.dart';
 import 'package:arena/core/theme/arena_theme.dart';
-import 'package:arena/core/theme/arena_typography.dart';
 import 'package:arena/data/repositories/auth_failure.dart';
+import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
@@ -49,12 +47,7 @@ class _LoginUserScreenState extends ConsumerState<LoginUserScreen> {
         : null;
 
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go(UserRoutes.home),
-        ),
-      ),
+      appBar: const ArenaAppBar(title: ''),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(ArenaSpacing.lg),

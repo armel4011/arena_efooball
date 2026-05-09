@@ -1,7 +1,5 @@
 import 'package:arena/core/router/user_router.dart';
-import 'package:arena/core/theme/arena_colors.dart';
 import 'package:arena/core/theme/arena_theme.dart';
-import 'package:arena/core/theme/arena_typography.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';

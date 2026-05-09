@@ -1,10 +1,10 @@
 import 'package:arena/core/i18n/i18n_service.dart';
 import 'package:arena/core/router/user_router.dart';
-import 'package:arena/core/theme/arena_colors.dart';
 import 'package:arena/core/theme/arena_theme.dart';
-import 'package:arena/core/theme/arena_typography.dart';
 import 'package:arena/data/repositories/auth_failure.dart';
+import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:arena/features_shared/widgets/arena_stepper.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/auth/widgets/auth_failure_message.dart';
@@ -101,38 +101,54 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
         : null;
 
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: isLoading ? null : _back,
-        ),
-        title: Text('Étape ${_step + 1} / 3', style: ArenaTypography.titleSmall),
+      appBar: ArenaAppBar(
+        title: 'Étape ${_step + 1} / 3',
+        showBack: _step < 2 && !isLoading,
+        onBack: _back,
       ),
       body: SafeArea(
-        child: switch (_step) {
-          0 => _AccountStep(
-              emailCtrl: _emailCtrl,
-              passwordCtrl: _passwordCtrl,
-              passwordConfirmCtrl: _passwordConfirmCtrl,
-              onNext: _next,
-              isLoading: isLoading,
+        child: Column(
+          children: [
+            // Visual stepper above the form so the user can read progress
+            // without parsing the AppBar copy. Locked to 3 steps per the
+            // master prompt; success page also rides on the last bar.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                ArenaSpacing.lg,
+                ArenaSpacing.sm,
+                ArenaSpacing.lg,
+                0,
+              ),
+              child: ArenaStepper(totalSteps: 3, currentStep: _step),
             ),
-          1 => _ProfileStep(
-              usernameCtrl: _usernameCtrl,
-              countryCode: _countryCode,
-              onCountry: (c) => setState(() => _countryCode = c),
-              cgu: _cguAccepted,
-              privacy: _privacyAccepted,
-              marketing: _marketingAccepted,
-              onCgu: (v) => setState(() => _cguAccepted = v),
-              onPrivacy: (v) => setState(() => _privacyAccepted = v),
-              onMarketing: (v) => setState(() => _marketingAccepted = v),
-              errorMessage: errorMessage,
-              onSubmit: _submit,
-              isLoading: isLoading,
+            Expanded(
+              child: switch (_step) {
+                0 => _AccountStep(
+                    emailCtrl: _emailCtrl,
+                    passwordCtrl: _passwordCtrl,
+                    passwordConfirmCtrl: _passwordConfirmCtrl,
+                    onNext: _next,
+                    isLoading: isLoading,
+                  ),
+                1 => _ProfileStep(
+                    usernameCtrl: _usernameCtrl,
+                    countryCode: _countryCode,
+                    onCountry: (c) => setState(() => _countryCode = c),
+                    cgu: _cguAccepted,
+                    privacy: _privacyAccepted,
+                    marketing: _marketingAccepted,
+                    onCgu: (v) => setState(() => _cguAccepted = v),
+                    onPrivacy: (v) => setState(() => _privacyAccepted = v),
+                    onMarketing: (v) => setState(() => _marketingAccepted = v),
+                    errorMessage: errorMessage,
+                    onSubmit: _submit,
+                    isLoading: isLoading,
+                  ),
+                _ => const _SuccessStep(),
+              },
             ),
-          _ => const _SuccessStep(),
-        },
+          ],
+        ),
       ),
     );
   }

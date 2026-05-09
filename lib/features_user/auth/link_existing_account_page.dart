@@ -1,7 +1,6 @@
 import 'package:arena/core/router/user_router.dart';
-import 'package:arena/core/theme/arena_colors.dart';
 import 'package:arena/core/theme/arena_theme.dart';
-import 'package:arena/core/theme/arena_typography.dart';
+import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -36,12 +35,7 @@ class LinkExistingAccountPage extends StatelessWidget {
             ' (mot de passe).';
 
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go(UserRoutes.login),
-        ),
-      ),
+      appBar: const ArenaAppBar(title: 'Lier les comptes'),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(ArenaSpacing.lg),

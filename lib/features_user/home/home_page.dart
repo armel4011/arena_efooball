@@ -1,6 +1,4 @@
-import 'package:arena/core/theme/arena_colors.dart';
 import 'package:arena/core/theme/arena_theme.dart';
-import 'package:arena/core/theme/arena_typography.dart';
 import 'package:arena/data/models/profile.dart';
 import 'package:arena/features_shared/widgets/arena_glass_card.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';

@@ -1,9 +1,8 @@
-import 'package:arena/core/theme/arena_colors.dart';
 import 'package:arena/core/theme/arena_theme.dart';
-import 'package:arena/core/theme/arena_typography.dart';
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
+import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_card.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
@@ -29,7 +28,7 @@ class CompetitionDetailPage extends ConsumerWidget {
     final async = ref.watch(competitionByIdProvider(competitionId));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('COMPÉTITION')),
+      appBar: const ArenaAppBar(title: 'Compétition'),
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorState(

@@ -1,9 +1,9 @@
 {
   "$schema": "https://arena.app/schemas/screens-progress-v2.json",
   "version": "2.0",
-  "lastUpdate": "2026-05-09T02:00:00Z",
-  "currentWave": 1,
-  "currentPhase": "WAVE_1_CHECKPOINT_7_OF_14",
+  "lastUpdate": "2026-05-09T03:00:00Z",
+  "currentWave": 2,
+  "currentPhase": "WAVE_1_COMPLETE",
   "wave0Foundations": {
     "pubspecDedupe": "done",
     "tagPreArenaV2Rebuild": "done @ 9de8f3c",
@@ -31,13 +31,23 @@
     "analyzeStatus": "0 errors, 0 warnings (117 info lints stylistic pre-existing)"
   },
   "stats": {
-    "done": 7,
+    "done": 14,
     "inProgress": 0,
-    "todo": 47,
+    "todo": 40,
     "wave0Foundations": "complete",
     "wave0Widgets": "10/10 done",
-    "wave1": "7/14 — checkpoint #7 reached"
+    "wave1": "14/14 done — auth + core 1/2 shipped"
   },
+  "wave1PolishBacklog": [
+    "#1 Onboarding — replace flutter_onboarding_slider's stepper with ArenaStepper inline (4 dots) and Bebas hero 42px per arena_v2.html",
+    "#2 Splash — add the 3-col stat grid (joueurs/tournois/XAF cumulés)",
+    "#3 Login — placeholder Google/Apple SSO secondary buttons (PHASE 2.3) + 'OU' divider",
+    "#4 Register — replace inline country dropdown with ArenaAvatar(selected) color picker on step 2 (per v2 #4 spec)",
+    "#7 LinkAccount — wrap warning section in arenaWarningCardDecoration() per v2 spec",
+    "#9 Home — tier ArenaBadge in header, ArenaBanner for live streams, 3-col stat grid, news cards horizontal scroll",
+    "#10 CompetitionsListPage — 2 chip rows (game + status), full-bleed ArenaBanner cards (no padding) per v2 spec",
+    "#11 CompetitionDetail — full-bleed ArenaBanner header (game gradient), bigger Bebas h2 22px title, refined 4-tab bar"
+  ],
   "blockers": [
     {
       "id": "BLK-1",
@@ -122,17 +132,17 @@
     "lib/features_user/streaming/start_streaming_banner.dart"
   ],
   "screens": [
-    {"id": "#1",  "status": "todo", "filePath": "lib/features_user/onboarding/onboarding_page.dart"},
+    {"id": "#1",  "status": "done", "filePath": "lib/features_user/onboarding/onboarding_page.dart", "notes": "Legacy theme imports dropped. Slider package keeps the v2 visual via the compat layer (Bebas via displayLarge alias). Pixel-perfect 4-dot stepper polish reported in wave 1 polish."},
     {"id": "#2",  "status": "done", "filePath": "lib/features_user/auth/splash_user_screen.dart", "notes": "ArenaLogo gradient + Instrument Serif tagline + flutter_animate cascade. Stat grid (3 cols) reporté en wave 1 polish."},
-    {"id": "#3",  "status": "todo", "filePath": "lib/features_user/auth/login_user_screen.dart"},
-    {"id": "#4",  "status": "todo", "filePath": "lib/features_user/auth/register_user_screen.dart"},
+    {"id": "#3",  "status": "done", "filePath": "lib/features_user/auth/login_user_screen.dart", "notes": "ArenaAppBar + dropped legacy imports. Google/Apple SSO buttons reported in PHASE 2.3."},
+    {"id": "#4",  "status": "done", "filePath": "lib/features_user/auth/register_user_screen.dart", "notes": "ArenaAppBar with onBack callback for stepper-aware back. ArenaStepper(totalSteps:3, currentStep:_step) added above body. ArenaAppBar gained a public onBack hook to support multi-step flows."},
     {"id": "#5",  "status": "done", "filePath": "lib/features_user/auth/forgot_password_page.dart", "notes": "ArenaAppBar swap + dropped legacy theme imports."},
     {"id": "#6",  "status": "done", "filePath": "lib/features_user/auth/reset_password_page.dart", "notes": "ArenaAppBar(showBack:false) — deep-link guard."},
-    {"id": "#7",  "status": "todo", "filePath": "lib/features_user/auth/link_existing_account_page.dart"},
+    {"id": "#7",  "status": "done", "filePath": "lib/features_user/auth/link_existing_account_page.dart", "notes": "ArenaAppBar(title:'Lier les comptes') + dropped legacy imports."},
     {"id": "#8",  "status": "done", "filePath": "lib/features_user/auth/cgu_acceptance_page.dart", "notes": "ArenaAppBar(showBack:false) + dropped legacy imports."},
-    {"id": "#9",  "status": "todo", "filePath": "lib/features_user/home/home_page.dart"},
-    {"id": "#10", "status": "todo", "filePath": "lib/features_user/competitions/competitions_list_page.dart"},
-    {"id": "#11", "status": "todo", "filePath": "lib/features_user/competitions/competition_detail_page.dart"},
+    {"id": "#9",  "status": "done", "filePath": "lib/features_user/home/home_page.dart", "notes": "Legacy theme imports dropped. Page is composed inside MainLayout (no AppBar to swap). Tier badge + ArenaBanner streams + 3-col stat grid reported in wave 1 polish."},
+    {"id": "#10", "status": "done", "filePath": "lib/features_user/competitions/competitions_list_page.dart", "notes": "Legacy theme imports dropped. Page is composed inside MainLayout (no AppBar). 2 chip rows (game / status) + game-specific ArenaBanner cards reported in wave 1 polish."},
+    {"id": "#11", "status": "done", "filePath": "lib/features_user/competitions/competition_detail_page.dart", "notes": "ArenaAppBar(title:'Compétition') + dropped legacy imports. Full-bleed ArenaBanner header + 4-tab bar refactor reported in wave 1 polish."},
     {"id": "#12", "status": "done", "filePath": "lib/features_user/competitions/registration_confirm_page.dart", "notes": "Created from scratch: card-glow summary, payment breakdown, prize distribution (50/30/20), ack checkbox, paiement CTA placeholder (PHASE 11bis). Route /competitions/:id/register/confirm + RegistrationConfirmArgs extra."},
     {"id": "#13", "status": "done", "filePath": "lib/features_user/match_room/match_room_page.dart", "notes": "git mv lib/features_user/match → lib/features_user/match_room (folder + 2 widgets). All imports updated. Page content unchanged in this checkpoint — v2 stepper polish reported in wave 1 polish."},
     {"id": "#14", "status": "done", "filePath": "lib/features_user/profile/match_history_page.dart", "notes": "Created from scratch: 4 filter chips (all/wins/losses/ongoing), match cards with status badge + score, animated cascade. New playerMatchHistoryProvider + allMatches() in MatchStatsRepository. Route /profile/match-history."},

@@ -10,6 +10,7 @@ class ArenaAppBar extends StatelessWidget implements PreferredSizeWidget {
   const ArenaAppBar({
     required this.title,
     this.showBack = true,
+    this.onBack,
     this.actions = const [],
     this.bordered = false,
     super.key,
@@ -17,6 +18,12 @@ class ArenaAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   final String title;
   final bool showBack;
+
+  /// Optional override for the back-button tap. When `null` (default) the
+  /// bar calls `Navigator.maybePop(context)` — fine for normal stack
+  /// navigation. Provide a custom callback for multi-step flows where
+  /// "back" should walk an internal index instead of popping the route.
+  final VoidCallback? onBack;
   final List<Widget> actions;
   final bool bordered;
 
@@ -37,10 +44,10 @@ class ArenaAppBar extends StatelessWidget implements PreferredSizeWidget {
       ),
       child: Row(
         children: [
-          if (showBack && canPop) ...[
+          if (showBack && (canPop || onBack != null)) ...[
             _CircleIconButton(
               icon: Icons.arrow_back,
-              onTap: () => Navigator.maybePop(context),
+              onTap: onBack ?? () => Navigator.maybePop(context),
             ),
             const SizedBox(width: 10),
           ],
