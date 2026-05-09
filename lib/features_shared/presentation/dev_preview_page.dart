@@ -245,13 +245,13 @@ class _BannerGallery extends StatelessWidget {
         ArenaBanner(
           game: ArenaBannerGame.efoot,
           title: 'Cameroon eFootball Cup',
-          subtitle: '12 / 16 joueurs · Cagnotte 25 000 XAF',
+          subtitle: '12 / 16 joueurs · Récompense 25 000 XAF',
         ),
         SizedBox(height: ArenaSpacing.sm),
         ArenaBanner(
           game: ArenaBannerGame.fifa,
           title: 'FIFA Mobile Africa',
-          subtitle: '8 / 32 joueurs · Cagnotte 50 000 XAF',
+          subtitle: '8 / 32 joueurs · Récompense 50 000 XAF',
         ),
         SizedBox(height: ArenaSpacing.sm),
         ArenaBanner(

@@ -72,10 +72,9 @@ dependencies:
   # ─── Icons ─────────────────────────────────────────────────
   cupertino_icons: ^1.0.8
 
-  # ─── PHASE 0.5 — Onboarding ────────────────────────────────
-  flutter_onboarding_slider: ^1.0.11
-
   # ─── PHASE 2 — Auth (forms validation) ─────────────────────
+  # flutter_onboarding_slider was dropped during wave 1 polish — onboarding
+  # is now a native PageView so the layout matches arena_v2.html.
   reactive_forms: ^17.0.1
 
   # ─── PHASE 2bis — TOTP admin (Google Authenticator) ────────

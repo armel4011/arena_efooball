@@ -1,0 +1,203 @@
+import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/features_shared/widgets/arena_app_bar.dart';
+import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+
+/// PHASE 7 — recording-blocked landing page.
+///
+/// Shown when the system-overlay permission, foreground services or
+/// battery-saver block the screen recorder. The user has two ways out:
+/// fix the OS settings and retry, or forfeit the match. Reproduces
+/// `arena_v2.html` #18 — danger-card cause + numbered solution list +
+/// retry / forfeit / contact CTAs.
+///
+/// Maps to screen #18 of `arena_v2.html`.
+class RecordingErrorPage extends StatelessWidget {
+  const RecordingErrorPage({
+    this.cause = 'SYSTEM_ALERT_WINDOW',
+    this.onRetry,
+    this.onForfeit,
+    this.onContactSupport,
+    super.key,
+  });
+
+  final String cause;
+  final VoidCallback? onRetry;
+  final VoidCallback? onForfeit;
+  final VoidCallback? onContactSupport;
+
+  static const _solutions = <String>[
+    'Va dans Paramètres → Apps → ARENA',
+    'Active "Affichage par-dessus les autres apps"',
+    'Désactive le Battery Saver pour ARENA',
+    'Autorise ARENA en arrière-plan',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: const ArenaAppBar(title: 'Erreur enregistrement'),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(ArenaSpacing.lg),
+          children: [
+            const _ErrorIcon().animate().fadeIn(
+                  duration: ArenaDurations.medium,
+                ),
+            const SizedBox(height: ArenaSpacing.md),
+            Text(
+              'RECORDING IMPOSSIBLE',
+              textAlign: TextAlign.center,
+              style: ArenaText.h1.copyWith(color: ArenaColors.neonRed),
+            ),
+            const SizedBox(height: ArenaSpacing.sm),
+            Text(
+              'Sans recording, le match ne peut pas démarrer (anti-cheat).',
+              textAlign: TextAlign.center,
+              style: ArenaText.body,
+            ),
+            const SizedBox(height: ArenaSpacing.lg),
+            _CauseCard(cause: cause)
+                .animate(delay: 100.ms)
+                .fadeIn(duration: ArenaDurations.medium),
+            const SizedBox(height: ArenaSpacing.lg),
+            Text('SOLUTIONS', style: ArenaText.inputLabel),
+            const SizedBox(height: ArenaSpacing.sm),
+            const _SolutionsCard(solutions: _solutions)
+                .animate(delay: 200.ms)
+                .fadeIn(duration: ArenaDurations.medium),
+            const SizedBox(height: ArenaSpacing.xl),
+            ArenaButton(
+              label: '↻ RÉESSAYER',
+              fullWidth: true,
+              size: ArenaButtonSize.large,
+              onPressed: onRetry ?? () => Navigator.maybePop(context),
+            ),
+            const SizedBox(height: ArenaSpacing.sm),
+            ArenaButton(
+              label: '🏳 FORFAIT (perdre)',
+              variant: ArenaButtonVariant.danger,
+              fullWidth: true,
+              onPressed: onForfeit,
+            ),
+            const SizedBox(height: ArenaSpacing.lg),
+            Center(
+              child: TextButton(
+                onPressed: onContactSupport,
+                child: Text(
+                  'Contacter le support',
+                  style: ArenaText.body
+                      .copyWith(color: ArenaColors.signalBlue),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ErrorIcon extends StatelessWidget {
+  const _ErrorIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: ArenaColors.neonRed.withValues(alpha: 0.45),
+              blurRadius: 32,
+              spreadRadius: -2,
+            ),
+          ],
+        ),
+        child: const Text('🚫', style: TextStyle(fontSize: 60)),
+      ),
+    );
+  }
+}
+
+class _CauseCard extends StatelessWidget {
+  const _CauseCard({required this.cause});
+  final String cause;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(ArenaSpacing.lg),
+      decoration: arenaDangerCardDecoration(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('⚠️ Cause détectée', style: ArenaText.h3),
+          const SizedBox(height: ArenaSpacing.sm),
+          RichText(
+            text: TextSpan(
+              style: ArenaText.bodyMuted,
+              children: [
+                const TextSpan(text: 'Permission '),
+                TextSpan(
+                  text: cause,
+                  style: ArenaText.mono.copyWith(color: ArenaColors.neonRed),
+                ),
+                const TextSpan(text: ' manquante.'),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SolutionsCard extends StatelessWidget {
+  const _SolutionsCard({required this.solutions});
+  final List<String> solutions;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(ArenaSpacing.md),
+      decoration: BoxDecoration(
+        color: ArenaColors.carbon,
+        borderRadius: BorderRadius.circular(ArenaRadius.lg),
+        border: Border.all(color: ArenaColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var i = 0; i < solutions.length; i++)
+            Padding(
+              padding: EdgeInsets.only(
+                bottom: i == solutions.length - 1 ? 0 : ArenaSpacing.sm,
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 22,
+                    child: Text(
+                      '${i + 1}.',
+                      style: ArenaText.bodyMuted.copyWith(
+                        color: ArenaColors.signalBlue,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(solutions[i], style: ArenaText.body),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}

@@ -1,6 +1,6 @@
 import 'package:arena/data/models/standings.dart';
 import 'package:arena/data/repositories/standings_repository.dart';
-import 'package:arena/features_user/competitions/group_standings_view.dart';
+import 'package:arena/features_user/bracket/group_standings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -46,7 +46,7 @@ Widget _scoped(List<StandingsBucket> buckets) => ProviderScope(
             .overrideWith((ref, _) async => buckets),
       ],
       child: const MaterialApp(
-        home: Scaffold(body: GroupStandingsView(competitionId: 'c-1')),
+        home: Scaffold(body: GroupStandingsPage(competitionId: 'c-1')),
       ),
     );
 

@@ -10,15 +10,20 @@ import 'package:arena/features_user/auth/register_user_screen.dart';
 import 'package:arena/features_user/auth/reset_password_page.dart';
 import 'package:arena/features_user/auth/splash_user_screen.dart';
 import 'package:arena/features_user/chat/chat_page.dart';
+import 'package:arena/features_user/chat/messages_inbox_page.dart';
 import 'package:arena/features_user/competitions/competition_detail_page.dart';
 import 'package:arena/features_user/competitions/registration_confirm_page.dart';
 import 'package:arena/features_user/home/main_layout.dart';
 import 'package:arena/features_user/match_room/match_room_page.dart';
+import 'package:arena/features_user/notifications/notifications_page.dart';
 import 'package:arena/features_user/onboarding/onboarding_page.dart';
+import 'package:arena/features_user/profile/about_page.dart';
 import 'package:arena/features_user/profile/delete_account_page.dart';
 import 'package:arena/features_user/profile/edit_profile_page.dart';
 import 'package:arena/features_user/profile/match_history_page.dart';
-import 'package:arena/features_user/settings/settings_page.dart';
+import 'package:arena/features_user/profile/settings_page.dart';
+import 'package:arena/features_user/recording/match_in_progress_overlay.dart';
+import 'package:arena/features_user/recording/recording_error_page.dart';
 import 'package:arena/features_user/streaming/live_streams_page.dart';
 import 'package:arena/features_user/streaming/watch_stream_page.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -48,6 +53,11 @@ abstract final class UserRoutes {
   static const matchHistory = '/profile/match-history';
   static const registrationConfirm = '/competitions/:id/register/confirm';
   static const settings = '/settings';
+  static const messagesInbox = '/messages';
+  static const notifications = '/notifications';
+  static const about = '/about';
+  static const recordingError = '/recording/error';
+  static const matchInProgressPreview = '/recording/preview';
   static const devPreview = '/_dev/widgets';
 
   /// Builds the concrete `/competitions/<id>/register/confirm` URL.
@@ -270,6 +280,31 @@ final userRouterProvider = Provider<GoRouter>((ref) {
         path: UserRoutes.settings,
         name: 'user.settings',
         builder: (context, state) => const SettingsPage(),
+      ),
+      GoRoute(
+        path: UserRoutes.messagesInbox,
+        name: 'user.messagesInbox',
+        builder: (context, state) => const MessagesInboxPage(),
+      ),
+      GoRoute(
+        path: UserRoutes.notifications,
+        name: 'user.notifications',
+        builder: (context, state) => const NotificationsPage(),
+      ),
+      GoRoute(
+        path: UserRoutes.about,
+        name: 'user.about',
+        builder: (context, state) => const AboutPage(),
+      ),
+      GoRoute(
+        path: UserRoutes.recordingError,
+        name: 'user.recordingError',
+        builder: (context, state) => const RecordingErrorPage(),
+      ),
+      GoRoute(
+        path: UserRoutes.matchInProgressPreview,
+        name: 'user.matchInProgressPreview',
+        builder: (context, state) => const MatchInProgressOverlay(),
       ),
       GoRoute(
         path: UserRoutes.devPreview,

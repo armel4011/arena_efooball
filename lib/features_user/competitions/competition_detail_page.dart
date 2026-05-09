@@ -7,8 +7,8 @@ import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_card.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:arena/features_shared/widgets/error_state.dart';
-import 'package:arena/features_user/competitions/bracket_view_page.dart';
-import 'package:arena/features_user/competitions/group_standings_view.dart';
+import 'package:arena/features_user/bracket/bracket_view_page.dart';
+import 'package:arena/features_user/bracket/group_standings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -87,7 +87,7 @@ class _DetailBody extends StatelessWidget {
                 if (competition.format.isBracket)
                   BracketView(competitionId: competition.id)
                 else
-                  GroupStandingsView(competitionId: competition.id),
+                  GroupStandingsPage(competitionId: competition.id),
                 const _DeferredTab(
                   phase: 'PHASE 4.E',
                   icon: Icons.emoji_events_outlined,
@@ -255,7 +255,7 @@ class _InfosTab extends StatelessWidget {
               _kv('Commission ARENA', '${competition.commissionPct} %'),
               if (competition.prizePoolLocal > 0)
                 _kv(
-                  'Cagnotte',
+                  'Récompense',
                   '${_money(competition.prizePoolLocal)}'
                   ' ${competition.prizePoolCurrency ?? competition.registrationCurrency}',
                 ),

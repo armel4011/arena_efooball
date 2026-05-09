@@ -1,9 +1,8 @@
 import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/services/onboarding_service.dart';
-import 'package:arena/core/theme/arena_colors.dart';
 import 'package:arena/core/theme/arena_theme.dart';
-import 'package:arena/core/theme/arena_typography.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
+import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_card.dart';
 import 'package:arena/features_shared/widgets/language_switcher.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
@@ -29,13 +28,7 @@ class SettingsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-        title: const Text('PARAMÈTRES'),
-      ),
+      appBar: const ArenaAppBar(title: 'Paramètres'),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(ArenaSpacing.lg),

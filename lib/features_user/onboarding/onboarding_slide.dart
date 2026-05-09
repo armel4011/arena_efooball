@@ -1,98 +1,79 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:flutter/material.dart';
 
-/// Visual content for a single onboarding slide.
-///
-/// Composed inside the OnBoardingSlider from `flutter_onboarding_slider`
-/// — see `onboarding_page.dart`. Holds no state and no skip/next logic;
-/// the parent slider drives transitions and persistence.
-class OnboardingSlide extends StatelessWidget {
-  const OnboardingSlide({
+/// Data for a single onboarding slide. Owned by [OnboardingPage]; the slide
+/// itself is stateless and just renders [OnboardingSlide].
+class OnboardingSlideData {
+  const OnboardingSlideData({
+    required this.emoji,
     required this.title,
     required this.description,
-    required this.icon,
-    required this.accentColor,
-    this.iconBackground,
-    super.key,
   });
 
-  /// Slide headline (rendered with the Orbitron face).
+  final String emoji;
   final String title;
-
-  /// Body copy under the title.
   final String description;
+}
 
-  /// Glyph rendered inside the round visual.
-  final IconData icon;
+/// One onboarding screen — emoji hero (70px with a soft signal-blue
+/// drop-shadow glow), Bebas Neue h1, Space Grotesk paragraph, all centered.
+///
+/// Maps to `.onb-illu` / `.h1.center` / `.p.center` in `arena_v2.html`.
+class OnboardingSlide extends StatelessWidget {
+  const OnboardingSlide({required this.data, super.key});
 
-  /// Tint applied to the icon and the dotted ring around it.
-  final Color accentColor;
-
-  /// Optional fill behind the icon. Defaults to a translucent [accentColor].
-  final Color? iconBackground;
+  final OnboardingSlideData data;
 
   @override
   Widget build(BuildContext context) {
-    final bg = iconBackground ?? accentColor.withValues(alpha: 0.12);
-
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: ArenaSpacing.xl,
-        vertical: ArenaSpacing.lg,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 22),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _IllustrationRing(color: accentColor, fill: bg, icon: icon),
-          const SizedBox(height: ArenaSpacing.xxl),
+          // Two-layer drop-shadow approximates the CSS
+          // `filter: drop-shadow(0 0 30px var(--signal-blue-glow))`
+          // — a tight inner glow plus a wider, fainter outer halo so the
+          // emoji sits inside its own pool of light on the void backdrop.
           Text(
-            title,
+            data.emoji,
+            style: TextStyle(
+              fontSize: 70,
+              shadows: [
+                Shadow(
+                  color: ArenaColors.signalBlue.withValues(alpha: 0.7),
+                  blurRadius: 30,
+                ),
+                Shadow(
+                  color: ArenaColors.signalBlue.withValues(alpha: 0.35),
+                  blurRadius: 70,
+                ),
+              ],
+            ),
             textAlign: TextAlign.center,
-            style: ArenaTypography.headlineLarge,
+          ),
+          const SizedBox(height: ArenaSpacing.xxl),
+          // Onboarding title is intentionally larger than the canonical
+          // ArenaText.h1 (26 px) — Bebas Neue at the spec size renders
+          // smaller than the CSS preview suggests, so we bump to 32 px
+          // and a heavier weight here for parity with `arena_v2.html`.
+          Text(
+            data.title,
+            style: ArenaText.h1.copyWith(
+              fontSize: 32,
+              fontWeight: FontWeight.w700,
+              height: 1.05,
+            ),
+            textAlign: TextAlign.center,
           ),
           const SizedBox(height: ArenaSpacing.md),
           Text(
-            description,
+            data.description,
+            style: ArenaText.body.copyWith(color: ArenaColors.silver),
             textAlign: TextAlign.center,
-            style: ArenaTypography.bodyLarge.copyWith(
-              color: ArenaColors.textMuted,
-            ),
           ),
         ],
       ),
-    );
-  }
-}
-
-class _IllustrationRing extends StatelessWidget {
-  const _IllustrationRing({
-    required this.color,
-    required this.fill,
-    required this.icon,
-  });
-
-  final Color color;
-  final Color fill;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 180,
-      height: 180,
-      decoration: BoxDecoration(
-        color: fill,
-        shape: BoxShape.circle,
-        border: Border.all(color: color.withValues(alpha: 0.4), width: 2),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.25),
-            blurRadius: 32,
-            spreadRadius: 4,
-          ),
-        ],
-      ),
-      child: Icon(icon, size: 84, color: color),
     );
   }
 }

@@ -1,7 +1,7 @@
 import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/models/match_status.dart';
 import 'package:arena/data/repositories/match_repository.dart';
-import 'package:arena/features_user/competitions/bracket_view_page.dart';
+import 'package:arena/features_user/bracket/bracket_view_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

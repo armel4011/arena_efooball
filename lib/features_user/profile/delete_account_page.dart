@@ -1,8 +1,7 @@
 import 'package:arena/core/router/user_router.dart';
-import 'package:arena/core/theme/arena_colors.dart';
 import 'package:arena/core/theme/arena_theme.dart';
-import 'package:arena/core/theme/arena_typography.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
+import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_card.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
@@ -123,20 +122,18 @@ class _DeleteAccountPageState extends ConsumerState<DeleteAccountPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: _step == 3
-              ? null
-              : () {
-                  if (_step == 0) {
-                    context.pop();
-                  } else {
-                    setState(() => _step--);
-                  }
-                },
-        ),
-        title: const Text('SUPPRIMER MON COMPTE'),
+      appBar: ArenaAppBar(
+        title: 'Supprimer mon compte',
+        showBack: _step != 3,
+        onBack: _step == 3
+            ? null
+            : () {
+                if (_step == 0) {
+                  context.pop();
+                } else {
+                  setState(() => _step--);
+                }
+              },
       ),
       body: SafeArea(
         child: Padding(

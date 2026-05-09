@@ -65,7 +65,7 @@ class _RegistrationConfirmPageState extends State<RegistrationConfirmPage> {
                 .animate(delay: 100.ms)
                 .fadeIn(duration: ArenaDurations.medium),
             const SizedBox(height: ArenaSpacing.lg),
-            _SectionLabel('Cagnotte du tournoi'),
+            _SectionLabel('Récompense du tournoi'),
             const SizedBox(height: ArenaSpacing.sm),
             _PrizeDistribution(totalXaf: widget.totalPrizeXaf)
                 .animate(delay: 200.ms)

@@ -1,10 +1,9 @@
 import 'package:arena/core/router/user_router.dart';
-import 'package:arena/core/theme/arena_colors.dart';
 import 'package:arena/core/theme/arena_theme.dart';
-import 'package:arena/core/theme/arena_typography.dart';
 import 'package:arena/data/models/chat_channel.dart';
 import 'package:arena/data/models/chat_message.dart';
 import 'package:arena/data/repositories/chat_repository.dart';
+import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:arena/features_shared/widgets/error_state.dart';
@@ -68,18 +67,16 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   Widget build(BuildContext context) {
     final channelAsync = ref.watch(matchChannelProvider(widget.matchId));
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('CHAT'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go(UserRoutes.home);
-            }
-          },
-        ),
+      appBar: ArenaAppBar(
+        title: 'Chat',
+        bordered: true,
+        onBack: () {
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.go(UserRoutes.home);
+          }
+        },
       ),
       body: channelAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -171,7 +168,7 @@ class _Bubble extends StatelessWidget {
             vertical: ArenaSpacing.sm,
           ),
           decoration: BoxDecoration(
-            color: isSelf ? scheme.primary : ArenaColors.surfaceLight,
+            color: isSelf ? scheme.primary : ArenaColors.carbon2,
             borderRadius: BorderRadius.only(
               topLeft: const Radius.circular(16),
               topRight: const Radius.circular(16),
@@ -191,8 +188,8 @@ class _Bubble extends StatelessWidget {
           ),
           child: Text(
             message.content,
-            style: ArenaTypography.bodyMedium.copyWith(
-              color: isSelf ? Colors.white : ArenaColors.text,
+            style: ArenaText.body.copyWith(
+              color: isSelf ? Colors.white : ArenaColors.bone,
             ),
           ),
         ),

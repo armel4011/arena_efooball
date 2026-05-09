@@ -1,7 +1,6 @@
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:arena/core/services/agora_streaming_service.dart';
 import 'package:arena/core/services/match_viewers_service.dart';
-import 'package:arena/core/theme/arena_colors.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -72,7 +71,7 @@ class _WatchStreamPageState extends ConsumerState<WatchStreamPage> {
                 padding: const EdgeInsets.all(ArenaSpacing.lg),
                 child: Text(
                   _error!,
-                  style: const TextStyle(color: ArenaColors.danger),
+                  style: TextStyle(color: ArenaColors.neonRed),
                   textAlign: TextAlign.center,
                 ),
               ),

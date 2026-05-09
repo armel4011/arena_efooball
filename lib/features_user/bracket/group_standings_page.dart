@@ -13,8 +13,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// Renders one DataTable per group of the competition. Player display
 /// names are stubbed (preview of the UUID) until the `profiles` join
 /// lands in a later iteration.
-class GroupStandingsView extends ConsumerWidget {
-  const GroupStandingsView({required this.competitionId, super.key});
+class GroupStandingsPage extends ConsumerWidget {
+  const GroupStandingsPage({required this.competitionId, super.key});
 
   final String competitionId;
 
