@@ -62,6 +62,12 @@ class UnknownAuthFailure extends AuthFailure {
   const UnknownAuthFailure([Object? cause]) : super('unknown', cause);
 }
 
+/// Username déjà pris par un autre profil (contrainte unique sur `username`).
+class UsernameAlreadyTakenFailure extends AuthFailure {
+  const UsernameAlreadyTakenFailure([Object? cause])
+      : super('username_already_taken', cause);
+}
+
 /// Code d'invitation invalide / expiré / déjà utilisé.
 class InvalidInvitationCodeFailure extends AuthFailure {
   const InvalidInvitationCodeFailure([Object? cause])

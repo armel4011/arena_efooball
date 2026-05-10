@@ -59,6 +59,13 @@ class AuthRepository {
     required DateTime privacyPolicyAcceptedAt,
     bool marketingConsent = false,
   }) async {
+    // Pre-validate username uniqueness BEFORE auth.signUp so a clash
+    // doesn't leave us with an orphan auth.users row that can't be
+    // reused (Supabase rejects re-registering the same email).
+    if (await _profiles.usernameExists(username)) {
+      throw const UsernameAlreadyTakenFailure();
+    }
+
     final user = await _runAuth(() async {
       final res = await _client.auth.signUp(
         email: email.trim().toLowerCase(),
@@ -86,7 +93,16 @@ class AuthRepository {
       privacyPolicyAcceptedAt: privacyPolicyAcceptedAt,
       marketingConsent: marketingConsent,
     );
-    return _profiles.create(profile);
+    try {
+      return await _profiles.create(profile);
+    } on PostgrestException catch (e) {
+      // Race fallback — the pre-check passed but a concurrent signup
+      // claimed the same username before our INSERT landed.
+      if (e.code == '23505' && e.message.contains('username')) {
+        throw UsernameAlreadyTakenFailure(e);
+      }
+      rethrow;
+    }
   }
 
   Future<void> signOut() => _client.auth.signOut();

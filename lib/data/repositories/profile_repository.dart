@@ -16,6 +16,20 @@ class ProfileRepository {
     return Profile.fromJson(row);
   }
 
+  /// True if a profile already owns this username (case-insensitive). Used
+  /// pre-signup to surface a clear error instead of letting the unique
+  /// constraint blow up after `auth.signUp` already created an auth row.
+  Future<bool> usernameExists(String username) async {
+    final trimmed = username.trim();
+    if (trimmed.isEmpty) return false;
+    final row = await _client
+        .from(_table)
+        .select('id')
+        .ilike('username', trimmed)
+        .maybeSingle();
+    return row != null;
+  }
+
   /// Create a profile row immediately after `auth.signUp`. The row id
   /// must equal `auth.users.id`.
   Future<Profile> create(Profile profile) async {

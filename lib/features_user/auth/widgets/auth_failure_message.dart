@@ -31,6 +31,8 @@ String authFailureToMessage(AuthFailure failure) {
       'Compte verrouillé après 3 tentatives. Réessaie dans 30 min.',
     BackendUnavailableFailure() =>
       'Cette fonctionnalité arrive en PHASE 12.5 (Edge Functions).',
+    UsernameAlreadyTakenFailure() =>
+      'Ce pseudo est déjà pris. Choisis-en un autre.',
     UnknownAuthFailure() => 'Une erreur est survenue. Réessaie.',
   };
 }
