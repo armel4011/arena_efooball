@@ -7,10 +7,11 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 /// PHASE 6 + PHASE 12.5 — global messages inbox.
 ///
-/// Two tabs (DIRECT / COMPÉTITIONS) per `arena_v2.html` #15. Direct messages
-/// arrive in PHASE 12.5 with Agora RTM presence; until then this screen
-/// renders an empty state explaining the upcoming flow. Match chats are
-/// reachable from the match-room (`/chat/match/:id`), not from here.
+/// Two tabs (DIRECT / COMPÉTITIONS) per `arena_v2.html` #15. Direct
+/// messages arrive in PHASE 12.5 with Agora RTM presence; until then
+/// the DIRECT tab renders a deterministic v2 sample feed so the layout
+/// stays in sync with the design kit. Match chats remain reachable via
+/// the match-room (`/chat/match/:id`).
 ///
 /// Maps to screen #15 of `arena_v2.html`.
 class MessagesInboxPage extends StatelessWidget {
@@ -22,8 +23,11 @@ class MessagesInboxPage extends StatelessWidget {
       length: 2,
       child: Scaffold(
         appBar: const ArenaAppBar(
-          title: 'Messages',
+          title: 'MESSAGES',
           showBack: false,
+          actions: [
+            _ComposeAction(),
+          ],
         ),
         body: SafeArea(
           child: Column(
@@ -44,6 +48,22 @@ class MessagesInboxPage extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _ComposeAction extends StatelessWidget {
+  const _ComposeAction();
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: 'Nouvelle conversation',
+      icon: const Icon(Icons.edit_outlined, color: ArenaColors.gameEfoot),
+      onPressed: () => _showPlaceholder(
+        context,
+        'La composition de nouveaux messages directs arrive en PHASE 12.5.',
       ),
     );
   }
@@ -80,16 +100,51 @@ class _InboxTabs extends StatelessWidget {
 class _DirectTab extends StatelessWidget {
   const _DirectTab();
 
+  static const _sample = <_InboxThread>[
+    _InboxThread(
+      username: 'DianaA',
+      lastMessage: 'GG, beau match !',
+      timestamp: '14:25',
+      avatarColor: ArenaAvatarColor.green,
+      unread: 2,
+      online: true,
+    ),
+    _InboxThread(
+      username: 'SamuelK',
+      lastMessage: 'On joue le quart à quelle heure ?',
+      timestamp: '12:18',
+      avatarColor: ArenaAvatarColor.cyan,
+      online: true,
+    ),
+    _InboxThread(
+      username: 'AhmedB',
+      lastMessage: 'Tu joues pour la EA FC Night ?',
+      timestamp: 'Hier',
+      avatarColor: ArenaAvatarColor.orange,
+    ),
+    _InboxThread(
+      username: 'LindaO',
+      lastMessage: "Beau match l'autre fois !",
+      timestamp: '2j',
+      avatarColor: ArenaAvatarColor.purple,
+    ),
+  ];
+
   @override
   Widget build(BuildContext context) {
-    // Phase 6 ships match-attached chat only. The placeholder mirrors a
-    // v2 inbox row so the layout is in place for PHASE 12.5 wiring.
-    return const EmptyState(
-      icon: Icons.chat_bubble_outline,
-      title: 'Pas encore de discussion',
-      description: 'Les messages directs entre joueurs arriveront avec '
-          'PHASE 12.5 (Agora RTM). En attendant, le chat 1-on-1 est '
-          'accessible depuis chaque match-room.',
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(
+        ArenaSpacing.lg,
+        0,
+        ArenaSpacing.lg,
+        ArenaSpacing.lg,
+      ),
+      itemCount: _sample.length,
+      separatorBuilder: (_, __) => const SizedBox(height: ArenaSpacing.sm),
+      itemBuilder: (context, i) => _InboxRow(
+        thread: _sample[i],
+        highlighted: i == 0,
+      ),
     );
   }
 }
@@ -106,6 +161,183 @@ class _CompetitionsTab extends StatelessWidget {
           'apparaîtront ici dès que tu rejoindras un tournoi.',
     );
   }
+}
+
+class _InboxThread {
+  const _InboxThread({
+    required this.username,
+    required this.lastMessage,
+    required this.timestamp,
+    required this.avatarColor,
+    this.unread = 0,
+    this.online = false,
+  });
+
+  final String username;
+  final String lastMessage;
+  final String timestamp;
+  final ArenaAvatarColor avatarColor;
+  final int unread;
+  final bool online;
+}
+
+class _InboxRow extends StatelessWidget {
+  const _InboxRow({required this.thread, required this.highlighted});
+
+  final _InboxThread thread;
+  final bool highlighted;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _showPlaceholder(
+          context,
+          'Les messages directs avec ${thread.username} arrivent en PHASE 12.5.',
+        ),
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: ArenaColors.carbon2,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: highlighted
+                  ? ArenaColors.signalBlue
+                  : ArenaColors.border,
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _AvatarWithPresence(
+                initials: thread.username.isEmpty
+                    ? '?'
+                    : thread.username[0].toUpperCase(),
+                color: thread.avatarColor,
+                online: thread.online,
+              ),
+              const SizedBox(width: ArenaSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            thread.username,
+                            style: ArenaText.small.copyWith(
+                              color: ArenaColors.bone,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Text(
+                          thread.timestamp,
+                          style: ArenaText.small.copyWith(
+                            color: ArenaColors.silver,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      thread.lastMessage,
+                      style: ArenaText.small.copyWith(
+                        color: thread.unread > 0
+                            ? ArenaColors.bone
+                            : ArenaColors.silver,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              if (thread.unread > 0) ...[
+                const SizedBox(width: ArenaSpacing.sm),
+                _UnreadBadge(count: thread.unread),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AvatarWithPresence extends StatelessWidget {
+  const _AvatarWithPresence({
+    required this.initials,
+    required this.color,
+    required this.online,
+  });
+
+  final String initials;
+  final ArenaAvatarColor color;
+  final bool online;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        ArenaAvatar(initials: initials, color: color),
+        if (online)
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                color: ArenaColors.statusOk,
+                shape: BoxShape.circle,
+                border: Border.all(color: ArenaColors.carbon, width: 2),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _UnreadBadge extends StatelessWidget {
+  const _UnreadBadge({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 18,
+      height: 18,
+      alignment: Alignment.center,
+      decoration: const BoxDecoration(
+        color: ArenaColors.neonRed,
+        shape: BoxShape.circle,
+      ),
+      child: Text(
+        count > 9 ? '9+' : '$count',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 9,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+void _showPlaceholder(BuildContext context, String message) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(message),
+      duration: const Duration(seconds: 2),
+    ),
+  );
 }
 
 /// Helper avatar mapping for inbox cards (used once the
