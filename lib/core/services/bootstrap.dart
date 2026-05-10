@@ -18,50 +18,52 @@ Future<void> bootstrap({
   required String bundleId,
   required AppBuilder builder,
 }) async {
-  WidgetsFlutterBinding.ensureInitialized();
+  // Single zone wraps binding init, Sentry init and runApp so the framework
+  // sees the same zone everywhere — avoids the "Zone mismatch" warning that
+  // appears when SentryFlutter.init's appRunner spins up a child zone.
+  await runZonedGuarded<Future<void>>(() async {
+    WidgetsFlutterBinding.ensureInitialized();
 
-  FlavorConfig.init(
-    flavor: flavor,
-    appName: appName,
-    bundleId: bundleId,
-  );
+    FlavorConfig.init(
+      flavor: flavor,
+      appName: appName,
+      bundleId: bundleId,
+    );
 
-  await _loadEnv();
-  await _initSupabase();
+    await _loadEnv();
+    await _initSupabase();
 
-  // Pre-load SharedPreferences so providers can read it synchronously.
-  final prefs = await SharedPreferences.getInstance();
+    // Pre-load SharedPreferences so providers can read it synchronously.
+    final prefs = await SharedPreferences.getInstance();
 
-  final overrides = <Override>[
-    sharedPreferencesProvider.overrideWithValue(prefs),
-  ];
+    final overrides = <Override>[
+      sharedPreferencesProvider.overrideWithValue(prefs),
+    ];
 
-  // Per-flavor DSN — `.env` exposes SENTRY_DSN_USER / SENTRY_DSN_ADMIN.
-  // Falls back to a generic SENTRY_DSN if a flavor-specific one is missing.
-  final dsnKey = flavor == Flavor.admin ? 'SENTRY_DSN_ADMIN' : 'SENTRY_DSN_USER';
-  final sentryDsn = (dotenv.env[dsnKey]?.trim().isNotEmpty ?? false)
-      ? dotenv.env[dsnKey]!.trim()
-      : (dotenv.env['SENTRY_DSN']?.trim() ?? '');
-  if (sentryDsn.isEmpty) {
-    if (kDebugMode) {
+    // Per-flavor DSN — `.env` exposes SENTRY_DSN_USER / SENTRY_DSN_ADMIN.
+    // Falls back to a generic SENTRY_DSN if a flavor-specific one is missing.
+    final dsnKey =
+        flavor == Flavor.admin ? 'SENTRY_DSN_ADMIN' : 'SENTRY_DSN_USER';
+    final sentryDsn = (dotenv.env[dsnKey]?.trim().isNotEmpty ?? false)
+        ? dotenv.env[dsnKey]!.trim()
+        : (dotenv.env['SENTRY_DSN']?.trim() ?? '');
+
+    if (sentryDsn.isNotEmpty) {
+      await SentryFlutter.init((options) {
+        options
+          ..dsn = sentryDsn
+          ..environment = dotenv.env['APP_ENV'] ?? 'development'
+          ..tracesSampleRate = kReleaseMode ? 0.2 : 1.0
+          ..attachScreenshot = false;
+      });
+    } else if (kDebugMode) {
       debugPrint('[bootstrap] SENTRY_DSN missing — running without Sentry.');
     }
-    runApp(ProviderScope(overrides: overrides, child: builder()));
-    return;
-  }
 
-  await SentryFlutter.init(
-    (options) {
-      options
-        ..dsn = sentryDsn
-        ..environment = dotenv.env['APP_ENV'] ?? 'development'
-        ..tracesSampleRate = kReleaseMode ? 0.2 : 1.0
-        ..attachScreenshot = false;
-    },
-    appRunner: () => runApp(
-      ProviderScope(overrides: overrides, child: builder()),
-    ),
-  );
+    runApp(ProviderScope(overrides: overrides, child: builder()));
+  }, (error, stack) {
+    Sentry.captureException(error, stackTrace: stack);
+  });
 }
 
 Future<void> _loadEnv() async {
