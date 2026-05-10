@@ -92,6 +92,14 @@ class _ProfileBody extends ConsumerWidget {
             fullWidth: true,
             onPressed: () => context.push(UserRoutes.settings),
           ),
+          const SizedBox(height: ArenaSpacing.sm),
+          ArenaButton(
+            label: 'SE DÉCONNECTER',
+            icon: Icons.logout,
+            variant: ArenaButtonVariant.ghost,
+            fullWidth: true,
+            onPressed: () => ref.read(signOutProvider)(),
+          ),
         ],
       ),
     );

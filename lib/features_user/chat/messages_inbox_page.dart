@@ -13,48 +13,63 @@ import 'package:flutter_animate/flutter_animate.dart';
 /// stays in sync with the design kit. Match chats remain reachable via
 /// the match-room (`/chat/match/:id`).
 ///
+/// Used both as the Chat tab inside [MainLayout] (no AppBar — host
+/// supplies it) and as a stand-alone route at `/messages` (Scaffold
+/// wrapper). The shared body lives in [MessagesInboxBody].
+///
 /// Maps to screen #15 of `arena_v2.html`.
 class MessagesInboxPage extends StatelessWidget {
   const MessagesInboxPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    return const Scaffold(
+      appBar: ArenaAppBar(
+        title: 'MESSAGES',
+        actions: [InboxComposeAction()],
+      ),
+      body: MessagesInboxBody(),
+    );
+  }
+}
+
+/// AppBar-less inbox body, suitable for embedding inside a parent
+/// Scaffold (the user app's [MainLayout] already supplies the AppBar
+/// + bottom nav).
+class MessagesInboxBody extends StatelessWidget {
+  const MessagesInboxBody({super.key});
+
+  @override
+  Widget build(BuildContext context) {
     return DefaultTabController(
       length: 2,
-      child: Scaffold(
-        appBar: const ArenaAppBar(
-          title: 'MESSAGES',
-          showBack: false,
-          actions: [
-            _ComposeAction(),
-          ],
-        ),
-        body: SafeArea(
-          child: Column(
-            children: [
-              const _InboxTabs(),
-              Expanded(
-                child: TabBarView(
-                  children: [
-                    const _DirectTab().animate().fadeIn(
-                          duration: ArenaDurations.medium,
-                        ),
-                    const _CompetitionsTab().animate().fadeIn(
-                          duration: ArenaDurations.medium,
-                        ),
-                  ],
-                ),
+      child: SafeArea(
+        child: Column(
+          children: [
+            const _InboxTabs(),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  const _DirectTab().animate().fadeIn(
+                        duration: ArenaDurations.medium,
+                      ),
+                  const _CompetitionsTab().animate().fadeIn(
+                        duration: ArenaDurations.medium,
+                      ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _ComposeAction extends StatelessWidget {
-  const _ComposeAction();
+/// Compose-button shown in the inbox AppBar / parent layout. Opens the
+/// "new conversation" UI once Agora RTM lands (PHASE 12.5).
+class InboxComposeAction extends StatelessWidget {
+  const InboxComposeAction({super.key});
 
   @override
   Widget build(BuildContext context) {

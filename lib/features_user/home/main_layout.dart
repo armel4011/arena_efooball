@@ -1,7 +1,5 @@
-import 'package:arena/core/theme/arena_colors.dart';
 import 'package:arena/core/theme/arena_theme.dart';
-import 'package:arena/core/theme/arena_typography.dart';
-import 'package:arena/features_user/auth/auth_providers.dart';
+import 'package:arena/features_user/chat/messages_inbox_page.dart';
 import 'package:arena/features_user/competitions/competitions_list_page.dart';
 import 'package:arena/features_user/home/home_page.dart';
 import 'package:arena/features_user/profile/player_profile_page.dart';
@@ -27,12 +25,7 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
   static const _pages = <Widget>[
     HomePage(),
     CompetitionsListPage(),
-    _PhasePlaceholder(
-      phase: 'PHASE 6',
-      title: 'CHAT',
-      subtitle: 'Salons hybrides Supabase Realtime + Agora RTM — à venir.',
-      icon: Icons.chat_bubble_outline,
-    ),
+    MessagesInboxBody(),
     PlayerProfilePage(),
   ];
 
@@ -45,12 +38,7 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
           style: ArenaTypography.headlineMedium,
         ),
         actions: [
-          if (_currentIndex == 3)
-            IconButton(
-              icon: const Icon(Icons.logout),
-              tooltip: 'Se déconnecter',
-              onPressed: () => ref.read(signOutProvider)(),
-            ),
+          if (_currentIndex == 2) const InboxComposeAction(),
         ],
       ),
       body: IndexedStack(index: _currentIndex, children: _pages),
@@ -64,7 +52,7 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
   String _titleForIndex(int i) => switch (i) {
         0 => 'ACCUEIL',
         1 => 'COMPÉTITIONS',
-        2 => 'CHAT',
+        2 => 'MESSAGES',
         3 => 'PROFIL',
         _ => 'ARENA',
       };
@@ -151,63 +139,6 @@ class _GlowingNavBar extends StatelessWidget {
                 icon: Icon(Icons.person_outline),
                 selectedIcon: Icon(Icons.person),
                 label: 'Profil',
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _PhasePlaceholder extends StatelessWidget {
-  const _PhasePlaceholder({
-    required this.phase,
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-  });
-
-  final String phase;
-  final String title;
-  final String subtitle;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(ArenaSpacing.xl),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 96,
-                height: 96,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: ArenaColors.surface,
-                  border: Border.all(color: ArenaColors.border),
-                ),
-                child: Icon(icon, size: 48, color: ArenaColors.textMuted),
-              ),
-              const SizedBox(height: ArenaSpacing.lg),
-              Text(
-                phase,
-                style: ArenaTypography.labelLarge.copyWith(
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-              ),
-              const SizedBox(height: ArenaSpacing.xs),
-              Text(title, style: ArenaTypography.displayMedium),
-              const SizedBox(height: ArenaSpacing.sm),
-              Text(
-                subtitle,
-                textAlign: TextAlign.center,
-                style: ArenaTypography.bodyMedium.copyWith(
-                  color: ArenaColors.textMuted,
-                ),
               ),
             ],
           ),
