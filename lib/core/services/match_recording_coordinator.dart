@@ -79,6 +79,11 @@ class MatchRecordingCoordinator {
   final _stateController = StreamController<CoordinatorState>.broadcast();
   CoordinatorState _state = const CoordinatorIdle();
 
+  // Fires every time the overlay sends focusMain, so the main app can
+  // open the actions sheet alongside the activity coming to front.
+  final _focusController = StreamController<void>.broadcast();
+  Stream<void> get focusRequests => _focusController.stream;
+
   StreamSubscription<OverlayAction>? _actionsSub;
   Timer? _graceTimer;
 
@@ -143,6 +148,7 @@ class MatchRecordingCoordinator {
     _graceTimer?.cancel();
     await _actionsSub?.cancel();
     await _stateController.close();
+    await _focusController.close();
   }
 
   // ─── Overlay action plumbing ───────────────────────────────────────────
@@ -151,6 +157,7 @@ class MatchRecordingCoordinator {
     switch (action) {
       case OverlayAction.focusMain:
         await _bringToFront.bringArenaToFront();
+        _focusController.add(null);
       case OverlayAction.resume:
         _onResume();
       case OverlayAction.pause:
@@ -163,6 +170,19 @@ class MatchRecordingCoordinator {
         }
     }
   }
+
+  /// Public entry for the in-app actions sheet to pause the recording.
+  /// Mirrors the overlay "Pause" tile.
+  void pause() => _onPause();
+
+  /// Public entry for the in-app actions sheet to resume from pause.
+  /// Mirrors the overlay "Continuer" tile.
+  void resume() => _onResume();
+
+  /// Public entry for the in-app actions sheet to declare a forfeit.
+  /// Mirrors the overlay "Arrêter (forfait)" tile.
+  Future<void> declareForfeit() =>
+      _declareForfeit('user_chose_forfeit');
 
   void _onPause() {
     final matchId = _matchId;

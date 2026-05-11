@@ -1,11 +1,14 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:arena/data/models/match_stream.dart';
 import 'package:arena/data/repositories/match_stream_repository.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screen_recording/flutter_screen_recording.dart';
+
+final _filenameRandom = Random();
 
 /// State machine for the anti-cheat screen recorder.
 sealed class RecordingState {
@@ -107,7 +110,10 @@ class RecordingService {
       rethrow;
     }
 
-    final filename = 'arena_${matchId}_${session.id}';
+    // User-facing filename — short, predictable, no PII. The full mapping
+    // back to (matchId, streamId) lives in the streams DB row.
+    final filename =
+        'match_${_filenameRandom.nextInt(999999).toString().padLeft(6, '0')}';
     bool started;
     try {
       started = await _platform.startRecording(

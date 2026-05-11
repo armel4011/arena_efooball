@@ -66,3 +66,7 @@ error image/
 .tmp_screenshots/
 .claude_tmp_screen.png
 
+# Android adb bugreports
+bugreport*.zip
+bugreport*.txt
+

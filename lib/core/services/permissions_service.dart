@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 /// Outcome of a permission request, normalized across platforms.
@@ -163,3 +164,7 @@ class _DefaultPermissionRequester implements PermissionRequester {
     return PermissionOutcome.denied;
   }
 }
+
+final permissionsServiceProvider = Provider<PermissionsService>((ref) {
+  return PermissionsService();
+});

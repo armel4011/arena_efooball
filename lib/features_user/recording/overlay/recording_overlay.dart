@@ -8,14 +8,20 @@ import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 /// `flutter_overlay_window` — it cannot read providers from the
 /// main app, so all state arrives through `FlutterOverlayWindow.shareData`.
 ///
-/// Layout (matches the PHASE 8.4 brief):
+/// Layout:
 ///   - 72 dp circular red button,
 ///   - white "REC" timer text MM:SS in the middle,
-///   - drag-to-side baked in via `PositionGravity.auto` (set by the
-///     main app when it calls `showOverlay`),
-///   - short tap → ask the main app to bring ARENA to front,
-///   - long press → in-overlay sheet with 3 options
-///     (Continuer / Pause / Arrêter forfait).
+///   - drag-to-side baked in via `PositionGravity.auto`,
+///   - tap → ask the main app to bring ARENA to front (focusMain).
+///
+/// All non-trivial actions (pause / resume / stop / forfeit) live in
+/// ARENA itself, not in the overlay isolate. Reasons:
+///   * Bottom sheets + resizeOverlay are fragile inside an overlay
+///     isolate, especially on MIUI / OxygenOS.
+///   * Long-press events are eaten by the underlying app on those OEMs.
+///   * `MatchRecordingLifecycle` already exposes a tap-to-stop banner
+///     inside the match room, which is what the user reaches after a
+///     focusMain tap.
 class RecordingOverlayApp extends StatelessWidget {
   const RecordingOverlayApp({super.key});
 
@@ -39,6 +45,8 @@ class RecordingOverlayButton extends StatefulWidget {
 }
 
 class _RecordingOverlayButtonState extends State<RecordingOverlayButton> {
+  static const double _buttonSize = 72;
+
   OverlayTick _tick = const OverlayTick(elapsedSeconds: 0, isWarning: false);
 
   @override
@@ -56,30 +64,14 @@ class _RecordingOverlayButtonState extends State<RecordingOverlayButton> {
     );
   }
 
-  Future<void> _onLongPress() async {
-    final ctx = context;
-    if (!ctx.mounted) return;
-    final result = await showModalBottomSheet<String>(
-      context: ctx,
-      backgroundColor: ArenaColors.surface,
-      isDismissible: true,
-      builder: (sheetCtx) => _LongPressMenu(),
-    );
-    if (result == null) return;
-    await FlutterOverlayWindow.shareData(result);
-  }
-
   @override
   Widget build(BuildContext context) {
-    const size = 72.0;
     final color = _tick.isWarning ? ArenaColors.warning : ArenaColors.danger;
-
     return GestureDetector(
       onTap: _onTap,
-      onLongPress: _onLongPress,
       child: Container(
-        width: size,
-        height: size,
+        width: _buttonSize,
+        height: _buttonSize,
         decoration: BoxDecoration(
           color: color,
           shape: BoxShape.circle,
@@ -110,63 +102,6 @@ class _RecordingOverlayButtonState extends State<RecordingOverlayButton> {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _LongPressMenu extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _MenuTile(
-              label: 'Continuer',
-              icon: Icons.play_arrow,
-              color: ArenaColors.success,
-              onTap: () => Navigator.pop(context, RecordingOverlayMessages.askResumeType),
-            ),
-            _MenuTile(
-              label: 'Pause (max 2 min)',
-              icon: Icons.pause,
-              color: ArenaColors.warning,
-              onTap: () => Navigator.pop(context, RecordingOverlayMessages.askPauseType),
-            ),
-            _MenuTile(
-              label: 'Arrêter (forfait)',
-              icon: Icons.stop,
-              color: ArenaColors.danger,
-              onTap: () => Navigator.pop(context, RecordingOverlayMessages.askForfeitType),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MenuTile extends StatelessWidget {
-  const _MenuTile({
-    required this.label,
-    required this.icon,
-    required this.color,
-    required this.onTap,
-  });
-
-  final String label;
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(icon, color: color),
-      title: Text(label, style: const TextStyle(color: ArenaColors.text)),
-      onTap: onTap,
     );
   }
 }

@@ -1,13 +1,15 @@
+import 'dart:async';
+
 import 'package:arena/core/router/user_router.dart';
-import 'package:arena/core/theme/arena_colors.dart';
 import 'package:arena/core/theme/arena_theme.dart';
-import 'package:arena/core/theme/arena_typography.dart';
 import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/models/match_status.dart';
+import 'package:arena/data/models/profile.dart';
 import 'package:arena/data/repositories/match_repository.dart';
+import 'package:arena/data/repositories/profile_repository.dart';
+import 'package:arena/features_shared/widgets/arena_app_bar.dart';
+import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
-import 'package:arena/features_shared/widgets/arena_card.dart';
-import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:arena/features_shared/widgets/error_state.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
@@ -19,78 +21,111 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-/// In-flight optimistic score submissions, keyed by matchId. Lives
-/// outside the widget tree so a player who taps SOUMETTRE, steps back
-/// to the bracket and re-enters the match room still sees the "waiting
-/// for opponent" UI — instead of being shown the entry form again
-/// (and worst-case double-submitting).
-///
-/// The realtime stream of `match_events` is the source of truth; this
-/// provider only fills the gap between "we just inserted" and "the
-/// stream echoed it back" — typically a few hundred ms, but the gap
-/// also covers the entire time the widget is unmounted.
+// Optimistic state survives remounts (back-to-bracket-and-return). Lives
+// outside the widget tree.
 final _pendingScoreSubmissionProvider =
     StateProvider.family<Map<String, dynamic>?, String>((ref, matchId) => null);
-
-/// Same idea as [_pendingScoreSubmissionProvider] but for the share-code
-/// step: holds the room code we just posted while the realtime stream
-/// catches up to `status = ready`. Persisting it across remounts means
-/// stepping back to the bracket and re-entering the room still shows
-/// the "code partagé" interstitial instead of dropping back to the
-/// empty share form.
 final _pendingRoomCodeProvider =
     StateProvider.family<String?, String>((ref, matchId) => null);
 
-/// PHASE 5 — Match Room shell.
+/// Loads the two players' profiles in parallel for the match header.
+final _matchPlayersProvider =
+    FutureProvider.family<_MatchPlayers, String>((ref, matchId) async {
+  final match = await ref.watch(matchByIdProvider(matchId).future);
+  if (match == null) return const _MatchPlayers(p1: null, p2: null);
+  final repo = ref.watch(profileRepositoryProvider);
+  final p1 = match.player1Id == null ? null : await repo.getById(match.player1Id!);
+  final p2 = match.player2Id == null ? null : await repo.getById(match.player2Id!);
+  return _MatchPlayers(p1: p1, p2: p2);
+});
+
+class _MatchPlayers {
+  const _MatchPlayers({required this.p1, required this.p2});
+  final Profile? p1;
+  final Profile? p2;
+}
+
+/// Maps the match status onto the four-step v2 progress indicator.
 ///
-/// Watches the match in realtime and dispatches to a status-specific
-/// view. The actual interactive flows (sharing the room code,
-/// submitting scores) land in sub-steps 5.C and 5.D — for now each
-/// branch shows a clear "what should happen here" placeholder so the
-/// scaffold can be tested end-to-end without mocking deep providers.
+/// Steps follow the v2 mockup (`docs/arena_v2.html` line 799+):
+///   1 — Code room  (HOME shares the code)
+///   2 — Adversaire rejoint  (AWAY confirms in the room)
+///   3 — Match en cours  (recording / score submission)
+///   4 — Score validé  (terminal: completed / disputed / forfeited)
+enum _MatchStep {
+  codeRoom(1, 'Code room'),
+  opponentJoining(2, 'Adversaire rejoint'),
+  matchInProgress(3, 'Match en cours'),
+  result(4, 'Résultat');
+
+  const _MatchStep(this.number, this.label);
+
+  final int number;
+  final String label;
+
+  static _MatchStep fromStatus(MatchStatus s) => switch (s) {
+        MatchStatus.pending || MatchStatus.scheduled => _MatchStep.codeRoom,
+        MatchStatus.ready => _MatchStep.opponentJoining,
+        MatchStatus.inProgress ||
+        MatchStatus.scorePending ||
+        MatchStatus.awaitingValidation =>
+          _MatchStep.matchInProgress,
+        MatchStatus.completed ||
+        MatchStatus.disputed ||
+        MatchStatus.forfeited ||
+        MatchStatus.cancelled =>
+          _MatchStep.result,
+      };
+}
+
+/// PHASE 5 + v2 redesign — Match Room shell.
+///
+/// Layout per `docs/arena_v2.html` #11: ArenaAppBar → 4-step progress →
+/// player avatars (HOME/AWAY) → step-specific body. The scoring,
+/// recording-lifecycle and streaming-banner wiring from v1 stays intact;
+/// only the chrome and the share-code / room-ready surfaces are restyled
+/// to match the v2 mockup.
 class MatchRoomPage extends ConsumerWidget {
   const MatchRoomPage({required this.matchId, super.key});
 
   final String matchId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(matchByIdProvider(matchId));
-    final selfId = ref.watch(currentSessionProvider)?.user.id;
-
-    final selfRole = async.value == null
-        ? MatchRole.observer
-        : MatchRole.resolve(match: async.value!, selfId: selfId);
-    final isPlayer = selfRole != MatchRole.observer;
+  Widget build(BuildContext context, WidgetRef widgetRef) {
+    final async = widgetRef.watch(matchByIdProvider(matchId));
+    final selfId = widgetRef.watch(currentSessionProvider)?.user.id;
+    final loadedMatch = async.value;
+    final isPlayer = loadedMatch != null &&
+        MatchRole.resolve(match: loadedMatch, selfId: selfId) !=
+            MatchRole.observer;
 
     return PopScope(
-      // The bracket reads `competitionMatchesProvider` as a Future (no
-      // realtime), so a status change made here would otherwise need a
-      // manual pull-to-refresh to show up. We invalidate the whole
-      // family on every exit path — AppBar back, system back gesture,
-      // and the deep-link fallback below — so the bracket re-fetches on
-      // its next build.
+      // The bracket reads `competitionMatchesProvider` as a Future; refresh
+      // it on every exit so a status change here shows up without a manual
+      // pull-to-refresh.
       onPopInvokedWithResult: (didPop, _) {
-        if (didPop) ref.invalidate(competitionMatchesProvider);
+        if (didPop) widgetRef.invalidate(competitionMatchesProvider);
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('MATCH ROOM'),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () {
-              ref.invalidate(competitionMatchesProvider);
-              if (context.canPop()) {
-                context.pop();
-              } else {
-                context.go(UserRoutes.home);
-              }
-            },
-          ),
+        appBar: ArenaAppBar(
+          title: async.value?.matchNumber == null
+              ? 'MATCH'
+              : 'MATCH #${async.value!.matchNumber}',
+          onBack: () {
+            widgetRef.invalidate(competitionMatchesProvider);
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go(UserRoutes.home);
+            }
+          },
           actions: [
             if (isPlayer)
               IconButton(
-                icon: const Icon(Icons.chat_outlined),
+                icon: const Icon(
+                  Icons.chat_bubble_outline,
+                  color: ArenaColors.gameEfoot,
+                ),
                 tooltip: 'Chat avec ton adversaire',
                 onPressed: () =>
                     context.push(UserRoutes.matchChatPath(matchId)),
@@ -98,22 +133,22 @@ class MatchRoomPage extends ConsumerWidget {
           ],
         ),
         body: async.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => ErrorState(
-          description: e.toString(),
-          onRetry: () => ref.invalidate(matchByIdProvider(matchId)),
-        ),
-        data: (m) {
-          if (m == null) {
-            return const EmptyState(
-              icon: Icons.search_off_outlined,
-              title: 'Match introuvable',
-              description: 'Le match a peut-être été annulé par un admin.',
-            );
-          }
-          final role = MatchRole.resolve(match: m, selfId: selfId);
-          return _MatchRoomBody(match: m, role: role, selfId: selfId);
-        },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => ErrorState(
+            description: e.toString(),
+            onRetry: () => widgetRef.invalidate(matchByIdProvider(matchId)),
+          ),
+          data: (m) {
+            if (m == null) {
+              return const EmptyState(
+                icon: Icons.search_off_outlined,
+                title: 'Match introuvable',
+                description: 'Le match a peut-être été annulé par un admin.',
+              );
+            }
+            final role = MatchRole.resolve(match: m, selfId: selfId);
+            return _MatchRoomBody(match: m, role: role, selfId: selfId);
+          },
         ),
       ),
     );
@@ -122,16 +157,10 @@ class MatchRoomPage extends ConsumerWidget {
 
 /// Where the current user stands relative to the match.
 enum MatchRole {
-  /// Player 1 (the bracket-determined slot 1).
   player1,
-
-  /// Player 2 (slot 2).
   player2,
-
-  /// Anyone else looking at the match (admin tools, future spectator).
   observer;
 
-  /// Convenience: did the user actually claim the home seat?
   bool isHomeOf(ArenaMatch m) {
     final selfMap = switch (this) {
       MatchRole.player1 => m.player1Id,
@@ -149,7 +178,7 @@ enum MatchRole {
   }
 }
 
-class _MatchRoomBody extends StatelessWidget {
+class _MatchRoomBody extends ConsumerWidget {
   const _MatchRoomBody({
     required this.match,
     required this.role,
@@ -161,369 +190,296 @@ class _MatchRoomBody extends StatelessWidget {
   final String? selfId;
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _Header(match: match, role: role),
-        // PHASE 8 wiring — anti-cheat lifecycle indicator (recording /
-        // paused / forfeit) sits right under the header so the player
-        // always sees what the coordinator is doing. Renders a no-op
-        // SizedBox.shrink() for observers and on iOS, so it costs
-        // nothing when not relevant.
-        MatchRecordingLifecycle(match: match, selfId: selfId),
-        // PHASE 8.7 — admin-driven live streaming banner. Hidden by
-        // default; surfaces a CTA when the admin flips
-        // `streams.is_public = true` for this match's HOME row.
-        if (role != MatchRole.observer)
-          StartStreamingBanner(matchId: match.id),
-        const Divider(height: 1, thickness: 1, color: ArenaColors.border),
-        Expanded(child: _bodyForStatus(match.status)),
-      ],
-    );
-  }
+  Widget build(BuildContext context, WidgetRef ref) {
+    final players = ref.watch(_matchPlayersProvider(match.id));
+    final step = _MatchStep.fromStatus(match.status);
 
-  Widget _bodyForStatus(MatchStatus status) => switch (status) {
-        MatchStatus.pending || MatchStatus.scheduled =>
-          role == MatchRole.observer
-              ? const _PlaceholderView(
-                  phase: '—',
-                  icon: Icons.vpn_key_outlined,
-                  title: 'En attente du code room',
-                  description: 'Les joueurs vont créer une room dans le jeu'
-                      ' et partager le code ici.',
-                )
-              : _ShareCodeForm(match: match),
-        MatchStatus.ready => _RoomReadyView(match: match, role: role),
-        MatchStatus.inProgress ||
-        MatchStatus.scorePending ||
-        MatchStatus.awaitingValidation =>
-          role == MatchRole.observer
-              ? const _PlaceholderView(
-                  phase: '—',
-                  icon: Icons.sports_esports,
-                  title: 'Match en cours',
-                  description: 'Les joueurs sont en train de jouer ou de'
-                      ' valider le score.',
-                )
-              : _ScoreFlowView(match: match, role: role),
-        MatchStatus.disputed => _DisputedView(match: match, selfId: selfId),
-        MatchStatus.completed => _CompletedView(match: match, selfId: selfId),
-        MatchStatus.cancelled => const _PlaceholderView(
-            phase: '—',
-            icon: Icons.block,
-            title: 'Match annulé',
-            description: "L'admin a annulé ce match.",
-          ),
-        MatchStatus.forfeited => const _PlaceholderView(
-            phase: '—',
-            icon: Icons.exit_to_app,
-            title: 'Forfait',
-            description: "L'un des joueurs n'a pas démarré à temps.",
-          ),
-      };
-}
-
-class _Header extends StatelessWidget {
-  const _Header({required this.match, required this.role});
-
-  final ArenaMatch match;
-  final MatchRole role;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(ArenaSpacing.lg),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(
+        ArenaSpacing.lg,
+        ArenaSpacing.md,
+        ArenaSpacing.lg,
+        ArenaSpacing.xxl,
+      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Text(
-                match.matchNumber == null
-                    ? 'MATCH'
-                    : 'MATCH #${match.matchNumber}',
-                style: ArenaTypography.headlineMedium,
-              ),
-              const Spacer(),
-              _StatusChip(status: match.status),
-            ],
-          ),
+          _StepIndicator(step: step),
           const SizedBox(height: ArenaSpacing.sm),
-          Row(
-            children: [
-              Expanded(
-                child: _SeatLine(
-                  label: 'Joueur 1',
-                  playerId: match.player1Id,
-                  highlight: role == MatchRole.player1,
-                ),
-              ),
-              const SizedBox(width: ArenaSpacing.md),
-              Text(
-                'vs',
-                style: ArenaTypography.bodyMedium.copyWith(
-                  color: ArenaColors.textFaint,
-                ),
-              ),
-              const SizedBox(width: ArenaSpacing.md),
-              Expanded(
-                child: _SeatLine(
-                  label: 'Joueur 2',
-                  playerId: match.player2Id,
-                  highlight: role == MatchRole.player2,
-                  alignEnd: true,
-                ),
-              ),
-            ],
+          _StepLabel(step: step),
+          const SizedBox(height: ArenaSpacing.lg),
+          _PlayersHeader(
+            match: match,
+            role: role,
+            p1: players.value?.p1,
+            p2: players.value?.p2,
           ),
-          if (role == MatchRole.observer) ...[
-            const SizedBox(height: ArenaSpacing.sm),
-            Text(
-              "Tu n'es pas inscrit à ce match — vue en lecture.",
-              style: ArenaTypography.bodyMedium.copyWith(
-                color: ArenaColors.textMuted,
-                fontSize: 12,
-              ),
-            ),
-          ],
+          // Anti-cheat recording banner (Android-only, no-op elsewhere).
+          MatchRecordingLifecycle(match: match, selfId: selfId),
+          if (role != MatchRole.observer)
+            StartStreamingBanner(matchId: match.id),
+          const SizedBox(height: ArenaSpacing.lg),
+          _StepBody(match: match, role: role, selfId: selfId),
         ],
       ),
     );
   }
 }
 
-class _SeatLine extends StatelessWidget {
-  const _SeatLine({
-    required this.label,
-    required this.playerId,
-    required this.highlight,
-    this.alignEnd = false,
-  });
+class _StepIndicator extends StatelessWidget {
+  const _StepIndicator({required this.step});
 
-  final String label;
-  final String? playerId;
-  final bool highlight;
-  final bool alignEnd;
+  final _MatchStep step;
 
   @override
   Widget build(BuildContext context) {
-    final pid = playerId;
-    final stub = pid == null ? 'À déterminer' : 'Joueur ${pid.substring(0, 6)}…';
-    return Column(
-      crossAxisAlignment:
-          alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+    return Row(
+      children: List.generate(4, (i) {
+        final active = i + 1 <= step.number;
+        return Expanded(
+          child: Container(
+            margin: EdgeInsets.only(right: i == 3 ? 0 : 6),
+            height: 4,
+            decoration: BoxDecoration(
+              color: active ? ArenaColors.signalBlue : ArenaColors.borderHi,
+              borderRadius: BorderRadius.circular(2),
+              boxShadow: active && i + 1 == step.number
+                  ? [
+                      BoxShadow(
+                        color: ArenaColors.signalBlue.withValues(alpha: 0.45),
+                        blurRadius: 12,
+                      ),
+                    ]
+                  : null,
+            ),
+          ),
+        );
+      }),
+    );
+  }
+}
+
+class _StepLabel extends StatelessWidget {
+  const _StepLabel({required this.step});
+
+  final _MatchStep step;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      'Étape ${step.number} / 4 — ${step.label}',
+      style: ArenaText.small.copyWith(color: ArenaColors.silver),
+    );
+  }
+}
+
+class _PlayersHeader extends StatelessWidget {
+  const _PlayersHeader({
+    required this.match,
+    required this.role,
+    required this.p1,
+    required this.p2,
+  });
+
+  final ArenaMatch match;
+  final MatchRole role;
+  final Profile? p1;
+  final Profile? p2;
+
+  @override
+  Widget build(BuildContext context) {
+    final p1IsHome = match.homePlayerId != null &&
+        match.homePlayerId == match.player1Id;
+    final p2IsHome = match.homePlayerId != null &&
+        match.homePlayerId == match.player2Id;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          highlight ? '$label · TOI' : label,
-          style: ArenaTypography.labelLarge.copyWith(
-            color: highlight
-                ? Theme.of(context).colorScheme.primary
-                : ArenaColors.textMuted,
-            fontSize: 11,
+        Expanded(
+          child: _PlayerSeat(
+            profile: p1,
+            seatLabel: 'Joueur 1',
+            isSelf: role == MatchRole.player1,
+            isHome: p1IsHome,
+            fallbackColor: ArenaAvatarColor.blue,
           ),
         ),
-        Text(
-          stub,
-          style: ArenaTypography.bodyMedium.copyWith(
-            color: pid == null ? ArenaColors.textMuted : ArenaColors.text,
-            fontWeight: highlight ? FontWeight.bold : FontWeight.normal,
+        Padding(
+          padding: const EdgeInsets.only(top: 14),
+          child: Text(
+            'VS',
+            style: ArenaText.h2.copyWith(color: ArenaColors.silverDim),
           ),
-          overflow: TextOverflow.ellipsis,
+        ),
+        Expanded(
+          child: _PlayerSeat(
+            profile: p2,
+            seatLabel: 'Joueur 2',
+            isSelf: role == MatchRole.player2,
+            isHome: p2IsHome,
+            fallbackColor: ArenaAvatarColor.green,
+          ),
         ),
       ],
     );
   }
 }
 
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.status});
+class _PlayerSeat extends StatelessWidget {
+  const _PlayerSeat({
+    required this.profile,
+    required this.seatLabel,
+    required this.isSelf,
+    required this.isHome,
+    required this.fallbackColor,
+  });
 
-  final MatchStatus status;
+  final Profile? profile;
+  final String seatLabel;
+  final bool isSelf;
+  final bool isHome;
+  final ArenaAvatarColor fallbackColor;
 
   @override
   Widget build(BuildContext context) {
-    final (label, color) = switch (status) {
-      MatchStatus.pending => ('À VENIR', ArenaColors.textMuted),
-      MatchStatus.scheduled => ('PROGRAMMÉ', ArenaColors.textMuted),
-      MatchStatus.ready => ('PRÊT', ArenaColors.primary),
-      MatchStatus.inProgress => ('EN COURS', ArenaColors.success),
-      MatchStatus.scorePending => ('SCORE EN ATTENTE', ArenaColors.warning),
-      MatchStatus.awaitingValidation => ('VALIDATION', ArenaColors.warning),
-      MatchStatus.disputed => ('LITIGE', ArenaColors.danger),
-      MatchStatus.completed => ('TERMINÉ', ArenaColors.textMuted),
-      MatchStatus.cancelled => ('ANNULÉ', ArenaColors.textFaint),
-      MatchStatus.forfeited => ('FORFAIT', ArenaColors.danger),
-    };
+    final username = profile?.username ?? seatLabel;
+    final initial =
+        username.isEmpty ? '?' : username.characters.first.toUpperCase();
+    final color = profile == null
+        ? fallbackColor
+        : _avatarColorFromHex(profile!.avatarColor) ?? fallbackColor;
+
+    return Column(
+      children: [
+        ArenaAvatar(
+          initials: initial,
+          color: color,
+          size: ArenaAvatarSize.lg,
+          selected: isSelf,
+        ),
+        const SizedBox(height: ArenaSpacing.sm),
+        Text(
+          isSelf ? '$username · TOI' : username,
+          style: ArenaText.body.copyWith(
+            color: ArenaColors.bone,
+            fontWeight: FontWeight.w700,
+          ),
+          textAlign: TextAlign.center,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 6),
+        if (isHome)
+          const _SeatBadge(label: 'HOME', color: ArenaColors.signalBlue)
+        else if (profile != null)
+          const _SeatBadge(label: 'AWAY', color: ArenaColors.statusWarn),
+      ],
+    );
+  }
+}
+
+class _SeatBadge extends StatelessWidget {
+  const _SeatBadge({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: ArenaSpacing.sm,
-        vertical: 2,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.16),
         borderRadius: ArenaRadius.pill,
+        border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Text(
         label,
-        style: ArenaTypography.labelLarge.copyWith(
-          color: color,
-          fontSize: 10,
-        ),
+        style: ArenaText.badge.copyWith(color: color, fontSize: 9),
       ),
     );
   }
 }
 
-class _PlaceholderView extends StatelessWidget {
-  const _PlaceholderView({
-    required this.phase,
+class _StepBody extends StatelessWidget {
+  const _StepBody({
+    required this.match,
+    required this.role,
+    required this.selfId,
+  });
+
+  final ArenaMatch match;
+  final MatchRole role;
+  final String? selfId;
+
+  @override
+  Widget build(BuildContext context) {
+    return switch (match.status) {
+      MatchStatus.pending || MatchStatus.scheduled => role ==
+              MatchRole.observer
+          ? const _ObserverWaitingPlaceholder(
+              icon: Icons.vpn_key_outlined,
+              title: 'En attente du code room',
+              description: 'Les joueurs vont créer une room dans le jeu et'
+                  ' partager le code ici.',
+            )
+          : _ShareCodeForm(match: match),
+      MatchStatus.ready => _RoomReadyView(match: match, role: role),
+      MatchStatus.inProgress ||
+      MatchStatus.scorePending ||
+      MatchStatus.awaitingValidation =>
+        role == MatchRole.observer
+            ? const _ObserverWaitingPlaceholder(
+                icon: Icons.sports_esports,
+                title: 'Match en cours',
+                description: 'Les joueurs sont en train de jouer ou de'
+                    ' valider le score.',
+              )
+            : _ScoreFlowView(match: match, role: role),
+      MatchStatus.disputed => _DisputedView(match: match, selfId: selfId),
+      MatchStatus.completed => _CompletedView(match: match, selfId: selfId),
+      MatchStatus.cancelled => const _TerminalCard(
+          icon: Icons.block,
+          color: ArenaColors.silverDim,
+          title: 'MATCH ANNULÉ',
+          description: "L'admin a annulé ce match.",
+        ),
+      MatchStatus.forfeited => const _TerminalCard(
+          icon: Icons.exit_to_app,
+          color: ArenaColors.neonRed,
+          title: 'FORFAIT',
+          description: "L'un des joueurs n'a pas démarré à temps.",
+        ),
+    };
+  }
+}
+
+class _ObserverWaitingPlaceholder extends StatelessWidget {
+  const _ObserverWaitingPlaceholder({
     required this.icon,
     required this.title,
     required this.description,
   });
 
-  final String phase;
   final IconData icon;
   final String title;
   final String description;
 
   @override
   Widget build(BuildContext context) {
-    return EmptyState(
-      icon: icon,
-      title: title,
-      description: phase == '—' ? description : '$phase — $description',
-    );
-  }
-}
-
-class _CompletedView extends StatelessWidget {
-  const _CompletedView({required this.match, required this.selfId});
-
-  final ArenaMatch match;
-  final String? selfId;
-
-  bool get _isPlayer =>
-      selfId != null &&
-      (selfId == match.player1Id || selfId == match.player2Id);
-
-  @override
-  Widget build(BuildContext context) {
-    final s1 = match.score1 ?? 0;
-    final s2 = match.score2 ?? 0;
     return Padding(
-      padding: const EdgeInsets.all(ArenaSpacing.lg),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const _HaloIcon(
-            icon: Icons.emoji_events,
-            color: ArenaColors.warning,
-            size: 64,
-          ),
-          const SizedBox(height: ArenaSpacing.md),
-          Text('SCORE FINAL', style: ArenaTypography.labelLarge),
-          const SizedBox(height: ArenaSpacing.sm),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: ArenaSpacing.lg,
-              vertical: ArenaSpacing.sm,
-            ),
-            decoration: BoxDecoration(
-              borderRadius: ArenaRadius.card,
-              boxShadow: [
-                BoxShadow(
-                  color: ArenaColors.warning.withValues(alpha: 0.32),
-                  blurRadius: 36,
-                  spreadRadius: -8,
-                ),
-              ],
-            ),
-            child: Text(
-              '$s1 — $s2',
-              style: ArenaTypography.displayMedium.copyWith(fontSize: 48),
-            ),
-          ),
-          const SizedBox(height: ArenaSpacing.md),
-          if (match.winnerId != null)
-            Text(
-              'Gagnant : Joueur ${match.winnerId!.substring(0, 6)}…',
-              style: ArenaTypography.bodyMedium.copyWith(
-                color: ArenaColors.textMuted,
-              ),
-            )
-          else
-            Text(
-              'Match nul.',
-              style: ArenaTypography.bodyMedium.copyWith(
-                color: ArenaColors.textMuted,
-              ),
-            ),
-          if (_isPlayer) ...[
-            const SizedBox(height: ArenaSpacing.xl),
-            ManualUploadButton(matchId: match.id, playerId: selfId!),
-          ],
-        ],
+      padding: const EdgeInsets.symmetric(vertical: ArenaSpacing.xxl),
+      child: EmptyState(
+        icon: icon,
+        title: title,
+        description: description,
       ),
     );
   }
 }
 
-/// PHASE 5/8 — Dispute placeholder with the manual-upload CTA so the
-/// player can hand a video to the admin even before the arbitration
-/// bot lands (PHASE 12.5).
-class _DisputedView extends StatelessWidget {
-  const _DisputedView({required this.match, required this.selfId});
+// ─── Step 1 — Share the room code (cyan dashed input + forfeit timer) ────
 
-  final ArenaMatch match;
-  final String? selfId;
-
-  bool get _isPlayer =>
-      selfId != null &&
-      (selfId == match.player1Id || selfId == match.player2Id);
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(ArenaSpacing.lg),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const _HaloIcon(icon: Icons.gavel, color: ArenaColors.danger),
-          const SizedBox(height: ArenaSpacing.md),
-          Text(
-            'LITIGE EN COURS',
-            style: ArenaTypography.labelLarge,
-          ),
-          const SizedBox(height: ArenaSpacing.sm),
-          Text(
-            'Vos scores ne concordent pas. Un admin va trancher. Tu peux '
-            'envoyer une vidéo du match pour appuyer ta version.',
-            textAlign: TextAlign.center,
-            style: ArenaTypography.bodyMedium.copyWith(
-              color: ArenaColors.textMuted,
-            ),
-          ),
-          if (_isPlayer) ...[
-            const SizedBox(height: ArenaSpacing.xl),
-            ManualUploadButton(matchId: match.id, playerId: selfId!),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-/// PHASE 5.C — Share-the-room-code form (status `pending` / `scheduled`).
-///
-/// Either player can be the first to post a code; whoever does claims the
-/// HOME seat (single UPDATE in [MatchRepository.setRoomCode]) and flips the
-/// match to `ready`. The other player then sees [_RoomReadyView] in
-/// realtime via the [matchByIdProvider] stream.
-///
-/// V1.0 keeps it simple: no atomic seat claim — if both players post at the
-/// exact same instant, the second write wins and the first becomes AWAY.
-/// Acceptable trade-off; we'll harden in PHASE 12.5 if it bites.
 class _ShareCodeForm extends ConsumerStatefulWidget {
   const _ShareCodeForm({required this.match});
 
@@ -573,9 +529,7 @@ class _ShareCodeFormState extends ConsumerState<_ShareCodeForm> {
       return;
     }
     if (!mounted) return;
-    ref
-        .read(_pendingRoomCodeProvider(widget.match.id).notifier)
-        .state = raw;
+    ref.read(_pendingRoomCodeProvider(widget.match.id).notifier).state = raw;
     setState(() => _submitting = false);
   }
 
@@ -584,65 +538,290 @@ class _ShareCodeFormState extends ConsumerState<_ShareCodeForm> {
     final optimisticCode =
         ref.watch(_pendingRoomCodeProvider(widget.match.id));
     if (optimisticCode != null) {
-      return _CodeSharedInterstitial(code: optimisticCode);
+      return _CodeSharedInterstitial(
+        code: optimisticCode,
+        matchId: widget.match.id,
+      );
     }
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(ArenaSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: ArenaSpacing.lg),
-          const _HaloIcon(
-            icon: Icons.vpn_key_outlined,
-            color: ArenaColors.primary,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'CODE ROOM (HOME CRÉE)',
+          style: ArenaText.inputLabel,
+        ),
+        const SizedBox(height: ArenaSpacing.sm),
+        _CyanDashedContainer(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Saisis ton code eFootball :',
+                textAlign: TextAlign.center,
+                style: ArenaText.bodyMuted.copyWith(
+                  color: ArenaColors.silver,
+                ),
+              ),
+              const SizedBox(height: ArenaSpacing.sm),
+              _CodeInput(
+                controller: _controller,
+                enabled: !_submitting,
+              ),
+              const SizedBox(height: ArenaSpacing.sm),
+              Text(
+                widget.match.player2Id == null
+                    ? 'Ton adversaire recevra ce code au chat dès envoi.'
+                    : 'Ton adversaire reçoit ce code au chat dès envoi.',
+                textAlign: TextAlign.center,
+                style: ArenaText.small.copyWith(color: ArenaColors.silver),
+              ),
+            ],
           ),
-          const SizedBox(height: ArenaSpacing.md),
-          Text(
-            'PARTAGE LE CODE DE LA ROOM',
-            textAlign: TextAlign.center,
-            style: ArenaTypography.headlineMedium,
-          ),
+        ),
+        if (_error != null) ...[
           const SizedBox(height: ArenaSpacing.sm),
           Text(
-            'Crée une room dans le jeu, puis colle le code ici. Ton'
-            ' adversaire le verra apparaître en temps réel.',
-            textAlign: TextAlign.center,
-            style: ArenaTypography.bodyMedium.copyWith(
-              color: ArenaColors.textMuted,
-            ),
-          ),
-          const SizedBox(height: ArenaSpacing.xl),
-          ArenaTextField(
-            label: 'Code de la room',
-            hint: 'Ex: ABC123',
-            controller: _controller,
-            maxLength: 12,
-            autofocus: true,
-            textInputAction: TextInputAction.done,
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9]')),
-              _UpperCaseFormatter(),
-            ],
-            errorText: _error,
-            enabled: !_submitting,
-          ),
-          const SizedBox(height: ArenaSpacing.md),
-          ArenaButton(
-            label: 'PARTAGER LE CODE',
-            icon: Icons.send_outlined,
-            fullWidth: true,
-            isLoading: _submitting,
-            onPressed: _submit,
+            _error!,
+            style: ArenaText.bodyMuted.copyWith(color: ArenaColors.neonRed),
           ),
         ],
+        if (widget.match.scheduledAt != null) ...[
+          const SizedBox(height: ArenaSpacing.lg),
+          _ForfeitTimerCard(scheduledAt: widget.match.scheduledAt!),
+        ],
+        const SizedBox(height: ArenaSpacing.lg),
+        ArenaButton(
+          label: 'ENVOYER LE CODE',
+          icon: Icons.send_outlined,
+          fullWidth: true,
+          isLoading: _submitting,
+          onPressed: _submit,
+        ),
+        const SizedBox(height: ArenaSpacing.sm),
+        _OpenChatLink(matchId: widget.match.id),
+      ],
+    );
+  }
+}
+
+class _CodeInput extends StatelessWidget {
+  const _CodeInput({required this.controller, required this.enabled});
+
+  final TextEditingController controller;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      enabled: enabled,
+      autofocus: true,
+      maxLength: 12,
+      textAlign: TextAlign.center,
+      textCapitalization: TextCapitalization.characters,
+      textInputAction: TextInputAction.done,
+      style: ArenaText.roomCode.copyWith(
+        color: ArenaColors.bone,
+        fontSize: 22,
+        letterSpacing: 4,
+      ),
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9-]')),
+        _UpperCaseFormatter(),
+      ],
+      decoration: InputDecoration(
+        hintText: 'Ex: 8K3-TZ9',
+        hintStyle: ArenaText.body.copyWith(
+          color: ArenaColors.silverDim,
+          letterSpacing: 4,
+        ),
+        counterText: '',
+        filled: true,
+        fillColor: ArenaColors.void_,
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: ArenaSpacing.md,
+          horizontal: ArenaSpacing.lg,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(ArenaRadius.md),
+          borderSide: const BorderSide(color: ArenaColors.gameEfoot, width: 1.5),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(ArenaRadius.md),
+          borderSide: const BorderSide(color: ArenaColors.gameEfoot, width: 1.5),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(ArenaRadius.md),
+          borderSide: const BorderSide(color: ArenaColors.gameEfoot, width: 2),
+        ),
       ),
     );
   }
 }
 
-/// PHASE 5.C — Room is set (status `ready`). Shows the code prominently and
-/// lets either player flip the match to `in_progress` once both have joined
-/// the in-game room.
+class _CyanDashedContainer extends StatelessWidget {
+  const _CyanDashedContainer({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: _DashedBorderPainter(
+        color: ArenaColors.gameEfoot,
+        radius: ArenaRadius.lg,
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(ArenaSpacing.lg),
+        decoration: BoxDecoration(
+          color: ArenaColors.gameEfoot.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(ArenaRadius.lg),
+        ),
+        child: child,
+      ),
+    );
+  }
+}
+
+class _DashedBorderPainter extends CustomPainter {
+  _DashedBorderPainter({required this.color, required this.radius});
+
+  final Color color;
+  final double radius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color.withValues(alpha: 0.6)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+
+    final rect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Radius.circular(radius),
+    );
+    final path = Path()..addRRect(rect);
+    final dashed = _dashPath(path, dashLength: 6, gapLength: 4);
+    canvas.drawPath(dashed, paint);
+  }
+
+  Path _dashPath(
+    Path source, {
+    required double dashLength,
+    required double gapLength,
+  }) {
+    final dest = Path();
+    for (final metric in source.computeMetrics()) {
+      double dist = 0;
+      while (dist < metric.length) {
+        dest.addPath(
+          metric.extractPath(dist, dist + dashLength),
+          Offset.zero,
+        );
+        dist += dashLength + gapLength;
+      }
+    }
+    return dest;
+  }
+
+  @override
+  bool shouldRepaint(_DashedBorderPainter old) =>
+      old.color != color || old.radius != radius;
+}
+
+class _ForfeitTimerCard extends StatefulWidget {
+  const _ForfeitTimerCard({required this.scheduledAt});
+
+  final DateTime scheduledAt;
+
+  @override
+  State<_ForfeitTimerCard> createState() => _ForfeitTimerCardState();
+}
+
+class _ForfeitTimerCardState extends State<_ForfeitTimerCard> {
+  static const _forfeitWindow = Duration(minutes: 10);
+  Timer? _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final deadline = widget.scheduledAt.add(_forfeitWindow);
+    final remaining = deadline.difference(DateTime.now());
+    final mmss = _format(remaining);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: ArenaSpacing.lg,
+        vertical: ArenaSpacing.md,
+      ),
+      decoration: arenaWarningCardDecoration(),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.timer_outlined,
+            color: ArenaColors.statusWarn,
+            size: 18,
+          ),
+          const SizedBox(width: ArenaSpacing.sm),
+          Expanded(
+            child: Text(
+              'Timer forfait auto',
+              style: ArenaText.body.copyWith(
+                color: ArenaColors.bone,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Text(
+            mmss,
+            style: ArenaText.monoLg.copyWith(color: ArenaColors.statusWarn),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _format(Duration d) {
+    if (d.isNegative) return '00:00';
+    final mm = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final ss = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$mm:$ss';
+  }
+}
+
+class _OpenChatLink extends StatelessWidget {
+  const _OpenChatLink({required this.matchId});
+
+  final String matchId;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: ArenaButton(
+        label: 'OUVRIR LE CHAT',
+        icon: Icons.chat_bubble_outline,
+        variant: ArenaButtonVariant.ghost,
+        onPressed: () => context.push(UserRoutes.matchChatPath(matchId)),
+      ),
+    );
+  }
+}
+
+// ─── Step 2 — Code shared, opponent joining ──────────────────────────────
+
 class _RoomReadyView extends ConsumerStatefulWidget {
   const _RoomReadyView({required this.match, required this.role});
 
@@ -677,8 +856,6 @@ class _RoomReadyViewState extends ConsumerState<_RoomReadyView> {
         SnackBar(content: Text('Impossible de marquer démarré : $e')),
       );
     }
-    // On success the realtime stream pushes the new status and the body
-    // rebuilds — no local state to flip back.
   }
 
   Future<void> _copyCode(String code) async {
@@ -708,107 +885,124 @@ class _RoomReadyViewState extends ConsumerState<_RoomReadyView> {
             ' que les deux joueurs sont dedans.',
     };
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(ArenaSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: ArenaSpacing.lg),
-          const _HaloIcon(
-            icon: Icons.meeting_room_outlined,
-            color: ArenaColors.success,
-          ),
-          const SizedBox(height: ArenaSpacing.sm),
-          Text(
-            'CODE DE LA ROOM',
-            textAlign: TextAlign.center,
-            style: ArenaTypography.labelLarge.copyWith(
-              color: ArenaColors.textMuted,
-            ),
-          ),
-          const SizedBox(height: ArenaSpacing.sm),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: ArenaRadius.card,
-              boxShadow: [
-                BoxShadow(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .primary
-                      .withValues(alpha: 0.45),
-                  blurRadius: 32,
-                  spreadRadius: -4,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: ArenaCard(
-              elevated: true,
-              padding: const EdgeInsets.symmetric(
-                vertical: ArenaSpacing.lg,
-                horizontal: ArenaSpacing.md,
-              ),
-              child: Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'CODE DE LA ROOM',
+          style: ArenaText.inputLabel,
+        ),
+        const SizedBox(height: ArenaSpacing.sm),
+        _CyanDashedContainer(
+          child: Column(
+            children: [
+              Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Expanded(
                     child: SelectableText(
                       code ?? '—',
                       textAlign: TextAlign.center,
-                      style: ArenaTypography.displayMedium.copyWith(
-                        fontSize: 40,
-                        letterSpacing: 4,
-                      ),
+                      style: ArenaText.roomCode.copyWith(fontSize: 28),
                     ),
                   ),
-                  if (code != null) ...[
-                    const SizedBox(width: ArenaSpacing.sm),
+                  if (code != null)
                     IconButton(
-                      icon: const Icon(Icons.copy_outlined),
+                      icon: const Icon(Icons.copy_outlined, size: 18),
                       tooltip: 'Copier le code',
-                      color: ArenaColors.textMuted,
+                      color: ArenaColors.silver,
                       onPressed: () => _copyCode(code),
                     ),
-                  ],
                 ],
               ),
-            ),
+              const SizedBox(height: ArenaSpacing.sm),
+              Text(
+                hint,
+                textAlign: TextAlign.center,
+                style: ArenaText.small.copyWith(color: ArenaColors.silver),
+              ),
+            ],
           ),
+        ),
+        if (widget.match.scheduledAt != null) ...[
           const SizedBox(height: ArenaSpacing.lg),
-          Text(
-            hint,
-            textAlign: TextAlign.center,
-            style: ArenaTypography.bodyMedium.copyWith(
-              color: ArenaColors.textMuted,
-            ),
-          ),
-          if (isPlayer) ...[
-            const SizedBox(height: ArenaSpacing.xl),
-            ArenaButton(
-              label: 'JE SUIS DANS LA ROOM',
-              icon: Icons.play_arrow_rounded,
-              fullWidth: true,
-              isLoading: _submitting,
-              onPressed: _markStarted,
-            ),
-          ],
+          _ForfeitTimerCard(scheduledAt: widget.match.scheduledAt!),
         ],
-      ),
+        if (isPlayer) ...[
+          const SizedBox(height: ArenaSpacing.lg),
+          ArenaButton(
+            label: 'JE SUIS DANS LA ROOM',
+            icon: Icons.play_arrow_rounded,
+            fullWidth: true,
+            isLoading: _submitting,
+            onPressed: _markStarted,
+          ),
+          const SizedBox(height: ArenaSpacing.sm),
+          _OpenChatLink(matchId: widget.match.id),
+        ],
+      ],
     );
   }
 }
 
-/// PHASE 5.D — Collaborative score-submission flow.
-///
-/// Watches `match_events` of type `score_submitted` in realtime, then:
-///  - `mySubmission == null`  → render the entry form
-///  - `mySubmission != null && !bothSubmitted` → "waiting for opponent"
-///  - `bothSubmitted` → auto-resolve once via `_resolve`: matching scores
-///    commit (with `winnerId` derived from the higher score, or null on a
-///    draw), divergent scores flip the match to `disputed`. Both clients
-///    reach the same conclusion from identical inputs, so the redundant
-///    write is a no-op — `_resolutionTriggered` just avoids re-firing on
-///    every rebuild of this widget.
+class _CodeSharedInterstitial extends StatelessWidget {
+  const _CodeSharedInterstitial({required this.code, required this.matchId});
+
+  final String code;
+  final String matchId;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('CODE DE LA ROOM', style: ArenaText.inputLabel),
+        const SizedBox(height: ArenaSpacing.sm),
+        _CyanDashedContainer(
+          child: Column(
+            children: [
+              const Icon(
+                Icons.check_circle,
+                color: ArenaColors.statusOk,
+                size: 28,
+              ),
+              const SizedBox(height: ArenaSpacing.xs),
+              Text(
+                'CODE PARTAGÉ',
+                style: ArenaText.inputLabel.copyWith(
+                  color: ArenaColors.statusOk,
+                ),
+              ),
+              const SizedBox(height: ArenaSpacing.sm),
+              Text(
+                code,
+                textAlign: TextAlign.center,
+                style: ArenaText.roomCode.copyWith(fontSize: 28),
+              ),
+              const SizedBox(height: ArenaSpacing.sm),
+              const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              const SizedBox(height: ArenaSpacing.xs),
+              Text(
+                'Synchronisation avec ton adversaire…',
+                textAlign: TextAlign.center,
+                style: ArenaText.small.copyWith(color: ArenaColors.silver),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: ArenaSpacing.lg),
+        _OpenChatLink(matchId: matchId),
+      ],
+    );
+  }
+}
+
+// ─── Step 3 — Score submission flow ──────────────────────────────────────
+
 class _ScoreFlowView extends ConsumerStatefulWidget {
   const _ScoreFlowView({required this.match, required this.role});
 
@@ -839,12 +1033,6 @@ class _ScoreFlowViewState extends ConsumerState<_ScoreFlowView> {
   }
 
   bool get _isPlayer1 => widget.role == MatchRole.player1;
-
-  /// Group-stage matches stay on the regulation-time score (draws are
-  /// allowed). Only knockout matches expose the "decided by penalties"
-  /// toggle. We use `groupId` as the marker because it's set by the
-  /// admin when the match belongs to a group, and left null for every
-  /// knockout slot.
   bool get _isKnockout => widget.match.groupId == null;
 
   Future<void> _submit() async {
@@ -887,8 +1075,6 @@ class _ScoreFlowViewState extends ConsumerState<_ScoreFlowView> {
     final selfId = ref.read(currentSessionProvider)?.user.id;
     if (selfId == null) return;
 
-    // The DB stores score1 / score2 keyed to the bracket-ordered seats,
-    // not "me / opponent" — flip when the user is on the player2 seat.
     final s1 = _isPlayer1 ? my : opp;
     final s2 = _isPlayer1 ? opp : my;
     final pen1 = _viaPenalties ? (_isPlayer1 ? myPen : oppPen) : null;
@@ -965,7 +1151,6 @@ class _ScoreFlowViewState extends ConsumerState<_ScoreFlowView> {
       if (concordant) {
         String? winner;
         if (viaPenA && pen1A != null && pen2A != null) {
-          // Regulation tied — decide on penalties.
           if (pen1A > pen2A) {
             winner = widget.match.player1Id;
           } else if (pen2A > pen1A) {
@@ -1008,7 +1193,10 @@ class _ScoreFlowViewState extends ConsumerState<_ScoreFlowView> {
         ref.watch(matchScoreSubmissionsProvider(widget.match.id));
 
     return submissionsAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: ArenaSpacing.xxl),
+        child: Center(child: CircularProgressIndicator()),
+      ),
       error: (e, _) => ErrorState(
         description: e.toString(),
         onRetry: () => ref.invalidate(
@@ -1016,18 +1204,11 @@ class _ScoreFlowViewState extends ConsumerState<_ScoreFlowView> {
         ),
       ),
       data: (submissions) {
-        // Last submission per player wins — guards against a player
-        // submitting twice (e.g. correcting a typo before the opponent
-        // has posted).
         final byPlayer = <String, Map<String, dynamic>>{};
         for (final s in submissions) {
           final by = s['created_by'] as String?;
           if (by != null) byPlayer[by] = s;
         }
-        // Optimistic merge: if we just posted but the realtime stream
-        // hasn't echoed back yet — or we've come back to this room
-        // after stepping away — fall back to the matchId-keyed state
-        // provider so the UI reflects the in-flight submission.
         final optimistic =
             ref.watch(_pendingScoreSubmissionProvider(widget.match.id));
         if (optimistic != null && !byPlayer.containsKey(selfId)) {
@@ -1058,142 +1239,109 @@ class _ScoreFlowViewState extends ConsumerState<_ScoreFlowView> {
   }
 
   Widget _buildForm() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(ArenaSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: ArenaSpacing.lg),
-          const _HaloIcon(
-            icon: Icons.edit_outlined,
-            color: ArenaColors.warning,
-          ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'SAISIS LE SCORE FINAL',
+          style: ArenaText.inputLabel,
+        ),
+        const SizedBox(height: ArenaSpacing.sm),
+        Text(
+          'Entre les buts de chaque côté. Si vos deux saisies'
+          ' concordent, le match est validé automatiquement.',
+          style: ArenaText.bodyMuted,
+        ),
+        const SizedBox(height: ArenaSpacing.lg),
+        Row(
+          children: [
+            Expanded(
+              child: _ScoreField(
+                label: 'Mon score',
+                controller: _myScoreCtrl,
+                enabled: !_submitting,
+                action: TextInputAction.next,
+              ),
+            ),
+            const SizedBox(width: ArenaSpacing.md),
+            Expanded(
+              child: _ScoreField(
+                label: 'Score adversaire',
+                controller: _oppScoreCtrl,
+                enabled: !_submitting,
+                action: _isKnockout
+                    ? TextInputAction.next
+                    : TextInputAction.done,
+              ),
+            ),
+          ],
+        ),
+        if (_isKnockout) ...[
           const SizedBox(height: ArenaSpacing.md),
-          Text(
-            'SAISIS LE SCORE FINAL',
-            textAlign: TextAlign.center,
-            style: ArenaTypography.headlineMedium,
+          SwitchListTile.adaptive(
+            title: Text(
+              'Match décidé aux tirs au but',
+              style: ArenaText.body,
+            ),
+            subtitle: Text(
+              'À cocher uniquement si le score réglementaire est à égalité.',
+              style: ArenaText.small.copyWith(color: ArenaColors.silver),
+            ),
+            value: _viaPenalties,
+            contentPadding: EdgeInsets.zero,
+            onChanged: _submitting
+                ? null
+                : (v) => setState(() {
+                      _viaPenalties = v;
+                      if (!v) {
+                        _myPenCtrl.clear();
+                        _oppPenCtrl.clear();
+                      }
+                    }),
           ),
+          if (_viaPenalties) ...[
+            const SizedBox(height: ArenaSpacing.sm),
+            Row(
+              children: [
+                Expanded(
+                  child: _ScoreField(
+                    label: 'Mes tirs au but',
+                    controller: _myPenCtrl,
+                    enabled: !_submitting,
+                    action: TextInputAction.next,
+                  ),
+                ),
+                const SizedBox(width: ArenaSpacing.md),
+                Expanded(
+                  child: _ScoreField(
+                    label: 'Tirs adversaire',
+                    controller: _oppPenCtrl,
+                    enabled: !_submitting,
+                    action: TextInputAction.done,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+        if (_error != null) ...[
           const SizedBox(height: ArenaSpacing.sm),
           Text(
-            'Entre les buts de chaque côté. Si vos deux saisies'
-            ' concordent, le match est validé automatiquement.',
-            textAlign: TextAlign.center,
-            style: ArenaTypography.bodyMedium.copyWith(
-              color: ArenaColors.textMuted,
-            ),
-          ),
-          const SizedBox(height: ArenaSpacing.xl),
-          Row(
-            children: [
-              Expanded(
-                child: ArenaTextField(
-                  label: 'Mon score',
-                  hint: '0',
-                  controller: _myScoreCtrl,
-                  keyboardType: TextInputType.number,
-                  textInputAction: TextInputAction.next,
-                  maxLength: 2,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  enabled: !_submitting,
-                ),
-              ),
-              const SizedBox(width: ArenaSpacing.md),
-              Expanded(
-                child: ArenaTextField(
-                  label: 'Score adversaire',
-                  hint: '0',
-                  controller: _oppScoreCtrl,
-                  keyboardType: TextInputType.number,
-                  textInputAction: _isKnockout
-                      ? TextInputAction.next
-                      : TextInputAction.done,
-                  maxLength: 2,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  enabled: !_submitting,
-                ),
-              ),
-            ],
-          ),
-          if (_isKnockout) ...[
-            const SizedBox(height: ArenaSpacing.md),
-            SwitchListTile.adaptive(
-              title: Text(
-                'Match décidé aux tirs au but',
-                style: ArenaTypography.bodyMedium,
-              ),
-              subtitle: Text(
-                'À cocher uniquement si le score réglementaire'
-                ' est à égalité.',
-                style: ArenaTypography.bodyMedium.copyWith(
-                  color: ArenaColors.textMuted,
-                  fontSize: 12,
-                ),
-              ),
-              value: _viaPenalties,
-              contentPadding: EdgeInsets.zero,
-              onChanged: _submitting
-                  ? null
-                  : (v) => setState(() {
-                        _viaPenalties = v;
-                        if (!v) {
-                          _myPenCtrl.clear();
-                          _oppPenCtrl.clear();
-                        }
-                      }),
-            ),
-            if (_viaPenalties) ...[
-              const SizedBox(height: ArenaSpacing.sm),
-              Row(
-                children: [
-                  Expanded(
-                    child: ArenaTextField(
-                      label: 'Mes tirs au but',
-                      hint: '0',
-                      controller: _myPenCtrl,
-                      keyboardType: TextInputType.number,
-                      textInputAction: TextInputAction.next,
-                      maxLength: 2,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      enabled: !_submitting,
-                    ),
-                  ),
-                  const SizedBox(width: ArenaSpacing.md),
-                  Expanded(
-                    child: ArenaTextField(
-                      label: 'Tirs adversaire',
-                      hint: '0',
-                      controller: _oppPenCtrl,
-                      keyboardType: TextInputType.number,
-                      textInputAction: TextInputAction.done,
-                      maxLength: 2,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      enabled: !_submitting,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ],
-          if (_error != null) ...[
-            const SizedBox(height: ArenaSpacing.sm),
-            Text(
-              _error!,
-              style: ArenaTypography.bodyMedium.copyWith(
-                color: ArenaColors.danger,
-              ),
-            ),
-          ],
-          const SizedBox(height: ArenaSpacing.lg),
-          ArenaButton(
-            label: 'SOUMETTRE LE SCORE',
-            icon: Icons.check_circle_outline,
-            fullWidth: true,
-            isLoading: _submitting,
-            onPressed: _submit,
+            _error!,
+            style: ArenaText.bodyMuted.copyWith(color: ArenaColors.neonRed),
           ),
         ],
-      ),
+        const SizedBox(height: ArenaSpacing.lg),
+        ArenaButton(
+          label: 'SOUMETTRE LE SCORE',
+          icon: Icons.check_circle_outline,
+          fullWidth: true,
+          isLoading: _submitting,
+          onPressed: _submit,
+        ),
+        const SizedBox(height: ArenaSpacing.sm),
+        _OpenChatLink(matchId: widget.match.id),
+      ],
     );
   }
 
@@ -1211,53 +1359,50 @@ class _ScoreFlowViewState extends ConsumerState<_ScoreFlowView> {
         ? (_isPlayer1 ? pl['penalty2'] as int? : pl['penalty1'] as int?)
         : null;
 
-    return Padding(
+    return Container(
       padding: const EdgeInsets.all(ArenaSpacing.lg),
+      decoration: arenaWarningCardDecoration(),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _HaloIcon(
-            icon: bothSubmitted ? Icons.hourglass_top : Icons.hourglass_bottom,
-            color: ArenaColors.warning,
+          Icon(
+            bothSubmitted ? Icons.hourglass_top : Icons.hourglass_bottom,
+            color: ArenaColors.statusWarn,
+            size: 32,
           ),
-          const SizedBox(height: ArenaSpacing.md),
+          const SizedBox(height: ArenaSpacing.sm),
           Text(
-            bothSubmitted ? 'VALIDATION EN COURS' : 'EN ATTENTE DE TON ADVERSAIRE',
-            textAlign: TextAlign.center,
-            style: ArenaTypography.labelLarge,
+            bothSubmitted
+                ? 'VALIDATION EN COURS'
+                : 'EN ATTENTE DE TON ADVERSAIRE',
+            style: ArenaText.inputLabel.copyWith(
+              color: ArenaColors.statusWarn,
+            ),
           ),
           const SizedBox(height: ArenaSpacing.sm),
           Text(
             'Tu as soumis : $myGoals — $oppGoals',
-            textAlign: TextAlign.center,
-            style: ArenaTypography.headlineMedium,
+            style: ArenaText.h2,
           ),
           if (viaPen && myPen != null && oppPen != null) ...[
-            const SizedBox(height: ArenaSpacing.xs),
+            const SizedBox(height: 4),
             Text(
               'Aux tirs au but : $myPen — $oppPen',
-              textAlign: TextAlign.center,
-              style: ArenaTypography.bodyMedium.copyWith(
-                color: ArenaColors.textMuted,
-              ),
+              style: ArenaText.small.copyWith(color: ArenaColors.silver),
             ),
           ],
-          const SizedBox(height: ArenaSpacing.md),
+          const SizedBox(height: ArenaSpacing.sm),
           Text(
             bothSubmitted
                 ? 'On compare les scores des deux joueurs…'
-                : "Ton adversaire n'a pas encore saisi son score. Le match"
-                    ' sera validé dès que ce sera le cas.',
+                : "Ton adversaire n'a pas encore saisi son score.",
             textAlign: TextAlign.center,
-            style: ArenaTypography.bodyMedium.copyWith(
-              color: ArenaColors.textMuted,
-            ),
+            style: ArenaText.small.copyWith(color: ArenaColors.silver),
           ),
           if (bothSubmitted) ...[
-            const SizedBox(height: ArenaSpacing.lg),
+            const SizedBox(height: ArenaSpacing.md),
             const SizedBox(
-              width: 24,
-              height: 24,
+              width: 22,
+              height: 22,
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
           ],
@@ -1267,97 +1412,181 @@ class _ScoreFlowViewState extends ConsumerState<_ScoreFlowView> {
   }
 }
 
-/// Optimistic interstitial shown after the room code POST succeeds, until
-/// the realtime stream pushes the new `status = ready` and the parent
-/// swaps in [_RoomReadyView]. Without it, the user sees the loading
-/// spinner on the form until the stream catches up — usually fast, but
-/// noticeable on slow links.
-class _CodeSharedInterstitial extends StatelessWidget {
-  const _CodeSharedInterstitial({required this.code});
+class _ScoreField extends StatelessWidget {
+  const _ScoreField({
+    required this.label,
+    required this.controller,
+    required this.enabled,
+    required this.action,
+  });
 
-  final String code;
+  final String label;
+  final TextEditingController controller;
+  final bool enabled;
+  final TextInputAction action;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(ArenaSpacing.lg),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: ArenaText.inputLabel),
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          enabled: enabled,
+          keyboardType: TextInputType.number,
+          textInputAction: action,
+          maxLength: 2,
+          textAlign: TextAlign.center,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          style: ArenaText.h2,
+          decoration: const InputDecoration(
+            hintText: '0',
+            counterText: '',
+            filled: true,
+            fillColor: ArenaColors.carbon,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Step 4 — Result (completed / disputed / cancelled / forfeited) ─────
+
+class _CompletedView extends StatelessWidget {
+  const _CompletedView({required this.match, required this.selfId});
+
+  final ArenaMatch match;
+  final String? selfId;
+
+  bool get _isPlayer =>
+      selfId != null &&
+      (selfId == match.player1Id || selfId == match.player2Id);
+
+  @override
+  Widget build(BuildContext context) {
+    final s1 = match.score1 ?? 0;
+    final s2 = match.score2 ?? 0;
+    return Container(
+      padding: const EdgeInsets.all(ArenaSpacing.xl),
+      decoration: arenaSuccessCardDecoration(),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const _HaloIcon(
-            icon: Icons.check_circle,
-            color: ArenaColors.success,
+          const Icon(
+            Icons.emoji_events,
+            color: ArenaColors.statusWarn,
+            size: 56,
           ),
-          const SizedBox(height: ArenaSpacing.md),
+          const SizedBox(height: ArenaSpacing.sm),
+          Text('SCORE FINAL', style: ArenaText.inputLabel),
+          const SizedBox(height: ArenaSpacing.sm),
           Text(
-            'CODE PARTAGÉ',
-            style: ArenaTypography.labelLarge.copyWith(
-              color: ArenaColors.textMuted,
-            ),
+            '$s1 — $s2',
+            style: ArenaText.bigNumber.copyWith(fontSize: 48),
           ),
           const SizedBox(height: ArenaSpacing.sm),
           Text(
-            code,
-            style: ArenaTypography.displayMedium.copyWith(
-              fontSize: 40,
-              letterSpacing: 4,
-            ),
+            match.winnerId == null
+                ? 'Match nul.'
+                : 'Gagnant : Joueur ${match.winnerId!.substring(0, 6)}…',
+            style: ArenaText.bodyMuted,
           ),
-          const SizedBox(height: ArenaSpacing.lg),
-          const SizedBox(
-            width: 24,
-            height: 24,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
-          const SizedBox(height: ArenaSpacing.sm),
-          Text(
-            'Synchronisation avec ton adversaire…',
-            style: ArenaTypography.bodyMedium.copyWith(
-              color: ArenaColors.textMuted,
-            ),
-          ),
+          if (_isPlayer) ...[
+            const SizedBox(height: ArenaSpacing.lg),
+            ManualUploadButton(matchId: match.id, playerId: selfId!),
+          ],
         ],
       ),
     );
   }
 }
 
-/// Hero icon with a soft colored halo behind it. Used as the focal glyph
-/// at the top of every match-room sub-view for a consistent premium feel.
-class _HaloIcon extends StatelessWidget {
-  const _HaloIcon({
-    required this.icon,
-    required this.color,
-    this.size = 56,
-  });
+class _DisputedView extends StatelessWidget {
+  const _DisputedView({required this.match, required this.selfId});
 
-  final IconData icon;
-  final Color color;
-  final double size;
+  final ArenaMatch match;
+  final String? selfId;
+
+  bool get _isPlayer =>
+      selfId != null &&
+      (selfId == match.player1Id || selfId == match.player2Id);
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: size + 24,
-      height: size + 24,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.45),
-            blurRadius: 36,
-            spreadRadius: -4,
+      padding: const EdgeInsets.all(ArenaSpacing.xl),
+      decoration: arenaDangerCardDecoration(),
+      child: Column(
+        children: [
+          const Icon(Icons.gavel, color: ArenaColors.neonRed, size: 48),
+          const SizedBox(height: ArenaSpacing.sm),
+          Text(
+            'LITIGE EN COURS',
+            style: ArenaText.inputLabel.copyWith(color: ArenaColors.neonRed),
           ),
+          const SizedBox(height: ArenaSpacing.sm),
+          Text(
+            'Vos scores ne concordent pas. Un admin va trancher. Tu peux '
+            'envoyer une vidéo du match pour appuyer ta version.',
+            textAlign: TextAlign.center,
+            style: ArenaText.bodyMuted,
+          ),
+          if (_isPlayer) ...[
+            const SizedBox(height: ArenaSpacing.lg),
+            ManualUploadButton(matchId: match.id, playerId: selfId!),
+          ],
         ],
       ),
-      child: Icon(icon, size: size, color: color),
     );
   }
 }
 
-/// Forces every typed character to upper-case while keeping the cursor
-/// where the user expects it. Used by the room-code field.
+class _TerminalCard extends StatelessWidget {
+  const _TerminalCard({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.description,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String description;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(ArenaSpacing.xl),
+      decoration: BoxDecoration(
+        color: ArenaColors.carbon,
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+        borderRadius: BorderRadius.circular(ArenaRadius.lg),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 48),
+          const SizedBox(height: ArenaSpacing.sm),
+          Text(
+            title,
+            style: ArenaText.inputLabel.copyWith(color: color),
+          ),
+          const SizedBox(height: ArenaSpacing.sm),
+          Text(
+            description,
+            textAlign: TextAlign.center,
+            style: ArenaText.bodyMuted,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────
+
 class _UpperCaseFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
@@ -1366,4 +1595,19 @@ class _UpperCaseFormatter extends TextInputFormatter {
   ) {
     return newValue.copyWith(text: newValue.text.toUpperCase());
   }
+}
+
+ArenaAvatarColor? _avatarColorFromHex(String hex) {
+  final cleaned = hex.replaceAll('#', '').trim().toUpperCase();
+  return switch (cleaned) {
+    '4C7AFF' => ArenaAvatarColor.blue,
+    'FF2D55' => ArenaAvatarColor.red,
+    '00C896' => ArenaAvatarColor.green,
+    'F77F00' => ArenaAvatarColor.orange,
+    '00B4D8' => ArenaAvatarColor.cyan,
+    '9D4EDD' => ArenaAvatarColor.purple,
+    'FF6B9D' => ArenaAvatarColor.pink,
+    'FFD700' => ArenaAvatarColor.yellow,
+    _ => null,
+  };
 }

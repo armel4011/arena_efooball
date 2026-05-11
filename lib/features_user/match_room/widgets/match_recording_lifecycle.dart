@@ -1,12 +1,18 @@
-import 'dart:io';
-
 import 'package:arena/core/services/match_recording_coordinator.dart';
-import 'package:arena/core/theme/arena_colors.dart';
+import 'package:arena/core/services/permissions_service.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/models/match_status.dart';
+import 'package:arena/features_user/match_room/widgets/match_recording_actions_sheet.dart';
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+/// True only on a real Android device. False on web (where `dart:io` is
+/// unsupported) and on every other platform — recording is Android-only.
+bool get _isAndroidNative =>
+    !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
 /// Glue between `MatchRoomPage` and PHASE 8's anti-cheat coordinator.
 ///
@@ -71,7 +77,7 @@ class _MatchRecordingLifecycleState
   }
 
   Future<void> _maybeReact() async {
-    if (!Platform.isAndroid) return;
+    if (!_isAndroidNative) return;
     if (!_isPlayer) return;
     final coord = ref.read(matchRecordingCoordinatorProvider);
 
@@ -85,8 +91,42 @@ class _MatchRecordingLifecycleState
 
     if (isLive && !_startAttempted) {
       _startAttempted = true;
-      final opp = _opponentId;
+      var opp = _opponentId;
+      // Debug-only fallback for solo BYE testing on the emulator: without
+      // a real opponent the coordinator bails before MediaProjection. A
+      // synthetic UUID lets the native recorder + overlay come up; the
+      // forfeit auto-flow will FK-fail at markForfeit() if the pause grace
+      // ever expires — fine, debug data only.
+      if (opp == null && kDebugMode) {
+        opp = '00000000-0000-0000-0000-000000000000';
+      }
       if (opp == null) return;
+
+      // Request runtime permissions BEFORE handing off to the native
+      // recorder. Without RECORD_AUDIO the audio track is silently
+      // dropped; without POST_NOTIFICATIONS (Android 13+) the foreground
+      // service notification can't show and the OS kills the FGS in ~5s.
+      final permissions = ref.read(permissionsServiceProvider);
+      final bundle = await permissions.requestRecordingBundle();
+      if (!bundle.allGranted) {
+        if (mounted) {
+          setState(() => _startError = _bundleErrorMessage(bundle));
+        }
+        return;
+      }
+
+      // SYSTEM_ALERT_WINDOW for the floating anti-cheat button. Sends the
+      // user to a full-screen settings page on Android 6+, so handle it
+      // explicitly here — RecordingOverlayController.start() also checks
+      // but bails silently on denial, which hides the failure.
+      final overlay = await permissions.requestOverlay();
+      if (!overlay.isGranted) {
+        if (mounted) {
+          setState(() => _startError = _overlayErrorMessage(overlay));
+        }
+        return;
+      }
+
       try {
         await coord.startForMatch(
           matchId: widget.match.id,
@@ -108,33 +148,73 @@ class _MatchRecordingLifecycleState
     }
   }
 
+  String _bundleErrorMessage(RecordingPermissionsBundle bundle) {
+    final missing = <String>[];
+    if (!bundle.microphone.isGranted) missing.add('micro');
+    if (!bundle.notifications.isGranted) missing.add('notifications');
+    final list = missing.join(' + ');
+    if (bundle.microphone.needsSettings ||
+        bundle.notifications.needsSettings) {
+      return 'Autorise $list dans Paramètres > Apps > ARENA';
+    }
+    return 'Autorisation $list refusée — retape JE SUIS DANS LA ROOM';
+  }
+
+  String _overlayErrorMessage(PermissionOutcome outcome) {
+    if (outcome.needsSettings) {
+      return 'Active "Afficher au-dessus des autres apps" pour ARENA '
+          'dans Paramètres > Apps > Accès spécial';
+    }
+    return 'Overlay refusé — retape JE SUIS DANS LA ROOM après activation';
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (!Platform.isAndroid || !_isPlayer) {
+    if (!_isAndroidNative || !_isPlayer) {
       return const SizedBox.shrink();
     }
+
+    // Open the actions sheet when the overlay sends a focusMain (tap on
+    // the floating button).
+    ref.listen(coordinatorFocusRequestsProvider, (_, __) {
+      if (!mounted) return;
+      MatchRecordingActionsSheet.show(context);
+    });
 
     if (_startError != null) {
       return _LifecycleBanner(
         icon: Icons.warning_amber_rounded,
         color: ArenaColors.warning,
-        text: 'Recording indisponible — $_startError',
+        text: 'Recording indisponible — $_startError\nTape ici pour réessayer.',
+        onTap: () {
+          setState(() {
+            _startError = null;
+            _startAttempted = false;
+          });
+          _maybeReact();
+        },
       );
     }
 
-    final asyncState = ref.watch(_coordinatorStateProvider);
+    final asyncState = ref.watch(coordinatorStateProvider);
     final coordState = asyncState.value ?? const CoordinatorIdle();
 
+    void openSheet() {
+      MatchRecordingActionsSheet.show(context);
+    }
+
     return switch (coordState) {
-      CoordinatorRecording() => const _LifecycleBanner(
+      CoordinatorRecording() => _LifecycleBanner(
           icon: Icons.fiber_manual_record,
           color: ArenaColors.danger,
-          text: 'Enregistrement anti-triche en cours',
+          text: 'Enregistrement anti-triche en cours\nTape pour les actions',
+          onTap: openSheet,
         ),
-      CoordinatorPaused() => const _LifecycleBanner(
+      CoordinatorPaused() => _LifecycleBanner(
           icon: Icons.pause_circle_outline,
           color: ArenaColors.warning,
-          text: 'Match en pause — revenez sous 2 min ou forfait auto',
+          text: 'Match en pause — tape pour reprendre ou arrêter',
+          onTap: openSheet,
         ),
       CoordinatorForfeited(reason: final r) => _LifecycleBanner(
           icon: Icons.flag_outlined,
@@ -153,15 +233,17 @@ class _LifecycleBanner extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.text,
+    this.onTap,
   });
 
   final IconData icon;
   final Color color;
   final String text;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final inner = Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(
         horizontal: ArenaSpacing.md,
@@ -185,14 +267,11 @@ class _LifecycleBanner extends StatelessWidget {
         ],
       ),
     );
+
+    if (onTap == null) return inner;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(onTap: onTap, child: inner),
+    );
   }
 }
-
-/// Hands the coordinator's current state to widgets that need to
-/// re-render when it changes. Defined here (rather than in the
-/// coordinator file) so we don't pollute the core service with a
-/// UI-shaped provider.
-final _coordinatorStateProvider = StreamProvider<CoordinatorState>((ref) {
-  final coord = ref.watch(matchRecordingCoordinatorProvider);
-  return coord.stateStream;
-});

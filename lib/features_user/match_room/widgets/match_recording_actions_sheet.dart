@@ -1,0 +1,228 @@
+import 'package:arena/core/services/gallery_exporter.dart';
+import 'package:arena/core/services/match_recording_coordinator.dart';
+import 'package:arena/core/theme/arena_theme.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+/// Modal bottom sheet with every recording action available from the
+/// match room (PHASE 8 fallback when the floating overlay is killed by
+/// the OEM or the user can't reach it). The same widget is reachable
+/// from the floating button itself (tap → focusMain → autoShow this
+/// sheet) so the two surfaces stay in sync.
+class MatchRecordingActionsSheet extends ConsumerWidget {
+  const MatchRecordingActionsSheet({super.key});
+
+  static Future<void> show(BuildContext context) {
+    return showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: ArenaColors.surface,
+      isScrollControlled: false,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => const MatchRecordingActionsSheet(),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncState = ref.watch(coordinatorStateProvider);
+    final state = asyncState.value ?? const CoordinatorIdle();
+    final coord = ref.read(matchRecordingCoordinatorProvider);
+    final gallery = ref.read(galleryExporterProvider);
+
+    final isPaused = state is CoordinatorPaused;
+    final isLive = state is CoordinatorRecording || state is CoordinatorPaused;
+
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                ArenaSpacing.lg,
+                ArenaSpacing.xs,
+                ArenaSpacing.lg,
+                ArenaSpacing.sm,
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: _stateDotColor(state),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: ArenaSpacing.sm),
+                  Text(
+                    _stateLabel(state),
+                    style: ArenaText.inputLabel.copyWith(
+                      color: ArenaColors.silver,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isLive) ...[
+              if (isPaused)
+                _ActionTile(
+                  icon: Icons.play_arrow,
+                  color: ArenaColors.success,
+                  label: 'Continuer',
+                  onTap: () {
+                    coord.resume();
+                    Navigator.of(context).pop();
+                  },
+                )
+              else
+                _ActionTile(
+                  icon: Icons.pause,
+                  color: ArenaColors.warning,
+                  label: 'Pause (max 2 min)',
+                  onTap: () {
+                    coord.pause();
+                    Navigator.of(context).pop();
+                  },
+                ),
+              _ActionTile(
+                icon: Icons.camera_alt_outlined,
+                color: ArenaColors.signalBlue,
+                label: "Capture d'écran",
+                onTap: () => _onScreenshot(context, gallery),
+              ),
+              _ActionTile(
+                icon: Icons.save_alt,
+                color: ArenaColors.success,
+                label: 'Enregistrer et arrêter',
+                onTap: () => _onStopAndExport(context, coord, gallery),
+              ),
+              _ActionTile(
+                icon: Icons.stop_circle_outlined,
+                color: ArenaColors.danger,
+                label: 'Arrêter (forfait)',
+                onTap: () async {
+                  Navigator.of(context).pop();
+                  await coord.declareForfeit();
+                },
+              ),
+            ] else
+              const Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: ArenaSpacing.lg,
+                  vertical: ArenaSpacing.md,
+                ),
+                child: Text(
+                  'Aucun enregistrement en cours.',
+                  style: TextStyle(color: ArenaColors.silver),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _onScreenshot(
+    BuildContext context,
+    GalleryExporter gallery,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    Navigator.of(context).pop();
+    final uri = await gallery.takeScreenshot();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          uri != null
+              ? 'Capture enregistrée dans Téléchargements › ARENA'
+              : 'Capture impossible',
+        ),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  Future<void> _onStopAndExport(
+    BuildContext context,
+    MatchRecordingCoordinator coord,
+    GalleryExporter gallery,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    Navigator.of(context).pop();
+    String? localPath;
+    try {
+      localPath = await coord.stopCleanly();
+    } catch (_) {/* best-effort */}
+    if (localPath == null || localPath.isEmpty) return;
+    final uri = await gallery.saveVideoToGallery(localPath);
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          uri != null
+              ? 'Replay enregistré dans Téléchargements › ARENA'
+              : "Replay disponible dans le cache de l'app",
+        ),
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  Color _stateDotColor(CoordinatorState s) => switch (s) {
+        CoordinatorRecording() => ArenaColors.danger,
+        CoordinatorPaused() => ArenaColors.warning,
+        CoordinatorForfeited() => ArenaColors.danger,
+        CoordinatorStopped() => ArenaColors.silver,
+        CoordinatorIdle() => ArenaColors.silver,
+      };
+
+  String _stateLabel(CoordinatorState s) => switch (s) {
+        CoordinatorRecording() => 'Enregistrement en cours',
+        CoordinatorPaused() => 'En pause — reprends sous 2 min',
+        CoordinatorForfeited() => 'Forfait déclaré',
+        CoordinatorStopped() => 'Enregistrement arrêté',
+        CoordinatorIdle() => 'Aucun enregistrement',
+      };
+}
+
+class _ActionTile extends StatelessWidget {
+  const _ActionTile({
+    required this.icon,
+    required this.color,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: Icon(icon, color: color),
+      title: Text(label, style: const TextStyle(color: ArenaColors.text)),
+      onTap: onTap,
+    );
+  }
+}
+
+/// Stream of the coordinator's current state. Exposed here so the
+/// match-room banner and the actions sheet share the same source of
+/// truth without redeclaring a private provider in each file.
+final coordinatorStateProvider = StreamProvider<CoordinatorState>((ref) {
+  final coord = ref.watch(matchRecordingCoordinatorProvider);
+  return coord.stateStream;
+});
+
+/// Emits each time the overlay sends a focusMain — used by the match
+/// room widget to auto-open the actions sheet right after ARENA comes
+/// back to front from a tap on the floating button.
+final coordinatorFocusRequestsProvider = StreamProvider<void>((ref) {
+  final coord = ref.watch(matchRecordingCoordinatorProvider);
+  return coord.focusRequests;
+});
