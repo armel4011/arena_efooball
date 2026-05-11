@@ -84,6 +84,19 @@ class MatchRecordingCoordinator {
   final _focusController = StreamController<void>.broadcast();
   Stream<void> get focusRequests => _focusController.stream;
 
+  // Fires when the overlay's mini "screenshot" button is tapped — main
+  // app exports a PNG via GalleryExporter and shows a snackbar.
+  final _screenshotController = StreamController<void>.broadcast();
+  Stream<void> get screenshotRequests => _screenshotController.stream;
+
+  // Fires when the overlay's mini "save & stop" button is tapped — main
+  // app calls stopCleanly() + GalleryExporter and shows a snackbar.
+  // The Future-returning local-path is published as the event so the
+  // listener can call gallery.saveVideoToGallery without re-reading
+  // coordinator state (which has already moved to Stopped).
+  final _saveStopController = StreamController<String?>.broadcast();
+  Stream<String?> get saveStopRequests => _saveStopController.stream;
+
   StreamSubscription<OverlayAction>? _actionsSub;
   Timer? _graceTimer;
 
@@ -149,6 +162,8 @@ class MatchRecordingCoordinator {
     await _actionsSub?.cancel();
     await _stateController.close();
     await _focusController.close();
+    await _screenshotController.close();
+    await _saveStopController.close();
   }
 
   // ─── Overlay action plumbing ───────────────────────────────────────────
@@ -159,11 +174,32 @@ class MatchRecordingCoordinator {
         await _bringToFront.bringArenaToFront();
         _focusController.add(null);
       case OverlayAction.resume:
-        _onResume();
+        await _onResume();
       case OverlayAction.pause:
-        _onPause();
+        await _onPause();
       case OverlayAction.forfeit:
         await _declareForfeit('user_chose_forfeit');
+      case OverlayAction.screenshot:
+        // Bring ARENA to front so the snackbar emitted by the listener
+        // is visible — the actual capture is best-effort and the file
+        // ends up in Download/ARENA either way.
+        await _bringToFront.bringArenaToFront();
+        _screenshotController.add(null);
+      case OverlayAction.saveAndStop:
+        // Stop the recorder first (closes the file), then publish the
+        // local path so the listener can hand it to GalleryExporter.
+        // Using stopCleanly here also flips the coordinator state to
+        // Stopped, which collapses the lifecycle banner.
+        await _bringToFront.bringArenaToFront();
+        try {
+          final localPath = await stopCleanly();
+          _saveStopController.add(localPath);
+        } catch (e, st) {
+          if (kDebugMode) {
+            debugPrint('[coordinator] saveAndStop failed: $e\n$st');
+          }
+          _saveStopController.add(null);
+        }
       case OverlayAction.unknown:
         if (kDebugMode) {
           debugPrint('[coordinator] received OverlayAction.unknown');
@@ -173,18 +209,18 @@ class MatchRecordingCoordinator {
 
   /// Public entry for the in-app actions sheet to pause the recording.
   /// Mirrors the overlay "Pause" tile.
-  void pause() => _onPause();
+  Future<void> pause() => _onPause();
 
   /// Public entry for the in-app actions sheet to resume from pause.
   /// Mirrors the overlay "Continuer" tile.
-  void resume() => _onResume();
+  Future<void> resume() => _onResume();
 
   /// Public entry for the in-app actions sheet to declare a forfeit.
   /// Mirrors the overlay "Arrêter (forfait)" tile.
   Future<void> declareForfeit() =>
       _declareForfeit('user_chose_forfeit');
 
-  void _onPause() {
+  Future<void> _onPause() async {
     final matchId = _matchId;
     final playerId = _playerId;
     if (matchId == null || playerId == null) return;
@@ -195,6 +231,10 @@ class MatchRecordingCoordinator {
       // dispute screen if needed.
       unawaited(_declareForfeit('pause_grace_expired'));
     });
+    // Freeze the overlay chrono — without this the MM:SS keeps ticking
+    // during the 2-min pause window, which made the user think their
+    // pause was ignored.
+    await _overlay.pause();
     _emit(
       CoordinatorPaused(
         matchId: matchId,
@@ -204,12 +244,13 @@ class MatchRecordingCoordinator {
     );
   }
 
-  void _onResume() {
+  Future<void> _onResume() async {
     final matchId = _matchId;
     final playerId = _playerId;
     if (matchId == null || playerId == null) return;
     _graceTimer?.cancel();
     _graceTimer = null;
+    await _overlay.resume();
     _emit(CoordinatorRecording(matchId: matchId, playerId: playerId));
   }
 

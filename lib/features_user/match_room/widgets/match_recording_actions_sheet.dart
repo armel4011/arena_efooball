@@ -13,10 +13,13 @@ class MatchRecordingActionsSheet extends ConsumerWidget {
   const MatchRecordingActionsSheet({super.key});
 
   static Future<void> show(BuildContext context) {
+    // isScrollControlled: true so the sheet can grow past the default 50%
+    // cap when the device has chunky bottom system bars (MIUI gesture nav
+    // adds ~30 dp, which overflowed the 4-tile column on Android 15).
     return showModalBottomSheet<void>(
       context: context,
       backgroundColor: ArenaColors.surface,
-      isScrollControlled: false,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -36,7 +39,7 @@ class MatchRecordingActionsSheet extends ConsumerWidget {
 
     return SafeArea(
       top: false,
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(vertical: 12),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -90,12 +93,6 @@ class MatchRecordingActionsSheet extends ConsumerWidget {
                   },
                 ),
               _ActionTile(
-                icon: Icons.camera_alt_outlined,
-                color: ArenaColors.signalBlue,
-                label: "Capture d'écran",
-                onTap: () => _onScreenshot(context, gallery),
-              ),
-              _ActionTile(
                 icon: Icons.save_alt,
                 color: ArenaColors.success,
                 label: 'Enregistrer et arrêter',
@@ -123,25 +120,6 @@ class MatchRecordingActionsSheet extends ConsumerWidget {
               ),
           ],
         ),
-      ),
-    );
-  }
-
-  Future<void> _onScreenshot(
-    BuildContext context,
-    GalleryExporter gallery,
-  ) async {
-    final messenger = ScaffoldMessenger.of(context);
-    Navigator.of(context).pop();
-    final uri = await gallery.takeScreenshot();
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          uri != null
-              ? 'Capture enregistrée dans Téléchargements › ARENA'
-              : 'Capture impossible',
-        ),
-        duration: const Duration(seconds: 3),
       ),
     );
   }
@@ -225,4 +203,21 @@ final coordinatorStateProvider = StreamProvider<CoordinatorState>((ref) {
 final coordinatorFocusRequestsProvider = StreamProvider<void>((ref) {
   final coord = ref.watch(matchRecordingCoordinatorProvider);
   return coord.focusRequests;
+});
+
+/// Emits when the overlay's mini "screenshot" button is tapped — the
+/// match-room widget exports a PNG via GalleryExporter and shows a
+/// snackbar.
+final coordinatorScreenshotRequestsProvider = StreamProvider<void>((ref) {
+  final coord = ref.watch(matchRecordingCoordinatorProvider);
+  return coord.screenshotRequests;
+});
+
+/// Emits when the overlay's mini "save & stop" button is tapped — the
+/// match-room widget exports the just-finished MP4 via GalleryExporter
+/// and shows a snackbar. Carries the local file path (or null on
+/// stop failure).
+final coordinatorSaveStopRequestsProvider = StreamProvider<String?>((ref) {
+  final coord = ref.watch(matchRecordingCoordinatorProvider);
+  return coord.saveStopRequests;
 });

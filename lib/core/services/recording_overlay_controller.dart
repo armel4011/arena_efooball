@@ -5,12 +5,20 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Action requested by the long-press menu inside the overlay isolate.
+/// Action requested by the expanded menu inside the overlay isolate.
 ///
 /// The main app subscribes via [RecordingOverlayController.actions] and
-/// reacts (resume → no-op, pause → freeze auto-stop, forfeit → stop
-/// recording + flag the player as forfeit on the server).
-enum OverlayAction { focusMain, resume, pause, forfeit, unknown }
+/// reacts (resume / pause → freeze auto-stop, screenshot → export PNG,
+/// saveAndStop → stop + export MP4, forfeit → stop + mark forfeit).
+enum OverlayAction {
+  focusMain,
+  resume,
+  pause,
+  forfeit,
+  screenshot,
+  saveAndStop,
+  unknown,
+}
 
 /// Drives the floating button rendered by `flutter_overlay_window`.
 ///
@@ -34,6 +42,10 @@ class RecordingOverlayController {
   StreamSubscription<dynamic>? _listener;
   Timer? _tickTimer;
   DateTime? _startedAt;
+  // While paused: Duration the chronometer was at when the user paused.
+  // null while running. Set in pause(), cleared in resume() after rebasing
+  // _startedAt so the next ticks resume from the same MM:SS.
+  Duration? _pausedElapsed;
 
   /// Total length of a recording — must match `RecordingService.maxDuration`.
   /// Used by the overlay to flash a warning in the last 30 s.
@@ -70,9 +82,45 @@ class RecordingOverlayController {
     _tickTimer?.cancel();
     _tickTimer = null;
     _startedAt = null;
+    _pausedElapsed = null;
     await _listener?.cancel();
     _listener = null;
     await _platform.closeOverlay();
+  }
+
+  /// Freezes the chronometer in the overlay isolate and pushes a
+  /// `paused` tick so the floating button switches to the yellow
+  /// "PAUSE" face. Idempotent.
+  Future<void> pause() async {
+    final start = _startedAt;
+    if (start == null || _pausedElapsed != null) return;
+    _pausedElapsed = DateTime.now().difference(start);
+    await _platform.shareData(
+      RecordingOverlayMessages.tick(
+        elapsedSeconds: _pausedElapsed!.inSeconds,
+        warning: false,
+        paused: true,
+      ),
+    );
+  }
+
+  /// Resumes the chronometer from the paused MM:SS without losing the
+  /// elapsed time accumulated before the pause. Idempotent.
+  Future<void> resume() async {
+    final paused = _pausedElapsed;
+    if (paused == null) return;
+    // Rebase the start anchor so DateTime.now() - _startedAt == paused
+    // immediately after resume — keeps the existing tick formula intact.
+    _startedAt = DateTime.now().subtract(paused);
+    _pausedElapsed = null;
+    // Push an immediate tick so the overlay UI flips to red without
+    // waiting for the next 1-second period.
+    await _platform.shareData(
+      RecordingOverlayMessages.tick(
+        elapsedSeconds: paused.inSeconds,
+        warning: totalDuration - paused <= const Duration(seconds: 30),
+      ),
+    );
   }
 
   Future<void> dispose() async {
@@ -90,6 +138,9 @@ class RecordingOverlayController {
   void _startTicking() {
     _tickTimer?.cancel();
     _tickTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      // While paused, _pausedElapsed is non-null and pause() already
+      // pushed the frozen frame — skip until resume() reseats _startedAt.
+      if (_pausedElapsed != null) return;
       final start = _startedAt;
       if (start == null) return;
       final elapsed = DateTime.now().difference(start);
@@ -111,6 +162,8 @@ class RecordingOverlayController {
       RecordingOverlayMessages.askResumeType => OverlayAction.resume,
       RecordingOverlayMessages.askPauseType => OverlayAction.pause,
       RecordingOverlayMessages.askForfeitType => OverlayAction.forfeit,
+      RecordingOverlayMessages.askScreenshotType => OverlayAction.screenshot,
+      RecordingOverlayMessages.askSaveStopType => OverlayAction.saveAndStop,
       _ => OverlayAction.unknown,
     };
   }
@@ -142,11 +195,18 @@ class _DefaultOverlayPlatform implements OverlayPlatform {
 
   @override
   Future<void> showOverlay() {
+    // `flutter_overlay_window` interprets width/height as raw pixels, not
+    // dp. On a 3x density display 220 px is only ~73 dp — the four mini
+    // buttons (offset 64 dp from the centre of the cluster) would render
+    // outside the native window and stay invisible. Scale by the device
+    // pixel ratio so the rendered SizedBox(220, 220) actually fits.
+    final dpr = PlatformDispatcher.instance.views.first.devicePixelRatio;
+    final sizePx = (220 * dpr).round();
     return FlutterOverlayWindow.showOverlay(
       enableDrag: true,
       positionGravity: PositionGravity.auto,
-      width: 220,
-      height: 220,
+      width: sizePx,
+      height: sizePx,
       overlayTitle: 'ARENA',
       overlayContent: 'Enregistrement en cours',
     );

@@ -8,20 +8,21 @@ import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 /// `flutter_overlay_window` — it cannot read providers from the
 /// main app, so all state arrives through `FlutterOverlayWindow.shareData`.
 ///
-/// Layout:
-///   - 72 dp circular red button,
-///   - white "REC" timer text MM:SS in the middle,
-///   - drag-to-side baked in via `PositionGravity.auto`,
-///   - tap → ask the main app to bring ARENA to front (focusMain).
+/// Gestures — collapsed:
+///   - tap → expand into a 4-mini-button cardinal cluster
+///     (pause / open ARENA / save+stop / forfeit).
 ///
-/// All non-trivial actions (pause / resume / stop / forfeit) live in
-/// ARENA itself, not in the overlay isolate. Reasons:
-///   * Bottom sheets + resizeOverlay are fragile inside an overlay
-///     isolate, especially on MIUI / OxygenOS.
-///   * Long-press events are eaten by the underlying app on those OEMs.
-///   * `MatchRecordingLifecycle` already exposes a tap-to-stop banner
-///     inside the match room, which is what the user reaches after a
-///     focusMain tap.
+/// Gestures — expanded:
+///   - tap on the main button → collapse,
+///   - tap on a mini → send the action and auto-collapse.
+///
+/// Taps are wired through `Listener.onPointerDown` rather than
+/// `GestureDetector.onTap`: the native drag handler in
+/// `flutter_overlay_window` claims ACTION_MOVE on any micro-jitter,
+/// which makes Flutter's gesture arena cancel `onTap` before it can
+/// fire. `Listener` sits below the arena and receives `PointerDownEvent`
+/// synchronously on every touch — so the action fires on touch-down,
+/// before drag tracking can steal the gesture.
 class RecordingOverlayApp extends StatelessWidget {
   const RecordingOverlayApp({super.key});
 
@@ -45,9 +46,14 @@ class RecordingOverlayButton extends StatefulWidget {
 }
 
 class _RecordingOverlayButtonState extends State<RecordingOverlayButton> {
-  static const double _buttonSize = 72;
+  static const double _mainSize = 72;
+  // Distance between the main button center and a mini button center.
+  // The overlay window is 220×220 — a 40 dp mini at radius 64 around a
+  // 72 dp main fits with a 14 dp gutter to the window edge.
+  static const double _miniRadius = 64;
 
   OverlayTick _tick = const OverlayTick(elapsedSeconds: 0, isWarning: false);
+  bool _expanded = false;
 
   @override
   void initState() {
@@ -58,47 +64,165 @@ class _RecordingOverlayButtonState extends State<RecordingOverlayButton> {
     });
   }
 
-  Future<void> _onTap() async {
-    await FlutterOverlayWindow.shareData(
-      RecordingOverlayMessages.focusMainType,
-    );
+  void _onMainTap() {
+    setState(() => _expanded = !_expanded);
+  }
+
+  Future<void> _onMiniTap(String message) async {
+    setState(() => _expanded = false);
+    await FlutterOverlayWindow.shareData(message);
+  }
+
+  Color get _mainColor {
+    if (_tick.isPaused) return ArenaColors.warning;
+    if (_tick.isWarning) return ArenaColors.warning;
+    return ArenaColors.danger;
+  }
+
+  IconData get _mainIcon {
+    if (_tick.isPaused) return Icons.pause;
+    return Icons.fiber_manual_record;
   }
 
   @override
   Widget build(BuildContext context) {
-    final color = _tick.isWarning ? ArenaColors.warning : ArenaColors.danger;
-    return GestureDetector(
-      onTap: _onTap,
-      child: Container(
-        width: _buttonSize,
-        height: _buttonSize,
-        decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: color.withValues(alpha: 0.45),
-              blurRadius: 12,
-              spreadRadius: 2,
+    return SizedBox(
+      width: 220,
+      height: 220,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // 4 cardinals — pause / screenshot / save+stop / forfeit.
+          // IgnorePointer + opacity 0 while collapsed so they don't eat
+          // touches around the main button.
+          _MiniButton(
+            visible: _expanded,
+            offset: const Offset(0, -_miniRadius),
+            icon: _tick.isPaused ? Icons.play_arrow : Icons.pause,
+            color: _tick.isPaused ? ArenaColors.success : ArenaColors.warning,
+            onTap: () => _onMiniTap(
+              _tick.isPaused
+                  ? RecordingOverlayMessages.askResumeType
+                  : RecordingOverlayMessages.askPauseType,
             ),
-          ],
-        ),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.fiber_manual_record, color: Colors.white, size: 14),
-              const SizedBox(height: 2),
-              Text(
-                _tick.formatted,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 12,
-                  fontFeatures: [FontFeature.tabularFigures()],
+          ),
+          _MiniButton(
+            visible: _expanded,
+            offset: const Offset(_miniRadius, 0),
+            icon: Icons.open_in_new,
+            color: ArenaColors.signalBlue,
+            onTap: () => _onMiniTap(RecordingOverlayMessages.focusMainType),
+          ),
+          _MiniButton(
+            visible: _expanded,
+            offset: const Offset(0, _miniRadius),
+            icon: Icons.save_alt,
+            color: ArenaColors.success,
+            onTap: () => _onMiniTap(RecordingOverlayMessages.askSaveStopType),
+          ),
+          _MiniButton(
+            visible: _expanded,
+            offset: const Offset(-_miniRadius, 0),
+            icon: Icons.stop_circle_outlined,
+            color: ArenaColors.danger,
+            onTap: () => _onMiniTap(RecordingOverlayMessages.askForfeitType),
+          ),
+          // Main button stays on top so the cardinals don't capture
+          // a touch aimed at the chrono.
+          // HitTestBehavior.opaque is REQUIRED inside an overlay isolate:
+          // the default `deferToChild` defers to Container's hit test,
+          // and Container with `decoration` (no `color` field) doesn't
+          // declare a hit area on every Flutter version — touches then
+          // bubble up to nothing and the Listener never fires.
+          Listener(
+            behavior: HitTestBehavior.opaque,
+            onPointerDown: (_) => _onMainTap(),
+            child: Container(
+              width: _mainSize,
+              height: _mainSize,
+              decoration: BoxDecoration(
+                color: _mainColor,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: _mainColor.withValues(alpha: 0.45),
+                    blurRadius: 12,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(_mainIcon, color: Colors.white, size: 14),
+                    const SizedBox(height: 2),
+                    Text(
+                      _tick.formatted,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                        fontFeatures: [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniButton extends StatelessWidget {
+  const _MiniButton({
+    required this.visible,
+    required this.offset,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  final bool visible;
+  final Offset offset;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    const size = 40.0;
+    return AnimatedSlide(
+      duration: const Duration(milliseconds: 160),
+      curve: Curves.easeOutCubic,
+      offset: visible ? Offset(offset.dx / size, offset.dy / size) : Offset.zero,
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 160),
+        opacity: visible ? 1 : 0,
+        child: IgnorePointer(
+          ignoring: !visible,
+          child: Listener(
+            behavior: HitTestBehavior.opaque,
+            onPointerDown: (_) => onTap(),
+            child: Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.5),
+                    blurRadius: 8,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+              child: Icon(icon, color: Colors.white, size: 20),
+            ),
           ),
         ),
       ),

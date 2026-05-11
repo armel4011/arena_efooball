@@ -1,3 +1,4 @@
+import 'package:arena/core/services/gallery_exporter.dart';
 import 'package:arena/core/services/match_recording_coordinator.dart';
 import 'package:arena/core/services/permissions_service.dart';
 import 'package:arena/core/theme/arena_theme.dart';
@@ -179,6 +180,55 @@ class _MatchRecordingLifecycleState
     ref.listen(coordinatorFocusRequestsProvider, (_, __) {
       if (!mounted) return;
       MatchRecordingActionsSheet.show(context);
+    });
+
+    // Mini-button "Capture d'écran" — export PNG + snackbar.
+    ref.listen(coordinatorScreenshotRequestsProvider, (_, __) async {
+      if (!mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
+      final uri =
+          await ref.read(galleryExporterProvider).takeScreenshot();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            uri != null
+                ? 'Capture enregistrée dans Téléchargements › ARENA'
+                : 'Capture impossible',
+          ),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    });
+
+    // Mini-button "Enregistrer et arrêter" — export MP4 + snackbar. The
+    // coordinator already called stopCleanly() before publishing on the
+    // stream, so we just hand the file path to the gallery exporter.
+    ref.listen(coordinatorSaveStopRequestsProvider, (_, next) async {
+      if (!mounted) return;
+      final localPath = next.value;
+      final messenger = ScaffoldMessenger.of(context);
+      if (localPath == null || localPath.isEmpty) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Arrêt OK — aucun fichier à exporter'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+        return;
+      }
+      final uri = await ref
+          .read(galleryExporterProvider)
+          .saveVideoToGallery(localPath);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            uri != null
+                ? 'Replay enregistré dans Téléchargements › ARENA'
+                : "Replay disponible dans le cache de l'app",
+          ),
+          duration: const Duration(seconds: 4),
+        ),
+      );
     });
 
     if (_startError != null) {
