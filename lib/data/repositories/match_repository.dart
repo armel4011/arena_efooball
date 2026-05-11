@@ -123,6 +123,8 @@ class MatchRepository {
     bool decidedByPenalties = false,
     int? penaltyP1,
     int? penaltyP2,
+    String? proofPath,
+    String? proofMimeType,
   }) async {
     final payload = <String, dynamic>{
       'score1': scoreP1,
@@ -132,6 +134,8 @@ class MatchRepository {
         'penalty1': penaltyP1,
         'penalty2': penaltyP2,
       },
+      if (proofPath != null) 'proof_path': proofPath,
+      if (proofMimeType != null) 'proof_mime': proofMimeType,
     };
     await _client.from(_eventsTable).insert({
       'match_id': matchId,

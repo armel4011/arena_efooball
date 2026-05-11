@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:arena/core/router/user_router.dart';
+import 'package:arena/core/services/score_proof_uploader.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/models/match_status.dart';
@@ -43,6 +44,87 @@ class _MatchPlayers {
   const _MatchPlayers({required this.p1, required this.p2});
   final Profile? p1;
   final Profile? p2;
+}
+
+/// Picks the most recent `score_submitted` event per player from a
+/// flat list of events. Sorted by `created_at` ascending so the last
+/// write to the map is the latest event — Supabase realtime returns
+/// in arrival order and we can't rely on that being insertion order
+/// when the dispute view triggers a resubmit.
+Map<String, Map<String, dynamic>> _latestSubmissionPerPlayer(
+  List<Map<String, dynamic>> submissions,
+) {
+  final sorted = [...submissions]..sort((a, b) {
+    final ta = DateTime.tryParse(a['created_at']?.toString() ?? '') ??
+        DateTime.fromMillisecondsSinceEpoch(0);
+    final tb = DateTime.tryParse(b['created_at']?.toString() ?? '') ??
+        DateTime.fromMillisecondsSinceEpoch(0);
+    return ta.compareTo(tb);
+  });
+  final byPlayer = <String, Map<String, dynamic>>{};
+  for (final s in sorted) {
+    final by = s['created_by'] as String?;
+    if (by != null) byPlayer[by] = s;
+  }
+  return byPlayer;
+}
+
+/// Compares two submitted score payloads and either commits the match
+/// (concordant) or flips it to disputed. Pulled out of `_ScoreFlowView`
+/// so the dispute resubmit flow shares the same comparison logic.
+Future<void> _resolveSubmissions({
+  required ArenaMatch match,
+  required Map<String, dynamic> p1Submission,
+  required Map<String, dynamic> p2Submission,
+  required MatchRepository repo,
+  required void Function(Object error) onError,
+}) async {
+  final pl1 = (p1Submission['payload'] as Map?)?.cast<String, dynamic>() ?? {};
+  final pl2 = (p2Submission['payload'] as Map?)?.cast<String, dynamic>() ?? {};
+  final s1A = pl1['score1'] as int?;
+  final s2A = pl1['score2'] as int?;
+  final s1B = pl2['score1'] as int?;
+  final s2B = pl2['score2'] as int?;
+  if (s1A == null || s2A == null || s1B == null || s2B == null) return;
+
+  final viaPenA = pl1['via_penalties'] == true;
+  final viaPenB = pl2['via_penalties'] == true;
+  final pen1A = pl1['penalty1'] as int?;
+  final pen2A = pl1['penalty2'] as int?;
+  final pen1B = pl2['penalty1'] as int?;
+  final pen2B = pl2['penalty2'] as int?;
+
+  final regulationConcordant = s1A == s1B && s2A == s2B;
+  final penaltiesConcordant = viaPenA == viaPenB &&
+      (!viaPenA || (pen1A == pen1B && pen2A == pen2B));
+  final concordant = regulationConcordant && penaltiesConcordant;
+
+  try {
+    if (concordant) {
+      String? winner;
+      if (viaPenA && pen1A != null && pen2A != null) {
+        if (pen1A > pen2A) {
+          winner = match.player1Id;
+        } else if (pen2A > pen1A) {
+          winner = match.player2Id;
+        }
+      } else if (s1A > s2A) {
+        winner = match.player1Id;
+      } else if (s2A > s1A) {
+        winner = match.player2Id;
+      }
+      await repo.commitScore(
+        matchId: match.id,
+        scoreP1: s1A,
+        scoreP2: s2A,
+        winnerId: winner,
+      );
+    } else {
+      await repo.flagDisputed(match.id);
+    }
+  } catch (e) {
+    onError(e);
+  }
 }
 
 /// Maps the match status onto the four-step v2 progress indicator.
@@ -1022,6 +1104,14 @@ class _ScoreFlowViewState extends ConsumerState<_ScoreFlowView> {
   bool _submitting = false;
   String? _error;
   bool _resolutionTriggered = false;
+  // Optional proof attached to this submission (screenshot or short
+  // clip). The file is uploaded immediately on pick so a slow network
+  // doesn't block the actual SOUMETTRE tap; the storage path is then
+  // stamped on the score_submitted payload.
+  PickedProof? _proof;
+  String? _uploadedProofPath;
+  bool _pickingProof = false;
+  String? _proofError;
 
   @override
   void dispose() {
@@ -1094,6 +1184,8 @@ class _ScoreFlowViewState extends ConsumerState<_ScoreFlowView> {
             decidedByPenalties: _viaPenalties,
             penaltyP1: pen1,
             penaltyP2: pen2,
+            proofPath: _uploadedProofPath,
+            proofMimeType: _proof?.mimeType,
           );
     } catch (e) {
       if (!mounted) return;
@@ -1116,66 +1208,74 @@ class _ScoreFlowViewState extends ConsumerState<_ScoreFlowView> {
           'penalty1': pen1,
           'penalty2': pen2,
         },
+        if (_uploadedProofPath != null) 'proof_path': _uploadedProofPath,
+        if (_proof?.mimeType != null) 'proof_mime': _proof!.mimeType,
       },
     };
     setState(() => _submitting = false);
+  }
+
+  Future<void> _pickAndUploadProof() async {
+    if (_pickingProof || _submitting) return;
+    final selfId = ref.read(currentSessionProvider)?.user.id;
+    if (selfId == null) return;
+
+    setState(() {
+      _pickingProof = true;
+      _proofError = null;
+    });
+    try {
+      final picked = await ref.read(scoreProofUploaderProvider).pick();
+      if (picked == null) {
+        if (!mounted) return;
+        setState(() => _pickingProof = false);
+        return;
+      }
+      final storagePath = await ref.read(scoreProofUploaderProvider).upload(
+            matchId: widget.match.id,
+            userId: selfId,
+            proof: picked,
+          );
+      if (!mounted) return;
+      setState(() {
+        _proof = picked;
+        _uploadedProofPath = storagePath;
+        _pickingProof = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _pickingProof = false;
+        _proofError = e is FormatException ? e.message : 'Upload impossible : $e';
+      });
+    }
+  }
+
+  void _clearProof() {
+    if (_submitting) return;
+    setState(() {
+      _proof = null;
+      _uploadedProofPath = null;
+      _proofError = null;
+    });
   }
 
   Future<void> _resolve(
     Map<String, dynamic> p1Submission,
     Map<String, dynamic> p2Submission,
   ) async {
-    final pl1 = (p1Submission['payload'] as Map?)?.cast<String, dynamic>() ?? {};
-    final pl2 = (p2Submission['payload'] as Map?)?.cast<String, dynamic>() ?? {};
-    final s1A = pl1['score1'] as int?;
-    final s2A = pl1['score2'] as int?;
-    final s1B = pl2['score1'] as int?;
-    final s2B = pl2['score2'] as int?;
-    if (s1A == null || s2A == null || s1B == null || s2B == null) return;
-
-    final viaPenA = pl1['via_penalties'] == true;
-    final viaPenB = pl2['via_penalties'] == true;
-    final pen1A = pl1['penalty1'] as int?;
-    final pen2A = pl1['penalty2'] as int?;
-    final pen1B = pl2['penalty1'] as int?;
-    final pen2B = pl2['penalty2'] as int?;
-
-    final regulationConcordant = s1A == s1B && s2A == s2B;
-    final penaltiesConcordant = viaPenA == viaPenB &&
-        (!viaPenA || (pen1A == pen1B && pen2A == pen2B));
-    final concordant = regulationConcordant && penaltiesConcordant;
-
-    final repo = ref.read(matchRepositoryProvider);
-
-    try {
-      if (concordant) {
-        String? winner;
-        if (viaPenA && pen1A != null && pen2A != null) {
-          if (pen1A > pen2A) {
-            winner = widget.match.player1Id;
-          } else if (pen2A > pen1A) {
-            winner = widget.match.player2Id;
-          }
-        } else if (s1A > s2A) {
-          winner = widget.match.player1Id;
-        } else if (s2A > s1A) {
-          winner = widget.match.player2Id;
-        }
-        await repo.commitScore(
-          matchId: widget.match.id,
-          scoreP1: s1A,
-          scoreP2: s2A,
-          winnerId: winner,
+    await _resolveSubmissions(
+      match: widget.match,
+      p1Submission: p1Submission,
+      p2Submission: p2Submission,
+      repo: ref.read(matchRepositoryProvider),
+      onError: (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur de résolution : $e')),
         );
-      } else {
-        await repo.flagDisputed(widget.match.id);
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur de résolution : $e')),
-      );
-    }
+      },
+    );
   }
 
   @override
@@ -1204,11 +1304,7 @@ class _ScoreFlowViewState extends ConsumerState<_ScoreFlowView> {
         ),
       ),
       data: (submissions) {
-        final byPlayer = <String, Map<String, dynamic>>{};
-        for (final s in submissions) {
-          final by = s['created_by'] as String?;
-          if (by != null) byPlayer[by] = s;
-        }
+        final byPlayer = _latestSubmissionPerPlayer(submissions);
         final optimistic =
             ref.watch(_pendingScoreSubmissionProvider(widget.match.id));
         if (optimistic != null && !byPlayer.containsKey(selfId)) {
@@ -1324,6 +1420,15 @@ class _ScoreFlowViewState extends ConsumerState<_ScoreFlowView> {
             ),
           ],
         ],
+        const SizedBox(height: ArenaSpacing.lg),
+        _ProofAttachmentBlock(
+          proof: _proof,
+          uploading: _pickingProof,
+          submitting: _submitting,
+          error: _proofError,
+          onPick: _pickAndUploadProof,
+          onClear: _clearProof,
+        ),
         if (_error != null) ...[
           const SizedBox(height: ArenaSpacing.sm),
           Text(
@@ -1453,6 +1558,132 @@ class _ScoreField extends StatelessWidget {
   }
 }
 
+class _ProofAttachmentBlock extends StatelessWidget {
+  const _ProofAttachmentBlock({
+    required this.proof,
+    required this.uploading,
+    required this.submitting,
+    required this.error,
+    required this.onPick,
+    required this.onClear,
+  });
+
+  final PickedProof? proof;
+  final bool uploading;
+  final bool submitting;
+  final String? error;
+  final VoidCallback onPick;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final attached = proof != null;
+    return Container(
+      padding: const EdgeInsets.all(ArenaSpacing.md),
+      decoration: BoxDecoration(
+        color: attached
+            ? ArenaColors.success.withValues(alpha: 0.10)
+            : ArenaColors.carbon,
+        borderRadius: BorderRadius.circular(ArenaRadius.md),
+        border: Border.all(
+          color: attached
+              ? ArenaColors.success.withValues(alpha: 0.5)
+              : ArenaColors.borderHi,
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                attached
+                    ? Icons.check_circle
+                    : Icons.add_photo_alternate_outlined,
+                color: attached ? ArenaColors.success : ArenaColors.silver,
+                size: 18,
+              ),
+              const SizedBox(width: ArenaSpacing.sm),
+              Expanded(
+                child: Text(
+                  attached
+                      ? 'Preuve attachée'
+                      : 'Joins une photo ou vidéo (recommandé)',
+                  style: ArenaText.inputLabel.copyWith(
+                    color: attached ? ArenaColors.success : ArenaColors.bone,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            attached
+                ? '${proof!.displayName} · ${_humanSize(proof!.bytes)}'
+                : "Capture d'écran de l'écran de fin du match ou clip de "
+                    'la dernière action — utile en cas de litige.',
+            style: ArenaText.small.copyWith(color: ArenaColors.silver),
+          ),
+          if (error != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              error!,
+              style: ArenaText.small.copyWith(color: ArenaColors.neonRed),
+            ),
+          ],
+          const SizedBox(height: ArenaSpacing.sm),
+          if (uploading)
+            const Row(
+              children: [
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                SizedBox(width: ArenaSpacing.sm),
+                Text(
+                  'Upload en cours…',
+                  style: TextStyle(color: ArenaColors.silver, fontSize: 12),
+                ),
+              ],
+            )
+          else if (attached)
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.swap_horiz, size: 16),
+                    label: const Text('Remplacer'),
+                    onPressed: submitting ? null : onPick,
+                  ),
+                ),
+                const SizedBox(width: ArenaSpacing.sm),
+                IconButton(
+                  icon: const Icon(Icons.close, color: ArenaColors.silver),
+                  tooltip: 'Retirer la preuve',
+                  onPressed: submitting ? null : onClear,
+                ),
+              ],
+            )
+          else
+            OutlinedButton.icon(
+              icon: const Icon(Icons.attach_file, size: 16),
+              label: const Text('Choisir un fichier'),
+              onPressed: submitting ? null : onPick,
+            ),
+        ],
+      ),
+    );
+  }
+
+  static String _humanSize(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(0)} Ko';
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} Mo';
+  }
+}
+
 // ─── Step 4 — Result (completed / disputed / cancelled / forfeited) ─────
 
 class _CompletedView extends StatelessWidget {
@@ -1503,24 +1734,175 @@ class _CompletedView extends StatelessWidget {
   }
 }
 
-class _DisputedView extends StatelessWidget {
+class _DisputedView extends ConsumerStatefulWidget {
   const _DisputedView({required this.match, required this.selfId});
 
   final ArenaMatch match;
   final String? selfId;
 
+  @override
+  ConsumerState<_DisputedView> createState() => _DisputedViewState();
+}
+
+class _DisputedViewState extends ConsumerState<_DisputedView> {
+  bool _resolving = false;
+
   bool get _isPlayer =>
-      selfId != null &&
-      (selfId == match.player1Id || selfId == match.player2Id);
+      widget.selfId != null &&
+      (widget.selfId == widget.match.player1Id ||
+          widget.selfId == widget.match.player2Id);
+
+  bool get _isPlayer1 => widget.selfId == widget.match.player1Id;
+  bool get _isKnockout => widget.match.groupId == null;
 
   @override
   Widget build(BuildContext context) {
+    if (!_isPlayer) {
+      return _buildBanner();
+    }
+
+    final submissionsAsync =
+        ref.watch(matchScoreSubmissionsProvider(widget.match.id));
+    return submissionsAsync.when(
+      loading: _buildBanner,
+      error: (_, __) => _buildBanner(),
+      data: (submissions) {
+        final byPlayer = _latestSubmissionPerPlayer(submissions);
+        final p1Sub = widget.match.player1Id == null
+            ? null
+            : byPlayer[widget.match.player1Id];
+        final p2Sub = widget.match.player2Id == null
+            ? null
+            : byPlayer[widget.match.player2Id];
+
+        // If both players already concord on their LATEST submission
+        // (e.g. the opponent corrected first and we just landed back on
+        // this view), commit silently — _resolveSubmissions promotes
+        // the match to completed which collapses this view.
+        if (p1Sub != null && p2Sub != null && !_resolving) {
+          _resolving = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _autoResolve(p1Sub, p2Sub);
+          });
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildBanner(),
+            const SizedBox(height: ArenaSpacing.lg),
+            _SubmittedScoresGrid(
+              match: widget.match,
+              p1Sub: p1Sub,
+              p2Sub: p2Sub,
+              selfIsPlayer1: _isPlayer1,
+            ),
+            const SizedBox(height: ArenaSpacing.lg),
+            ArenaButton(
+              label: 'MODIFIER MON SCORE',
+              icon: Icons.edit_outlined,
+              fullWidth: true,
+              onPressed: () => _openEditDialog(
+                _isPlayer1 ? p1Sub : p2Sub,
+              ),
+            ),
+            const SizedBox(height: ArenaSpacing.sm),
+            ManualUploadButton(
+              matchId: widget.match.id,
+              playerId: widget.selfId!,
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _autoResolve(
+    Map<String, dynamic> p1Sub,
+    Map<String, dynamic> p2Sub,
+  ) async {
+    await _resolveSubmissions(
+      match: widget.match,
+      p1Submission: p1Sub,
+      p2Submission: p2Sub,
+      repo: ref.read(matchRepositoryProvider),
+      onError: (_) {/* silent — dispute view can retry on next build */},
+    );
+    if (mounted) _resolving = false;
+  }
+
+  Future<void> _openEditDialog(Map<String, dynamic>? mine) async {
+    final pl = (mine?['payload'] as Map?)?.cast<String, dynamic>() ?? {};
+    final s1 = pl['score1'] as int?;
+    final s2 = pl['score2'] as int?;
+    final viaPen = pl['via_penalties'] == true;
+    final pen1 = pl['penalty1'] as int?;
+    final pen2 = pl['penalty2'] as int?;
+    final myInitial = (_isPlayer1 ? s1 : s2)?.toString() ?? '';
+    final oppInitial = (_isPlayer1 ? s2 : s1)?.toString() ?? '';
+    final myPenInitial = viaPen
+        ? ((_isPlayer1 ? pen1 : pen2)?.toString() ?? '')
+        : '';
+    final oppPenInitial = viaPen
+        ? ((_isPlayer1 ? pen2 : pen1)?.toString() ?? '')
+        : '';
+
+    final updated = await showDialog<_EditedScore>(
+      context: context,
+      builder: (_) => _EditScoreDialog(
+        myInitial: myInitial,
+        oppInitial: oppInitial,
+        viaPenaltiesInitial: viaPen,
+        myPenInitial: myPenInitial,
+        oppPenInitial: oppPenInitial,
+        knockout: _isKnockout,
+      ),
+    );
+    if (updated == null || !mounted) return;
+
+    final selfId = widget.selfId;
+    if (selfId == null) return;
+
+    final myGoals = updated.my;
+    final oppGoals = updated.opp;
+    final s1New = _isPlayer1 ? myGoals : oppGoals;
+    final s2New = _isPlayer1 ? oppGoals : myGoals;
+    final pen1New = updated.viaPenalties
+        ? (_isPlayer1 ? updated.myPen : updated.oppPen)
+        : null;
+    final pen2New = updated.viaPenalties
+        ? (_isPlayer1 ? updated.oppPen : updated.myPen)
+        : null;
+
+    try {
+      await ref.read(matchRepositoryProvider).submitScore(
+            matchId: widget.match.id,
+            byProfileId: selfId,
+            scoreP1: s1New,
+            scoreP2: s2New,
+            decidedByPenalties: updated.viaPenalties,
+            penaltyP1: pen1New,
+            penaltyP2: pen2New,
+          );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Impossible de renvoyer : $e')),
+      );
+      return;
+    }
+    // The realtime stream will pick up the new event and trigger
+    // _autoResolve on the next build.
+    setState(() => _resolving = false);
+  }
+
+  Widget _buildBanner() {
     return Container(
-      padding: const EdgeInsets.all(ArenaSpacing.xl),
+      padding: const EdgeInsets.all(ArenaSpacing.lg),
       decoration: arenaDangerCardDecoration(),
       child: Column(
         children: [
-          const Icon(Icons.gavel, color: ArenaColors.neonRed, size: 48),
+          const Icon(Icons.gavel, color: ArenaColors.neonRed, size: 40),
           const SizedBox(height: ArenaSpacing.sm),
           Text(
             'LITIGE EN COURS',
@@ -1528,17 +1910,283 @@ class _DisputedView extends StatelessWidget {
           ),
           const SizedBox(height: ArenaSpacing.sm),
           Text(
-            'Vos scores ne concordent pas. Un admin va trancher. Tu peux '
-            'envoyer une vidéo du match pour appuyer ta version.',
+            "Vos scores ne concordent pas. Si tu t'es trompé, corrige-le ;"
+            ' sinon attends que ton adversaire corrige le sien. Sans accord,'
+            ' un admin tranchera à partir des preuves.',
             textAlign: TextAlign.center,
             style: ArenaText.bodyMuted,
           ),
-          if (_isPlayer) ...[
-            const SizedBox(height: ArenaSpacing.lg),
-            ManualUploadButton(matchId: match.id, playerId: selfId!),
+        ],
+      ),
+    );
+  }
+}
+
+class _SubmittedScoresGrid extends StatelessWidget {
+  const _SubmittedScoresGrid({
+    required this.match,
+    required this.p1Sub,
+    required this.p2Sub,
+    required this.selfIsPlayer1,
+  });
+
+  final ArenaMatch match;
+  final Map<String, dynamic>? p1Sub;
+  final Map<String, dynamic>? p2Sub;
+  final bool selfIsPlayer1;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _ScoreSubmissionCard(
+            label: selfIsPlayer1 ? 'TOI' : 'JOUEUR 1',
+            highlight: selfIsPlayer1,
+            payload: (p1Sub?['payload'] as Map?)?.cast<String, dynamic>(),
+          ),
+        ),
+        const SizedBox(width: ArenaSpacing.md),
+        Expanded(
+          child: _ScoreSubmissionCard(
+            label: selfIsPlayer1 ? 'JOUEUR 2' : 'TOI',
+            highlight: !selfIsPlayer1,
+            payload: (p2Sub?['payload'] as Map?)?.cast<String, dynamic>(),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ScoreSubmissionCard extends StatelessWidget {
+  const _ScoreSubmissionCard({
+    required this.label,
+    required this.highlight,
+    required this.payload,
+  });
+
+  final String label;
+  final bool highlight;
+  final Map<String, dynamic>? payload;
+
+  @override
+  Widget build(BuildContext context) {
+    final s1 = payload?['score1'] as int?;
+    final s2 = payload?['score2'] as int?;
+    final viaPen = payload?['via_penalties'] == true;
+    final pen1 = payload?['penalty1'] as int?;
+    final pen2 = payload?['penalty2'] as int?;
+    final accent = highlight ? ArenaColors.signalBlue : ArenaColors.silverDim;
+
+    return Container(
+      padding: const EdgeInsets.all(ArenaSpacing.md),
+      decoration: BoxDecoration(
+        color: ArenaColors.carbon,
+        border: Border.all(color: accent.withValues(alpha: 0.5)),
+        borderRadius: BorderRadius.circular(ArenaRadius.md),
+      ),
+      child: Column(
+        children: [
+          Text(
+            label,
+            style: ArenaText.inputLabel.copyWith(color: accent),
+          ),
+          const SizedBox(height: ArenaSpacing.sm),
+          Text(
+            (s1 == null || s2 == null) ? '— : —' : '$s1 — $s2',
+            style: ArenaText.bigNumber.copyWith(fontSize: 32),
+          ),
+          if (viaPen && pen1 != null && pen2 != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              'TAB $pen1 — $pen2',
+              style: ArenaText.small.copyWith(color: ArenaColors.silver),
+            ),
           ],
         ],
       ),
+    );
+  }
+}
+
+class _EditedScore {
+  const _EditedScore({
+    required this.my,
+    required this.opp,
+    required this.viaPenalties,
+    this.myPen,
+    this.oppPen,
+  });
+  final int my;
+  final int opp;
+  final bool viaPenalties;
+  final int? myPen;
+  final int? oppPen;
+}
+
+class _EditScoreDialog extends StatefulWidget {
+  const _EditScoreDialog({
+    required this.myInitial,
+    required this.oppInitial,
+    required this.viaPenaltiesInitial,
+    required this.myPenInitial,
+    required this.oppPenInitial,
+    required this.knockout,
+  });
+
+  final String myInitial;
+  final String oppInitial;
+  final bool viaPenaltiesInitial;
+  final String myPenInitial;
+  final String oppPenInitial;
+  final bool knockout;
+
+  @override
+  State<_EditScoreDialog> createState() => _EditScoreDialogState();
+}
+
+class _EditScoreDialogState extends State<_EditScoreDialog> {
+  late final _myCtrl = TextEditingController(text: widget.myInitial);
+  late final _oppCtrl = TextEditingController(text: widget.oppInitial);
+  late final _myPenCtrl = TextEditingController(text: widget.myPenInitial);
+  late final _oppPenCtrl = TextEditingController(text: widget.oppPenInitial);
+  late bool _viaPen = widget.viaPenaltiesInitial;
+  String? _error;
+
+  @override
+  void dispose() {
+    _myCtrl.dispose();
+    _oppCtrl.dispose();
+    _myPenCtrl.dispose();
+    _oppPenCtrl.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final my = int.tryParse(_myCtrl.text.trim());
+    final opp = int.tryParse(_oppCtrl.text.trim());
+    if (my == null || opp == null || my < 0 || my > 99 || opp < 0 || opp > 99) {
+      setState(() => _error = 'Scores attendus entre 0 et 99.');
+      return;
+    }
+    int? myPen;
+    int? oppPen;
+    if (_viaPen) {
+      if (my != opp) {
+        setState(
+          () => _error = 'Score réglementaire à égalité avant les tirs au but.',
+        );
+        return;
+      }
+      myPen = int.tryParse(_myPenCtrl.text.trim());
+      oppPen = int.tryParse(_oppPenCtrl.text.trim());
+      if (myPen == null || oppPen == null || myPen < 0 || oppPen < 0 ||
+          myPen > 30 || oppPen > 30) {
+        setState(() => _error = 'Tirs au but attendus entre 0 et 30.');
+        return;
+      }
+      if (myPen == oppPen) {
+        setState(
+          () => _error = 'Les tirs au but ne peuvent pas finir à égalité.',
+        );
+        return;
+      }
+    }
+    Navigator.of(context).pop(
+      _EditedScore(
+        my: my,
+        opp: opp,
+        viaPenalties: _viaPen,
+        myPen: myPen,
+        oppPen: oppPen,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: ArenaColors.surface,
+      title: Text('Corriger ton score', style: ArenaText.h2),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _ScoreField(
+                  label: 'Mon score',
+                  controller: _myCtrl,
+                  enabled: true,
+                  action: TextInputAction.next,
+                ),
+              ),
+              const SizedBox(width: ArenaSpacing.md),
+              Expanded(
+                child: _ScoreField(
+                  label: 'Adversaire',
+                  controller: _oppCtrl,
+                  enabled: true,
+                  action: widget.knockout
+                      ? TextInputAction.next
+                      : TextInputAction.done,
+                ),
+              ),
+            ],
+          ),
+          if (widget.knockout) ...[
+            const SizedBox(height: ArenaSpacing.sm),
+            SwitchListTile.adaptive(
+              title: Text('Décidé aux tirs au but', style: ArenaText.body),
+              value: _viaPen,
+              contentPadding: EdgeInsets.zero,
+              onChanged: (v) => setState(() => _viaPen = v),
+            ),
+            if (_viaPen)
+              Row(
+                children: [
+                  Expanded(
+                    child: _ScoreField(
+                      label: 'Mes TAB',
+                      controller: _myPenCtrl,
+                      enabled: true,
+                      action: TextInputAction.next,
+                    ),
+                  ),
+                  const SizedBox(width: ArenaSpacing.md),
+                  Expanded(
+                    child: _ScoreField(
+                      label: 'TAB adv.',
+                      controller: _oppPenCtrl,
+                      enabled: true,
+                      action: TextInputAction.done,
+                    ),
+                  ),
+                ],
+              ),
+          ],
+          if (_error != null) ...[
+            const SizedBox(height: ArenaSpacing.sm),
+            Text(
+              _error!,
+              style: ArenaText.small.copyWith(color: ArenaColors.neonRed),
+            ),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Annuler'),
+        ),
+        ArenaButton(
+          label: 'RENVOYER',
+          icon: Icons.send_outlined,
+          onPressed: _submit,
+        ),
+      ],
     );
   }
 }
