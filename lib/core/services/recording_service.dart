@@ -243,7 +243,12 @@ class _DefaultRecordingPlatform implements RecordingPlatform {
       // is the only flow on iOS.
       return Future.value(false);
     }
-    return FlutterScreenRecording.startRecordScreenAndAudio(
+    // Recording the *microphone* leaks the player's voice / room
+    // background to the admin reviewing the file — not what we want.
+    // Internal/playback audio (the actual game sound) would require
+    // AudioPlaybackCapture API which `flutter_screen_recording` does
+    // not expose. Until we patch the package, ship a silent video.
+    return FlutterScreenRecording.startRecordScreen(
       filename,
       titleNotification: notificationTitle,
       messageNotification: notificationMessage,
