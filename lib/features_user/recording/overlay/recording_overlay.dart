@@ -1,5 +1,8 @@
+import 'dart:ui';
+
 import 'package:arena/core/theme/arena_colors.dart';
 import 'package:arena/features_user/recording/overlay/recording_overlay_messages.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 
@@ -10,7 +13,7 @@ import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 ///
 /// Gestures — collapsed:
 ///   - tap → expand into a 4-mini-button cardinal cluster
-///     (pause / open ARENA / save+stop / forfeit).
+///     (N pause / E open ARENA / S save+stop / W forfeit).
 ///
 /// Gestures — expanded:
 ///   - tap on the main button → collapse,
@@ -70,6 +73,19 @@ class _RecordingOverlayButtonState extends State<RecordingOverlayButton> {
 
   Future<void> _onMiniTap(String message) async {
     setState(() => _expanded = false);
+    // Primary route — Dart-native SendPort. Reliable even when the
+    // main activity is paused (MIUI / Android 12+).
+    final port =
+        IsolateNameServer.lookupPortByName(RecordingOverlayMessages.mainPortName);
+    if (port != null) {
+      port.send(message);
+    } else if (kDebugMode) {
+      debugPrint('[overlay] main port not registered, falling back');
+    }
+    // Belt-and-braces — also push via the plugin's channel. Harmless if
+    // the main side ignores duplicate events (parser maps both routes
+    // to the same OverlayAction and the coordinator's handlers are
+    // idempotent).
     await FlutterOverlayWindow.shareData(message);
   }
 
@@ -92,7 +108,7 @@ class _RecordingOverlayButtonState extends State<RecordingOverlayButton> {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // 4 cardinals — pause / screenshot / save+stop / forfeit.
+          // 4 cardinals — N pause / E focus / S save+stop / W forfeit.
           // IgnorePointer + opacity 0 while collapsed so they don't eat
           // touches around the main button.
           _MiniButton(

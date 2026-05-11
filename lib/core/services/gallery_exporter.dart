@@ -41,26 +41,6 @@ class GalleryExporter {
     }
   }
 
-  /// Captures ARENA's foreground window into a PNG inside Download/ARENA/.
-  /// When the game is in foreground the capture is whatever ARENA last
-  /// rendered (limitation: a parallel MediaProjection session is needed
-  /// to capture the underlying game — deferred to a later phase).
-  Future<String?> takeScreenshot() async {
-    if (!Platform.isAndroid) return null;
-    try {
-      return await _channel.invokeMethod<String>('takeScreenshot');
-    } on MissingPluginException {
-      if (kDebugMode) {
-        debugPrint('[gallery] native handler not registered yet');
-      }
-      return null;
-    } catch (e, st) {
-      if (kDebugMode) {
-        debugPrint('[gallery] takeScreenshot failed: $e\n$st');
-      }
-      return null;
-    }
-  }
 }
 
 final galleryExporterProvider = Provider<GalleryExporter>((_) => GalleryExporter());

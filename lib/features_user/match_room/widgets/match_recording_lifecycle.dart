@@ -4,6 +4,7 @@ import 'package:arena/core/services/permissions_service.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/models/match_status.dart';
+import 'package:arena/data/repositories/match_repository.dart';
 import 'package:arena/features_user/match_room/widgets/match_recording_actions_sheet.dart';
 import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform, kDebugMode, kIsWeb;
@@ -91,6 +92,22 @@ class _MatchRecordingLifecycleState
         status == MatchStatus.forfeited;
 
     if (isLive && !_startAttempted) {
+      // Lock recording if this player has already submitted a score
+      // for the match. Once a score is in, the match is either
+      // pending-opponent, in dispute, or up for admin validation —
+      // recording adds no value and would just chew battery.
+      final submissions = ref
+          .read(matchScoreSubmissionsProvider(widget.match.id))
+          .valueOrNull;
+      final alreadySubmitted = submissions?.any(
+            (s) => s['created_by'] == widget.selfId,
+          ) ??
+          false;
+      if (alreadySubmitted) {
+        _startAttempted = true;
+        return;
+      }
+
       _startAttempted = true;
       var opp = _opponentId;
       // Debug-only fallback for solo BYE testing on the emulator: without
@@ -180,24 +197,6 @@ class _MatchRecordingLifecycleState
     ref.listen(coordinatorFocusRequestsProvider, (_, __) {
       if (!mounted) return;
       MatchRecordingActionsSheet.show(context);
-    });
-
-    // Mini-button "Capture d'écran" — export PNG + snackbar.
-    ref.listen(coordinatorScreenshotRequestsProvider, (_, __) async {
-      if (!mounted) return;
-      final messenger = ScaffoldMessenger.of(context);
-      final uri =
-          await ref.read(galleryExporterProvider).takeScreenshot();
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            uri != null
-                ? 'Capture enregistrée dans Téléchargements › ARENA'
-                : 'Capture impossible',
-          ),
-          duration: const Duration(seconds: 3),
-        ),
-      );
     });
 
     // Mini-button "Enregistrer et arrêter" — export MP4 + snackbar. The

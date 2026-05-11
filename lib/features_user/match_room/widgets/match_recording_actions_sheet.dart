@@ -205,14 +205,6 @@ final coordinatorFocusRequestsProvider = StreamProvider<void>((ref) {
   return coord.focusRequests;
 });
 
-/// Emits when the overlay's mini "screenshot" button is tapped — the
-/// match-room widget exports a PNG via GalleryExporter and shows a
-/// snackbar.
-final coordinatorScreenshotRequestsProvider = StreamProvider<void>((ref) {
-  final coord = ref.watch(matchRecordingCoordinatorProvider);
-  return coord.screenshotRequests;
-});
-
 /// Emits when the overlay's mini "save & stop" button is tapped — the
 /// match-room widget exports the just-finished MP4 via GalleryExporter
 /// and shows a snackbar. Carries the local file path (or null on

@@ -84,11 +84,6 @@ class MatchRecordingCoordinator {
   final _focusController = StreamController<void>.broadcast();
   Stream<void> get focusRequests => _focusController.stream;
 
-  // Fires when the overlay's mini "screenshot" button is tapped — main
-  // app exports a PNG via GalleryExporter and shows a snackbar.
-  final _screenshotController = StreamController<void>.broadcast();
-  Stream<void> get screenshotRequests => _screenshotController.stream;
-
   // Fires when the overlay's mini "save & stop" button is tapped — main
   // app calls stopCleanly() + GalleryExporter and shows a snackbar.
   // The Future-returning local-path is published as the event so the
@@ -162,7 +157,6 @@ class MatchRecordingCoordinator {
     await _actionsSub?.cancel();
     await _stateController.close();
     await _focusController.close();
-    await _screenshotController.close();
     await _saveStopController.close();
   }
 
@@ -179,12 +173,6 @@ class MatchRecordingCoordinator {
         await _onPause();
       case OverlayAction.forfeit:
         await _declareForfeit('user_chose_forfeit');
-      case OverlayAction.screenshot:
-        // Bring ARENA to front so the snackbar emitted by the listener
-        // is visible — the actual capture is best-effort and the file
-        // ends up in Download/ARENA either way.
-        await _bringToFront.bringArenaToFront();
-        _screenshotController.add(null);
       case OverlayAction.saveAndStop:
         // Stop the recorder first (closes the file), then publish the
         // local path so the listener can hand it to GalleryExporter.

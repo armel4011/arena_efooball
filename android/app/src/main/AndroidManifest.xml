@@ -91,6 +91,15 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="anti_cheat_overlay_during_match" />
         </service>
+
+        <!-- PHASE 8.6 — Custom MediaProjection-based recorder. Replaces
+             the upstream flutter_screen_recording plugin so we can
+             pick our own resolution (360p) and bitrate (~500 kbps)
+             and keep proof clips well under 100 MB. -->
+        <service
+            android:name=".ArenaRecorderService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

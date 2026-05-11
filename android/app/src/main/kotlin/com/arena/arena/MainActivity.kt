@@ -1,33 +1,86 @@
 package com.arena.arena
 
+import android.app.Activity
 import android.content.ContentValues
+import android.content.Context
 import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.Canvas
+import android.media.projection.MediaProjectionManager
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
-import android.os.Handler
-import android.os.Looper
 import android.provider.MediaStore
-import android.view.PixelCopy
+import android.util.Log
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
-import kotlin.random.Random
 
 /**
- * Wires the `arena/native` method channel used by the floating-button
- * overlay (PHASE 8.5) to bring ARENA back to the foreground from a
- * short tap, and by PHASE 8.4 to publish a finished recording from
- * the app's private cache into the user-visible Download/ARENA folder.
+ * Wires the `arena/native` method channel used by PHASE 8:
+ *   * `bringToFront` — pull ARENA back from the recents stack after
+ *     a tap on the floating button.
+ *   * `saveVideoToGallery` — publish a finished MP4 from the app's
+ *     private cache into the user-visible Download/ARENA folder via
+ *     MediaStore.Downloads (Android 10+ scoped-storage friendly).
+ *   * `startCustomRecording` / `stopCustomRecording` — drive
+ *     [ArenaRecorderService] directly so we control resolution,
+ *     bitrate and output filename (target: 360p / 500 kbps so a
+ *     25-min match stays well under 100 MB).
  */
 class MainActivity : FlutterActivity() {
 
     private companion object {
+        const val TAG = "ArenaNative"
         const val NATIVE_CHANNEL = "arena/native"
         const val DOWNLOADS_SUBDIR = "ARENA"
+        // request code for the MediaProjection permission dialog.
+        const val RECORDING_PERMISSION_REQUEST = 0x4242
+    }
+
+    // Pending state during the system MediaProjection dialog. The
+    // Flutter call is async — we stash the result + the requested
+    // start parameters here and forward them to the service once the
+    // user accepts (or we resolve the result with false on cancel).
+    private data class PendingStart(
+        val filename: String,
+        val title: String,
+        val message: String,
+        val result: MethodChannel.Result,
+    )
+
+    private var pendingStart: PendingStart? = null
+
+    @Deprecated("Using startActivityForResult/onActivityResult — the modern" +
+        " ActivityResult APIs aren't exposed by Flutter's FlutterActivity")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != RECORDING_PERMISSION_REQUEST) return
+        val pending = pendingStart ?: return
+        pendingStart = null
+        if (resultCode != Activity.RESULT_OK || data == null) {
+            Log.d(TAG, "recording permission denied (resultCode=$resultCode)")
+            pending.result.success(false)
+            return
+        }
+        val intent = Intent(applicationContext, ArenaRecorderService::class.java).apply {
+            action = ArenaRecorderService.ACTION_START
+            putExtra(ArenaRecorderService.EXTRA_RESULT_CODE, resultCode)
+            putExtra(ArenaRecorderService.EXTRA_RESULT_DATA, data)
+            putExtra(ArenaRecorderService.EXTRA_FILENAME, pending.filename)
+            putExtra(ArenaRecorderService.EXTRA_TITLE, pending.title)
+            putExtra(ArenaRecorderService.EXTRA_MESSAGE, pending.message)
+        }
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(intent)
+            } else {
+                startService(intent)
+            }
+            pending.result.success(true)
+        } catch (e: Exception) {
+            Log.w(TAG, "startForegroundService failed", e)
+            pending.result.success(false)
+        }
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -37,12 +90,6 @@ class MainActivity : FlutterActivity() {
             .setMethodCallHandler { call, result ->
                 when (call.method) {
                     "bringToFront" -> {
-                        // Re-launch our own activity with the right flags so
-                        // the OS pulls it from the back stack instead of
-                        // creating a new task. SINGLE_TOP avoids spawning a
-                        // duplicate; REORDER_TO_FRONT pulls the existing one
-                        // forward; NEW_TASK is required when the call comes
-                        // from the overlay service context.
                         val intent = Intent(applicationContext, MainActivity::class.java).apply {
                             addFlags(
                                 Intent.FLAG_ACTIVITY_NEW_TASK or
@@ -66,38 +113,83 @@ class MainActivity : FlutterActivity() {
                             result.error("SAVE_FAILED", e.message, null)
                         }
                     }
-                    "takeScreenshot" -> {
-                        // Captures ARENA's own window (decorView). When the
-                        // game is in foreground ARENA's view is offscreen,
-                        // so the capture is whatever ARENA last rendered.
-                        // Real game capture needs a parallel MediaProjection
-                        // session — deferred.
-                        takeScreenshot { uri, error ->
-                            if (error != null) {
-                                result.error("SCREENSHOT_FAILED", error, null)
-                            } else {
-                                result.success(uri?.toString())
-                            }
-                        }
+                    "startCustomRecording" -> {
+                        val filename = call.argument<String>("filename") ?: "match"
+                        val title = call.argument<String>("title") ?: "ARENA"
+                        val message =
+                            call.argument<String>("message") ?: "Enregistrement en cours"
+                        startCustomRecording(filename, title, message, result)
+                    }
+                    "stopCustomRecording" -> {
+                        stopCustomRecording(result)
                     }
                     else -> result.notImplemented()
                 }
             }
     }
 
-    /**
-     * Copies [srcPath] into the user-visible Download/ARENA/ folder via
-     * MediaStore — the only Android 10+ scoped-storage-friendly way to
-     * surface a file in any file manager without WRITE_EXTERNAL_STORAGE.
-     * Returns the resulting content:// URI, or null if the source file
-     * was missing or the OS is pre-Q (MediaStore.Downloads doesn't exist).
-     */
+    // ──────────────────────────────────────────────────────────────
+    // Custom MediaProjection recording — drives ArenaRecorderService
+    // ──────────────────────────────────────────────────────────────
+
+    private fun startCustomRecording(
+        filename: String,
+        title: String,
+        message: String,
+        result: MethodChannel.Result,
+    ) {
+        if (pendingStart != null) {
+            result.success(false)
+            return
+        }
+        if (ArenaRecorderService.isActive) {
+            // Already recording — treat the second call as a no-op
+            // success rather than a crash; the foreground service is
+            // alive and will deliver a path on stop.
+            result.success(true)
+            return
+        }
+        pendingStart = PendingStart(filename, title, message, result)
+        try {
+            val pm = applicationContext
+                .getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+            @Suppress("DEPRECATION")
+            startActivityForResult(
+                pm.createScreenCaptureIntent(),
+                RECORDING_PERMISSION_REQUEST
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "createScreenCaptureIntent failed", e)
+            pendingStart = null
+            result.success(false)
+        }
+    }
+
+    private fun stopCustomRecording(result: MethodChannel.Result) {
+        // Ask the service to stop and wait for it to publish its
+        // output path. The service tears down MediaRecorder +
+        // VirtualDisplay + MediaProjection and writes `lastOutputPath`
+        // before stopping itself.
+        ArenaRecorderService.requestStopAndDrain { path ->
+            result.success(path ?: "")
+        }
+        val intent = Intent(applicationContext, ArenaRecorderService::class.java).apply {
+            action = ArenaRecorderService.ACTION_STOP
+        }
+        try {
+            startService(intent)
+        } catch (e: Exception) {
+            Log.w(TAG, "stopService(start) failed", e)
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // saveVideoToGallery — Download/ARENA/<name>.mp4 via MediaStore
+    // ──────────────────────────────────────────────────────────────
+
     private fun saveVideoToGallery(srcPath: String): Uri? {
         val src = File(srcPath)
         if (!src.exists() || src.length() == 0L) return null
-        // Downloads collection only exists on Q+. Pre-Q would need
-        // WRITE_EXTERNAL_STORAGE, which we don't request — file stays
-        // in the app cache.
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return null
 
         val resolver = applicationContext.contentResolver
@@ -108,95 +200,15 @@ class MainActivity : FlutterActivity() {
                 MediaStore.Downloads.RELATIVE_PATH,
                 "${Environment.DIRECTORY_DOWNLOADS}/$DOWNLOADS_SUBDIR"
             )
-            // Mark as pending so other apps don't see a half-copied file.
             put(MediaStore.Downloads.IS_PENDING, 1)
         }
-
         val collection = MediaStore.Downloads.getContentUri(
             MediaStore.VOLUME_EXTERNAL_PRIMARY
         )
-
         val uri = resolver.insert(collection, values) ?: return null
-
         try {
             resolver.openOutputStream(uri)?.use { out ->
                 src.inputStream().use { input -> input.copyTo(out) }
-            } ?: run {
-                resolver.delete(uri, null, null)
-                return null
-            }
-        } catch (e: Exception) {
-            resolver.delete(uri, null, null)
-            throw e
-        }
-
-        val done = ContentValues().apply {
-            put(MediaStore.Downloads.IS_PENDING, 0)
-        }
-        resolver.update(uri, done, null, null)
-        return uri
-    }
-
-    /**
-     * Captures the activity window into a PNG inside Download/ARENA/.
-     * On Android O+ uses PixelCopy (hardware accel, no permissions);
-     * pre-O falls back to View.draw(Canvas) into a software bitmap.
-     */
-    private fun takeScreenshot(callback: (Uri?, String?) -> Unit) {
-        val window = this.window
-        val view = window.decorView
-        val w = view.width
-        val h = view.height
-        if (w <= 0 || h <= 0) {
-            callback(null, "Window not laid out yet (w=$w, h=$h)")
-            return
-        }
-        val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            PixelCopy.request(window, bitmap, { copyResult ->
-                if (copyResult == PixelCopy.SUCCESS) {
-                    try {
-                        val uri = savePngToDownloads(bitmap)
-                        callback(uri, null)
-                    } catch (e: Exception) {
-                        callback(null, e.message)
-                    }
-                } else {
-                    callback(null, "PixelCopy code=$copyResult")
-                }
-            }, Handler(Looper.getMainLooper()))
-        } else {
-            try {
-                view.draw(Canvas(bitmap))
-                val uri = savePngToDownloads(bitmap)
-                callback(uri, null)
-            } catch (e: Exception) {
-                callback(null, e.message)
-            }
-        }
-    }
-
-    private fun savePngToDownloads(bitmap: Bitmap): Uri? {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return null
-        val resolver = applicationContext.contentResolver
-        val rand = Random.nextInt(999999).toString().padStart(6, '0')
-        val name = "match_screenshot_$rand.png"
-        val values = ContentValues().apply {
-            put(MediaStore.Downloads.DISPLAY_NAME, name)
-            put(MediaStore.Downloads.MIME_TYPE, "image/png")
-            put(
-                MediaStore.Downloads.RELATIVE_PATH,
-                "${Environment.DIRECTORY_DOWNLOADS}/$DOWNLOADS_SUBDIR"
-            )
-            put(MediaStore.Downloads.IS_PENDING, 1)
-        }
-        val collection = MediaStore.Downloads.getContentUri(
-            MediaStore.VOLUME_EXTERNAL_PRIMARY
-        )
-        val uri = resolver.insert(collection, values) ?: return null
-        try {
-            resolver.openOutputStream(uri)?.use { out ->
-                bitmap.compress(Bitmap.CompressFormat.PNG, 90, out)
             } ?: run {
                 resolver.delete(uri, null, null)
                 return null

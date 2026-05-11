@@ -6,6 +6,14 @@
 /// payloads. We wrap it in a typed pair so a typo in a string literal
 /// doesn't silently break the overlay → main wiring.
 abstract final class RecordingOverlayMessages {
+  /// Name under which the main isolate registers a `ReceivePort` in
+  /// `IsolateNameServer`. The overlay isolate looks the port up and
+  /// uses `SendPort.send` to deliver action strings (`ask_pause`,
+  /// `ask_screenshot`, …) — this works on MIUI / Android 12+ where
+  /// `flutter_overlay_window`'s `shareData → overlayListener` channel
+  /// silently drops events once the main activity is paused.
+  static const String mainPortName = 'arena_overlay_actions_main';
+
   /// `main → overlay` — push the elapsed recording duration in
   /// seconds. The overlay re-renders MM:SS each tick.
   static const String tickType = 'tick';
@@ -36,11 +44,6 @@ abstract final class RecordingOverlayMessages {
   /// app stops the recording, marks the player as forfeit, alerts
   /// the admin.
   static const String askForfeitType = 'ask_forfeit';
-
-  /// `overlay → main` — the user picked "Capture d'écran". Main app
-  /// brings ARENA to front (so the snackbar is visible) and exports
-  /// a PNG to Download/ARENA/.
-  static const String askScreenshotType = 'ask_screenshot';
 
   /// `overlay → main` — the user picked "Enregistrer et arrêter".
   /// Main app cleanly stops the recording and exports the resulting

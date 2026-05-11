@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:isolate';
+import 'dart:ui';
 
 import 'package:arena/features_user/recording/overlay/recording_overlay_messages.dart';
 import 'package:flutter/foundation.dart';
@@ -8,14 +10,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// Action requested by the expanded menu inside the overlay isolate.
 ///
 /// The main app subscribes via [RecordingOverlayController.actions] and
-/// reacts (resume / pause → freeze auto-stop, screenshot → export PNG,
-/// saveAndStop → stop + export MP4, forfeit → stop + mark forfeit).
+/// reacts (resume / pause → freeze auto-stop, saveAndStop → stop +
+/// export MP4, forfeit → stop + mark forfeit).
 enum OverlayAction {
   focusMain,
   resume,
   pause,
   forfeit,
-  screenshot,
   saveAndStop,
   unknown,
 }
@@ -40,6 +41,8 @@ class RecordingOverlayController {
   final _actions = StreamController<OverlayAction>.broadcast();
 
   StreamSubscription<dynamic>? _listener;
+  ReceivePort? _port;
+  StreamSubscription<dynamic>? _portSub;
   Timer? _tickTimer;
   DateTime? _startedAt;
   // While paused: Duration the chronometer was at when the user paused.
@@ -74,6 +77,7 @@ class RecordingOverlayController {
     await _platform.showOverlay();
     _startedAt = DateTime.now();
     _bindListener();
+    _bindIsolatePort();
     _startTicking();
   }
 
@@ -85,6 +89,13 @@ class RecordingOverlayController {
     _pausedElapsed = null;
     await _listener?.cancel();
     _listener = null;
+    await _portSub?.cancel();
+    _portSub = null;
+    _port?.close();
+    _port = null;
+    IsolateNameServer.removePortNameMapping(
+      RecordingOverlayMessages.mainPortName,
+    );
     await _platform.closeOverlay();
   }
 
@@ -135,6 +146,30 @@ class RecordingOverlayController {
     });
   }
 
+  /// Registers a `ReceivePort` so the overlay isolate can deliver
+  /// action strings via `SendPort.send`. This is the resilient
+  /// fallback to `flutter_overlay_window`'s `shareData` channel which
+  /// stops delivering on MIUI / Android 12+ once the main activity is
+  /// paused.
+  void _bindIsolatePort() {
+    // Defensive: drop any leftover mapping from a previous run.
+    IsolateNameServer.removePortNameMapping(
+      RecordingOverlayMessages.mainPortName,
+    );
+    final port = ReceivePort();
+    final registered = IsolateNameServer.registerPortWithName(
+      port.sendPort,
+      RecordingOverlayMessages.mainPortName,
+    );
+    if (!registered && kDebugMode) {
+      debugPrint('[overlay-ctrl] failed to register isolate port');
+    }
+    _port = port;
+    _portSub = port.listen((event) {
+      _actions.add(_parseAction(event));
+    });
+  }
+
   void _startTicking() {
     _tickTimer?.cancel();
     _tickTimer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -162,7 +197,6 @@ class RecordingOverlayController {
       RecordingOverlayMessages.askResumeType => OverlayAction.resume,
       RecordingOverlayMessages.askPauseType => OverlayAction.pause,
       RecordingOverlayMessages.askForfeitType => OverlayAction.forfeit,
-      RecordingOverlayMessages.askScreenshotType => OverlayAction.screenshot,
       RecordingOverlayMessages.askSaveStopType => OverlayAction.saveAndStop,
       _ => OverlayAction.unknown,
     };

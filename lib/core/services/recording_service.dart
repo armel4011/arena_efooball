@@ -5,10 +5,19 @@ import 'dart:math';
 import 'package:arena/data/models/match_stream.dart';
 import 'package:arena/data/repositories/match_stream_repository.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_screen_recording/flutter_screen_recording.dart';
 
 final _filenameRandom = Random();
+
+/// `2026-05-11 14:37:12` → `20260511_143712`. Local time on purpose —
+/// the user reads this filename in their gallery; UTC would surprise
+/// anyone glancing at the file in Téléchargements.
+String _formatFilenameTimestamp(DateTime t) {
+  String two(int n) => n.toString().padLeft(2, '0');
+  return '${t.year}${two(t.month)}${two(t.day)}_'
+      '${two(t.hour)}${two(t.minute)}${two(t.second)}';
+}
 
 /// State machine for the anti-cheat screen recorder.
 sealed class RecordingState {
@@ -110,10 +119,13 @@ class RecordingService {
       rethrow;
     }
 
-    // User-facing filename — short, predictable, no PII. The full mapping
-    // back to (matchId, streamId) lives in the streams DB row.
-    final filename =
-        'match_${_filenameRandom.nextInt(999999).toString().padLeft(6, '0')}';
+    // User-facing filename — `match_<6-digit rand>_<yyyyMMdd_HHmmss>`.
+    // No PII, sorts chronologically in the Téléchargements › ARENA
+    // folder, and the random suffix keeps two recordings from the
+    // same second on the same device from colliding.
+    final rand =
+        _filenameRandom.nextInt(999999).toString().padLeft(6, '0');
+    final filename = 'match_${rand}_${_formatFilenameTimestamp(DateTime.now())}';
     bool started;
     try {
       started = await _platform.startRecording(
@@ -232,33 +244,35 @@ abstract class RecordingPlatform {
 class _DefaultRecordingPlatform implements RecordingPlatform {
   const _DefaultRecordingPlatform();
 
+  // Native handlers live in MainActivity.kt + ArenaRecorderService.kt.
+  // We dropped the upstream flutter_screen_recording dependency so we
+  // could pick 360p / 500 kbps / 24 fps for a much smaller proof clip.
+  static const MethodChannel _channel = MethodChannel('arena/native');
+
   @override
   Future<bool> startRecording({
     required String filename,
     required String notificationTitle,
     required String notificationMessage,
-  }) {
+  }) async {
     if (!Platform.isAndroid) {
       // iOS: third-party recording is sandboxed away. Manual upload
       // is the only flow on iOS.
-      return Future.value(false);
+      return false;
     }
-    // Recording the *microphone* leaks the player's voice / room
-    // background to the admin reviewing the file — not what we want.
-    // Internal/playback audio (the actual game sound) would require
-    // AudioPlaybackCapture API which `flutter_screen_recording` does
-    // not expose. Until we patch the package, ship a silent video.
-    return FlutterScreenRecording.startRecordScreen(
-      filename,
-      titleNotification: notificationTitle,
-      messageNotification: notificationMessage,
-    );
+    final ok = await _channel.invokeMethod<bool>('startCustomRecording', {
+      'filename': filename,
+      'title': notificationTitle,
+      'message': notificationMessage,
+    });
+    return ok ?? false;
   }
 
   @override
   Future<String> stopRecording() async {
     if (!Platform.isAndroid) return '';
-    return FlutterScreenRecording.stopRecordScreen;
+    final path = await _channel.invokeMethod<String>('stopCustomRecording');
+    return path ?? '';
   }
 }
 
