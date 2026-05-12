@@ -16,15 +16,21 @@ class NotificationRepository {
 
   final SupabaseClient _client;
 
-  /// Realtime stream of every notification belonging to [userId], newest
-  /// first. RLS on `public.notifications` already filters by
-  /// `auth.uid() = user_id` so the `.eq()` here is defence in depth.
-  Stream<List<ArenaNotification>> watch(String userId) {
+  /// Realtime stream of the latest [limit] notifications belonging to
+  /// [userId], newest first. RLS on `public.notifications` already
+  /// filters by `auth.uid() = user_id` so the `.eq()` here is defence
+  /// in depth.
+  ///
+  /// The cap protects the home-page bell + notification center from
+  /// pulling thousands of rows for power users — older entries land
+  /// with a cursor-based loader in PHASE 12.5.
+  Stream<List<ArenaNotification>> watch(String userId, {int limit = 100}) {
     return _client
         .from(_table)
         .stream(primaryKey: ['id'])
         .eq('user_id', userId)
-        .order('created_at')
+        .order('created_at', ascending: false)
+        .limit(limit)
         .map(
           (rows) => [
             for (final row in rows) ArenaNotification.fromJson(row),

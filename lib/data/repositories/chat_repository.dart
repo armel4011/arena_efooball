@@ -41,17 +41,22 @@ class ChatRepository {
     return ChatChannel.fromJson(inserted);
   }
 
-  /// Realtime stream of every message in a channel, **oldest first**.
-  /// The Supabase `.stream().order()` chain doesn't reliably enforce the
-  /// order on realtime broadcast events, so we sort client-side as well
-  /// — the chat UI uses a `reverse: true` ListView so newest sits at
-  /// the bottom.
-  Stream<List<ChatMessage>> watchMessages(String channelId) {
+  /// Realtime stream of the **latest** [limit] messages in a channel,
+  /// oldest → newest after the client-side sort. We query the newest
+  /// first server-side so the limit caps the right window, then sort
+  /// ascending for the `reverse: true` ListView the chat UI uses.
+  ///
+  /// Older history (scroll-to-top) lands with the dedicated cursor
+  /// fetcher in PHASE 12.5; until then a 200-row cap is enough for a
+  /// match-scoped chat (PHASE 6 hard-caps the channel lifetime to one
+  /// match).
+  Stream<List<ChatMessage>> watchMessages(String channelId, {int limit = 200}) {
     return _client
         .from(_messagesTable)
         .stream(primaryKey: ['id'])
         .eq('channel_id', channelId)
-        .order('created_at')
+        .order('created_at', ascending: false)
+        .limit(limit)
         .map(
           (rows) => [
             for (final row in rows) ChatMessage.fromJson(row),

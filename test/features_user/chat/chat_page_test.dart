@@ -52,7 +52,7 @@ class _FakeChatRepository implements ChatRepository {
   }
 
   @override
-  Stream<List<ChatMessage>> watchMessages(String channelId) =>
+  Stream<List<ChatMessage>> watchMessages(String channelId, {int limit = 200}) =>
       Stream<List<ChatMessage>>.value(const []);
 
   @override
