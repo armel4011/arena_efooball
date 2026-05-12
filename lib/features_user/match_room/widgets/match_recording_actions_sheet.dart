@@ -108,14 +108,14 @@ class MatchRecordingActionsSheet extends ConsumerWidget {
                 },
               ),
             ] else
-              const Padding(
-                padding: EdgeInsets.symmetric(
+              Padding(
+                padding: const EdgeInsets.symmetric(
                   horizontal: ArenaSpacing.lg,
                   vertical: ArenaSpacing.md,
                 ),
                 child: Text(
                   'Aucun enregistrement en cours.',
-                  style: TextStyle(color: ArenaColors.silver),
+                  style: ArenaText.bodyMuted,
                 ),
               ),
           ],

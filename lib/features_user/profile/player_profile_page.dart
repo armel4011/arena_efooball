@@ -41,10 +41,10 @@ class PlayerProfilePage extends ConsumerWidget {
       ),
       data: (profile) {
         if (profile == null) {
-          return const Center(
+          return Center(
             child: Text(
               'Profil indisponible. Reconnecte-toi.',
-              style: TextStyle(color: ArenaColors.textMuted),
+              style: ArenaText.bodyMuted,
             ),
           );
         }

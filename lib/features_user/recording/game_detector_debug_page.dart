@@ -1,8 +1,8 @@
 import 'package:arena/core/services/game_detector_service.dart';
 import 'package:arena/core/services/permissions_service.dart';
-import 'package:arena/core/theme/arena_colors.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/target_game.dart';
+import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_card.dart';
 import 'package:flutter/material.dart';
@@ -57,10 +57,7 @@ class _GameDetectorDebugPageState extends State<GameDetectorDebugPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: ArenaColors.bg,
-      appBar: AppBar(
-        title: const Text('Game detector — DEBUG'),
-        backgroundColor: ArenaColors.bg,
-      ),
+      appBar: const ArenaAppBar(title: 'Game detector — DEBUG'),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(ArenaSpacing.md),

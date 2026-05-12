@@ -19,3 +19,11 @@ linter:
     document_ignores: false
     # We group deps by PHASE, not alphabetically — see pubspec.yaml.
     sort_pub_dependencies: false
+
+# Custom lints — design system guards
+# ─────────────────────────────────────────────────────────────────────────────
+# The analyzer can't natively enforce "no numeric literal in EdgeInsets/SizedBox"
+# yet (would need `custom_lint`, currently incompatible with analyzer 7.x — see
+# pubspec.yaml notes). Until then, run `scripts/check_spacing.sh` (or .ps1) to
+# scan lib/ for hardcoded spacing literals — the design system exposes
+# ArenaSpacing.{xs,sm,md,lg,xl,xxl,xxxl} and those should be used instead.

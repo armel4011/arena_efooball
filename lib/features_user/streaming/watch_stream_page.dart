@@ -2,6 +2,7 @@ import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:arena/core/services/agora_streaming_service.dart';
 import 'package:arena/core/services/match_viewers_service.dart';
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -56,10 +57,8 @@ class _WatchStreamPageState extends ConsumerState<WatchStreamPage> {
 
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        title: Text('Match #${widget.matchId.substring(0, 8)}'),
-        backgroundColor: Colors.black54,
-        foregroundColor: Colors.white,
+      appBar: ArenaAppBar(
+        title: 'Match #${widget.matchId.substring(0, 8)}',
         actions: [
           _ViewerCountBadge(matchId: widget.matchId),
           const SizedBox(width: ArenaSpacing.md),
@@ -71,7 +70,7 @@ class _WatchStreamPageState extends ConsumerState<WatchStreamPage> {
                 padding: const EdgeInsets.all(ArenaSpacing.lg),
                 child: Text(
                   _error!,
-                  style: TextStyle(color: ArenaColors.neonRed),
+                  style: ArenaText.body.copyWith(color: ArenaColors.neonRed),
                   textAlign: TextAlign.center,
                 ),
               ),

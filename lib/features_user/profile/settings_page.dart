@@ -310,9 +310,9 @@ class _PrivacySection extends StatelessWidget {
           ListTile(
             leading:
                 const Icon(Icons.delete_outline, color: ArenaColors.danger),
-            title: const Text(
+            title: Text(
               'Supprimer mon compte',
-              style: TextStyle(color: ArenaColors.danger),
+              style: ArenaText.body.copyWith(color: ArenaColors.danger),
             ),
             trailing:
                 const Icon(Icons.chevron_right, color: ArenaColors.danger),

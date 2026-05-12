@@ -1,4 +1,5 @@
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_user/chat/messages_inbox_page.dart';
 import 'package:arena/features_user/competitions/competitions_list_page.dart';
 import 'package:arena/features_user/home/home_page.dart';
@@ -32,11 +33,8 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          _titleForIndex(_currentIndex),
-          style: ArenaTypography.headlineMedium,
-        ),
+      appBar: ArenaAppBar(
+        title: _titleForIndex(_currentIndex),
         actions: [
           if (_currentIndex == 2) const InboxComposeAction(),
         ],
