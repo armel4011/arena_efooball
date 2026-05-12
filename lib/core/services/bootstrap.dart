@@ -1,7 +1,10 @@
 import 'dart:async';
 
 import 'package:arena/core/flavors/flavor_config.dart';
+import 'package:arena/core/services/notification_service.dart';
 import 'package:arena/core/services/onboarding_service.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -32,6 +35,7 @@ Future<void> bootstrap({
 
     await _loadEnv();
     await _initSupabase();
+    await _initFirebase();
 
     // Pre-load SharedPreferences so providers can read it synchronously.
     final prefs = await SharedPreferences.getInstance();
@@ -72,6 +76,25 @@ Future<void> _loadEnv() async {
   } catch (_) {
     if (kDebugMode) {
       debugPrint('[bootstrap] .env not loaded — falling back to empty env.');
+    }
+  }
+}
+
+/// Initialise Firebase + register the FCM background handler.
+///
+/// Android pulls config from `app/src/<flavor>/google-services.json` via
+/// the `com.google.gms.google-services` Gradle plugin. iOS lives behind
+/// PHASE 8b (Apple Developer account required), so any failure on that
+/// platform is logged but never crashes the boot.
+Future<void> _initFirebase() async {
+  try {
+    await Firebase.initializeApp();
+    FirebaseMessaging.onBackgroundMessage(
+      firebaseMessagingBackgroundHandler,
+    );
+  } catch (e, st) {
+    if (kDebugMode) {
+      debugPrint('[bootstrap] Firebase init skipped: $e\n$st');
     }
   }
 }

@@ -91,6 +91,11 @@ dependencies:
   permission_handler: ^11.3.1
   file_picker: ^8.1.2
 
+  # ─── PHASE 10 — Push notifications (FCM + in-app) ──────────
+  firebase_core: ^3.6.0
+  firebase_messaging: ^15.1.3
+  flutter_local_notifications: ^17.2.3
+
   # ─── DEFERRED (à activer dans leur PHASE) ──────────────────
   #
   # PHASE 2.3 — Social SSO (native config required)
@@ -102,10 +107,6 @@ dependencies:
   #
   # PHASE 8b — iOS Live Activity (requiert compte Apple Developer)
   # live_activities: ^2.4.9
-  #
-  # PHASE 10 — Push notifications
-  # firebase_core: ^3.6.0
-  # firebase_messaging: ^15.1.3
   #
   # PHASE 11bis — Paiements
   # webview_flutter: ^4.10.0

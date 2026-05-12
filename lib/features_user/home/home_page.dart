@@ -1,11 +1,14 @@
+import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/profile.dart';
+import 'package:arena/data/repositories/notification_repository.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
 import 'package:arena/features_shared/widgets/arena_banner.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 /// User dashboard.
 ///
@@ -93,16 +96,19 @@ class HomePage extends ConsumerWidget {
   }
 }
 
-class _Header extends StatelessWidget {
+class _Header extends ConsumerWidget {
   const _Header({required this.profile});
 
   final Profile? profile;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final username = profile?.username ?? 'Joueur';
     final initial = username.isEmpty ? '?' : username[0].toUpperCase();
     final color = _avatarColorFor(profile?.avatarColor);
+    final unread = profile == null
+        ? 0
+        : ref.watch(unreadNotificationCountProvider(profile!.id));
 
     return Container(
       padding: const EdgeInsets.fromLTRB(
@@ -156,34 +162,29 @@ class _Header extends StatelessWidget {
                   color: ArenaColors.silver,
                   size: 20,
                 ),
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Notifications push : PHASE 12.5 (FCM).'),
-                    ),
-                  );
-                },
+                onPressed: () => context.go(UserRoutes.notifications),
               ),
-              Positioned(
-                top: 6,
-                right: 4,
-                child: Container(
-                  width: 13,
-                  height: 13,
-                  alignment: Alignment.center,
-                  decoration: const BoxDecoration(
-                    color: ArenaColors.neonRed,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Text(
-                    '3',
-                    style: ArenaText.badge.copyWith(
-                      color: Colors.white,
-                      fontSize: 9,
+              if (unread > 0)
+                Positioned(
+                  top: 6,
+                  right: 4,
+                  child: Container(
+                    width: 13,
+                    height: 13,
+                    alignment: Alignment.center,
+                    decoration: const BoxDecoration(
+                      color: ArenaColors.neonRed,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      unread > 9 ? '9+' : '$unread',
+                      style: ArenaText.badge.copyWith(
+                        color: Colors.white,
+                        fontSize: 9,
+                      ),
                     ),
                   ),
                 ),
-              ),
             ],
           ),
         ],
