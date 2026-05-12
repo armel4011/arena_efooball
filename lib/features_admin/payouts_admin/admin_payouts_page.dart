@@ -1,31 +1,35 @@
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/data/models/payout.dart';
+import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
+import 'package:arena/data/repositories/admin/admin_payouts_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
+import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 /// PHASE 11 · A13 — payout validation page (CRITIQUE).
 ///
-/// Five automated checks per payout (KYC / no dispute / no anti-cheat /
-/// account not banned / valid MoMo number). Batch mode requires the
-/// admin to type the exact total amount as anti-mistake guard before
-/// validating multiple payouts in one go.
+/// Reads pending payouts via [adminPendingPayoutsProvider] and lets
+/// the admin validate them — flipping `payouts.status` to `validated`
+/// + recording an `admin_audit_log` row. The provider dispatch step
+/// (`validate_payout` Edge Function) lands in PHASE 11bis / 12.5.
 ///
 /// Maps to screen A13 of `arena_v2.html`.
-class AdminPayoutsPage extends StatefulWidget {
+class AdminPayoutsPage extends ConsumerStatefulWidget {
   const AdminPayoutsPage({super.key});
 
   @override
-  State<AdminPayoutsPage> createState() => _AdminPayoutsPageState();
+  ConsumerState<AdminPayoutsPage> createState() => _AdminPayoutsPageState();
 }
 
-class _AdminPayoutsPageState extends State<AdminPayoutsPage> {
+class _AdminPayoutsPageState extends ConsumerState<AdminPayoutsPage> {
   _PayoutMode _mode = _PayoutMode.oneByOne;
   final _batchCtrl = TextEditingController();
-
-  static const _expectedBatchTotal = 105000;
 
   @override
   void dispose() {
@@ -33,59 +37,64 @@ class _AdminPayoutsPageState extends State<AdminPayoutsPage> {
     super.dispose();
   }
 
-  bool get _batchEnabled =>
-      int.tryParse(_batchCtrl.text.replaceAll(' ', '')) ==
-      _expectedBatchTotal;
-
   @override
   Widget build(BuildContext context) {
+    final payouts = ref.watch(adminPendingPayoutsProvider);
+
     return Scaffold(
       appBar: const ArenaAppBar(title: 'Payouts — validation'),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(ArenaSpacing.lg),
-          children: [
-            _Summary(
-              mode: _mode,
-              onModeChanged: (m) => setState(() => _mode = m),
+        child: payouts.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Padding(
+            padding: const EdgeInsets.all(ArenaSpacing.lg),
+            child: Text(
+              'Erreur de chargement : $e',
+              style: ArenaText.bodyMuted,
             ),
-            const SizedBox(height: ArenaSpacing.lg),
-            Text('PAYOUT 1/12', style: ArenaText.inputLabel),
-            const SizedBox(height: ArenaSpacing.sm),
-            const _PayoutCard(
-              initials: 'K',
-              color: ArenaAvatarColor.blue,
-              name: 'KevinM_237',
-              meta: 'FIFA Cup · 🥇 1er',
-              amountLabel: '25 000 XAF',
-              method: 'MTN MoMo',
-              checks: _allOk,
-              border: ArenaColors.statusOk,
-              ctaLabel: '✅ VALIDER · 25 000 XAF',
-              ctaSuccess: true,
-            ),
-            const SizedBox(height: ArenaSpacing.sm),
-            const _PayoutCard(
-              initials: 'A',
-              color: ArenaAvatarColor.orange,
-              name: 'AhmedB',
-              meta: 'FIFA Cup · 🥈 2e',
-              amountLabel: '12 500 XAF',
-              method: 'Orange Money',
-              checks: _ahmedChecks,
-              border: ArenaColors.neonRed,
-              ctaLabel: '⚠ VOIR LE PROBLÈME',
-              ctaWarning: true,
-            ),
-            const SizedBox(height: ArenaSpacing.lg),
-            Text('MODE BATCH', style: ArenaText.inputLabel),
-            const SizedBox(height: ArenaSpacing.sm),
-            _BatchCard(
-              controller: _batchCtrl,
-              onChanged: (_) => setState(() {}),
-              enabled: _batchEnabled,
-            ),
-          ],
+          ),
+          data: (list) => ListView(
+            padding: const EdgeInsets.all(ArenaSpacing.lg),
+            children: [
+              _Summary(
+                mode: _mode,
+                onModeChanged: (m) => setState(() => _mode = m),
+                payouts: list,
+              ),
+              const SizedBox(height: ArenaSpacing.lg),
+              if (list.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(ArenaSpacing.lg),
+                  child: Text(
+                    '✅ Aucun payout en attente.',
+                    style: ArenaText.bodyMuted,
+                    textAlign: TextAlign.center,
+                  ),
+                )
+              else ...[
+                for (var i = 0; i < list.length; i++) ...[
+                  Text(
+                    'PAYOUT ${i + 1}/${list.length}',
+                    style: ArenaText.inputLabel,
+                  ),
+                  const SizedBox(height: ArenaSpacing.sm),
+                  _PayoutCard(payout: list[i]),
+                  const SizedBox(height: ArenaSpacing.md),
+                ],
+                if (_mode == _PayoutMode.batch) ...[
+                  Text('MODE BATCH', style: ArenaText.inputLabel),
+                  const SizedBox(height: ArenaSpacing.sm),
+                  _BatchCard(
+                    controller: _batchCtrl,
+                    payouts: list,
+                    onValidated: () {
+                      ref.invalidate(adminPendingPayoutsProvider);
+                    },
+                  ),
+                ],
+              ],
+            ],
+          ),
         ),
       ),
     );
@@ -94,36 +103,24 @@ class _AdminPayoutsPageState extends State<AdminPayoutsPage> {
 
 enum _PayoutMode { batch, oneByOne }
 
-class _Check {
-  const _Check({required this.label, required this.ok});
-  final String label;
-  final bool ok;
-}
-
-const _allOk = <_Check>[
-  _Check(label: 'KYC vérifié', ok: true),
-  _Check(label: 'Aucun litige ouvert', ok: true),
-  _Check(label: "Pas d'alerte anti-cheat", ok: true),
-  _Check(label: 'Compte non banni', ok: true),
-  _Check(label: 'Numéro MoMo validé', ok: true),
-];
-
-const _ahmedChecks = <_Check>[
-  _Check(label: 'KYC vérifié', ok: true),
-  _Check(label: 'Litige ouvert M-4282', ok: false),
-  _Check(label: "Pas d'alerte anti-cheat", ok: true),
-  _Check(label: 'Compte non banni', ok: true),
-  _Check(label: 'Numéro MoMo validé', ok: true),
-];
-
 class _Summary extends StatelessWidget {
-  const _Summary({required this.mode, required this.onModeChanged});
+  const _Summary({
+    required this.mode,
+    required this.onModeChanged,
+    required this.payouts,
+  });
 
   final _PayoutMode mode;
   final ValueChanged<_PayoutMode> onModeChanged;
+  final List<Payout> payouts;
 
   @override
   Widget build(BuildContext context) {
+    final total = payouts.fold<double>(0, (a, p) => a + p.amountLocal);
+    final fmt = NumberFormat('#,###', 'fr_FR')
+        .format(total.round())
+        .replaceAll(',', ' ');
+
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.lg),
       decoration: arenaDangerCardDecoration(),
@@ -136,14 +133,17 @@ class _Summary extends StatelessWidget {
                 Text('À verser', style: ArenaText.bodyMuted),
                 const SizedBox(height: 4),
                 Text(
-                  '145 000 XAF',
+                  '$fmt XAF',
                   style: ArenaText.bigNumber.copyWith(
                     color: ArenaColors.neonRed,
                     fontSize: 28,
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text('12 payouts pending', style: ArenaText.bodyMuted),
+                Text(
+                  '${payouts.length} payouts pending',
+                  style: ArenaText.bodyMuted,
+                ),
               ],
             ),
           ),
@@ -173,35 +173,20 @@ class _Summary extends StatelessWidget {
   }
 }
 
-class _PayoutCard extends StatelessWidget {
-  const _PayoutCard({
-    required this.initials,
-    required this.color,
-    required this.name,
-    required this.meta,
-    required this.amountLabel,
-    required this.method,
-    required this.checks,
-    required this.border,
-    required this.ctaLabel,
-    this.ctaSuccess = false,
-    this.ctaWarning = false,
-  });
-
-  final String initials;
-  final ArenaAvatarColor color;
-  final String name;
-  final String meta;
-  final String amountLabel;
-  final String method;
-  final List<_Check> checks;
-  final Color border;
-  final String ctaLabel;
-  final bool ctaSuccess;
-  final bool ctaWarning;
+class _PayoutCard extends ConsumerWidget {
+  const _PayoutCard({required this.payout});
+  final Payout payout;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final allOk = payout.allAutoChecksPassed;
+    final border = allOk ? ArenaColors.statusOk : ArenaColors.neonRed;
+    final amountFmt = NumberFormat('#,###', 'fr_FR')
+        .format(payout.amountLocal.round())
+        .replaceAll(',', ' ');
+
+    final checks = _buildChecks(payout);
+
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.md),
       decoration: BoxDecoration(
@@ -215,8 +200,8 @@ class _PayoutCard extends StatelessWidget {
           Row(
             children: [
               ArenaAvatar(
-                initials: initials,
-                color: color,
+                initials: payout.userId.substring(0, 1).toUpperCase(),
+                color: ArenaAvatarColor.blue,
                 size: ArenaAvatarSize.sm,
               ),
               const SizedBox(width: ArenaSpacing.sm),
@@ -225,12 +210,15 @@ class _PayoutCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      name,
+                      'User ${payout.userId.substring(0, 8)}',
                       style: ArenaText.body
                           .copyWith(fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 2),
-                    Text(meta, style: ArenaText.bodyMuted),
+                    Text(
+                      'Compétition ${payout.competitionId.substring(0, 8)}',
+                      style: ArenaText.bodyMuted,
+                    ),
                   ],
                 ),
               ),
@@ -238,22 +226,26 @@ class _PayoutCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    amountLabel,
+                    '$amountFmt ${payout.currency}',
                     style: ArenaText.mono.copyWith(
-                      color: ctaSuccess
-                          ? ArenaColors.statusOk
-                          : ArenaColors.silver,
+                      color: allOk ? ArenaColors.statusOk : ArenaColors.silver,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 2),
-                  Text(method, style: ArenaText.bodyMuted),
+                  Text(
+                    payout.payoutMethod ?? '—',
+                    style: ArenaText.bodyMuted,
+                  ),
                 ],
               ),
             ],
           ),
           const SizedBox(height: ArenaSpacing.sm),
-          Text('5 CONTRÔLES AUTO', style: ArenaText.inputLabel),
+          Text(
+            '${checks.length} CONTRÔLES AUTO',
+            style: ArenaText.inputLabel,
+          ),
           const SizedBox(height: ArenaSpacing.xs),
           for (final c in checks)
             Padding(
@@ -283,33 +275,239 @@ class _PayoutCard extends StatelessWidget {
               ),
             ),
           const SizedBox(height: ArenaSpacing.sm),
-          ArenaButton(
-            label: ctaLabel,
-            variant: ctaSuccess
-                ? ArenaButtonVariant.primary
-                : ArenaButtonVariant.secondary,
-            fullWidth: true,
-            onPressed: () {},
-          ),
+          if (allOk)
+            ArenaButton(
+              label: '✅ VALIDER · $amountFmt ${payout.currency}',
+              variant: ArenaButtonVariant.primary,
+              fullWidth: true,
+              onPressed: () => _validate(context, ref),
+            )
+          else
+            ArenaButton(
+              label: '⚠ REVUE MANUELLE',
+              variant: ArenaButtonVariant.secondary,
+              fullWidth: true,
+              onPressed: () => _manualReview(context, ref),
+            ),
         ],
       ),
     );
   }
+
+  Future<void> _validate(BuildContext context, WidgetRef ref) async {
+    final adminId = ref.read(currentSessionProvider)?.user.id;
+    if (adminId == null) return;
+    final justification = await _askJustification(
+      context,
+      title: 'Valider ce payout ?',
+      hint: 'Justification (vérifications effectuées)',
+    );
+    if (justification == null) return;
+    try {
+      await ref.read(adminPayoutsRepositoryProvider).validate(
+            payoutId: payout.id,
+            adminId: adminId,
+            justification: justification,
+          );
+      await ref.read(adminAuditLogRepositoryProvider).record(
+        adminId: adminId,
+        action: 'payout_validated',
+        targetType: 'payout',
+        targetId: payout.id,
+        afterState: {
+          'amount_local': payout.amountLocal,
+          'currency': payout.currency,
+          'justification': justification,
+        },
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Échec : $e')),
+      );
+    }
+  }
+
+  Future<void> _manualReview(BuildContext context, WidgetRef ref) async {
+    final adminId = ref.read(currentSessionProvider)?.user.id;
+    if (adminId == null) return;
+    final action = await showDialog<_PayoutAction>(
+      context: context,
+      builder: (c) => AlertDialog(
+        backgroundColor: ArenaColors.carbon,
+        title: Text('Revue manuelle', style: ArenaText.h3),
+        content: Text(
+          'Au moins une vérification automatique a échoué. Tu peux quand '
+          'même valider après revue, ou refuser le payout.',
+          style: ArenaText.bodyMuted,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(c).pop(_PayoutAction.cancel),
+            child: const Text('FERMER'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(c).pop(_PayoutAction.refuse),
+            style: TextButton.styleFrom(foregroundColor: ArenaColors.neonRed),
+            child: const Text('REFUSER'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(c).pop(_PayoutAction.validate),
+            child: const Text('VALIDER QUAND MÊME'),
+          ),
+        ],
+      ),
+    );
+    if (action == null || action == _PayoutAction.cancel) return;
+
+    if (!context.mounted) return;
+    final justification = await _askJustification(
+      context,
+      title: action == _PayoutAction.refuse
+          ? 'Refuser ce payout ?'
+          : 'Valider ce payout ?',
+      hint: 'Justification écrite (obligatoire)',
+    );
+    if (justification == null) return;
+
+    final repo = ref.read(adminPayoutsRepositoryProvider);
+    final audit = ref.read(adminAuditLogRepositoryProvider);
+    try {
+      if (action == _PayoutAction.validate) {
+        await repo.validate(
+          payoutId: payout.id,
+          adminId: adminId,
+          justification: justification,
+        );
+        await audit.record(
+          adminId: adminId,
+          action: 'payout_validated',
+          targetType: 'payout',
+          targetId: payout.id,
+          afterState: {
+            'justification': justification,
+            'override': true,
+          },
+        );
+      } else {
+        await repo.refuse(
+          payoutId: payout.id,
+          adminId: adminId,
+          justification: justification,
+        );
+        await audit.record(
+          adminId: adminId,
+          action: 'payout_refused',
+          targetType: 'payout',
+          targetId: payout.id,
+          afterState: {'justification': justification},
+        );
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Échec : $e')),
+      );
+    }
+  }
+
+  Future<String?> _askJustification(
+    BuildContext context, {
+    required String title,
+    required String hint,
+  }) async {
+    final ctrl = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (c) => AlertDialog(
+        backgroundColor: ArenaColors.carbon,
+        title: Text(title, style: ArenaText.h3),
+        content: ArenaTextField(controller: ctrl, hint: hint, maxLines: 3),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(c).pop(),
+            child: const Text('ANNULER'),
+          ),
+          TextButton(
+            onPressed: () {
+              final v = ctrl.text.trim();
+              if (v.isEmpty) return;
+              Navigator.of(c).pop(v);
+            },
+            child: const Text('CONFIRMER'),
+          ),
+        ],
+      ),
+    );
+    ctrl.dispose();
+    return result;
+  }
+
+  static List<_Check> _buildChecks(Payout payout) {
+    final raw = payout.autoChecks;
+    if (raw.isEmpty) {
+      return const [_Check(label: 'Aucun contrôle auto', ok: false)];
+    }
+    return [
+      for (final entry in raw.entries)
+        _Check(label: _labelFor(entry.key), ok: entry.value == true),
+    ];
+  }
+
+  static String _labelFor(String key) {
+    switch (key) {
+      case 'kyc_verified':
+      case 'kyc':
+        return 'KYC vérifié';
+      case 'no_dispute':
+        return 'Aucun litige ouvert';
+      case 'no_anti_cheat':
+      case 'anti_cheat':
+        return "Pas d'alerte anti-cheat";
+      case 'not_banned':
+      case 'account_active':
+        return 'Compte non banni';
+      case 'momo_valid':
+      case 'payment_destination':
+        return 'Destination paiement valide';
+      default:
+        return key.replaceAll('_', ' ');
+    }
+  }
 }
 
-class _BatchCard extends StatelessWidget {
+enum _PayoutAction { validate, refuse, cancel }
+
+class _Check {
+  const _Check({required this.label, required this.ok});
+  final String label;
+  final bool ok;
+}
+
+class _BatchCard extends ConsumerWidget {
   const _BatchCard({
     required this.controller,
-    required this.onChanged,
-    required this.enabled,
+    required this.payouts,
+    required this.onValidated,
   });
 
   final TextEditingController controller;
-  final ValueChanged<String> onChanged;
-  final bool enabled;
+  final List<Payout> payouts;
+  final VoidCallback onValidated;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final eligible = payouts.where((p) => p.allAutoChecksPassed).toList();
+    final expectedTotal = eligible.fold<double>(
+      0,
+      (acc, p) => acc + p.amountLocal,
+    );
+    final fmt = NumberFormat('#,###', 'fr_FR')
+        .format(expectedTotal.round())
+        .replaceAll(',', ' ');
+    final typed = int.tryParse(controller.text.replaceAll(' ', '')) ?? 0;
+    final enabled = eligible.isNotEmpty && typed == expectedTotal.round();
+
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.md),
       decoration: arenaWarningCardDecoration(),
@@ -325,23 +523,23 @@ class _BatchCard extends StatelessWidget {
                   text: 'Anti-erreur : ',
                   style: ArenaText.body.copyWith(fontWeight: FontWeight.w700),
                 ),
-                const TextSpan(
-                  text: 'tape le total à verser pour valider 8 payouts '
-                      'éligibles.',
+                TextSpan(
+                  text: 'tape le total à verser pour valider '
+                      '${eligible.length} payouts éligibles.',
                 ),
               ],
             ),
           ),
           const SizedBox(height: ArenaSpacing.sm),
           Text(
-            'Total attendu : 105 000 XAF',
+            'Total attendu : $fmt XAF',
             style: ArenaText.inputLabel,
           ),
           const SizedBox(height: ArenaSpacing.xs),
           ArenaTextField(
             controller: controller,
             hint: 'Tape le montant…',
-            onChanged: onChanged,
+            keyboardType: TextInputType.number,
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'[0-9 ]')),
               LengthLimitingTextInputFormatter(10),
@@ -349,13 +547,57 @@ class _BatchCard extends StatelessWidget {
           ),
           const SizedBox(height: ArenaSpacing.sm),
           ArenaButton(
-            label: '🔒 VALIDER 8 PAYOUTS',
+            label: '🔒 VALIDER ${eligible.length} PAYOUTS',
             variant: ArenaButtonVariant.danger,
             fullWidth: true,
-            onPressed: enabled ? () {} : null,
+            onPressed:
+                enabled ? () => _runBatch(context, ref, eligible) : null,
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _runBatch(
+    BuildContext context,
+    WidgetRef ref,
+    List<Payout> eligible,
+  ) async {
+    final adminId = ref.read(currentSessionProvider)?.user.id;
+    if (adminId == null) return;
+    final repo = ref.read(adminPayoutsRepositoryProvider);
+    final audit = ref.read(adminAuditLogRepositoryProvider);
+    final justification =
+        'Validation batch (${eligible.length} payouts) — anti-erreur OK.';
+    try {
+      for (final p in eligible) {
+        await repo.validate(
+          payoutId: p.id,
+          adminId: adminId,
+          justification: justification,
+        );
+        await audit.record(
+          adminId: adminId,
+          action: 'payout_validated',
+          targetType: 'payout',
+          targetId: p.id,
+          afterState: {
+            'amount_local': p.amountLocal,
+            'batch': true,
+          },
+        );
+      }
+      controller.clear();
+      onValidated();
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${eligible.length} payouts validés.')),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Échec : $e')),
+      );
+    }
   }
 }

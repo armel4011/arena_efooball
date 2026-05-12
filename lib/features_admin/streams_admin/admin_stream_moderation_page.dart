@@ -1,132 +1,121 @@
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/data/models/match_stream.dart';
+import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
+import 'package:arena/data/repositories/match_stream_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
-import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
+import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// PHASE 11 · A12 — multi-stream moderation grid.
 ///
-/// 2x2 (or larger) grid of mini Agora subscribers, capped at 6 active
-/// streams per moderator session. Each tile carries a kill-switch that
-/// disconnects the broadcaster + a chat shortcut. Bottom card shows the
-/// global chat aggregated across streams.
+/// Reads live public streams via [activePublicStreamsProvider]
+/// (realtime). The cap is informational (V1.0 won't enforce a hard
+/// max); the kill switch flips `streams.is_public = false` so the
+/// stream drops out of the user-facing `LiveStreamsPage` immediately.
+/// Every cut is appended to the audit log.
 ///
 /// Maps to screen A12 of `arena_v2.html`.
-class AdminStreamModerationPage extends StatelessWidget {
+class AdminStreamModerationPage extends ConsumerWidget {
   const AdminStreamModerationPage({super.key});
 
-  static const _streams = <_Stream>[
-    _Stream(
-      label: 'FIFA · Finale',
-      players: 'KevinM vs DianaA',
-      viewers: 1247,
-      gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFF1A3A6C), Color(0xFF2C0A1F)],
-      ),
-      flagged: true,
+  static const _capacity = 6;
+  static const _gradients = <LinearGradient>[
+    LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFF1A3A6C), Color(0xFF2C0A1F)],
     ),
-    _Stream(
-      label: 'eFoot · Demi',
-      players: 'SamuelK vs LindaO',
-      viewers: 432,
-      gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFF1A3A1A), Color(0xFF0A1A0A)],
-      ),
+    LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFF1A3A1A), Color(0xFF0A1A0A)],
     ),
-    _Stream(
-      label: 'EA FC · Quart',
-      players: 'PaulN vs FatimaH',
-      viewers: 218,
-      gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFF3A2200), Color(0xFF1A0A00)],
-      ),
+    LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFF3A2200), Color(0xFF1A0A00)],
+    ),
+    LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFF3A0A6C), Color(0xFF1A0A30)],
     ),
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final streams = ref.watch(activePublicStreamsProvider);
+
     return Scaffold(
-      appBar: ArenaAppBar(
-        title: 'Modération streams',
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.more_horiz, color: ArenaColors.silver),
-            onPressed: () {},
-          ),
-        ],
-      ),
+      appBar: const ArenaAppBar(title: 'Modération streams'),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(ArenaSpacing.lg),
-          children: [
-            const _SummaryCard(),
-            const SizedBox(height: ArenaSpacing.md),
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              childAspectRatio: 0.95,
-              crossAxisSpacing: ArenaSpacing.xs,
-              mainAxisSpacing: ArenaSpacing.xs,
-              children: [
-                for (final s in _streams) _StreamTile(stream: s),
-                const _EmptySlot(used: 3, total: 6),
-              ],
+        child: streams.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Padding(
+            padding: const EdgeInsets.all(ArenaSpacing.lg),
+            child: Text(
+              'Erreur de chargement : $e',
+              style: ArenaText.bodyMuted,
             ),
-            const SizedBox(height: ArenaSpacing.lg),
-            Text(
-              'CHAT GLOBAL — TOUS STREAMS',
-              style: ArenaText.inputLabel,
-            ),
-            const SizedBox(height: ArenaSpacing.sm),
-            const _ChatRow(
-              initial: 'L',
-              color: ArenaAvatarColor.purple,
-              user: 'LindaO',
-              streamRef: 'stream FIFA',
-              message: 'Allez Diana 🔥',
-            ),
-            const SizedBox(height: ArenaSpacing.md),
-            Container(
-              padding: const EdgeInsets.all(ArenaSpacing.md),
-              decoration: arenaWarningCardDecoration(),
-              child: Text(
-                '⚠ Couper un stream est journalisé dans admin_audit_log '
-                'avec ton ID admin.',
-                style: ArenaText.body,
+          ),
+          data: (list) => ListView(
+            padding: const EdgeInsets.all(ArenaSpacing.lg),
+            children: [
+              _SummaryCard(streams: list),
+              const SizedBox(height: ArenaSpacing.md),
+              if (list.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(ArenaSpacing.lg),
+                  child: Text(
+                    'Aucun stream public actif.',
+                    style: ArenaText.bodyMuted,
+                    textAlign: TextAlign.center,
+                  ),
+                )
+              else
+                GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: 2,
+                  childAspectRatio: 0.95,
+                  crossAxisSpacing: ArenaSpacing.xs,
+                  mainAxisSpacing: ArenaSpacing.xs,
+                  children: [
+                    for (var i = 0; i < list.length; i++)
+                      _StreamTile(
+                        stream: list[i],
+                        gradient: _gradients[i % _gradients.length],
+                      ),
+                    if (list.length < _capacity)
+                      _EmptySlot(
+                        used: list.length,
+                        total: _capacity,
+                      ),
+                  ],
+                ),
+              const SizedBox(height: ArenaSpacing.lg),
+              Container(
+                padding: const EdgeInsets.all(ArenaSpacing.md),
+                decoration: arenaWarningCardDecoration(),
+                child: Text(
+                  '⚠ Couper un stream est journalisé dans admin_audit_log '
+                  'avec ton ID admin.',
+                  style: ArenaText.body,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _Stream {
-  const _Stream({
-    required this.label,
-    required this.players,
-    required this.viewers,
-    required this.gradient,
-    this.flagged = false,
-  });
-
-  final String label;
-  final String players;
-  final int viewers;
-  final LinearGradient gradient;
-  final bool flagged;
-}
-
 class _SummaryCard extends StatelessWidget {
-  const _SummaryCard();
+  const _SummaryCard({required this.streams});
+  final List<MatchStream> streams;
 
   @override
   Widget build(BuildContext context) {
@@ -139,46 +128,39 @@ class _SummaryCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('3 streams actifs', style: ArenaText.h3),
+                Text(
+                  '${streams.length} stream${streams.length > 1 ? 's' : ''} actif${streams.length > 1 ? 's' : ''}',
+                  style: ArenaText.h3,
+                ),
                 const SizedBox(height: 2),
-                Text('Sur 6 max simultanés', style: ArenaText.bodyMuted),
+                Text(
+                  'Sur ${AdminStreamModerationPage._capacity} max simultanés',
+                  style: ArenaText.bodyMuted,
+                ),
               ],
             ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              const ArenaBadge(
-                label: 'LIVE',
-                variant: ArenaBadgeVariant.live,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '1 897 👁',
-                style: ArenaText.mono.copyWith(fontWeight: FontWeight.w700),
-              ),
-            ],
-          ),
+          if (streams.isNotEmpty)
+            const ArenaBadge(label: 'LIVE', variant: ArenaBadgeVariant.live),
         ],
       ),
     );
   }
 }
 
-class _StreamTile extends StatelessWidget {
-  const _StreamTile({required this.stream});
+class _StreamTile extends ConsumerWidget {
+  const _StreamTile({required this.stream, required this.gradient});
 
-  final _Stream stream;
+  final MatchStream stream;
+  final LinearGradient gradient;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       decoration: BoxDecoration(
         color: ArenaColors.carbon,
         borderRadius: BorderRadius.circular(ArenaRadius.lg),
-        border: Border.all(
-          color: stream.flagged ? ArenaColors.neonRed : ArenaColors.border,
-        ),
+        border: Border.all(color: ArenaColors.border),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -188,40 +170,21 @@ class _StreamTile extends StatelessWidget {
             children: [
               Container(
                 height: 80,
-                decoration: BoxDecoration(gradient: stream.gradient),
+                decoration: BoxDecoration(gradient: gradient),
               ),
-              Positioned(
+              const Positioned(
                 top: 4,
                 left: 4,
-                child: const ArenaBadge(
+                child: ArenaBadge(
                   label: 'LIVE',
                   variant: ArenaBadgeVariant.live,
-                ),
-              ),
-              Positioned(
-                top: 4,
-                right: 4,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.6),
-                    borderRadius:
-                        BorderRadius.circular(ArenaRadius.round),
-                  ),
-                  child: Text(
-                    '👁 ${stream.viewers}',
-                    style: ArenaText.badge.copyWith(color: Colors.white),
-                  ),
                 ),
               ),
               Positioned(
                 bottom: 4,
                 left: 4,
                 child: Text(
-                  stream.label,
+                  'M-${stream.matchId.substring(0, 6)}',
                   style: ArenaText.body.copyWith(
                     color: Colors.white,
                     fontSize: 9,
@@ -237,22 +200,14 @@ class _StreamTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  stream.players,
+                  'Streamer ${stream.playerId.substring(0, 6)}',
                   style: ArenaText.body.copyWith(fontSize: 9),
                 ),
                 const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _MiniButton(
-                        label: '🔇 COUPER',
-                        onTap: () {},
-                        danger: true,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    _MiniButton(label: '💬', onTap: () {}),
-                  ],
+                _MiniButton(
+                  label: '🔇 COUPER',
+                  danger: true,
+                  onTap: () => _cut(context, ref),
                 ),
               ],
             ),
@@ -260,6 +215,54 @@ class _StreamTile extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _cut(BuildContext context, WidgetRef ref) async {
+    final adminId = ref.read(currentSessionProvider)?.user.id;
+    if (adminId == null) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        backgroundColor: ArenaColors.carbon,
+        title: Text('Couper ce stream ?', style: ArenaText.h3),
+        content: Text(
+          'Le stream sera retiré de la liste publique et les viewers '
+          'seront déconnectés.',
+          style: ArenaText.bodyMuted,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(c).pop(false),
+            child: const Text('ANNULER'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(c).pop(true),
+            style: TextButton.styleFrom(foregroundColor: ArenaColors.neonRed),
+            child: const Text('COUPER'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+
+    try {
+      await ref.read(matchStreamRepositoryProvider).setStreamingPublic(
+            streamId: stream.id,
+            isPublic: false,
+          );
+      await ref.read(adminAuditLogRepositoryProvider).record(
+        adminId: adminId,
+        action: 'stream_cut',
+        targetType: 'stream',
+        targetId: stream.id,
+        afterState: {'match_id': stream.matchId},
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Échec : $e')),
+      );
+    }
   }
 }
 
@@ -335,76 +338,6 @@ class _MiniButton extends StatelessWidget {
             fontSize: 9,
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _ChatRow extends StatelessWidget {
-  const _ChatRow({
-    required this.initial,
-    required this.color,
-    required this.user,
-    required this.streamRef,
-    required this.message,
-  });
-
-  final String initial;
-  final ArenaAvatarColor color;
-  final String user;
-  final String streamRef;
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(ArenaSpacing.sm),
-      decoration: BoxDecoration(
-        color: ArenaColors.carbon,
-        borderRadius: BorderRadius.circular(ArenaRadius.lg),
-        border: Border.all(color: ArenaColors.border),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ArenaAvatar(
-            initials: initial,
-            color: color,
-            size: ArenaAvatarSize.sm,
-          ),
-          const SizedBox(width: ArenaSpacing.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                RichText(
-                  text: TextSpan(
-                    style: ArenaText.bodyMuted,
-                    children: [
-                      TextSpan(
-                        text: user,
-                        style: ArenaText.body.copyWith(
-                          color: ArenaColors.neonRed,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      TextSpan(text: ' · $streamRef'),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(message, style: ArenaText.body),
-              ],
-            ),
-          ),
-          IconButton(
-            tooltip: 'Bannir',
-            iconSize: 18,
-            color: ArenaColors.neonRed,
-            icon: const Icon(Icons.block),
-            onPressed: () {},
-          ),
-        ],
       ),
     );
   }

@@ -1,98 +1,96 @@
+import 'package:arena/core/router/admin_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/data/models/admin_audit_log.dart';
+import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
+import 'package:arena/data/repositories/admin/admin_kpis_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 /// PHASE 11 · A6 — admin home / KPI dashboard.
 ///
-/// Three sections: KPI grid (active comps / matches / disputes / pending
-/// payouts), alert cards (urgent disputes + payouts > 24h) and quick
-/// actions + recent activity feed. Backend wires to the
-/// `admin_kpis` view in PHASE 11.
+/// KPIs come from [adminKpisProvider] (live counts of competitions /
+/// matches / disputes / pending payouts). The activity feed reads the
+/// last 5 admin actions from `admin_audit_log`. Quick actions route
+/// to the relevant section. The two alert cards stay heuristic for
+/// now — a proper "stale dispute" / "old payout" gating belongs in
+/// a future ranking query.
 ///
 /// Maps to screen A6 of `arena_v2.html`.
-class AdminDashboardPage extends StatelessWidget {
+class AdminDashboardPage extends ConsumerWidget {
   const AdminDashboardPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final kpis = ref.watch(adminKpisProvider);
+    final recent = ref.watch(
+      adminAuditLogProvider(const AdminAuditLogFilter(periodDays: 7)),
+    );
+
     return Scaffold(
       appBar: const ArenaAppBar(
         title: 'Dashboard',
         showBack: false,
       ),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(ArenaSpacing.lg),
-          children: [
-            Text('KPIs LIVE', style: ArenaText.inputLabel),
-            const SizedBox(height: ArenaSpacing.sm),
-            const _KpiGrid().animate().fadeIn(
-                  duration: ArenaDurations.medium,
-                ),
-            const SizedBox(height: ArenaSpacing.md),
-            const _PayoutsKpi().animate(delay: 100.ms).fadeIn(
-                  duration: ArenaDurations.medium,
-                ),
-            const SizedBox(height: ArenaSpacing.lg),
-            Text('🚨 Alertes', style: ArenaText.h3),
-            const SizedBox(height: ArenaSpacing.sm),
-            _AlertCard(
-              decoration: arenaDangerCardDecoration(),
-              icon: '⚠',
-              title: '3 disputes urgentes (>10 min)',
-              subtitle: 'M-4287, M-4289, M-4291',
-              accent: ArenaColors.neonRed,
-            ).animate(delay: 200.ms).fadeIn(duration: ArenaDurations.medium),
-            const SizedBox(height: ArenaSpacing.sm),
-            _AlertCard(
-              decoration: arenaWarningCardDecoration(),
-              icon: '⏱',
-              title: 'Payouts en attente > 24h',
-              subtitle: '5 joueurs concernés',
-              accent: ArenaColors.statusWarn,
-            ).animate(delay: 250.ms).fadeIn(duration: ArenaDurations.medium),
-            const SizedBox(height: ArenaSpacing.lg),
-            Text('⚡ Quick actions', style: ArenaText.h3),
-            const SizedBox(height: ArenaSpacing.sm),
-            ArenaButton(
-              label: '+ NOUVELLE COMPÉTITION',
-              fullWidth: true,
-              onPressed: () {},
-            ),
-            const SizedBox(height: ArenaSpacing.xs),
-            ArenaButton(
-              label: '⚖ VOIR LES DISPUTES',
-              fullWidth: true,
-              variant: ArenaButtonVariant.secondary,
-              onPressed: () {},
-            ),
-            const SizedBox(height: ArenaSpacing.xs),
-            ArenaButton(
-              label: '💰 VALIDER PAYOUTS',
-              fullWidth: true,
-              variant: ArenaButtonVariant.secondary,
-              onPressed: () {},
-            ),
-            const SizedBox(height: ArenaSpacing.lg),
-            Text('📜 Activité récente', style: ArenaText.h3),
-            const SizedBox(height: ArenaSpacing.sm),
-            const _ActivityRow(
-              initials: 'M1',
-              color: ArenaAvatarColor.cyan,
-              title: 'Modérateur1 a validé un payout',
-              meta: 'il y a 5 min · 25 000 XAF',
-            ),
-            const SizedBox(height: ArenaSpacing.xs),
-            const _ActivityRow(
-              initials: 'AP',
-              color: ArenaAvatarColor.orange,
-              title: 'Admin a tranché dispute M-4282',
-              meta: 'il y a 12 min · score 3-1 validé',
-            ),
-          ],
+        child: RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(adminKpisProvider);
+            ref.invalidate(adminAuditLogProvider);
+          },
+          child: ListView(
+            padding: const EdgeInsets.all(ArenaSpacing.lg),
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: [
+              Text('KPIs LIVE', style: ArenaText.inputLabel),
+              const SizedBox(height: ArenaSpacing.sm),
+              _KpiGrid(kpis: kpis).animate().fadeIn(
+                    duration: ArenaDurations.medium,
+                  ),
+              const SizedBox(height: ArenaSpacing.md),
+              _PayoutsKpi(kpis: kpis).animate(delay: 100.ms).fadeIn(
+                    duration: ArenaDurations.medium,
+                  ),
+              const SizedBox(height: ArenaSpacing.lg),
+              Text('🚨 Alertes', style: ArenaText.h3),
+              const SizedBox(height: ArenaSpacing.sm),
+              _AlertCards(kpis: kpis)
+                  .animate(delay: 200.ms)
+                  .fadeIn(duration: ArenaDurations.medium),
+              const SizedBox(height: ArenaSpacing.lg),
+              Text('⚡ Quick actions', style: ArenaText.h3),
+              const SizedBox(height: ArenaSpacing.sm),
+              ArenaButton(
+                label: '+ NOUVELLE COMPÉTITION',
+                fullWidth: true,
+                onPressed: () =>
+                    context.go(AdminRoutes.competitionsCreate),
+              ),
+              const SizedBox(height: ArenaSpacing.xs),
+              ArenaButton(
+                label: '⚖ VOIR LES DISPUTES',
+                fullWidth: true,
+                variant: ArenaButtonVariant.secondary,
+                onPressed: () => context.go(AdminRoutes.matches),
+              ),
+              const SizedBox(height: ArenaSpacing.xs),
+              ArenaButton(
+                label: '💰 VALIDER PAYOUTS',
+                fullWidth: true,
+                variant: ArenaButtonVariant.secondary,
+                onPressed: () => context.go(AdminRoutes.payouts),
+              ),
+              const SizedBox(height: ArenaSpacing.lg),
+              Text('📜 Activité récente', style: ArenaText.h3),
+              const SizedBox(height: ArenaSpacing.sm),
+              _RecentActivity(entries: recent),
+            ],
+          ),
         ),
       ),
     );
@@ -100,15 +98,29 @@ class AdminDashboardPage extends StatelessWidget {
 }
 
 class _KpiGrid extends StatelessWidget {
-  const _KpiGrid();
+  const _KpiGrid({required this.kpis});
+  final AsyncValue<AdminKpis> kpis;
 
   @override
   Widget build(BuildContext context) {
+    final activeComps = kpis.maybeWhen(
+      data: (k) => k.activeCompetitions.toString(),
+      orElse: () => '—',
+    );
+    final liveMatches = kpis.maybeWhen(
+      data: (k) => k.liveMatches.toString(),
+      orElse: () => '—',
+    );
+    final disputes = kpis.maybeWhen(
+      data: (k) => k.openDisputes.toString(),
+      orElse: () => '—',
+    );
+
     return Row(
       children: [
         Expanded(
           child: _KpiTile(
-            value: '42',
+            value: activeComps,
             label: 'Compét. actives',
             border: ArenaColors.signalBlue,
           ),
@@ -116,7 +128,7 @@ class _KpiGrid extends StatelessWidget {
         const SizedBox(width: ArenaSpacing.sm),
         Expanded(
           child: _KpiTile(
-            value: '187',
+            value: liveMatches,
             label: 'Matchs en cours',
             border: ArenaColors.statusWarn,
             valueColor: ArenaColors.statusWarn,
@@ -125,7 +137,7 @@ class _KpiGrid extends StatelessWidget {
         const SizedBox(width: ArenaSpacing.sm),
         Expanded(
           child: _KpiTile(
-            value: '7',
+            value: disputes,
             label: 'Disputes',
             border: ArenaColors.neonRed,
             valueColor: ArenaColors.neonRed,
@@ -182,10 +194,22 @@ class _KpiTile extends StatelessWidget {
 }
 
 class _PayoutsKpi extends StatelessWidget {
-  const _PayoutsKpi();
+  const _PayoutsKpi({required this.kpis});
+  final AsyncValue<AdminKpis> kpis;
 
   @override
   Widget build(BuildContext context) {
+    final count = kpis.maybeWhen(
+      data: (k) => k.pendingPayouts.toString(),
+      orElse: () => '—',
+    );
+    final amount = kpis.maybeWhen(
+      data: (k) => NumberFormat('#,###', 'fr_FR')
+          .format(k.pendingPayoutsAmountLocal.round())
+          .replaceAll(',', ' '),
+      orElse: () => '—',
+    );
+
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.lg),
       decoration: BoxDecoration(
@@ -196,7 +220,7 @@ class _PayoutsKpi extends StatelessWidget {
       child: Row(
         children: [
           Text(
-            '12',
+            count,
             style: ArenaText.bigNumber.copyWith(
               color: ArenaColors.neonRed,
               fontSize: 24,
@@ -205,12 +229,67 @@ class _PayoutsKpi extends StatelessWidget {
           const SizedBox(width: ArenaSpacing.md),
           Expanded(
             child: Text(
-              'Payouts en attente · 145 000 XAF',
+              'Payouts en attente · $amount XAF',
               style: ArenaText.body,
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _AlertCards extends StatelessWidget {
+  const _AlertCards({required this.kpis});
+  final AsyncValue<AdminKpis> kpis;
+
+  @override
+  Widget build(BuildContext context) {
+    final disputes = kpis.maybeWhen(
+      data: (k) => k.openDisputes,
+      orElse: () => 0,
+    );
+    final pendingPayouts = kpis.maybeWhen(
+      data: (k) => k.pendingPayouts,
+      orElse: () => 0,
+    );
+
+    if (disputes == 0 && pendingPayouts == 0) {
+      return Container(
+        padding: const EdgeInsets.all(ArenaSpacing.md),
+        decoration: BoxDecoration(
+          color: ArenaColors.carbon,
+          borderRadius: BorderRadius.circular(ArenaRadius.lg),
+          border: Border.all(color: ArenaColors.border),
+        ),
+        child: Text(
+          '✅ Aucune alerte — bonne journée.',
+          style: ArenaText.bodyMuted,
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        if (disputes > 0)
+          _AlertCard(
+            decoration: arenaDangerCardDecoration(),
+            icon: '⚠',
+            title: '$disputes ${disputes == 1 ? 'dispute ouverte' : 'disputes ouvertes'}',
+            subtitle: 'À traiter dans l\'onglet Matchs',
+            accent: ArenaColors.neonRed,
+          ),
+        if (disputes > 0 && pendingPayouts > 0)
+          const SizedBox(height: ArenaSpacing.sm),
+        if (pendingPayouts > 0)
+          _AlertCard(
+            decoration: arenaWarningCardDecoration(),
+            icon: '⏱',
+            title: 'Payouts en attente de validation',
+            subtitle: '$pendingPayouts ${pendingPayouts == 1 ? 'joueur concerné' : 'joueurs concernés'}',
+            accent: ArenaColors.statusWarn,
+          ),
+      ],
     );
   }
 }
@@ -259,21 +338,50 @@ class _AlertCard extends StatelessWidget {
   }
 }
 
-class _ActivityRow extends StatelessWidget {
-  const _ActivityRow({
-    required this.initials,
-    required this.color,
-    required this.title,
-    required this.meta,
-  });
-
-  final String initials;
-  final ArenaAvatarColor color;
-  final String title;
-  final String meta;
+class _RecentActivity extends StatelessWidget {
+  const _RecentActivity({required this.entries});
+  final AsyncValue<List<AdminAuditLog>> entries;
 
   @override
   Widget build(BuildContext context) {
+    return entries.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.all(ArenaSpacing.md),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, _) => Padding(
+        padding: const EdgeInsets.all(ArenaSpacing.md),
+        child: Text('Erreur de chargement : $e', style: ArenaText.bodyMuted),
+      ),
+      data: (list) {
+        final recent = list.take(5).toList(growable: false);
+        if (recent.isEmpty) {
+          return Text(
+            'Aucune action récente.',
+            style: ArenaText.bodyMuted,
+          );
+        }
+        return Column(
+          children: [
+            for (var i = 0; i < recent.length; i++) ...[
+              _ActivityRow(entry: recent[i]),
+              if (i != recent.length - 1)
+                const SizedBox(height: ArenaSpacing.xs),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ActivityRow extends StatelessWidget {
+  const _ActivityRow({required this.entry});
+  final AdminAuditLog entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final visual = _visualFor(entry.action);
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.sm),
       decoration: BoxDecoration(
@@ -284,8 +392,8 @@ class _ActivityRow extends StatelessWidget {
       child: Row(
         children: [
           ArenaAvatar(
-            initials: initials,
-            color: color,
+            initials: visual.emoji,
+            color: visual.color,
             size: ArenaAvatarSize.sm,
           ),
           const SizedBox(width: ArenaSpacing.sm),
@@ -293,9 +401,12 @@ class _ActivityRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: ArenaText.body),
+                Text(visual.label, style: ArenaText.body),
                 const SizedBox(height: 2),
-                Text(meta, style: ArenaText.bodyMuted),
+                Text(
+                  _formatTimestamp(entry.createdAt),
+                  style: ArenaText.bodyMuted,
+                ),
               ],
             ),
           ),
@@ -303,4 +414,91 @@ class _ActivityRow extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ActivityVisual {
+  const _ActivityVisual({
+    required this.emoji,
+    required this.color,
+    required this.label,
+  });
+  final String emoji;
+  final ArenaAvatarColor color;
+  final String label;
+}
+
+_ActivityVisual _visualFor(String action) {
+  switch (action) {
+    case 'payout_validated':
+      return const _ActivityVisual(
+        emoji: '💰',
+        color: ArenaAvatarColor.green,
+        label: 'Payout validé',
+      );
+    case 'payout_refused':
+      return const _ActivityVisual(
+        emoji: '🚫',
+        color: ArenaAvatarColor.red,
+        label: 'Payout refusé',
+      );
+    case 'dispute_resolved':
+      return const _ActivityVisual(
+        emoji: '⚖',
+        color: ArenaAvatarColor.orange,
+        label: 'Dispute tranchée',
+      );
+    case 'user_banned':
+      return const _ActivityVisual(
+        emoji: '🚫',
+        color: ArenaAvatarColor.red,
+        label: 'Utilisateur banni',
+      );
+    case 'user_unbanned':
+      return const _ActivityVisual(
+        emoji: '✅',
+        color: ArenaAvatarColor.green,
+        label: 'Utilisateur réactivé',
+      );
+    case 'match_verdict':
+      return const _ActivityVisual(
+        emoji: '⚽',
+        color: ArenaAvatarColor.blue,
+        label: 'Score validé',
+      );
+    case 'bracket_generated':
+      return const _ActivityVisual(
+        emoji: '🏆',
+        color: ArenaAvatarColor.orange,
+        label: 'Bracket généré',
+      );
+    case 'competition_created':
+      return const _ActivityVisual(
+        emoji: '➕',
+        color: ArenaAvatarColor.cyan,
+        label: 'Compétition créée',
+      );
+    case 'competition_cancelled':
+      return const _ActivityVisual(
+        emoji: '🚫',
+        color: ArenaAvatarColor.red,
+        label: 'Compétition annulée',
+      );
+    default:
+      return _ActivityVisual(
+        emoji: '•',
+        color: ArenaAvatarColor.blue,
+        label: action.replaceAll('_', ' '),
+      );
+  }
+}
+
+String _formatTimestamp(DateTime? at) {
+  if (at == null) return '';
+  final diff = DateTime.now().difference(at);
+  if (diff.inMinutes < 1) return "À l'instant";
+  if (diff.inMinutes < 60) return 'Il y a ${diff.inMinutes} min';
+  if (diff.inHours < 24) return 'Il y a ${diff.inHours} h';
+  if (diff.inDays == 1) return 'Hier';
+  if (diff.inDays < 7) return '${diff.inDays}j';
+  return DateFormat('dd/MM HH:mm').format(at);
 }

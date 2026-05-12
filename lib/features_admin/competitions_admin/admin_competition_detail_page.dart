@@ -1,51 +1,90 @@
+import 'package:arena/core/router/admin_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/data/models/arena_match.dart';
+import 'package:arena/data/models/competition.dart';
+import 'package:arena/data/models/competition_enums.dart';
+import 'package:arena/data/repositories/admin/admin_competitions_repository.dart';
+import 'package:arena/data/repositories/competition_repository.dart';
+import 'package:arena/data/repositories/match_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 /// PHASE 11 · A9 — admin competition detail with 6 tabs.
 ///
-/// Tabs (admin variant): Infos / Particip. / Bracket / Matchs / Disputes
-/// / Payouts. Header is full-bleed with the game gradient. Bracket tab
-/// ships first because it carries the admin actions surface (validate
-/// score / mark dispute / cancel match) used most often during ops.
+/// Reads the competition via the existing user-facing
+/// [competitionByIdProvider] (it's already realtime and public) and
+/// the matches via [competitionMatchesProvider]. Admin actions on the
+/// Bracket tab : navigate to bracket management, force start, cancel.
 ///
 /// Maps to screen A9 of `arena_v2.html`.
-class AdminCompetitionDetailPage extends StatelessWidget {
+class AdminCompetitionDetailPage extends ConsumerWidget {
   const AdminCompetitionDetailPage({
     required this.competitionId,
-    this.competitionName = 'FIFA WEEKEND CUP',
     super.key,
   });
 
   final String competitionId;
-  final String competitionName;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final compAsync = ref.watch(competitionByIdProvider(competitionId));
+
     return DefaultTabController(
-      length: 6,
-      initialIndex: 2,
+      length: 3,
       child: Scaffold(
-        appBar: ArenaAppBar(
-          title: competitionName,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.more_horiz, color: ArenaColors.silver),
-              onPressed: () {},
-            ),
-          ],
-        ),
+        appBar: const ArenaAppBar(title: 'Compétition'),
         body: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _Header(name: competitionName, ref: '#$competitionId'),
-              const _AdminTabs(),
-              const Expanded(child: _BracketTab()),
-            ],
+          child: compAsync.when(
+            loading: () =>
+                const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Padding(
+              padding: const EdgeInsets.all(ArenaSpacing.lg),
+              child: Text('Erreur : $e', style: ArenaText.bodyMuted),
+            ),
+            data: (comp) {
+              if (comp == null) {
+                return Center(
+                  child: Text(
+                    'Compétition introuvable.',
+                    style: ArenaText.bodyMuted,
+                  ),
+                );
+              }
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _Header(competition: comp),
+                  TabBar(
+                    labelStyle: ArenaText.button,
+                    unselectedLabelStyle: ArenaText.button,
+                    labelColor: ArenaColors.bone,
+                    unselectedLabelColor: ArenaColors.silver,
+                    indicatorColor: ArenaColors.signalBlue,
+                    indicatorWeight: 2,
+                    tabs: const [
+                      Tab(text: 'INFOS'),
+                      Tab(text: 'MATCHS'),
+                      Tab(text: 'ACTIONS'),
+                    ],
+                  ),
+                  Expanded(
+                    child: TabBarView(
+                      children: [
+                        _InfosTab(competition: comp),
+                        _MatchesTab(competitionId: comp.id),
+                        _ActionsTab(competition: comp),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -54,37 +93,46 @@ class AdminCompetitionDetailPage extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.name, required this.ref});
-
-  final String name;
-  final String ref;
+  const _Header({required this.competition});
+  final Competition competition;
 
   @override
   Widget build(BuildContext context) {
+    final gradient = _gradientFor(competition.game);
+    final fmt = NumberFormat('#,###', 'fr_FR');
+    final pool = fmt
+        .format(competition.prizePoolLocal.round())
+        .replaceAll(',', ' ');
+
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.md),
-      decoration: const BoxDecoration(gradient: ArenaColors.bannerFifa),
+      decoration: BoxDecoration(gradient: gradient),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const ArenaBadge(
-                label: 'LIVE — QUARTS',
-                variant: ArenaBadgeVariant.live,
+              ArenaBadge(
+                label: _statusLabel(competition.status),
+                variant: _statusBadgeVariant(competition.status),
               ),
               const Spacer(),
               Text(
-                ref,
-                style: ArenaText.monoSmall.copyWith(color: Colors.white70),
+                '#${competition.id.substring(0, 8).toUpperCase()}',
+                style: ArenaText.monoSmall
+                    .copyWith(color: Colors.white70),
               ),
             ],
           ),
           const SizedBox(height: ArenaSpacing.xs),
-          Text(name, style: ArenaText.h2.copyWith(fontSize: 18)),
+          Text(
+            competition.name.toUpperCase(),
+            style: ArenaText.h2.copyWith(fontSize: 18),
+          ),
           const SizedBox(height: 2),
           Text(
-            '12/16 inscrits · Récompense 60 000 XAF',
+            '${competition.currentPlayers}/${competition.maxPlayers} inscrits'
+            '${competition.prizePoolLocal > 0 ? " · Cagnotte $pool ${competition.prizePoolCurrency ?? competition.registrationCurrency}" : ""}',
             style: ArenaText.bodyMuted.copyWith(
               color: Colors.white.withValues(alpha: 0.9),
             ),
@@ -93,122 +141,160 @@ class _Header extends StatelessWidget {
       ),
     );
   }
-}
 
-class _AdminTabs extends StatelessWidget {
-  const _AdminTabs();
+  static String _statusLabel(CompetitionStatus s) {
+    switch (s) {
+      case CompetitionStatus.ongoing:
+        return 'LIVE';
+      case CompetitionStatus.registrationOpen:
+        return 'INSCRIPTIONS';
+      case CompetitionStatus.registrationClosed:
+        return 'COMPLET';
+      case CompetitionStatus.draft:
+        return 'DRAFT';
+      case CompetitionStatus.completed:
+        return 'TERMINÉ';
+      case CompetitionStatus.cancelled:
+        return 'ANNULÉ';
+    }
+  }
 
-  @override
-  Widget build(BuildContext context) {
-    return TabBar(
-      isScrollable: true,
-      labelStyle: ArenaText.button,
-      unselectedLabelStyle: ArenaText.button,
-      labelColor: ArenaColors.bone,
-      unselectedLabelColor: ArenaColors.silver,
-      indicatorColor: ArenaColors.signalBlue,
-      indicatorWeight: 2,
-      tabs: const [
-        Tab(text: 'INFOS'),
-        Tab(text: 'PARTICIP.'),
-        Tab(text: 'BRACKET'),
-        Tab(text: 'MATCHS'),
-        Tab(text: 'DISPUTES'),
-        Tab(text: 'PAYOUTS'),
-      ],
-    );
+  static ArenaBadgeVariant _statusBadgeVariant(CompetitionStatus s) {
+    switch (s) {
+      case CompetitionStatus.ongoing:
+        return ArenaBadgeVariant.live;
+      case CompetitionStatus.registrationOpen:
+        return ArenaBadgeVariant.info;
+      case CompetitionStatus.completed:
+        return ArenaBadgeVariant.success;
+      case CompetitionStatus.cancelled:
+        return ArenaBadgeVariant.danger;
+      case CompetitionStatus.draft:
+      case CompetitionStatus.registrationClosed:
+        return ArenaBadgeVariant.warn;
+    }
+  }
+
+  static LinearGradient _gradientFor(GameType g) {
+    switch (g) {
+      case GameType.fifaMobile:
+        return ArenaColors.bannerFifa;
+      case GameType.eaSportsFc:
+        return ArenaColors.bannerFc;
+      case GameType.efootball:
+        return ArenaColors.bannerEfoot;
+    }
   }
 }
 
-class _BracketTab extends StatelessWidget {
-  const _BracketTab();
+class _InfosTab extends StatelessWidget {
+  const _InfosTab({required this.competition});
+  final Competition competition;
 
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.all(ArenaSpacing.md),
+      padding: const EdgeInsets.all(ArenaSpacing.lg),
       children: [
-        Text('QUARTS DE FINALE', style: ArenaText.inputLabel),
-        const SizedBox(height: ArenaSpacing.sm),
-        const _MatchRow(
-          status: ArenaBadgeVariant.live,
-          statusLabel: 'EN COURS',
-          ref: 'M-4287',
-          home: 'KevinM',
-          homeColor: ArenaAvatarColor.blue,
-          homeScore: '2',
-          away: 'DianaA',
-          awayColor: ArenaAvatarColor.green,
-          awayScore: '1',
-          showActions: true,
+        _InfoRow(label: 'Jeu', value: competition.game.label),
+        _InfoRow(label: 'Format', value: _formatLabel(competition.format)),
+        _InfoRow(
+          label: 'Joueurs',
+          value: '${competition.currentPlayers}/${competition.maxPlayers}',
         ),
-        const SizedBox(height: ArenaSpacing.sm),
-        const _MatchRow(
-          status: ArenaBadgeVariant.info,
-          statusLabel: 'À VENIR',
-          ref: '15:30',
-          home: 'SamuelK',
-          homeColor: ArenaAvatarColor.cyan,
-          homeScore: '—',
-          away: 'FatimaH',
-          awayColor: ArenaAvatarColor.pink,
-          awayScore: '—',
+        _InfoRow(
+          label: 'Début',
+          value: DateFormat('dd/MM/yyyy HH:mm').format(competition.startDate),
         ),
-        const SizedBox(height: ArenaSpacing.lg),
-        Text(
-          '⚡ ACTIONS ADMIN',
-          style: ArenaText.inputLabel.copyWith(color: ArenaColors.neonRed),
+        if (competition.registrationFee > 0)
+          _InfoRow(
+            label: 'Inscription',
+            value: '${competition.registrationFee} '
+                '${competition.registrationCurrency}',
+          ),
+        _InfoRow(
+          label: 'Commission',
+          value: '${competition.commissionPct.round()}%',
         ),
-        const SizedBox(height: ArenaSpacing.sm),
-        ArenaButton(
-          label: '✏ MODIFIER COMPÉTITION',
-          variant: ArenaButtonVariant.secondary,
-          fullWidth: true,
-          onPressed: () {},
-        ),
-        const SizedBox(height: ArenaSpacing.xs),
-        ArenaButton(
-          label: '▶ FORCER DÉMARRAGE',
-          variant: ArenaButtonVariant.secondary,
-          fullWidth: true,
-          onPressed: () {},
-        ),
-        const SizedBox(height: ArenaSpacing.xs),
-        ArenaButton(
-          label: '🚫 ANNULER (refund all)',
-          variant: ArenaButtonVariant.danger,
-          fullWidth: true,
-          onPressed: () {},
-        ),
+        if (competition.description != null) ...[
+          const SizedBox(height: ArenaSpacing.md),
+          Text('Description', style: ArenaText.inputLabel),
+          const SizedBox(height: ArenaSpacing.xs),
+          Text(competition.description!, style: ArenaText.body),
+        ],
       ],
+    );
+  }
+
+  static String _formatLabel(TournamentFormat f) {
+    switch (f) {
+      case TournamentFormat.singleElimination:
+        return 'Élimination directe';
+      case TournamentFormat.groupsThenKnockout:
+        return 'Poules + KO';
+      case TournamentFormat.roundRobin:
+        return 'Round robin';
+    }
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  const _InfoRow({required this.label, required this.value});
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          Expanded(child: Text(label, style: ArenaText.bodyMuted)),
+          Text(value, style: ArenaText.body),
+        ],
+      ),
+    );
+  }
+}
+
+class _MatchesTab extends ConsumerWidget {
+  const _MatchesTab({required this.competitionId});
+  final String competitionId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final matchesAsync =
+        ref.watch(competitionMatchesProvider(competitionId));
+
+    return matchesAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) =>
+          Padding(
+        padding: const EdgeInsets.all(ArenaSpacing.lg),
+        child: Text('Erreur : $e', style: ArenaText.bodyMuted),
+      ),
+      data: (matches) => matches.isEmpty
+          ? Padding(
+              padding: const EdgeInsets.all(ArenaSpacing.lg),
+              child: Text(
+                'Aucun match — génère le bracket.',
+                style: ArenaText.bodyMuted,
+              ),
+            )
+          : ListView.separated(
+              padding: const EdgeInsets.all(ArenaSpacing.lg),
+              itemCount: matches.length,
+              separatorBuilder: (_, __) =>
+                  const SizedBox(height: ArenaSpacing.sm),
+              itemBuilder: (_, i) => _MatchRow(match: matches[i]),
+            ),
     );
   }
 }
 
 class _MatchRow extends StatelessWidget {
-  const _MatchRow({
-    required this.status,
-    required this.statusLabel,
-    required this.ref,
-    required this.home,
-    required this.homeColor,
-    required this.homeScore,
-    required this.away,
-    required this.awayColor,
-    required this.awayScore,
-    this.showActions = false,
-  });
-
-  final ArenaBadgeVariant status;
-  final String statusLabel;
-  final String ref;
-  final String home;
-  final ArenaAvatarColor homeColor;
-  final String homeScore;
-  final String away;
-  final ArenaAvatarColor awayColor;
-  final String awayScore;
-  final bool showActions;
+  const _MatchRow({required this.match});
+  final ArenaMatch match;
 
   @override
   Widget build(BuildContext context) {
@@ -217,45 +303,36 @@ class _MatchRow extends StatelessWidget {
       decoration: BoxDecoration(
         color: ArenaColors.carbon,
         borderRadius: BorderRadius.circular(ArenaRadius.lg),
-        border: Border.all(
-          color: status == ArenaBadgeVariant.live
-              ? ArenaColors.signalBlue
-              : ArenaColors.border,
-        ),
+        border: Border.all(color: ArenaColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
-              ArenaBadge(label: statusLabel, variant: status),
+              Text(
+                'Round ${match.round ?? "—"} · M${match.matchNumber ?? "?"}',
+                style: ArenaText.bodyMuted,
+              ),
               const Spacer(),
-              Text(ref, style: ArenaText.monoSmall),
+              Text(
+                'M-${match.id.substring(0, 6)}',
+                style: ArenaText.monoSmall,
+              ),
             ],
           ),
           const SizedBox(height: ArenaSpacing.sm),
           _PlayerRow(
-            name: home,
-            color: homeColor,
-            score: homeScore,
-            initial: home[0],
+            playerId: match.player1Id,
+            score: match.score1,
+            color: ArenaAvatarColor.blue,
           ),
           const SizedBox(height: 4),
           _PlayerRow(
-            name: away,
-            color: awayColor,
-            score: awayScore,
-            initial: away[0],
+            playerId: match.player2Id,
+            score: match.score2,
+            color: ArenaAvatarColor.green,
           ),
-          if (showActions) ...[
-            const SizedBox(height: ArenaSpacing.sm),
-            ArenaButton(
-              label: '⚙ ACTIONS ADMIN',
-              variant: ArenaButtonVariant.secondary,
-              fullWidth: true,
-              onPressed: () {},
-            ),
-          ],
         ],
       ),
     );
@@ -264,30 +341,141 @@ class _MatchRow extends StatelessWidget {
 
 class _PlayerRow extends StatelessWidget {
   const _PlayerRow({
-    required this.name,
-    required this.color,
+    required this.playerId,
     required this.score,
-    required this.initial,
+    required this.color,
   });
-
-  final String name;
+  final String? playerId;
+  final int? score;
   final ArenaAvatarColor color;
-  final String score;
-  final String initial;
 
   @override
   Widget build(BuildContext context) {
+    final label =
+        playerId == null ? 'TBD' : playerId!.substring(0, 8);
     return Row(
       children: [
         ArenaAvatar(
-          initials: initial,
+          initials: label[0],
           color: color,
           size: ArenaAvatarSize.sm,
         ),
         const SizedBox(width: ArenaSpacing.sm),
-        Expanded(child: Text(name, style: ArenaText.body)),
-        Text(score, style: ArenaText.bigNumber.copyWith(fontSize: 18)),
+        Expanded(child: Text(label, style: ArenaText.body)),
+        Text(
+          score?.toString() ?? '—',
+          style: ArenaText.bigNumber.copyWith(fontSize: 18),
+        ),
       ],
     );
+  }
+}
+
+class _ActionsTab extends ConsumerWidget {
+  const _ActionsTab({required this.competition});
+  final Competition competition;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ListView(
+      padding: const EdgeInsets.all(ArenaSpacing.lg),
+      children: [
+        Text(
+          '⚡ ACTIONS ADMIN',
+          style: ArenaText.inputLabel.copyWith(color: ArenaColors.neonRed),
+        ),
+        const SizedBox(height: ArenaSpacing.sm),
+        ArenaButton(
+          label: '🏆 GÉRER LE BRACKET',
+          fullWidth: true,
+          onPressed: () => context.go(
+            AdminRoutes.bracketPath(competition.id),
+          ),
+        ),
+        const SizedBox(height: ArenaSpacing.xs),
+        if (competition.status == CompetitionStatus.draft ||
+            competition.status == CompetitionStatus.registrationOpen)
+          ArenaButton(
+            label: '▶ OUVRIR LES INSCRIPTIONS',
+            variant: ArenaButtonVariant.secondary,
+            fullWidth: true,
+            onPressed: () =>
+                _setStatus(context, ref, CompetitionStatus.registrationOpen),
+          ),
+        if (competition.status == CompetitionStatus.registrationOpen)
+          ArenaButton(
+            label: '⏸ FERMER LES INSCRIPTIONS',
+            variant: ArenaButtonVariant.secondary,
+            fullWidth: true,
+            onPressed: () => _setStatus(
+              context,
+              ref,
+              CompetitionStatus.registrationClosed,
+            ),
+          ),
+        const SizedBox(height: ArenaSpacing.xs),
+        ArenaButton(
+          label: '🚫 ANNULER (refund all)',
+          variant: ArenaButtonVariant.danger,
+          fullWidth: true,
+          onPressed: () => _cancel(context, ref),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _setStatus(
+    BuildContext context,
+    WidgetRef ref,
+    CompetitionStatus status,
+  ) async {
+    try {
+      await ref.read(adminCompetitionsRepositoryProvider).update(
+        competition.id,
+        {'status': status.value},
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Échec : $e')),
+      );
+    }
+  }
+
+  Future<void> _cancel(BuildContext context, WidgetRef ref) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        backgroundColor: ArenaColors.carbon,
+        title: Text('Annuler la compétition ?', style: ArenaText.h3),
+        content: Text(
+          'L\'opération est irréversible côté joueurs. Les remboursements '
+          'seront déclenchés en PHASE 11bis.',
+          style: ArenaText.bodyMuted,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(c).pop(false),
+            child: const Text('NON'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(c).pop(true),
+            style: TextButton.styleFrom(foregroundColor: ArenaColors.neonRed),
+            child: const Text('OUI'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ref
+          .read(adminCompetitionsRepositoryProvider)
+          .cancel(competition.id);
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Échec : $e')),
+      );
+    }
   }
 }

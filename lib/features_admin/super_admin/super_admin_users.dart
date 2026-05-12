@@ -1,38 +1,49 @@
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/data/models/profile.dart';
+import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
+import 'package:arena/data/repositories/admin/admin_users_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
+import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// PHASE 11 · SA3 — super-admin user management.
 ///
-/// Search bar + status filter chips + country chips + a list of user
-/// cards with admin actions (voir / reset password / audit / ban).
-/// Banned users surface a "débannir" CTA. KYC-pending users get a warn
-/// badge.
+/// Reads `profiles` via [adminUsersProvider]. Filters: status (active /
+/// banned / KYC pending) + country. Ban / unban flip `is_active` under
+/// `profiles_admin_all` RLS; KYC override stamps `kyc_status` directly.
+/// Every write appends an audit log row.
 ///
 /// Maps to screen SA3 of `arena_v2.html`.
-class SuperAdminUsers extends StatefulWidget {
+class SuperAdminUsers extends ConsumerStatefulWidget {
   const SuperAdminUsers({super.key});
 
   @override
-  State<SuperAdminUsers> createState() => _SuperAdminUsersState();
+  ConsumerState<SuperAdminUsers> createState() => _SuperAdminUsersState();
 }
 
-class _SuperAdminUsersState extends State<SuperAdminUsers> {
+class _SuperAdminUsersState extends ConsumerState<SuperAdminUsers> {
   final _searchCtrl = TextEditingController();
-  String _filter = 'Tous (12 048)';
-  String _country = '';
+  String? _statusFilter;
+  String? _countryCode;
+  String _searchQuery = '';
 
-  static const _statusFilters = [
-    'Tous (12 048)',
-    'Actifs',
-    'Bannis (3)',
-    'KYC pending',
+  static const _statusFilters = <(String?, String)>[
+    (null, 'Tous'),
+    ('active', 'Actifs'),
+    ('banned', 'Bannis'),
+    ('kyc_pending', 'KYC pending'),
   ];
-  static const _countryFilters = ['🇨🇲', '🇸🇳', '🇨🇮', '+10'];
+  static const _countryFilters = <(String?, String)>[
+    (null, 'Tous pays'),
+    ('CM', '🇨🇲'),
+    ('SN', '🇸🇳'),
+    ('CI', '🇨🇮'),
+  ];
 
   @override
   void dispose() {
@@ -42,16 +53,14 @@ class _SuperAdminUsersState extends State<SuperAdminUsers> {
 
   @override
   Widget build(BuildContext context) {
+    final users = ref.watch(adminUsersProvider(AdminUsersFilter(
+      countryCode: _countryCode,
+      filter: _statusFilter,
+      searchQuery: _searchQuery.isEmpty ? null : _searchQuery,
+    )));
+
     return Scaffold(
-      appBar: ArenaAppBar(
-        title: 'Utilisateurs',
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.more_horiz, color: ArenaColors.silver),
-            onPressed: () {},
-          ),
-        ],
-      ),
+      appBar: const ArenaAppBar(title: 'Utilisateurs'),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(ArenaSpacing.lg),
@@ -59,66 +68,49 @@ class _SuperAdminUsersState extends State<SuperAdminUsers> {
             ArenaTextField(
               controller: _searchCtrl,
               hint: '🔍 Rechercher username, email…',
+              onChanged: (v) => setState(() => _searchQuery = v.trim()),
             ),
             const SizedBox(height: ArenaSpacing.md),
             Text('FILTRES', style: ArenaText.inputLabel),
             const SizedBox(height: ArenaSpacing.sm),
             _ChipsRow(
-              labels: _statusFilters,
-              current: _filter,
-              onTap: (l) => setState(() => _filter = l),
+              labels: [for (final (_, l) in _statusFilters) l],
+              currentIndex:
+                  _statusFilters.indexWhere((e) => e.$1 == _statusFilter),
+              onTap: (i) =>
+                  setState(() => _statusFilter = _statusFilters[i].$1),
             ),
             const SizedBox(height: ArenaSpacing.xs),
             _ChipsRow(
-              labels: _countryFilters,
-              current: _country,
-              onTap: (l) => setState(() => _country = l),
+              labels: [for (final (_, l) in _countryFilters) l],
+              currentIndex:
+                  _countryFilters.indexWhere((e) => e.$1 == _countryCode),
+              onTap: (i) =>
+                  setState(() => _countryCode = _countryFilters[i].$1),
             ),
             const SizedBox(height: ArenaSpacing.md),
-            const _UserCard(
-              initials: 'K',
-              color: ArenaAvatarColor.blue,
-              name: 'KevinM_237',
-              meta: 'kevin@gmail.com · 🇨🇲',
-              statusBadge: 'ACTIF',
-              statusVariant: ArenaBadgeVariant.success,
-              roleBadge: 'USER',
-              roleVariant: ArenaBadgeVariant.tierBronze,
-              showActions: true,
-            ),
-            const SizedBox(height: ArenaSpacing.sm),
-            const _UserCard(
-              initials: 'A',
-              color: ArenaAvatarColor.orange,
-              name: 'AdminPaul',
-              meta: 'paul@arena.app · 🇸🇳',
-              statusBadge: 'ACTIF',
-              statusVariant: ArenaBadgeVariant.success,
-              roleBadge: 'ADMIN',
-              roleVariant: ArenaBadgeVariant.danger,
-            ),
-            const SizedBox(height: ArenaSpacing.sm),
-            const _UserCard(
-              initials: 'X',
-              color: ArenaAvatarColor.red,
-              name: 'XploitR_99',
-              meta: 'xploit@temp.io · 🇧🇫',
-              statusBadge: 'BANNI',
-              statusVariant: ArenaBadgeVariant.danger,
-              banned: true,
-              note: '⚠ Triche détectée 2× · banni le 28/04',
-              showUnban: true,
-            ),
-            const SizedBox(height: ArenaSpacing.sm),
-            const _UserCard(
-              initials: 'L',
-              color: ArenaAvatarColor.purple,
-              name: 'LindaO',
-              meta: 'linda@yahoo.fr · 🇨🇮',
-              statusBadge: 'KYC PENDING',
-              statusVariant: ArenaBadgeVariant.warn,
-              roleBadge: 'USER',
-              roleVariant: ArenaBadgeVariant.tierBronze,
+            users.when(
+              loading: () =>
+                  const Center(child: CircularProgressIndicator()),
+              error: (e, _) =>
+                  Text('Erreur : $e', style: ArenaText.bodyMuted),
+              data: (list) => list.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.all(ArenaSpacing.md),
+                      child: Text(
+                        'Aucun utilisateur pour ces filtres.',
+                        style: ArenaText.bodyMuted,
+                        textAlign: TextAlign.center,
+                      ),
+                    )
+                  : Column(
+                      children: [
+                        for (final u in list) ...[
+                          _UserCard(profile: u),
+                          const SizedBox(height: ArenaSpacing.sm),
+                        ],
+                      ],
+                    ),
             ),
           ],
         ),
@@ -130,13 +122,13 @@ class _SuperAdminUsersState extends State<SuperAdminUsers> {
 class _ChipsRow extends StatelessWidget {
   const _ChipsRow({
     required this.labels,
-    required this.current,
+    required this.currentIndex,
     required this.onTap,
   });
 
   final List<String> labels;
-  final String current;
-  final ValueChanged<String> onTap;
+  final int currentIndex;
+  final ValueChanged<int> onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -144,11 +136,11 @@ class _ChipsRow extends StatelessWidget {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          for (final l in labels)
+          for (var i = 0; i < labels.length; i++)
             Padding(
               padding: const EdgeInsets.only(right: ArenaSpacing.xs),
               child: InkWell(
-                onTap: () => onTap(l),
+                onTap: () => onTap(i),
                 borderRadius: BorderRadius.circular(ArenaRadius.round),
                 child: AnimatedContainer(
                   duration: ArenaDurations.short,
@@ -157,24 +149,24 @@ class _ChipsRow extends StatelessWidget {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: l == current
+                    color: i == currentIndex
                         ? ArenaColors.signalBlue.withValues(alpha: 0.15)
                         : ArenaColors.carbon,
                     borderRadius:
                         BorderRadius.circular(ArenaRadius.round),
                     border: Border.all(
-                      color: l == current
+                      color: i == currentIndex
                           ? ArenaColors.signalBlue
                           : ArenaColors.border,
                     ),
                   ),
                   child: Text(
-                    l,
+                    labels[i],
                     style: ArenaText.body.copyWith(
-                      color: l == current
+                      color: i == currentIndex
                           ? ArenaColors.signalBlue
                           : ArenaColors.silver,
-                      fontWeight: l == current
+                      fontWeight: i == currentIndex
                           ? FontWeight.w600
                           : FontWeight.w500,
                     ),
@@ -188,57 +180,43 @@ class _ChipsRow extends StatelessWidget {
   }
 }
 
-class _UserCard extends StatelessWidget {
-  const _UserCard({
-    required this.initials,
-    required this.color,
-    required this.name,
-    required this.meta,
-    required this.statusBadge,
-    required this.statusVariant,
-    this.roleBadge,
-    this.roleVariant,
-    this.banned = false,
-    this.note,
-    this.showActions = false,
-    this.showUnban = false,
-  });
-
-  final String initials;
-  final ArenaAvatarColor color;
-  final String name;
-  final String meta;
-  final String statusBadge;
-  final ArenaBadgeVariant statusVariant;
-  final String? roleBadge;
-  final ArenaBadgeVariant? roleVariant;
-  final bool banned;
-  final String? note;
-  final bool showActions;
-  final bool showUnban;
+class _UserCard extends ConsumerWidget {
+  const _UserCard({required this.profile});
+  final Profile profile;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final banned = !profile.isActive;
+    final kycPending = profile.kycStatus == 'pending';
+    final borderColor = banned
+        ? ArenaColors.neonRed
+        : kycPending
+            ? ArenaColors.statusWarn
+            : ArenaColors.border;
+
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.md),
       decoration: BoxDecoration(
-        color: banned
-            ? ArenaColors.neonRed.withValues(alpha: 0.05)
-            : ArenaColors.carbon,
+        color: ArenaColors.carbon,
         borderRadius: BorderRadius.circular(ArenaRadius.lg),
-        border: Border.all(
-          color: banned ? ArenaColors.neonRed : ArenaColors.border,
+        border: Border(
+          top: const BorderSide(color: ArenaColors.border),
+          right: const BorderSide(color: ArenaColors.border),
+          bottom: const BorderSide(color: ArenaColors.border),
+          left: BorderSide(color: borderColor, width: 3),
         ),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               ArenaAvatar(
-                initials: initials,
-                color: color,
-                size: ArenaAvatarSize.md,
+                initials: profile.username.isEmpty
+                    ? '?'
+                    : profile.username[0].toUpperCase(),
+                color: ArenaAvatarColor.blue,
+                size: ArenaAvatarSize.sm,
               ),
               const SizedBox(width: ArenaSpacing.sm),
               Expanded(
@@ -246,89 +224,129 @@ class _UserCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      name,
+                      profile.username,
                       style: ArenaText.body
                           .copyWith(fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 2),
-                    Text(meta, style: ArenaText.bodyMuted),
+                    Text(profile.email, style: ArenaText.bodyMuted),
                   ],
                 ),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  ArenaBadge(label: statusBadge, variant: statusVariant),
-                  if (roleBadge != null) ...[
-                    const SizedBox(height: 4),
-                    ArenaBadge(label: roleBadge!, variant: roleVariant!),
-                  ],
-                ],
-              ),
+              if (banned)
+                const ArenaBadge(
+                  label: 'BANNI',
+                  variant: ArenaBadgeVariant.danger,
+                )
+              else if (kycPending)
+                const ArenaBadge(
+                  label: 'KYC',
+                  variant: ArenaBadgeVariant.warn,
+                )
+              else if (profile.isAdmin)
+                const ArenaBadge(
+                  label: 'ADMIN',
+                  variant: ArenaBadgeVariant.info,
+                )
+              else
+                const ArenaBadge(
+                  label: 'ACTIF',
+                  variant: ArenaBadgeVariant.success,
+                ),
             ],
           ),
-          if (note != null) ...[
-            const SizedBox(height: ArenaSpacing.sm),
-            Text(
-              note!,
-              style: ArenaText.bodyMuted
-                  .copyWith(color: ArenaColors.neonRed),
-            ),
-          ],
-          if (showActions) ...[
-            const SizedBox(height: ArenaSpacing.sm),
-            Wrap(
-              spacing: 4,
-              runSpacing: 4,
-              children: [
-                ArenaButton(
-                  label: '👁 VOIR',
-                  variant: ArenaButtonVariant.secondary,
-                  onPressed: () {},
+          const SizedBox(height: ArenaSpacing.sm),
+          Row(
+            children: [
+              Expanded(
+                child: ArenaButton(
+                  label: banned ? '✓ DÉBANNIR' : '🚫 BANNIR',
+                  variant: banned
+                      ? ArenaButtonVariant.primary
+                      : ArenaButtonVariant.danger,
+                  fullWidth: true,
+                  onPressed: () => _toggleBan(context, ref),
                 ),
-                ArenaButton(
-                  label: '🔑 RESET PWD',
-                  variant: ArenaButtonVariant.secondary,
-                  onPressed: () {},
-                ),
-                ArenaButton(
-                  label: '📜 AUDIT',
-                  variant: ArenaButtonVariant.secondary,
-                  onPressed: () {},
-                ),
-                ArenaButton(
-                  label: '🚫 BANNIR',
-                  variant: ArenaButtonVariant.danger,
-                  onPressed: () {},
-                ),
-              ],
-            ),
-          ],
-          if (showUnban) ...[
-            const SizedBox(height: ArenaSpacing.sm),
-            Row(
-              children: [
-                Expanded(
-                  child: ArenaButton(
-                    label: '📜 AUDIT',
-                    variant: ArenaButtonVariant.secondary,
-                    fullWidth: true,
-                    onPressed: () {},
-                  ),
-                ),
+              ),
+              if (kycPending) ...[
                 const SizedBox(width: 4),
                 Expanded(
                   child: ArenaButton(
-                    label: '↻ DÉBANNIR',
+                    label: '✅ KYC OK',
+                    variant: ArenaButtonVariant.secondary,
                     fullWidth: true,
-                    onPressed: () {},
+                    onPressed: () => _overrideKyc(context, ref, 'verified'),
                   ),
                 ),
               ],
-            ),
-          ],
+            ],
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _toggleBan(BuildContext context, WidgetRef ref) async {
+    final adminId = ref.read(currentSessionProvider)?.user.id;
+    if (adminId == null) return;
+    final shouldBan = profile.isActive;
+    final repo = ref.read(adminUsersRepositoryProvider);
+    final audit = ref.read(adminAuditLogRepositoryProvider);
+    try {
+      if (shouldBan) {
+        await repo.ban(profile.id);
+        await audit.record(
+          adminId: adminId,
+          action: 'user_banned',
+          targetType: 'profile',
+          targetId: profile.id,
+          beforeState: {'is_active': true},
+          afterState: {'is_active': false},
+        );
+      } else {
+        await repo.unban(profile.id);
+        await audit.record(
+          adminId: adminId,
+          action: 'user_unbanned',
+          targetType: 'profile',
+          targetId: profile.id,
+          beforeState: {'is_active': false},
+          afterState: {'is_active': true},
+        );
+      }
+      ref.invalidate(adminUsersProvider);
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Échec : $e')),
+      );
+    }
+  }
+
+  Future<void> _overrideKyc(
+    BuildContext context,
+    WidgetRef ref,
+    String status,
+  ) async {
+    final adminId = ref.read(currentSessionProvider)?.user.id;
+    if (adminId == null) return;
+    try {
+      await ref
+          .read(adminUsersRepositoryProvider)
+          .overrideKyc(userId: profile.id, status: status);
+      await ref.read(adminAuditLogRepositoryProvider).record(
+        adminId: adminId,
+        action: 'user_kyc_overridden',
+        targetType: 'profile',
+        targetId: profile.id,
+        afterState: {'kyc_status': status},
+      );
+      ref.invalidate(adminUsersProvider);
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Échec : $e')),
+      );
+    }
   }
 }

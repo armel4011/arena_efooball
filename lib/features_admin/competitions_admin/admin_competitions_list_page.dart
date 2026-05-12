@@ -1,39 +1,45 @@
+import 'package:arena/core/router/admin_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/data/models/competition.dart';
+import 'package:arena/data/models/competition_enums.dart';
+import 'package:arena/data/repositories/admin/admin_competitions_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 /// PHASE 11 · A7 — admin competitions list.
 ///
-/// Two filter chip rows (status + game) above status-coloured cards
-/// listing compétitions with admin CTAs (voir / modifier / annuler).
+/// Reads `competitions` via [adminCompetitionsProvider]. Filters are
+/// applied client-side (cf. repo doc). Tap a card → detail; the chip
+/// counts reflect the filtered subset of the realtime feed.
 ///
 /// Maps to screen A7 of `arena_v2.html`.
-class AdminCompetitionsListPage extends StatefulWidget {
+class AdminCompetitionsListPage extends ConsumerStatefulWidget {
   const AdminCompetitionsListPage({super.key});
 
   @override
-  State<AdminCompetitionsListPage> createState() =>
+  ConsumerState<AdminCompetitionsListPage> createState() =>
       _AdminCompetitionsListPageState();
 }
 
 class _AdminCompetitionsListPageState
-    extends State<AdminCompetitionsListPage> {
-  String _statusFilter = 'Toutes (47)';
-  String _gameFilter = 'Tous';
-
-  static const _statuses = [
-    'Toutes (47)',
-    'Live (12)',
-    'À venir (8)',
-    'Draft (3)',
-  ];
-  static const _games = ['Tous', 'eFoot', 'FIFA', 'FC Mobile'];
+    extends ConsumerState<AdminCompetitionsListPage> {
+  CompetitionStatus? _statusFilter;
+  GameType? _gameFilter;
 
   @override
   Widget build(BuildContext context) {
+    final filter = AdminCompetitionsFilter(
+      status: _statusFilter,
+      game: _gameFilter,
+    );
+    final list = ref.watch(adminCompetitionsProvider(filter));
+
     return Scaffold(
       appBar: ArenaAppBar(
         title: 'Compétitions',
@@ -44,7 +50,7 @@ class _AdminCompetitionsListPageState
               color: ArenaColors.signalBlue,
               size: 22,
             ),
-            onPressed: () {},
+            onPressed: () => context.go(AdminRoutes.competitionsCreate),
           ),
         ],
       ),
@@ -54,53 +60,45 @@ class _AdminCompetitionsListPageState
           children: [
             Text('FILTRES', style: ArenaText.inputLabel),
             const SizedBox(height: ArenaSpacing.sm),
-            _ChipsRow(
-              labels: _statuses,
+            _StatusChipsRow(
               current: _statusFilter,
-              onTap: (l) => setState(() => _statusFilter = l),
+              onTap: (s) => setState(() => _statusFilter = s),
             ),
             const SizedBox(height: ArenaSpacing.xs),
-            _ChipsRow(
-              labels: _games,
+            _GameChipsRow(
               current: _gameFilter,
-              onTap: (l) => setState(() => _gameFilter = l),
+              onTap: (g) => setState(() => _gameFilter = g),
             ),
             const SizedBox(height: ArenaSpacing.md),
-            const _CompCard(
-              borderColor: ArenaColors.neonRed,
-              badgeLabel: 'LIVE',
-              badgeVariant: ArenaBadgeVariant.live,
-              compRef: '#C-2284',
-              title: 'FIFA WEEKEND CUP',
-              kvs: [
-                ('Inscrits', '12/16'),
-                ('Récompense', '60 000 XAF'),
-                ('Phase', 'Quarts'),
-              ],
-              showActions: true,
-            ),
-            SizedBox(height: ArenaSpacing.sm),
-            _CompCard(
-              borderColor: ArenaColors.signalBlue,
-              badgeLabel: 'À VENIR',
-              badgeVariant: ArenaBadgeVariant.info,
-              compRef: '#C-2285',
-              title: 'EA FC NIGHT BATTLE',
-              kvs: [
-                ('Inscrits', '8/32'),
-                ('Démarre', '14/05 20h'),
-                ('Créateur', '@admin'),
-              ],
-            ),
-            SizedBox(height: ArenaSpacing.sm),
-            _CompCard(
-              borderColor: ArenaColors.statusWarn,
-              badgeLabel: 'DRAFT',
-              badgeVariant: ArenaBadgeVariant.warn,
-              compRef: '#C-2286',
-              title: 'eFOOT MASTERS RAMADAN',
-              kvs: [],
-              footerNote: 'Brouillon, pas publié',
+            list.when(
+              loading: () => const Padding(
+                padding: EdgeInsets.all(ArenaSpacing.lg),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (e, _) => Padding(
+                padding: const EdgeInsets.all(ArenaSpacing.md),
+                child: Text(
+                  'Erreur de chargement : $e',
+                  style: ArenaText.bodyMuted,
+                ),
+              ),
+              data: (comps) => comps.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.all(ArenaSpacing.lg),
+                      child: Text(
+                        'Aucune compétition pour ce filtre.',
+                        style: ArenaText.bodyMuted,
+                        textAlign: TextAlign.center,
+                      ),
+                    )
+                  : Column(
+                      children: [
+                        for (final c in comps) ...[
+                          _CompCard(competition: c),
+                          const SizedBox(height: ArenaSpacing.sm),
+                        ],
+                      ],
+                    ),
             ),
           ],
         ),
@@ -109,16 +107,17 @@ class _AdminCompetitionsListPageState
   }
 }
 
-class _ChipsRow extends StatelessWidget {
-  const _ChipsRow({
-    required this.labels,
-    required this.current,
-    required this.onTap,
-  });
+class _StatusChipsRow extends StatelessWidget {
+  const _StatusChipsRow({required this.current, required this.onTap});
+  final CompetitionStatus? current;
+  final ValueChanged<CompetitionStatus?> onTap;
 
-  final List<String> labels;
-  final String current;
-  final ValueChanged<String> onTap;
+  static const _items = <(CompetitionStatus?, String)>[
+    (null, 'Toutes'),
+    (CompetitionStatus.ongoing, 'Live'),
+    (CompetitionStatus.registrationOpen, 'À venir'),
+    (CompetitionStatus.draft, 'Draft'),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -126,13 +125,46 @@ class _ChipsRow extends StatelessWidget {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          for (final l in labels)
+          for (final (status, label) in _items)
             Padding(
               padding: const EdgeInsets.only(right: ArenaSpacing.xs),
               child: _Chip(
-                label: l,
-                active: l == current,
-                onTap: () => onTap(l),
+                label: label,
+                active: status == current,
+                onTap: () => onTap(status),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GameChipsRow extends StatelessWidget {
+  const _GameChipsRow({required this.current, required this.onTap});
+  final GameType? current;
+  final ValueChanged<GameType?> onTap;
+
+  static const _items = <(GameType?, String)>[
+    (null, 'Tous'),
+    (GameType.efootball, 'eFoot'),
+    (GameType.fifaMobile, 'FIFA'),
+    (GameType.eaSportsFc, 'FC Mobile'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final (game, label) in _items)
+            Padding(
+              padding: const EdgeInsets.only(right: ArenaSpacing.xs),
+              child: _Chip(
+                label: label,
+                active: game == current,
+                onTap: () => onTap(game),
               ),
             ),
         ],
@@ -184,104 +216,214 @@ class _Chip extends StatelessWidget {
   }
 }
 
-class _CompCard extends StatelessWidget {
-  const _CompCard({
-    required this.borderColor,
-    required this.badgeLabel,
-    required this.badgeVariant,
-    required this.compRef,
-    required this.title,
-    required this.kvs,
-    this.showActions = false,
-    this.footerNote,
-  });
-
-  final Color borderColor;
-  final String badgeLabel;
-  final ArenaBadgeVariant badgeVariant;
-  final String compRef;
-  final String title;
-  final List<(String, String)> kvs;
-  final bool showActions;
-  final String? footerNote;
+class _CompCard extends ConsumerWidget {
+  const _CompCard({required this.competition});
+  final Competition competition;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(ArenaSpacing.md),
-      decoration: BoxDecoration(
-        color: ArenaColors.carbon,
-        borderRadius: BorderRadius.circular(ArenaRadius.lg),
-        border: Border(
-          top: const BorderSide(color: ArenaColors.border),
-          right: const BorderSide(color: ArenaColors.border),
-          bottom: const BorderSide(color: ArenaColors.border),
-          left: BorderSide(color: borderColor, width: 3),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              ArenaBadge(label: badgeLabel, variant: badgeVariant),
-              const Spacer(),
-              Text(compRef, style: ArenaText.monoSmall),
-            ],
+  Widget build(BuildContext context, WidgetRef ref) {
+    final visual = _visualFor(competition.status);
+    final kvs = _kvsFor(competition);
+    final showActions = competition.status == CompetitionStatus.ongoing ||
+        competition.status == CompetitionStatus.registrationOpen;
+    final footerNote = competition.status == CompetitionStatus.draft
+        ? 'Brouillon, pas publié'
+        : null;
+
+    return InkWell(
+      onTap: () => context.go(AdminRoutes.competitionDetailPath(competition.id)),
+      borderRadius: BorderRadius.circular(ArenaRadius.lg),
+      child: Container(
+        padding: const EdgeInsets.all(ArenaSpacing.md),
+        decoration: BoxDecoration(
+          color: ArenaColors.carbon,
+          borderRadius: BorderRadius.circular(ArenaRadius.lg),
+          border: Border(
+            top: const BorderSide(color: ArenaColors.border),
+            right: const BorderSide(color: ArenaColors.border),
+            bottom: const BorderSide(color: ArenaColors.border),
+            left: BorderSide(color: visual.color, width: 3),
           ),
-          const SizedBox(height: ArenaSpacing.sm),
-          Text(title, style: ArenaText.h3),
-          if (kvs.isNotEmpty) const SizedBox(height: ArenaSpacing.sm),
-          for (final (k, v) in kvs)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Row(
-                children: [
-                  Expanded(child: Text(k, style: ArenaText.bodyMuted)),
-                  Text(v, style: ArenaText.body),
-                ],
-              ),
-            ),
-          if (footerNote != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(footerNote!, style: ArenaText.bodyMuted),
-            ),
-          if (showActions) ...[
-            const SizedBox(height: ArenaSpacing.sm),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             Row(
               children: [
-                Expanded(
-                  child: ArenaButton(
-                    label: 'VOIR',
-                    variant: ArenaButtonVariant.secondary,
-                    fullWidth: true,
-                    onPressed: () {},
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: ArenaButton(
-                    label: 'MODIFIER',
-                    variant: ArenaButtonVariant.secondary,
-                    fullWidth: true,
-                    onPressed: () {},
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: ArenaButton(
-                    label: '⏸ ANNULER',
-                    variant: ArenaButtonVariant.danger,
-                    fullWidth: true,
-                    onPressed: () {},
-                  ),
+                ArenaBadge(label: visual.label, variant: visual.variant),
+                const Spacer(),
+                Text(
+                  '#${competition.id.substring(0, 6).toUpperCase()}',
+                  style: ArenaText.monoSmall,
                 ),
               ],
             ),
+            const SizedBox(height: ArenaSpacing.sm),
+            Text(competition.name.toUpperCase(), style: ArenaText.h3),
+            if (kvs.isNotEmpty) const SizedBox(height: ArenaSpacing.sm),
+            for (final (k, v) in kvs)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  children: [
+                    Expanded(child: Text(k, style: ArenaText.bodyMuted)),
+                    Text(v, style: ArenaText.body),
+                  ],
+                ),
+              ),
+            if (footerNote != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(footerNote, style: ArenaText.bodyMuted),
+              ),
+            if (showActions) ...[
+              const SizedBox(height: ArenaSpacing.sm),
+              Row(
+                children: [
+                  Expanded(
+                    child: ArenaButton(
+                      label: 'VOIR',
+                      variant: ArenaButtonVariant.secondary,
+                      fullWidth: true,
+                      onPressed: () => context.go(
+                        AdminRoutes.competitionDetailPath(competition.id),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: ArenaButton(
+                      label: 'BRACKET',
+                      variant: ArenaButtonVariant.secondary,
+                      fullWidth: true,
+                      onPressed: () => context.go(
+                        AdminRoutes.bracketPath(competition.id),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: ArenaButton(
+                      label: 'ANNULER',
+                      variant: ArenaButtonVariant.danger,
+                      fullWidth: true,
+                      onPressed: () => _confirmCancel(context, ref),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     ).animate().fadeIn(duration: ArenaDurations.medium);
   }
+
+  Future<void> _confirmCancel(BuildContext context, WidgetRef ref) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        backgroundColor: ArenaColors.carbon,
+        title: Text('Annuler la compétition ?', style: ArenaText.h3),
+        content: Text(
+          'L\'opération est irréversible côté joueurs : la compétition '
+          'passe en cancelled. Les remboursements seront déclenchés en '
+          'PHASE 11bis.',
+          style: ArenaText.bodyMuted,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(c).pop(false),
+            child: const Text('NON'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(c).pop(true),
+            style: TextButton.styleFrom(foregroundColor: ArenaColors.neonRed),
+            child: const Text('OUI, ANNULER'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ref
+          .read(adminCompetitionsRepositoryProvider)
+          .cancel(competition.id);
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Échec : $e')),
+      );
+    }
+  }
+}
+
+class _StatusVisual {
+  const _StatusVisual({
+    required this.label,
+    required this.color,
+    required this.variant,
+  });
+  final String label;
+  final Color color;
+  final ArenaBadgeVariant variant;
+}
+
+_StatusVisual _visualFor(CompetitionStatus status) {
+  switch (status) {
+    case CompetitionStatus.ongoing:
+      return const _StatusVisual(
+        label: 'LIVE',
+        color: ArenaColors.neonRed,
+        variant: ArenaBadgeVariant.live,
+      );
+    case CompetitionStatus.registrationOpen:
+      return const _StatusVisual(
+        label: 'À VENIR',
+        color: ArenaColors.signalBlue,
+        variant: ArenaBadgeVariant.info,
+      );
+    case CompetitionStatus.registrationClosed:
+      return const _StatusVisual(
+        label: 'COMPLET',
+        color: ArenaColors.statusWarn,
+        variant: ArenaBadgeVariant.warn,
+      );
+    case CompetitionStatus.draft:
+      return const _StatusVisual(
+        label: 'DRAFT',
+        color: ArenaColors.statusWarn,
+        variant: ArenaBadgeVariant.warn,
+      );
+    case CompetitionStatus.completed:
+      return const _StatusVisual(
+        label: 'TERMINÉ',
+        color: ArenaColors.silver,
+        variant: ArenaBadgeVariant.neutral,
+      );
+    case CompetitionStatus.cancelled:
+      return const _StatusVisual(
+        label: 'ANNULÉ',
+        color: ArenaColors.neonRed,
+        variant: ArenaBadgeVariant.danger,
+      );
+  }
+}
+
+List<(String, String)> _kvsFor(Competition c) {
+  final fmt = NumberFormat('#,###', 'fr_FR');
+  final prize = fmt
+      .format(c.prizePoolLocal.round())
+      .replaceAll(',', ' ');
+  final out = <(String, String)>[
+    ('Inscrits', '${c.currentPlayers}/${c.maxPlayers}'),
+  ];
+  if (c.prizePoolLocal > 0) {
+    out.add(('Récompense', '$prize ${c.prizePoolCurrency ?? c.registrationCurrency}'));
+  }
+  if (c.status == CompetitionStatus.registrationOpen ||
+      c.status == CompetitionStatus.draft) {
+    out.add(('Démarre', DateFormat('dd/MM HH\'h\'').format(c.startDate)));
+  }
+  return out;
 }

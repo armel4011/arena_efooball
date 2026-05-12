@@ -1,29 +1,37 @@
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/data/models/arena_match.dart';
+import 'package:arena/data/models/dispute.dart';
+import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
+import 'package:arena/data/repositories/admin/admin_disputes_repository.dart';
+import 'package:arena/data/repositories/admin/admin_matches_repository.dart';
+import 'package:arena/data/repositories/match_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
+import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// PHASE 11 · A14 — dispute resolution screen.
 ///
-/// Top warning card carries the escalation level + open duration. Below
-/// : the disputed scores, the cloud-recorded replay thumbnail, the
-/// match-room chat (read-only), three admin verdict CTAs and a
-/// mandatory justification text-area for the audit log.
+/// Reads the dispute + match via providers; the admin picks a verdict
+/// for player 1, player 2, or cancels the match outright. Each path
+/// stamps the verdict on `matches`, marks the dispute `resolved` with
+/// the admin's written justification, and appends an audit log row.
 ///
 /// Maps to screen A14 of `arena_v2.html`.
-class AdminDisputesPage extends StatefulWidget {
+class AdminDisputesPage extends ConsumerStatefulWidget {
   const AdminDisputesPage({required this.matchId, super.key});
 
   final String matchId;
 
   @override
-  State<AdminDisputesPage> createState() => _AdminDisputesPageState();
+  ConsumerState<AdminDisputesPage> createState() => _AdminDisputesPageState();
 }
 
-class _AdminDisputesPageState extends State<AdminDisputesPage> {
+class _AdminDisputesPageState extends ConsumerState<AdminDisputesPage> {
   final _justificationCtrl = TextEditingController();
 
   @override
@@ -34,56 +42,53 @@ class _AdminDisputesPageState extends State<AdminDisputesPage> {
 
   @override
   Widget build(BuildContext context) {
+    final dispute = ref.watch(adminDisputeByMatchProvider(widget.matchId));
+    final match = ref.watch(matchByIdProvider(widget.matchId));
+
     return Scaffold(
       appBar: ArenaAppBar(
-        title: 'Dispute · ${widget.matchId}',
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.more_horiz, color: ArenaColors.silver),
-            onPressed: () {},
-          ),
-        ],
+        title: 'Dispute · M-${widget.matchId.substring(0, 6)}',
       ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(ArenaSpacing.lg),
           children: [
-            const _DisputeHeader(),
+            dispute.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Text('Erreur : $e', style: ArenaText.bodyMuted),
+              data: (d) => d == null
+                  ? Text(
+                      'Aucune dispute ouverte pour ce match.',
+                      style: ArenaText.bodyMuted,
+                    )
+                  : _DisputeHeader(dispute: d),
+            ),
             const SizedBox(height: ArenaSpacing.lg),
             Text('SCORES SAISIS', style: ArenaText.inputLabel),
             const SizedBox(height: ArenaSpacing.sm),
-            const _ScoresCard(),
-            const SizedBox(height: ArenaSpacing.lg),
-            Text('PREUVES', style: ArenaText.inputLabel),
-            const SizedBox(height: ArenaSpacing.sm),
-            const _ReplayCard(),
-            const SizedBox(height: ArenaSpacing.lg),
-            Text('💬 Chat match-room', style: ArenaText.h3),
-            const SizedBox(height: ArenaSpacing.sm),
-            const _ChatPreview(),
+            match.when(
+              loading: () =>
+                  const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Text('Erreur : $e', style: ArenaText.bodyMuted),
+              data: (m) => m == null
+                  ? Text('Match introuvable.', style: ArenaText.bodyMuted)
+                  : _ScoresCard(match: m),
+            ),
             const SizedBox(height: ArenaSpacing.lg),
             Text(
               '⚖ TRANCHER',
               style: ArenaText.inputLabel.copyWith(color: ArenaColors.neonRed),
             ),
             const SizedBox(height: ArenaSpacing.sm),
-            ArenaButton(
-              label: '✓ VALIDER SCORE 3-1 (AhmedB gagne)',
-              fullWidth: true,
-              onPressed: () {},
-            ),
-            const SizedBox(height: ArenaSpacing.xs),
-            ArenaButton(
-              label: '✓ VALIDER SCORE 2-3 (PaulN gagne)',
-              fullWidth: true,
-              onPressed: () {},
-            ),
-            const SizedBox(height: ArenaSpacing.xs),
-            ArenaButton(
-              label: '🚫 ANNULER MATCH (refund 2× 5000)',
-              variant: ArenaButtonVariant.danger,
-              fullWidth: true,
-              onPressed: () {},
+            match.maybeWhen(
+              data: (m) => m == null
+                  ? const SizedBox.shrink()
+                  : _VerdictButtons(
+                      match: m,
+                      dispute: dispute.valueOrNull,
+                      justificationController: _justificationCtrl,
+                    ),
+              orElse: () => const SizedBox.shrink(),
             ),
             const SizedBox(height: ArenaSpacing.lg),
             Text('Justification (obligatoire)', style: ArenaText.inputLabel),
@@ -102,10 +107,16 @@ class _AdminDisputesPageState extends State<AdminDisputesPage> {
 }
 
 class _DisputeHeader extends StatelessWidget {
-  const _DisputeHeader();
+  const _DisputeHeader({required this.dispute});
+  final Dispute dispute;
 
   @override
   Widget build(BuildContext context) {
+    final since = dispute.createdAt;
+    final ageLabel = since == null
+        ? ''
+        : 'Ouverte depuis ${_humanDuration(DateTime.now().difference(since))}';
+
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.lg),
       decoration: arenaWarningCardDecoration(),
@@ -114,32 +125,43 @@ class _DisputeHeader extends StatelessWidget {
         children: [
           Row(
             children: [
-              const ArenaBadge(
-                label: 'ESCALADE NIVEAU 2',
+              ArenaBadge(
+                label: 'ESCALADE NIVEAU ${dispute.escalationLevel}',
                 variant: ArenaBadgeVariant.warn,
               ),
               const Spacer(),
-              Text(
-                'Ouverte il y a 1h 23min',
-                style: ArenaText.bodyMuted,
-              ),
+              Text(ageLabel, style: ArenaText.bodyMuted),
             ],
           ),
           const SizedBox(height: ArenaSpacing.sm),
-          Text('Désaccord persistant sur score', style: ArenaText.h3),
-          const SizedBox(height: 2),
           Text(
-            '2 votes consécutifs en désaccord',
-            style: ArenaText.bodyMuted,
+            dispute.reason ?? 'Désaccord sur score',
+            style: ArenaText.h3,
           ),
+          if (dispute.evidence['note'] is String) ...[
+            const SizedBox(height: 2),
+            Text(
+              dispute.evidence['note'] as String,
+              style: ArenaText.bodyMuted,
+            ),
+          ],
         ],
       ),
     );
   }
+
+  static String _humanDuration(Duration d) {
+    if (d.inMinutes < 60) return '${d.inMinutes} min';
+    final h = d.inHours;
+    final m = d.inMinutes - h * 60;
+    if (m == 0) return '${h}h';
+    return '${h}h ${m}min';
+  }
 }
 
 class _ScoresCard extends StatelessWidget {
-  const _ScoresCard();
+  const _ScoresCard({required this.match});
+  final ArenaMatch match;
 
   @override
   Widget build(BuildContext context) {
@@ -152,10 +174,10 @@ class _ScoresCard extends StatelessWidget {
       child: Column(
         children: [
           _Row(
-            initial: 'A',
+            initial: _initialFor(match.player1Id),
             color: ArenaAvatarColor.orange,
-            label: 'AhmedB (HOME)',
-            score: '3 - 1',
+            label: 'Joueur 1 (HOME)',
+            score: '${match.score1 ?? '?'}',
             scoreColor: ArenaColors.gameFifa,
           ),
           const Divider(
@@ -164,16 +186,19 @@ class _ScoresCard extends StatelessWidget {
             thickness: 1,
           ),
           _Row(
-            initial: 'P',
+            initial: _initialFor(match.player2Id),
             color: ArenaAvatarColor.red,
-            label: 'PaulN (AWAY)',
-            score: '2 - 3',
+            label: 'Joueur 2 (AWAY)',
+            score: '${match.score2 ?? '?'}',
             scoreColor: ArenaColors.neonRed,
           ),
         ],
       ),
     );
   }
+
+  static String _initialFor(String? id) =>
+      (id == null || id.isEmpty) ? '?' : id[0].toUpperCase();
 }
 
 class _Row extends StatelessWidget {
@@ -218,141 +243,153 @@ class _Row extends StatelessWidget {
   }
 }
 
-class _ReplayCard extends StatelessWidget {
-  const _ReplayCard();
+class _VerdictButtons extends ConsumerWidget {
+  const _VerdictButtons({
+    required this.match,
+    required this.dispute,
+    required this.justificationController,
+  });
+
+  final ArenaMatch match;
+  final Dispute? dispute;
+  final TextEditingController justificationController;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: ArenaColors.carbon,
-        borderRadius: BorderRadius.circular(ArenaRadius.lg),
-        border: Border.all(color: ArenaColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Stack(
-            children: [
-              Container(
-                height: 80,
-                decoration: const BoxDecoration(gradient: ArenaColors.bannerFifa),
-              ),
-              Positioned.fill(
-                child: Center(
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.black.withValues(alpha: 0.6),
-                    ),
-                    child: const Icon(
-                      Icons.play_arrow,
-                      color: Colors.white,
-                      size: 22,
-                    ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p1Score = match.score1 ?? 0;
+    final p2Score = match.score2 ?? 0;
+
+    return Column(
+      children: [
+        ArenaButton(
+          label: '✓ VALIDER $p1Score-$p2Score (J1 gagne)',
+          fullWidth: true,
+          onPressed: match.player1Id == null
+              ? null
+              : () => _commit(
+                    context,
+                    ref,
+                    winnerId: match.player1Id,
+                    scoreP1: p1Score,
+                    scoreP2: p2Score,
                   ),
-                ),
-              ),
-              Positioned(
-                top: 4,
-                right: 4,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
+        ),
+        const SizedBox(height: ArenaSpacing.xs),
+        ArenaButton(
+          label: '✓ VALIDER $p2Score-$p1Score (J2 gagne)',
+          fullWidth: true,
+          onPressed: match.player2Id == null
+              ? null
+              : () => _commit(
+                    context,
+                    ref,
+                    winnerId: match.player2Id,
+                    scoreP1: p2Score,
+                    scoreP2: p1Score,
                   ),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.6),
-                    borderRadius: BorderRadius.circular(ArenaRadius.round),
-                  ),
-                  child: Text(
-                    '🎬 9:42',
-                    style: ArenaText.badge.copyWith(color: Colors.white),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          Padding(
-            padding: const EdgeInsets.all(ArenaSpacing.sm),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Recording AhmedB',
-                  style: ArenaText.body.copyWith(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Match auto-recorded · cloud',
-                  style: ArenaText.bodyMuted,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+        ),
+        const SizedBox(height: ArenaSpacing.xs),
+        ArenaButton(
+          label: '🚫 ANNULER MATCH',
+          variant: ArenaButtonVariant.danger,
+          fullWidth: true,
+          onPressed: () => _cancelMatch(context, ref),
+        ),
+      ],
     );
   }
-}
 
-class _ChatPreview extends StatelessWidget {
-  const _ChatPreview();
+  Future<void> _commit(
+    BuildContext context,
+    WidgetRef ref, {
+    required String? winnerId,
+    required int scoreP1,
+    required int scoreP2,
+  }) async {
+    final justification = justificationController.text.trim();
+    if (justification.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Justification obligatoire.')),
+      );
+      return;
+    }
+    final adminId = ref.read(currentSessionProvider)?.user.id;
+    if (adminId == null) return;
 
-  static const _msgs = <(_BubbleSide, String)>[
-    (_BubbleSide.them, 'Code : 8K3-TZ9'),
-    (_BubbleSide.me, 'GG, beau match.'),
-    (_BubbleSide.them, "Comment tu as compté 1-3 ? J'ai marqué 3 fois."),
-    (_BubbleSide.me, 'Non, ton 3e but était hors-jeu.'),
-  ];
+    try {
+      await ref.read(adminMatchesRepositoryProvider).setVerdict(
+            matchId: match.id,
+            scoreP1: scoreP1,
+            scoreP2: scoreP2,
+            winnerId: winnerId,
+          );
+      if (dispute != null) {
+        await ref.read(adminDisputesRepositoryProvider).resolve(
+              disputeId: dispute!.id,
+              adminId: adminId,
+              resolution: justification,
+            );
+      }
+      await ref.read(adminAuditLogRepositoryProvider).record(
+        adminId: adminId,
+        action: 'dispute_resolved',
+        targetType: 'match',
+        targetId: match.id,
+        afterState: {
+          'winner_id': winnerId,
+          'score1': scoreP1,
+          'score2': scoreP2,
+          'justification': justification,
+        },
+      );
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Verdict enregistré.')),
+      );
+      Navigator.of(context).pop();
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Échec : $e')),
+      );
+    }
+  }
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(ArenaSpacing.sm),
-      decoration: BoxDecoration(
-        color: ArenaColors.carbon,
-        borderRadius: BorderRadius.circular(ArenaRadius.lg),
-        border: Border.all(color: ArenaColors.border),
-      ),
-      child: Column(
-        children: [
-          for (final (side, text) in _msgs)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Align(
-                alignment: side == _BubbleSide.me
-                    ? Alignment.centerRight
-                    : Alignment.centerLeft,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: ArenaSpacing.sm,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: side == _BubbleSide.me
-                        ? ArenaColors.signalBlue
-                        : ArenaColors.carbon2,
-                    borderRadius: BorderRadius.circular(ArenaRadius.md),
-                  ),
-                  child: Text(
-                    text,
-                    style: ArenaText.body.copyWith(
-                      fontSize: 10,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
+  Future<void> _cancelMatch(BuildContext context, WidgetRef ref) async {
+    final justification = justificationController.text.trim();
+    if (justification.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Justification obligatoire.')),
+      );
+      return;
+    }
+    final adminId = ref.read(currentSessionProvider)?.user.id;
+    if (adminId == null) return;
+
+    try {
+      await ref.read(adminMatchesRepositoryProvider).cancel(match.id);
+      if (dispute != null) {
+        await ref.read(adminDisputesRepositoryProvider).resolve(
+              disputeId: dispute!.id,
+              adminId: adminId,
+              resolution: justification,
+              status: 'cancelled',
+            );
+      }
+      await ref.read(adminAuditLogRepositoryProvider).record(
+        adminId: adminId,
+        action: 'dispute_cancelled',
+        targetType: 'match',
+        targetId: match.id,
+        afterState: {'justification': justification},
+      );
+      if (!context.mounted) return;
+      Navigator.of(context).pop();
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Échec : $e')),
+      );
+    }
   }
 }
-
-enum _BubbleSide { me, them }

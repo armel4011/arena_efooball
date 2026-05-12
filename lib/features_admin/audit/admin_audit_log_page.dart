@@ -1,36 +1,46 @@
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/data/models/admin_audit_log.dart';
+import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 /// PHASE 11 · A15 — admin audit log.
 ///
-/// Search bar + 2 filter rows (action category + period) over a list of
-/// log cards. Each card carries the action type, perpetrator, target
-/// resource, an optional quoted justification and the admin IP/device
-/// metadata. Source: `admin_audit_log` (PHASE 11.5).
+/// Searches `admin_audit_log` via [adminAuditLogProvider]. Category +
+/// period chips translate to repository filters. Each row renders the
+/// action type, target reference, and timestamp.
 ///
 /// Maps to screen A15 of `arena_v2.html`.
-class AdminAuditLogPage extends StatefulWidget {
+class AdminAuditLogPage extends ConsumerStatefulWidget {
   const AdminAuditLogPage({super.key});
 
   @override
-  State<AdminAuditLogPage> createState() => _AdminAuditLogPageState();
+  ConsumerState<AdminAuditLogPage> createState() => _AdminAuditLogPageState();
 }
 
-class _AdminAuditLogPageState extends State<AdminAuditLogPage> {
+class _AdminAuditLogPageState extends ConsumerState<AdminAuditLogPage> {
   final _searchCtrl = TextEditingController();
-  String _category = 'Toutes';
-  String _period = '7 jours';
+  String? _category;
+  int? _periodDays = 7;
+  String _searchQuery = '';
 
-  static const _categories = [
-    'Toutes',
-    'Payouts',
-    'Disputes',
-    'Bans',
-    'Streams',
+  static const _categories = <(String?, String)>[
+    (null, 'Toutes'),
+    ('payout', 'Payouts'),
+    ('dispute', 'Disputes'),
+    ('ban', 'Bans'),
+    ('stream', 'Streams'),
   ];
-  static const _periods = ["Aujourd'hui", '7 jours', '30 jours', 'Tout'];
+
+  static const _periods = <(int?, String)>[
+    (1, "Aujourd'hui"),
+    (7, '7 jours'),
+    (30, '30 jours'),
+    (null, 'Tout'),
+  ];
 
   @override
   void dispose() {
@@ -40,16 +50,16 @@ class _AdminAuditLogPageState extends State<AdminAuditLogPage> {
 
   @override
   Widget build(BuildContext context) {
+    final entries = ref.watch(
+      adminAuditLogProvider(AdminAuditLogFilter(
+        category: _category,
+        periodDays: _periodDays,
+        searchQuery: _searchQuery.isEmpty ? null : _searchQuery,
+      )),
+    );
+
     return Scaffold(
-      appBar: ArenaAppBar(
-        title: "Journal d'audit",
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search, color: ArenaColors.silver),
-            onPressed: () {},
-          ),
-        ],
-      ),
+      appBar: const ArenaAppBar(title: "Journal d'audit"),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(ArenaSpacing.lg),
@@ -57,100 +67,50 @@ class _AdminAuditLogPageState extends State<AdminAuditLogPage> {
             ArenaTextField(
               controller: _searchCtrl,
               hint: '🔍 Rechercher action, admin, ressource…',
+              onChanged: (v) => setState(() => _searchQuery = v.trim()),
             ),
             const SizedBox(height: ArenaSpacing.md),
             _ChipsRow(
-              labels: _categories,
-              current: _category,
-              onTap: (l) => setState(() => _category = l),
+              labels: [for (final (_, l) in _categories) l],
+              currentIndex: _categories.indexWhere((e) => e.$1 == _category),
+              onTap: (i) => setState(() => _category = _categories[i].$1),
             ),
             const SizedBox(height: ArenaSpacing.xs),
             _ChipsRow(
-              labels: _periods,
-              current: _period,
-              onTap: (l) => setState(() => _period = l),
+              labels: [for (final (_, l) in _periods) l],
+              currentIndex: _periods.indexWhere((e) => e.$1 == _periodDays),
+              onTap: (i) => setState(() => _periodDays = _periods[i].$1),
             ),
             const SizedBox(height: ArenaSpacing.md),
-            _LogCard(
-              accent: ArenaColors.statusOk,
-              header: '💰 Payout validé',
-              time: '14:23',
-              detail: RichText(
-                text: TextSpan(
+            entries.when(
+              loading: () => const Padding(
+                padding: EdgeInsets.all(ArenaSpacing.lg),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (e, _) => Padding(
+                padding: const EdgeInsets.all(ArenaSpacing.md),
+                child: Text(
+                  'Erreur de chargement : $e',
                   style: ArenaText.bodyMuted,
-                  children: [
-                    TextSpan(
-                      text: 'Modérateur1',
-                      style: ArenaText.body
-                          .copyWith(fontWeight: FontWeight.w600),
-                    ),
-                    const TextSpan(text: ' a validé le payout '),
-                    TextSpan(
-                      text: 'PO-2284',
-                      style: ArenaText.mono
-                          .copyWith(color: ArenaColors.signalBlue),
-                    ),
-                    const TextSpan(text: ' de 25 000 XAF pour '),
-                    TextSpan(
-                      text: 'KevinM_237',
-                      style: ArenaText.body,
-                    ),
-                  ],
                 ),
               ),
-              footer: 'IP 41.205.•.• · device Android',
-            ),
-            const SizedBox(height: ArenaSpacing.sm),
-            _LogCard(
-              accent: ArenaColors.statusWarn,
-              header: '⚖ Dispute tranchée',
-              time: '14:15',
-              detail: RichText(
-                text: TextSpan(
-                  style: ArenaText.bodyMuted,
-                  children: [
-                    TextSpan(
-                      text: 'AdminPaul',
-                      style: ArenaText.body
-                          .copyWith(fontWeight: FontWeight.w600),
+              data: (rows) => rows.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.all(ArenaSpacing.lg),
+                      child: Text(
+                        'Aucune entrée pour ce filtre.',
+                        style: ArenaText.bodyMuted,
+                        textAlign: TextAlign.center,
+                      ),
+                    )
+                  : Column(
+                      children: [
+                        for (final r in rows) ...[
+                          _LogCard(entry: r),
+                          const SizedBox(height: ArenaSpacing.sm),
+                        ],
+                      ],
                     ),
-                    const TextSpan(text: ' a validé score 3-1 pour '),
-                    TextSpan(
-                      text: 'M-4282',
-                      style: ArenaText.mono
-                          .copyWith(color: ArenaColors.signalBlue),
-                    ),
-                  ],
-                ),
-              ),
-              quote:
-                  '"Recording montre clairement 3 buts de AhmedB. PaulN '
-                  "n'a marqué que 1 but.\"",
-            ),
-            const SizedBox(height: ArenaSpacing.sm),
-            _LogCard(
-              accent: ArenaColors.neonRed,
-              header: '🚫 User banni',
-              time: '12:42',
-              detail: RichText(
-                text: TextSpan(
-                  style: ArenaText.bodyMuted,
-                  children: [
-                    TextSpan(
-                      text: 'AdminPaul',
-                      style: ArenaText.body
-                          .copyWith(fontWeight: FontWeight.w600),
-                    ),
-                    const TextSpan(text: ' a banni '),
-                    TextSpan(
-                      text: 'XploitR_99',
-                      style: ArenaText.body
-                          .copyWith(fontWeight: FontWeight.w700),
-                    ),
-                    const TextSpan(text: ' (triche détectée)'),
-                  ],
-                ),
-              ),
             ),
           ],
         ),
@@ -162,13 +122,13 @@ class _AdminAuditLogPageState extends State<AdminAuditLogPage> {
 class _ChipsRow extends StatelessWidget {
   const _ChipsRow({
     required this.labels,
-    required this.current,
+    required this.currentIndex,
     required this.onTap,
   });
 
   final List<String> labels;
-  final String current;
-  final ValueChanged<String> onTap;
+  final int currentIndex;
+  final ValueChanged<int> onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -176,11 +136,11 @@ class _ChipsRow extends StatelessWidget {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          for (final l in labels)
+          for (var i = 0; i < labels.length; i++)
             Padding(
               padding: const EdgeInsets.only(right: ArenaSpacing.xs),
               child: InkWell(
-                onTap: () => onTap(l),
+                onTap: () => onTap(i),
                 borderRadius: BorderRadius.circular(ArenaRadius.round),
                 child: AnimatedContainer(
                   duration: ArenaDurations.short,
@@ -189,24 +149,24 @@ class _ChipsRow extends StatelessWidget {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: l == current
+                    color: i == currentIndex
                         ? ArenaColors.signalBlue.withValues(alpha: 0.15)
                         : ArenaColors.carbon,
                     borderRadius:
                         BorderRadius.circular(ArenaRadius.round),
                     border: Border.all(
-                      color: l == current
+                      color: i == currentIndex
                           ? ArenaColors.signalBlue
                           : ArenaColors.border,
                     ),
                   ),
                   child: Text(
-                    l,
+                    labels[i],
                     style: ArenaText.body.copyWith(
-                      color: l == current
+                      color: i == currentIndex
                           ? ArenaColors.signalBlue
                           : ArenaColors.silver,
-                      fontWeight: l == current
+                      fontWeight: i == currentIndex
                           ? FontWeight.w600
                           : FontWeight.w500,
                     ),
@@ -221,24 +181,18 @@ class _ChipsRow extends StatelessWidget {
 }
 
 class _LogCard extends StatelessWidget {
-  const _LogCard({
-    required this.accent,
-    required this.header,
-    required this.time,
-    required this.detail,
-    this.quote,
-    this.footer,
-  });
-
-  final Color accent;
-  final String header;
-  final String time;
-  final Widget detail;
-  final String? quote;
-  final String? footer;
+  const _LogCard({required this.entry});
+  final AdminAuditLog entry;
 
   @override
   Widget build(BuildContext context) {
+    final visual = _visualFor(entry.action);
+    final justification =
+        entry.afterState['justification'] ?? entry.beforeState['justification'];
+    final quote = (justification is String && justification.isNotEmpty)
+        ? '"$justification"'
+        : null;
+
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.md),
       decoration: BoxDecoration(
@@ -248,7 +202,7 @@ class _LogCard extends StatelessWidget {
           top: const BorderSide(color: ArenaColors.border),
           right: const BorderSide(color: ArenaColors.border),
           bottom: const BorderSide(color: ArenaColors.border),
-          left: BorderSide(color: accent, width: 3),
+          left: BorderSide(color: visual.color, width: 3),
         ),
       ),
       child: Column(
@@ -258,15 +212,35 @@ class _LogCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  header,
+                  visual.headerWith(entry.action),
                   style: ArenaText.body.copyWith(fontWeight: FontWeight.w700),
                 ),
               ),
-              Text(time, style: ArenaText.monoSmall),
+              Text(
+                _formatTime(entry.createdAt),
+                style: ArenaText.monoSmall,
+              ),
             ],
           ),
           const SizedBox(height: ArenaSpacing.xs),
-          detail,
+          RichText(
+            text: TextSpan(
+              style: ArenaText.bodyMuted,
+              children: [
+                TextSpan(
+                  text: _shortId(entry.adminId),
+                  style: ArenaText.body.copyWith(fontWeight: FontWeight.w600),
+                ),
+                TextSpan(text: ' · ${visual.actionVerb} '),
+                if (entry.targetType != null && entry.targetId != null)
+                  TextSpan(
+                    text: '${entry.targetType}#${_shortId(entry.targetId!)}',
+                    style: ArenaText.mono
+                        .copyWith(color: ArenaColors.signalBlue),
+                  ),
+              ],
+            ),
+          ),
           if (quote != null) ...[
             const SizedBox(height: ArenaSpacing.sm),
             Container(
@@ -276,17 +250,145 @@ class _LogCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(ArenaRadius.sm),
               ),
               child: Text(
-                quote!,
+                quote,
                 style: ArenaText.body.copyWith(fontStyle: FontStyle.italic),
               ),
             ),
           ],
-          if (footer != null) ...[
+          if (entry.ipAddress != null) ...[
             const SizedBox(height: ArenaSpacing.sm),
-            Text(footer!, style: ArenaText.small),
+            Text(
+              'IP ${entry.ipAddress}'
+              '${entry.userAgent != null ? ' · ${entry.userAgent}' : ''}',
+              style: ArenaText.small,
+            ),
           ],
         ],
       ),
     );
+  }
+
+  static String _shortId(String id) =>
+      id.length < 8 ? id : id.substring(0, 8);
+
+  static String _formatTime(DateTime? at) {
+    if (at == null) return '';
+    final now = DateTime.now();
+    if (now.year == at.year &&
+        now.month == at.month &&
+        now.day == at.day) {
+      return DateFormat('HH:mm').format(at);
+    }
+    return DateFormat('dd/MM HH:mm').format(at);
+  }
+}
+
+class _ActionVisual {
+  const _ActionVisual({
+    required this.emoji,
+    required this.label,
+    required this.color,
+    required this.actionVerb,
+  });
+
+  final String emoji;
+  final String label;
+  final Color color;
+  final String actionVerb;
+
+  String headerWith(String action) {
+    if (label.isNotEmpty) return '$emoji $label';
+    return '$emoji ${action.replaceAll('_', ' ')}';
+  }
+}
+
+_ActionVisual _visualFor(String action) {
+  switch (action) {
+    case 'payout_validated':
+      return const _ActionVisual(
+        emoji: '💰',
+        label: 'Payout validé',
+        color: ArenaColors.statusOk,
+        actionVerb: 'a validé',
+      );
+    case 'payout_refused':
+      return const _ActionVisual(
+        emoji: '🚫',
+        label: 'Payout refusé',
+        color: ArenaColors.neonRed,
+        actionVerb: 'a refusé',
+      );
+    case 'dispute_resolved':
+      return const _ActionVisual(
+        emoji: '⚖',
+        label: 'Dispute tranchée',
+        color: ArenaColors.statusWarn,
+        actionVerb: 'a tranché',
+      );
+    case 'dispute_cancelled':
+      return const _ActionVisual(
+        emoji: '⚖',
+        label: 'Dispute annulée',
+        color: ArenaColors.statusWarn,
+        actionVerb: 'a annulé',
+      );
+    case 'user_banned':
+      return const _ActionVisual(
+        emoji: '🚫',
+        label: 'User banni',
+        color: ArenaColors.neonRed,
+        actionVerb: 'a banni',
+      );
+    case 'user_unbanned':
+      return const _ActionVisual(
+        emoji: '✅',
+        label: 'User réactivé',
+        color: ArenaColors.statusOk,
+        actionVerb: 'a réactivé',
+      );
+    case 'stream_enabled':
+    case 'stream_disabled':
+    case 'stream_cut':
+      return const _ActionVisual(
+        emoji: '📺',
+        label: 'Stream',
+        color: ArenaColors.signalBlue,
+        actionVerb: 'a modifié',
+      );
+    case 'match_verdict':
+      return const _ActionVisual(
+        emoji: '⚽',
+        label: 'Verdict match',
+        color: ArenaColors.signalBlue,
+        actionVerb: 'a validé',
+      );
+    case 'bracket_generated':
+      return const _ActionVisual(
+        emoji: '🏆',
+        label: 'Bracket généré',
+        color: ArenaColors.signalBlue,
+        actionVerb: 'a généré',
+      );
+    case 'competition_created':
+      return const _ActionVisual(
+        emoji: '➕',
+        label: 'Compétition créée',
+        color: ArenaColors.signalBlue,
+        actionVerb: 'a créé',
+      );
+    case 'competition_cancelled':
+      return const _ActionVisual(
+        emoji: '🚫',
+        label: 'Compétition annulée',
+        color: ArenaColors.neonRed,
+        actionVerb: 'a annulé',
+      );
+    default:
+      return _ActionVisual(
+        emoji: '•',
+        label: '',
+        color: ArenaColors.silver,
+        actionVerb: 'a effectué',
+      );
   }
 }
