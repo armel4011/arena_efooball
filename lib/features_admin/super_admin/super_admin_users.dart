@@ -2,6 +2,7 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/profile.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_users_repository.dart';
+import 'package:arena/features_admin/auth_admin/widgets/totp_gate.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
@@ -290,6 +291,15 @@ class _UserCard extends ConsumerWidget {
     final adminId = ref.read(currentSessionProvider)?.user.id;
     if (adminId == null) return;
     final shouldBan = profile.isActive;
+    final totpOk = await TotpGate.confirm(
+      context,
+      ref,
+      reason: shouldBan
+          ? 'Bannir ${profile.username}'
+          : 'Débannir ${profile.username}',
+    );
+    if (!totpOk) return;
+    if (!context.mounted) return;
     final repo = ref.read(adminUsersRepositoryProvider);
     final audit = ref.read(adminAuditLogRepositoryProvider);
     try {
@@ -330,6 +340,13 @@ class _UserCard extends ConsumerWidget {
   ) async {
     final adminId = ref.read(currentSessionProvider)?.user.id;
     if (adminId == null) return;
+    final totpOk = await TotpGate.confirm(
+      context,
+      ref,
+      reason: 'Override KYC → $status pour ${profile.username}',
+    );
+    if (!totpOk) return;
+    if (!context.mounted) return;
     try {
       await ref
           .read(adminUsersRepositoryProvider)

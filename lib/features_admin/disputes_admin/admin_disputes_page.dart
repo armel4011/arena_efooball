@@ -5,6 +5,7 @@ import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_disputes_repository.dart';
 import 'package:arena/data/repositories/admin/admin_matches_repository.dart';
 import 'package:arena/data/repositories/match_repository.dart';
+import 'package:arena/features_admin/auth_admin/widgets/totp_gate.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
@@ -315,6 +316,13 @@ class _VerdictButtons extends ConsumerWidget {
     }
     final adminId = ref.read(currentSessionProvider)?.user.id;
     if (adminId == null) return;
+    final totpOk = await TotpGate.confirm(
+      context,
+      ref,
+      reason: 'Résoudre dispute · verdict $scoreP1-$scoreP2',
+    );
+    if (!totpOk) return;
+    if (!context.mounted) return;
 
     try {
       await ref.read(adminMatchesRepositoryProvider).setVerdict(
@@ -365,6 +373,13 @@ class _VerdictButtons extends ConsumerWidget {
     }
     final adminId = ref.read(currentSessionProvider)?.user.id;
     if (adminId == null) return;
+    final totpOk = await TotpGate.confirm(
+      context,
+      ref,
+      reason: 'Annuler le match (dispute)',
+    );
+    if (!totpOk) return;
+    if (!context.mounted) return;
 
     try {
       await ref.read(adminMatchesRepositoryProvider).cancel(match.id);

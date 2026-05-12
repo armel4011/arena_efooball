@@ -16,6 +16,7 @@ import 'package:arena/features_shared/widgets/error_state.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/match_room/widgets/manual_upload_button.dart';
 import 'package:arena/features_user/match_room/widgets/match_recording_lifecycle.dart';
+import 'package:arena/features_user/match_room/widgets/score_edit_dialog.dart';
 import 'package:arena/features_user/streaming/start_streaming_banner.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -190,9 +191,10 @@ class MatchRoomPage extends ConsumerWidget {
       },
       child: Scaffold(
         appBar: ArenaAppBar(
-          title: async.value?.matchNumber == null
-              ? 'MATCH'
-              : 'MATCH #${async.value!.matchNumber}',
+          title: switch (async.value?.matchNumber) {
+            null => 'MATCH',
+            final n => 'MATCH #$n',
+          },
           onBack: () {
             widgetRef.invalidate(competitionMatchesProvider);
             if (context.canPop()) {
@@ -1352,7 +1354,7 @@ class _ScoreFlowViewState extends ConsumerState<_ScoreFlowView> {
         Row(
           children: [
             Expanded(
-              child: _ScoreField(
+              child: ScoreField(
                 label: 'Mon score',
                 controller: _myScoreCtrl,
                 enabled: !_submitting,
@@ -1361,7 +1363,7 @@ class _ScoreFlowViewState extends ConsumerState<_ScoreFlowView> {
             ),
             const SizedBox(width: ArenaSpacing.md),
             Expanded(
-              child: _ScoreField(
+              child: ScoreField(
                 label: 'Score adversaire',
                 controller: _oppScoreCtrl,
                 enabled: !_submitting,
@@ -1400,7 +1402,7 @@ class _ScoreFlowViewState extends ConsumerState<_ScoreFlowView> {
             Row(
               children: [
                 Expanded(
-                  child: _ScoreField(
+                  child: ScoreField(
                     label: 'Mes tirs au but',
                     controller: _myPenCtrl,
                     enabled: !_submitting,
@@ -1409,7 +1411,7 @@ class _ScoreFlowViewState extends ConsumerState<_ScoreFlowView> {
                 ),
                 const SizedBox(width: ArenaSpacing.md),
                 Expanded(
-                  child: _ScoreField(
+                  child: ScoreField(
                     label: 'Tirs adversaire',
                     controller: _oppPenCtrl,
                     enabled: !_submitting,
@@ -1517,47 +1519,6 @@ class _ScoreFlowViewState extends ConsumerState<_ScoreFlowView> {
   }
 }
 
-class _ScoreField extends StatelessWidget {
-  const _ScoreField({
-    required this.label,
-    required this.controller,
-    required this.enabled,
-    required this.action,
-  });
-
-  final String label;
-  final TextEditingController controller;
-  final bool enabled;
-  final TextInputAction action;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: ArenaText.inputLabel),
-        const SizedBox(height: 6),
-        TextField(
-          controller: controller,
-          enabled: enabled,
-          keyboardType: TextInputType.number,
-          textInputAction: action,
-          maxLength: 2,
-          textAlign: TextAlign.center,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          style: ArenaText.h2,
-          decoration: const InputDecoration(
-            hintText: '0',
-            counterText: '',
-            filled: true,
-            fillColor: ArenaColors.carbon,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _ProofAttachmentBlock extends StatelessWidget {
   const _ProofAttachmentBlock({
     required this.proof,
@@ -1634,18 +1595,15 @@ class _ProofAttachmentBlock extends StatelessWidget {
           ],
           const SizedBox(height: ArenaSpacing.sm),
           if (uploading)
-            const Row(
+            Row(
               children: [
-                SizedBox(
+                const SizedBox(
                   width: 16,
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
-                SizedBox(width: ArenaSpacing.sm),
-                Text(
-                  'Upload en cours…',
-                  style: TextStyle(color: ArenaColors.silver, fontSize: 12),
-                ),
+                const SizedBox(width: ArenaSpacing.sm),
+                Text('Upload en cours…', style: ArenaText.bodyMuted),
               ],
             )
           else if (attached)
@@ -1847,9 +1805,9 @@ class _DisputedViewState extends ConsumerState<_DisputedView> {
         ? ((_isPlayer1 ? pen2 : pen1)?.toString() ?? '')
         : '';
 
-    final updated = await showDialog<_EditedScore>(
+    final updated = await showDialog<EditedScore>(
       context: context,
-      builder: (_) => _EditScoreDialog(
+      builder: (_) => EditScoreDialog(
         myInitial: myInitial,
         oppInitial: oppInitial,
         viaPenaltiesInitial: viaPen,
@@ -2006,187 +1964,6 @@ class _ScoreSubmissionCard extends StatelessWidget {
           ],
         ],
       ),
-    );
-  }
-}
-
-class _EditedScore {
-  const _EditedScore({
-    required this.my,
-    required this.opp,
-    required this.viaPenalties,
-    this.myPen,
-    this.oppPen,
-  });
-  final int my;
-  final int opp;
-  final bool viaPenalties;
-  final int? myPen;
-  final int? oppPen;
-}
-
-class _EditScoreDialog extends StatefulWidget {
-  const _EditScoreDialog({
-    required this.myInitial,
-    required this.oppInitial,
-    required this.viaPenaltiesInitial,
-    required this.myPenInitial,
-    required this.oppPenInitial,
-    required this.knockout,
-  });
-
-  final String myInitial;
-  final String oppInitial;
-  final bool viaPenaltiesInitial;
-  final String myPenInitial;
-  final String oppPenInitial;
-  final bool knockout;
-
-  @override
-  State<_EditScoreDialog> createState() => _EditScoreDialogState();
-}
-
-class _EditScoreDialogState extends State<_EditScoreDialog> {
-  late final _myCtrl = TextEditingController(text: widget.myInitial);
-  late final _oppCtrl = TextEditingController(text: widget.oppInitial);
-  late final _myPenCtrl = TextEditingController(text: widget.myPenInitial);
-  late final _oppPenCtrl = TextEditingController(text: widget.oppPenInitial);
-  late bool _viaPen = widget.viaPenaltiesInitial;
-  String? _error;
-
-  @override
-  void dispose() {
-    _myCtrl.dispose();
-    _oppCtrl.dispose();
-    _myPenCtrl.dispose();
-    _oppPenCtrl.dispose();
-    super.dispose();
-  }
-
-  void _submit() {
-    final my = int.tryParse(_myCtrl.text.trim());
-    final opp = int.tryParse(_oppCtrl.text.trim());
-    if (my == null || opp == null || my < 0 || my > 99 || opp < 0 || opp > 99) {
-      setState(() => _error = 'Scores attendus entre 0 et 99.');
-      return;
-    }
-    int? myPen;
-    int? oppPen;
-    if (_viaPen) {
-      if (my != opp) {
-        setState(
-          () => _error = 'Score réglementaire à égalité avant les tirs au but.',
-        );
-        return;
-      }
-      myPen = int.tryParse(_myPenCtrl.text.trim());
-      oppPen = int.tryParse(_oppPenCtrl.text.trim());
-      if (myPen == null || oppPen == null || myPen < 0 || oppPen < 0 ||
-          myPen > 30 || oppPen > 30) {
-        setState(() => _error = 'Tirs au but attendus entre 0 et 30.');
-        return;
-      }
-      if (myPen == oppPen) {
-        setState(
-          () => _error = 'Les tirs au but ne peuvent pas finir à égalité.',
-        );
-        return;
-      }
-    }
-    Navigator.of(context).pop(
-      _EditedScore(
-        my: my,
-        opp: opp,
-        viaPenalties: _viaPen,
-        myPen: myPen,
-        oppPen: oppPen,
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: ArenaColors.surface,
-      title: Text('Corriger ton score', style: ArenaText.h2),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: _ScoreField(
-                  label: 'Mon score',
-                  controller: _myCtrl,
-                  enabled: true,
-                  action: TextInputAction.next,
-                ),
-              ),
-              const SizedBox(width: ArenaSpacing.md),
-              Expanded(
-                child: _ScoreField(
-                  label: 'Adversaire',
-                  controller: _oppCtrl,
-                  enabled: true,
-                  action: widget.knockout
-                      ? TextInputAction.next
-                      : TextInputAction.done,
-                ),
-              ),
-            ],
-          ),
-          if (widget.knockout) ...[
-            const SizedBox(height: ArenaSpacing.sm),
-            SwitchListTile.adaptive(
-              title: Text('Décidé aux tirs au but', style: ArenaText.body),
-              value: _viaPen,
-              contentPadding: EdgeInsets.zero,
-              onChanged: (v) => setState(() => _viaPen = v),
-            ),
-            if (_viaPen)
-              Row(
-                children: [
-                  Expanded(
-                    child: _ScoreField(
-                      label: 'Mes TAB',
-                      controller: _myPenCtrl,
-                      enabled: true,
-                      action: TextInputAction.next,
-                    ),
-                  ),
-                  const SizedBox(width: ArenaSpacing.md),
-                  Expanded(
-                    child: _ScoreField(
-                      label: 'TAB adv.',
-                      controller: _oppPenCtrl,
-                      enabled: true,
-                      action: TextInputAction.done,
-                    ),
-                  ),
-                ],
-              ),
-          ],
-          if (_error != null) ...[
-            const SizedBox(height: ArenaSpacing.sm),
-            Text(
-              _error!,
-              style: ArenaText.small.copyWith(color: ArenaColors.neonRed),
-            ),
-          ],
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Annuler'),
-        ),
-        ArenaButton(
-          label: 'RENVOYER',
-          icon: Icons.send_outlined,
-          onPressed: _submit,
-        ),
-      ],
     );
   }
 }

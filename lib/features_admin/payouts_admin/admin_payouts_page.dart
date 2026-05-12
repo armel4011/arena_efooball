@@ -2,6 +2,7 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/payout.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_payouts_repository.dart';
+import 'package:arena/features_admin/auth_admin/widgets/totp_gate.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
@@ -303,6 +304,14 @@ class _PayoutCard extends ConsumerWidget {
       hint: 'Justification (vérifications effectuées)',
     );
     if (justification == null) return;
+    if (!context.mounted) return;
+    final totpOk = await TotpGate.confirm(
+      context,
+      ref,
+      reason: 'Valider un payout · ${payout.currency} '
+          '${payout.amountLocal.round()}',
+    );
+    if (!totpOk) return;
     try {
       await ref.read(adminPayoutsRepositoryProvider).validate(
             payoutId: payout.id,
@@ -369,6 +378,15 @@ class _PayoutCard extends ConsumerWidget {
       hint: 'Justification écrite (obligatoire)',
     );
     if (justification == null) return;
+    if (!context.mounted) return;
+    final totpOk = await TotpGate.confirm(
+      context,
+      ref,
+      reason: action == _PayoutAction.refuse
+          ? 'Refuser un payout'
+          : 'Override validation payout (revue manuelle)',
+    );
+    if (!totpOk) return;
 
     final repo = ref.read(adminPayoutsRepositoryProvider);
     final audit = ref.read(adminAuditLogRepositoryProvider);
@@ -565,6 +583,12 @@ class _BatchCard extends ConsumerWidget {
   ) async {
     final adminId = ref.read(currentSessionProvider)?.user.id;
     if (adminId == null) return;
+    final totpOk = await TotpGate.confirm(
+      context,
+      ref,
+      reason: 'Valider ${eligible.length} payouts en batch',
+    );
+    if (!totpOk) return;
     final repo = ref.read(adminPayoutsRepositoryProvider);
     final audit = ref.read(adminAuditLogRepositoryProvider);
     final justification =

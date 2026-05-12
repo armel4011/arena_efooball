@@ -130,6 +130,19 @@ class AdminAuthRepository {
     });
   }
 
+  /// Step-up TOTP verification for sensitive admin actions.
+  ///
+  /// Called from [TotpGate] before validating payouts, resolving disputes,
+  /// banning users, KYC override, etc. Wires to `admin-stepup-totp` Edge
+  /// Function (PHASE 12.5).
+  Future<void> stepUpTotp(String code) async {
+    return _runEdge<void>(() async {
+      throw const BackendUnavailableFailure(
+        'admin-stepup-totp edge function not deployed yet',
+      );
+    });
+  }
+
   /// Wrap an Edge-Function call in our typed-failure mapping.
   Future<T> _runEdge<T>(Future<T> Function() body) async {
     try {
@@ -274,4 +287,27 @@ class AdminTotpVerifyController extends AsyncNotifier<Profile?> {
 final adminTotpVerifyControllerProvider =
     AsyncNotifierProvider<AdminTotpVerifyController, Profile?>(
   AdminTotpVerifyController.new,
+);
+
+/// Step-up TOTP controller — re-prompt before sensitive admin actions
+/// (payout validation, dispute resolution, ban, KYC override). One
+/// controller instance per [TotpGate] modal; state resets on dismiss.
+class AdminTotpStepUpController extends AsyncNotifier<bool> {
+  @override
+  Future<bool> build() async => false;
+
+  Future<void> verify(String code) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      await ref.read(adminAuthRepositoryProvider).stepUpTotp(code);
+      return true;
+    });
+  }
+
+  void reset() => state = const AsyncData(false);
+}
+
+final adminTotpStepUpControllerProvider =
+    AsyncNotifierProvider<AdminTotpStepUpController, bool>(
+  AdminTotpStepUpController.new,
 );
