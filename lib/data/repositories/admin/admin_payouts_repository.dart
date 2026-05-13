@@ -49,14 +49,15 @@ class AdminPayoutsRepository {
   }
 
   /// Refuses a payout — money stays in the platform commission, the
-  /// player gets notified (PHASE 12.5 dispatch).
+  /// player gets notified (PHASE 12.5 dispatch). The DB enum calls
+  /// this state `cancelled`.
   Future<void> refuse({
     required String payoutId,
     required String adminId,
     required String justification,
   }) async {
     await _client.from(_table).update({
-      'status': 'refused',
+      'status': 'cancelled',
       'validated_by_admin_id': adminId,
       'validated_at': DateTime.now().toUtc().toIso8601String(),
       'validation_justification': justification,
@@ -72,7 +73,7 @@ final adminPayoutsRepositoryProvider =
 final adminPendingPayoutsProvider = StreamProvider<List<Payout>>((ref) {
   return ref
       .watch(adminPayoutsRepositoryProvider)
-      .watchAll(status: 'pending');
+      .watchAll(status: 'pending_admin_validation');
 });
 
 final adminAllPayoutsProvider = StreamProvider<List<Payout>>((ref) {

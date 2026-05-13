@@ -1,8 +1,34 @@
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
+import 'package:arena/data/models/user_role.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+/// Flat DTO for one registered player in the admin competition detail.
+@immutable
+class AdminCompetitionRegistrant {
+  const AdminCompetitionRegistrant({
+    required this.playerId,
+    required this.username,
+    required this.countryCode,
+    required this.avatarColor,
+    required this.role,
+    required this.status,
+    required this.registeredAt,
+  });
+
+  final String playerId;
+  final String username;
+  final String countryCode;
+  final String avatarColor;
+  final UserRole role;
+
+  /// One of `pending`, `confirmed`, `refunded`, `withdrawn`.
+  final String status;
+  final DateTime registeredAt;
+}
 
 /// Admin-side CRUD for `competitions`.
 ///
@@ -58,6 +84,40 @@ class AdminCompetitionsRepository {
     return Competition.fromJson(row);
   }
 
+  /// Returns the registered players for [competitionId] joined with
+  /// their profile (username, country, avatar color, role) ordered by
+  /// registration time. Powers the "Inscrits" tab of the admin
+  /// competition detail page.
+  Future<List<AdminCompetitionRegistrant>> listRegistrations(
+    String competitionId,
+  ) async {
+    final rows = await _client
+        .from('competition_registrations')
+        .select(
+          'player_id, registered_at, status, '
+          'profiles!player_id(username, country_code, avatar_color, role)',
+        )
+        .eq('competition_id', competitionId)
+        .order('registered_at');
+    return [
+      for (final row in rows as List<dynamic>)
+        _mapRegistrant(row as Map<String, dynamic>),
+    ];
+  }
+
+  AdminCompetitionRegistrant _mapRegistrant(Map<String, dynamic> row) {
+    final profile = row['profiles'] as Map<String, dynamic>? ?? const {};
+    return AdminCompetitionRegistrant(
+      playerId: row['player_id'] as String,
+      username: profile['username'] as String? ?? '—',
+      countryCode: profile['country_code'] as String? ?? '',
+      avatarColor: profile['avatar_color'] as String? ?? '#4C7AFF',
+      role: UserRole.fromValue(profile['role'] as String?),
+      status: row['status'] as String? ?? 'confirmed',
+      registeredAt: DateTime.parse(row['registered_at'] as String),
+    );
+  }
+
   /// Flips a competition into `cancelled`. The Edge Function that
   /// refunds the registrations (PHASE 11bis) doesn't exist yet — the
   /// admin still gets a clean UI affordance, and the rows
@@ -95,4 +155,11 @@ final adminCompetitionsProvider = StreamProvider.family<
   return ref
       .watch(adminCompetitionsRepositoryProvider)
       .watch(status: filter.status, game: filter.game);
+});
+
+final adminCompetitionRegistrantsProvider = FutureProvider.family<
+    List<AdminCompetitionRegistrant>, String>((ref, competitionId) {
+  return ref
+      .watch(adminCompetitionsRepositoryProvider)
+      .listRegistrations(competitionId);
 });

@@ -71,17 +71,32 @@ class _LoginAdminScreenState extends ConsumerState<LoginAdminScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text('CONNEXION ADMIN', style: ArenaTypography.displayMedium),
+                const SizedBox(height: ArenaSpacing.lg),
+                const Center(
+                  child: Text(
+                    '🛡',
+                    style: TextStyle(fontSize: 54),
+                  ),
+                ),
+                const SizedBox(height: ArenaSpacing.md),
+                Center(
+                  child: Text(
+                    'CONSOLE ADMIN',
+                    style: ArenaTypography.displayMedium,
+                  ),
+                ),
                 const SizedBox(height: ArenaSpacing.sm),
-                Text(
-                  'Authentification à deux facteurs requise.',
-                  style: ArenaTypography.bodyMedium.copyWith(
-                    color: ArenaColors.textMuted,
+                Center(
+                  child: Text(
+                    'Accès restreint · Authentification 2FA',
+                    style: ArenaTypography.bodyMedium.copyWith(
+                      color: ArenaColors.textMuted,
+                    ),
                   ),
                 ),
                 const SizedBox(height: ArenaSpacing.xl),
                 ArenaTextField(
-                  label: 'EMAIL',
+                  label: 'EMAIL ADMIN',
                   hint: 'admin@arena.app',
                   controller: _emailCtrl,
                   keyboardType: TextInputType.emailAddress,
@@ -107,11 +122,34 @@ class _LoginAdminScreenState extends ConsumerState<LoginAdminScreen> {
                     onPressed: () => setState(() => _obscure = !_obscure),
                   ),
                 ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: isLoading
+                        ? null
+                        : () => _showForgotPasswordHint(context),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: Text(
+                      'Mot de passe oublié ?',
+                      style: ArenaText.small.copyWith(
+                        color: ArenaColors.neonRed,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
                 if (errorMessage != null) ...[
                   const SizedBox(height: ArenaSpacing.sm),
                   _ErrorBanner(message: errorMessage),
                 ],
-                const SizedBox(height: ArenaSpacing.lg),
+                const SizedBox(height: ArenaSpacing.sm),
                 ArenaButton(
                   label: 'SE CONNECTER',
                   fullWidth: true,
@@ -128,9 +166,32 @@ class _LoginAdminScreenState extends ConsumerState<LoginAdminScreen> {
                     child: const Text('Je suis invité (code admin)'),
                   ),
                 ),
+                const SizedBox(height: ArenaSpacing.md),
+                const _AdminWarningCard(
+                  text: '⚠ Toute tentative non autorisée est journalisée '
+                      'et signalée.',
+                ),
+                const SizedBox(height: ArenaSpacing.md),
+                Center(
+                  child: Text(
+                    'Pas de Google/Apple sign-in · Sécurité max',
+                    style: ArenaText.small,
+                  ),
+                ),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  void _showForgotPasswordHint(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Réinitialisation admin : contacte ton super-admin pour '
+          'régénérer ton accès.',
         ),
       ),
     );
@@ -140,6 +201,32 @@ class _LoginAdminScreenState extends ConsumerState<LoginAdminScreen> {
 AuthFailure _asFailure(Object? error) {
   if (error is AuthFailure) return error;
   return UnknownAuthFailure(error);
+}
+
+class _AdminWarningCard extends StatelessWidget {
+  const _AdminWarningCard({required this.text});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(ArenaSpacing.md),
+      decoration: BoxDecoration(
+        color: ArenaColors.statusWarn.withValues(alpha: 0.12),
+        borderRadius: ArenaRadius.button,
+        border: Border.all(
+          color: ArenaColors.statusWarn.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Text(
+        text,
+        style: ArenaText.small.copyWith(
+          color: ArenaColors.bone,
+          height: 1.5,
+        ),
+      ),
+    );
+  }
 }
 
 class _ErrorBanner extends StatelessWidget {

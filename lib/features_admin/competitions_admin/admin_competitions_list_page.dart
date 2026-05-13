@@ -7,7 +7,6 @@ import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -316,7 +315,7 @@ class _CompCard extends ConsumerWidget {
           ],
         ),
       ),
-    ).animate().fadeIn(duration: ArenaDurations.medium);
+    );
   }
 
   Future<void> _confirmCancel(BuildContext context, WidgetRef ref) async {

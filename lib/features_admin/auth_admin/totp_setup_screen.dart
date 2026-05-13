@@ -144,14 +144,33 @@ class _SetupView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        const _TotpStepper(currentStep: 1),
+        const SizedBox(height: ArenaSpacing.md),
+        Center(
+          child: Text(
+            'SCANNE LE QR CODE',
+            style: ArenaTypography.displayMedium.copyWith(fontSize: 22),
+          ),
+        ),
+        const SizedBox(height: ArenaSpacing.sm),
+        Center(
+          child: Text(
+            'Avec Google Authenticator, Authy ou 1Password.',
+            style: ArenaTypography.bodyMedium.copyWith(
+              color: ArenaColors.textMuted,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+        const SizedBox(height: ArenaSpacing.lg),
         Text(
-          '1. Installe Google Authenticator',
+          '1. Installe ton app TOTP',
           style: ArenaTypography.headlineMedium,
         ),
         const SizedBox(height: ArenaSpacing.sm),
         Text(
           'Disponible sur Google Play et App Store. Tu peux aussi'
-          " utiliser Authy ou Microsoft Authenticator.",
+          ' utiliser Authy ou Microsoft Authenticator.',
           style: ArenaTypography.bodyMedium.copyWith(
             color: ArenaColors.textMuted,
           ),
@@ -165,7 +184,7 @@ class _SetupView extends StatelessWidget {
         Center(
           child: Container(
             padding: const EdgeInsets.all(ArenaSpacing.md),
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: Colors.white,
               borderRadius: ArenaRadius.card,
             ),
@@ -248,11 +267,15 @@ class _BackupCodesView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          'CODES DE RÉCUPÉRATION',
-          style: ArenaTypography.displayMedium,
+        const _TotpStepper(currentStep: 3),
+        const SizedBox(height: ArenaSpacing.md),
+        Center(
+          child: Text(
+            'CODES DE RÉCUPÉRATION',
+            style: ArenaTypography.displayMedium.copyWith(fontSize: 22),
+          ),
         ),
-        const SizedBox(height: ArenaSpacing.sm),
+        const SizedBox(height: ArenaSpacing.lg),
         Container(
           padding: const EdgeInsets.all(ArenaSpacing.md),
           decoration: BoxDecoration(
@@ -262,42 +285,29 @@ class _BackupCodesView extends StatelessWidget {
               color: ArenaColors.warning.withValues(alpha: 0.3),
             ),
           ),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.warning_amber_rounded,
-                  color: ArenaColors.warning),
-              const SizedBox(width: ArenaSpacing.sm),
-              Expanded(
-                child: Text(
-                  'Note ces codes maintenant. Ils ne seront plus jamais'
-                  ' affichés. Si tu perds ton téléphone, ils sont ton'
-                  ' seul moyen de retrouver ton compte.',
-                  style: ArenaTypography.bodySmall,
-                ),
+              Text(
+                '🔑 10 codes de récupération',
+                style: ArenaText.h3,
+              ),
+              const SizedBox(height: ArenaSpacing.sm),
+              _BackupCodesGrid(codes: codes),
+              const SizedBox(height: ArenaSpacing.sm),
+              Text(
+                "Note-les ailleurs ! Sans eux, perdre ton tel = perdre l'accès.",
+                style: ArenaText.small,
               ),
             ],
           ),
         ),
-        const SizedBox(height: ArenaSpacing.lg),
-        Container(
-          padding: const EdgeInsets.all(ArenaSpacing.md),
-          decoration: BoxDecoration(
-            color: ArenaColors.surface,
-            borderRadius: ArenaRadius.card,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (final c in codes)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: SelectableText(
-                    c,
-                    style: ArenaTypography.codeMedium,
-                  ),
-                ),
-            ],
-          ),
+        const SizedBox(height: ArenaSpacing.md),
+        ArenaButton(
+          label: '📋 COPIER · 📥 PDF',
+          fullWidth: true,
+          variant: ArenaButtonVariant.secondary,
+          onPressed: () => _copyAll(context, codes),
         ),
         const SizedBox(height: ArenaSpacing.md),
         CheckboxListTile(
@@ -305,16 +315,82 @@ class _BackupCodesView extends StatelessWidget {
           controlAffinity: ListTileControlAffinity.leading,
           value: acknowledged,
           onChanged: (v) => onAck(v ?? false),
-          title: const Text('J\'ai sauvegardé mes codes en lieu sûr'),
+          title: const Text("J'ai sauvegardé mes codes en lieu sûr"),
         ),
         const SizedBox(height: ArenaSpacing.lg),
         ArenaButton(
-          label: 'CONTINUER',
+          label: 'CONTINUER →',
           fullWidth: true,
           size: ArenaButtonSize.large,
           onPressed: onContinue,
         ),
       ],
+    );
+  }
+
+  static Future<void> _copyAll(BuildContext context, List<String> codes) async {
+    await Clipboard.setData(ClipboardData(text: codes.join('\n')));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Codes copiés dans le presse-papier.')),
+    );
+  }
+}
+
+class _BackupCodesGrid extends StatelessWidget {
+  const _BackupCodesGrid({required this.codes});
+  final List<String> codes;
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 4,
+        crossAxisSpacing: 8,
+        childAspectRatio: 5,
+      ),
+      itemCount: codes.length,
+      itemBuilder: (_, i) => SelectableText(
+        codes[i],
+        style: ArenaText.mono,
+      ),
+    );
+  }
+}
+
+class _TotpStepper extends StatelessWidget {
+  const _TotpStepper({required this.currentStep});
+
+  /// 0-based index of the currently-active step (0..3).
+  final int currentStep;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(4, (i) {
+        final isDone = i < currentStep;
+        final isActive = i == currentStep;
+        final color = isActive
+            ? ArenaColors.signalBlue
+            : isDone
+                ? ArenaColors.bone
+                : ArenaColors.silverDim;
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Container(
+            width: isActive ? 24 : 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+        );
+      }),
     );
   }
 }

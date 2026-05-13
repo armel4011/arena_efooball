@@ -131,20 +131,30 @@ class _InvitationRedeemScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  'INSCRIPTION ADMIN',
-                  style: ArenaTypography.displayMedium,
+                const SizedBox(height: ArenaSpacing.sm),
+                const Center(
+                  child: Text('🎟️', style: TextStyle(fontSize: 54)),
+                ),
+                const SizedBox(height: ArenaSpacing.md),
+                Center(
+                  child: Text(
+                    'DEVENIR ADMIN',
+                    style: ArenaTypography.displayMedium,
+                  ),
                 ),
                 const SizedBox(height: ArenaSpacing.sm),
-                Text(
-                  "Entre ton code d'invitation puis crée ton compte admin.",
-                  style: ArenaTypography.bodyMedium.copyWith(
-                    color: ArenaColors.textMuted,
+                Center(
+                  child: Text(
+                    "Saisis le code d'invitation reçu par email.",
+                    style: ArenaTypography.bodyMedium.copyWith(
+                      color: ArenaColors.textMuted,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
                 const SizedBox(height: ArenaSpacing.xl),
                 ArenaTextField(
-                  label: "CODE D'INVITATION",
+                  label: 'CODE INVITATION',
                   hint: 'ARENA-XXXX-XXXX-XXXX',
                   controller: _codeCtrl,
                   textInputAction: TextInputAction.next,
@@ -157,6 +167,17 @@ class _InvitationRedeemScreenState
                     ),
                     LengthLimitingTextInputFormatter(19),
                   ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Format : ARENA-XXXX-XXXX-XXXX (auto-formaté)',
+                  style: ArenaText.small,
+                ),
+                const SizedBox(height: ArenaSpacing.md),
+                const _InvitationPreviewCard(
+                  role: 'Modérateur',
+                  sender: 'super@arena.app',
+                  expiresOn: '16/05/2026',
                 ),
                 const SizedBox(height: ArenaSpacing.md),
                 ArenaTextField(
@@ -236,15 +257,49 @@ class _InvitationRedeemScreenState
                 ],
                 const SizedBox(height: ArenaSpacing.lg),
                 ArenaButton(
-                  label: 'CRÉER LE COMPTE',
+                  label: 'VALIDER LE CODE',
                   fullWidth: true,
                   size: ArenaButtonSize.large,
                   isLoading: isLoading,
                   onPressed: _cguChecked ? _submit : null,
                 ),
+                const SizedBox(height: ArenaSpacing.md),
+                Center(
+                  child: Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        'Pas reçu de code ? ',
+                        style: ArenaText.bodyMuted,
+                      ),
+                      GestureDetector(
+                        onTap: () => _showContactHint(context),
+                        child: Text(
+                          'Contacter le super-admin',
+                          style: ArenaText.bodyMuted.copyWith(
+                            color: ArenaColors.neonRed,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  void _showContactHint(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Demande à ton super-admin de renvoyer une invitation depuis '
+          'la console.',
         ),
       ),
     );
@@ -254,6 +309,48 @@ class _InvitationRedeemScreenState
 AuthFailure _asFailure(Object? error) {
   if (error is AuthFailure) return error;
   return UnknownAuthFailure(error);
+}
+
+class _InvitationPreviewCard extends StatelessWidget {
+  const _InvitationPreviewCard({
+    required this.role,
+    required this.sender,
+    required this.expiresOn,
+  });
+
+  final String role;
+  final String sender;
+  final String expiresOn;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(ArenaSpacing.md),
+      decoration: BoxDecoration(
+        color: ArenaColors.neonRed.withValues(alpha: 0.08),
+        borderRadius: ArenaRadius.button,
+        border: Border.all(
+          color: ArenaColors.neonRed.withValues(alpha: 0.25),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('📧 Tu as reçu', style: ArenaText.h3),
+          const SizedBox(height: 4),
+          Text(
+            'Invitation $role',
+            style: ArenaText.body.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'De : $sender · Expire le $expiresOn',
+            style: ArenaText.small,
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _ErrorBanner extends StatelessWidget {
