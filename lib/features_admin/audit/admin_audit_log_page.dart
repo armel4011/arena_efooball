@@ -197,7 +197,6 @@ class _LogCard extends StatelessWidget {
       padding: const EdgeInsets.all(ArenaSpacing.md),
       decoration: BoxDecoration(
         color: ArenaColors.carbon,
-        borderRadius: BorderRadius.circular(ArenaRadius.lg),
         border: Border(
           top: const BorderSide(color: ArenaColors.border),
           right: const BorderSide(color: ArenaColors.border),
