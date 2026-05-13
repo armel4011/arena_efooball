@@ -128,6 +128,18 @@ class AdminCompetitionsRepository {
         .update({'status': 'cancelled'})
         .eq('id', id);
   }
+
+  /// Suppression définitive (super-admin only). Les paiements liés
+  /// sont supprimés d'abord pour respecter la contrainte FK
+  /// `payments.competition_id on delete restrict`. Les registrations
+  /// et matches cascadent automatiquement côté DB.
+  Future<void> delete(String competitionId) async {
+    await _client
+        .from('payments')
+        .delete()
+        .eq('competition_id', competitionId);
+    await _client.from(_table).delete().eq('id', competitionId);
+  }
 }
 
 final adminCompetitionsRepositoryProvider =

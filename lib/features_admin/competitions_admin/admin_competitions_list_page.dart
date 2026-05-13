@@ -3,6 +3,7 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/admin/admin_competitions_repository.dart';
+import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
@@ -225,6 +226,10 @@ class _CompCard extends ConsumerWidget {
     final kvs = _kvsFor(competition);
     final showActions = competition.status == CompetitionStatus.ongoing ||
         competition.status == CompetitionStatus.registrationOpen;
+    final isSuperAdmin = ref.watch(currentProfileProvider).maybeWhen(
+          data: (p) => p?.isSuperAdmin ?? false,
+          orElse: () => false,
+        );
     final footerNote = competition.status == CompetitionStatus.draft
         ? 'Brouillon, pas publié'
         : null;
@@ -312,6 +317,15 @@ class _CompCard extends ConsumerWidget {
                 ],
               ),
             ],
+            if (isSuperAdmin) ...[
+              const SizedBox(height: ArenaSpacing.xs),
+              ArenaButton(
+                label: '🗑 SUPPRIMER DÉFINITIVEMENT',
+                variant: ArenaButtonVariant.danger,
+                fullWidth: true,
+                onPressed: () => _confirmDelete(context, ref),
+              ),
+            ],
           ],
         ),
       ),
@@ -348,6 +362,51 @@ class _CompCard extends ConsumerWidget {
       await ref
           .read(adminCompetitionsRepositoryProvider)
           .cancel(competition.id);
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Échec : $e')),
+      );
+    }
+  }
+
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        backgroundColor: ArenaColors.carbon,
+        title: Text(
+          'Supprimer définitivement ?',
+          style: ArenaText.h3.copyWith(color: ArenaColors.neonRed),
+        ),
+        content: Text(
+          'Cette compétition et tous ses paiements liés seront effacés '
+          'de la DB. Les inscriptions et matches cascadent automatiquement. '
+          'Cette action est IRRÉVERSIBLE.',
+          style: ArenaText.bodyMuted,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(c).pop(false),
+            child: const Text('NON'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(c).pop(true),
+            style: TextButton.styleFrom(foregroundColor: ArenaColors.neonRed),
+            child: const Text('OUI, SUPPRIMER'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ref
+          .read(adminCompetitionsRepositoryProvider)
+          .delete(competition.id);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Compétition supprimée.')),
+      );
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
