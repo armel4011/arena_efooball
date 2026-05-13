@@ -577,7 +577,7 @@ class _MaxPlayersPicker extends StatelessWidget {
   final int current;
   final ValueChanged<int> onChanged;
 
-  static const _options = [2, 4, 8, 16, 32, 64, 128, 256];
+  static const _options = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024];
 
   @override
   Widget build(BuildContext context) {
