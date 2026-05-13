@@ -129,16 +129,16 @@ class AdminCompetitionsRepository {
         .eq('id', id);
   }
 
-  /// Suppression définitive (super-admin only). Les paiements liés
-  /// sont supprimés d'abord pour respecter la contrainte FK
-  /// `payments.competition_id on delete restrict`. Les registrations
-  /// et matches cascadent automatiquement côté DB.
+  /// Suppression définitive (super-admin only). Appelle la RPC SQL
+  /// `delete_competition_cascade` (SECURITY DEFINER) qui supprime
+  /// atomiquement payouts → platform_revenue → payments → competition.
+  /// Les registrations / matches / brackets cascadent via leurs FK
+  /// `on delete cascade` propres.
   Future<void> delete(String competitionId) async {
-    await _client
-        .from('payments')
-        .delete()
-        .eq('competition_id', competitionId);
-    await _client.from(_table).delete().eq('id', competitionId);
+    await _client.rpc(
+      'delete_competition_cascade',
+      params: {'p_competition_id': competitionId},
+    );
   }
 }
 
