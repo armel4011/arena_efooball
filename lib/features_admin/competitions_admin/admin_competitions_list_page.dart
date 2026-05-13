@@ -320,7 +320,7 @@ class _CompCard extends ConsumerWidget {
             if (isSuperAdmin) ...[
               const SizedBox(height: ArenaSpacing.xs),
               ArenaButton(
-                label: '🗑 SUPPRIMER DÉFINITIVEMENT',
+                label: '🗑 SUPPRIMER',
                 variant: ArenaButtonVariant.danger,
                 fullWidth: true,
                 onPressed: () => _confirmDelete(context, ref),
