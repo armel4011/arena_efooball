@@ -1,9 +1,11 @@
+import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_divider.dart';
 import 'package:arena/features_user/payments/payment_method.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:go_router/go_router.dart';
 
 /// PHASE 11bis · P4 — payment success landing.
 ///
@@ -21,6 +23,7 @@ class PaymentSuccessPage extends StatelessWidget {
     required this.dateLabel,
     this.tournamentName = 'FIFA WEEKEND CUP',
     this.tournamentStartLabel = 'Démarre le 11 mai à 14h',
+    this.competitionId,
     this.onSeeMyEntries,
     this.onBackHome,
     super.key,
@@ -32,6 +35,7 @@ class PaymentSuccessPage extends StatelessWidget {
   final String dateLabel;
   final String tournamentName;
   final String tournamentStartLabel;
+  final String? competitionId;
   final VoidCallback? onSeeMyEntries;
   final VoidCallback? onBackHome;
 
@@ -93,18 +97,23 @@ class PaymentSuccessPage extends StatelessWidget {
                     duration: ArenaDurations.medium,
                   ),
               const SizedBox(height: ArenaSpacing.xl),
-              ArenaButton(
-                label: 'VOIR MES INSCRIPTIONS',
-                fullWidth: true,
-                size: ArenaButtonSize.large,
-                onPressed: onSeeMyEntries ?? () => Navigator.maybePop(context),
-              ),
-              const SizedBox(height: ArenaSpacing.sm),
+              if (competitionId != null) ...[
+                ArenaButton(
+                  label: '🏆 VOIR LA COMPÉTITION',
+                  fullWidth: true,
+                  size: ArenaButtonSize.large,
+                  onPressed: () => context.go(
+                    UserRoutes.competitionPath(competitionId!),
+                  ),
+                ),
+                const SizedBox(height: ArenaSpacing.sm),
+              ],
               ArenaButton(
                 label: "Retour à l'accueil",
                 variant: ArenaButtonVariant.ghost,
                 fullWidth: true,
-                onPressed: onBackHome ?? () => Navigator.maybePop(context),
+                onPressed: onBackHome ??
+                    () => context.go(UserRoutes.home),
               ),
             ],
           ),

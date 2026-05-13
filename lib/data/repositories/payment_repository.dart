@@ -158,3 +158,16 @@ final myPaymentsProvider = StreamProvider<List<PaymentRecord>>((ref) {
   }
   return ref.watch(paymentRepositoryProvider).watchMine();
 });
+
+/// Map competition_id → PaymentRecord pour les paiements actuellement
+/// en `awaiting_admin` du joueur courant. Utilisé par la liste comp
+/// pour décider si on doit ré-ouvrir P3 sur un paiement existant au
+/// lieu de relancer le flow d'inscription.
+final myPendingPaymentByCompetitionProvider =
+    Provider<Map<String, PaymentRecord>>((ref) {
+  final payments = ref.watch(myPaymentsProvider).valueOrNull ?? const [];
+  return {
+    for (final p in payments)
+      if (p.status == 'awaiting_admin') p.competitionId: p,
+  };
+});

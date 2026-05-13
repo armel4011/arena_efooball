@@ -3,9 +3,11 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
+import 'package:arena/data/repositories/payment_repository.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:arena/features_shared/widgets/error_state.dart';
+import 'package:arena/features_user/payments/payment_method.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -95,6 +97,8 @@ class _CompetitionsListPageState extends ConsumerState<CompetitionsListPage> {
               final registeredIds =
                   ref.watch(myRegisteredCompetitionIdsProvider).valueOrNull ??
                       const <String>{};
+              final pendingByComp =
+                  ref.watch(myPendingPaymentByCompetitionProvider);
               return RefreshIndicator(
                 onRefresh: () async {
                   ref.invalidate(competitionsListProvider(_game));
@@ -109,12 +113,19 @@ class _CompetitionsListPageState extends ConsumerState<CompetitionsListPage> {
                   itemBuilder: (context, i) {
                     final c = filtered[i];
                     final isReg = registeredIds.contains(c.id);
+                    final pending = pendingByComp[c.id];
                     return _CompetitionListCard(
                       competition: c,
                       isRegistered: isReg,
-                      onTap: () => _onCardTap(context, c, registeredIds),
+                      hasPendingPayment: pending != null,
+                      onTap: () => _onCardTap(
+                        context,
+                        c,
+                        registeredIds,
+                        pending,
+                      ),
                       onRegister: !isReg && c.canRegister
-                          ? () => _openInscriptionFlow(context, c)
+                          ? () => _onRegisterTap(context, c, pending)
                           : null,
                     );
                   },
@@ -132,15 +143,45 @@ void _onCardTap(
   BuildContext context,
   Competition c,
   Set<String> registeredIds,
+  PaymentRecord? pending,
 ) {
   // Si déjà inscrit → accès direct au détail (bracket / matches / etc).
   if (registeredIds.contains(c.id)) {
     context.push(UserRoutes.competitionPath(c.id));
     return;
   }
-  // Pas inscrit → on saute le détail et on envoie directement vers la
-  // page de confirmation d'inscription (gate).
+  // Sinon, s'il y a un paiement en attente, on saute la confirmation
+  // et P1/P2 et on ré-ouvre P3 directement.
+  _onRegisterTap(context, c, pending);
+}
+
+void _onRegisterTap(
+  BuildContext context,
+  Competition c,
+  PaymentRecord? pending,
+) {
+  if (pending != null) {
+    _resumeProcessing(context, c, pending);
+    return;
+  }
   _openInscriptionFlow(context, c);
+}
+
+void _resumeProcessing(
+  BuildContext context,
+  Competition c,
+  PaymentRecord pending,
+) {
+  context.push(
+    UserRoutes.paymentProcessing,
+    extra: PaymentProcessingArgs(
+      paymentId: pending.id,
+      method: PaymentMethod.fromCode(pending.payerMethod ?? 'MTN_MOMO'),
+      amountXaf: pending.amountLocal.round(),
+      competitionName: c.name,
+      maskedPhone: pending.payerPhone ?? '+••• •• •• ••',
+    ),
+  );
 }
 
 void _openInscriptionFlow(BuildContext context, Competition c) {
@@ -340,12 +381,17 @@ class _CompetitionListCard extends StatelessWidget {
   const _CompetitionListCard({
     required this.competition,
     required this.isRegistered,
+    required this.hasPendingPayment,
     required this.onTap,
     required this.onRegister,
   });
 
   final Competition competition;
   final bool isRegistered;
+
+  /// `true` quand un paiement de cet utilisateur sur cette comp est en
+  /// `awaiting_admin`. Le bouton CTA passe alors à "VOIR LE STATUT".
+  final bool hasPendingPayment;
   final VoidCallback onTap;
 
   /// `null` quand le joueur est déjà inscrit OU que la comp n'accepte
@@ -364,6 +410,7 @@ class _CompetitionListCard extends StatelessWidget {
         : _PaidCompetitionCard(
             competition: competition,
             isRegistered: isRegistered,
+            hasPendingPayment: hasPendingPayment,
             onTap: onTap,
             onRegister: onRegister,
           );
@@ -532,12 +579,14 @@ class _PaidCompetitionCard extends StatelessWidget {
   const _PaidCompetitionCard({
     required this.competition,
     required this.isRegistered,
+    required this.hasPendingPayment,
     required this.onTap,
     required this.onRegister,
   });
 
   final Competition competition;
   final bool isRegistered;
+  final bool hasPendingPayment;
   final VoidCallback onTap;
   final VoidCallback? onRegister;
 
@@ -759,8 +808,13 @@ class _PaidCompetitionCard extends StatelessWidget {
         body,
         const SizedBox(height: ArenaSpacing.sm),
         ArenaButton(
-          label: "✓ S'INSCRIRE · "
-              '${_money(c.registrationFee)} ${c.registrationCurrency}',
+          label: hasPendingPayment
+              ? '⏱ VOIR LE STATUT DU PAIEMENT'
+              : "✓ S'INSCRIRE · "
+                  '${_money(c.registrationFee)} ${c.registrationCurrency}',
+          variant: hasPendingPayment
+              ? ArenaButtonVariant.secondary
+              : ArenaButtonVariant.primary,
           fullWidth: true,
           onPressed: onRegister,
         ),

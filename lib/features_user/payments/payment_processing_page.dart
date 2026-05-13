@@ -64,6 +64,7 @@ class _PaymentProcessingPageState
               (rec.validatedAt ?? rec.createdAt).toLocal(),
             ),
             tournamentName: widget.competitionName,
+            competitionId: rec.competitionId,
           ),
         );
       });

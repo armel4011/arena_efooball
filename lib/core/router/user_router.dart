@@ -371,6 +371,7 @@ final userRouterProvider = Provider<GoRouter>((ref) {
             transactionId: extra?.transactionId ?? '—',
             dateLabel: extra?.dateLabel ?? '',
             tournamentName: extra?.tournamentName ?? 'COMPÉTITION',
+            competitionId: extra?.competitionId,
           );
         },
       ),
@@ -471,12 +472,18 @@ class PaymentResultArgs {
     required this.transactionId,
     required this.dateLabel,
     this.tournamentName = 'COMPÉTITION',
+    this.competitionId,
   });
 
   final PaymentMethod method;
   final int amountXaf;
   final String transactionId;
   final String dateLabel;
+
+  /// Permet à P4 d'offrir un CTA "VOIR LA COMPÉTITION" qui route
+  /// directement vers /competitions/:id maintenant que le joueur est
+  /// inscrit (trigger DB).
+  final String? competitionId;
   final String tournamentName;
 }
 
