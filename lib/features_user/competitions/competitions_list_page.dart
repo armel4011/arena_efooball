@@ -26,6 +26,7 @@ class CompetitionsListPage extends ConsumerStatefulWidget {
 class _CompetitionsListPageState extends ConsumerState<CompetitionsListPage> {
   GameType? _game;
   _StatusBucket _bucket = _StatusBucket.upcoming;
+  _PricingBucket _pricing = _PricingBucket.all;
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +57,13 @@ class _CompetitionsListPageState extends ConsumerState<CompetitionsListPage> {
                 selected: _bucket,
                 onChanged: (b) => setState(() => _bucket = b),
               ),
+              const SizedBox(height: ArenaSpacing.sm),
+              Text('TARIF', style: ArenaText.inputLabel),
+              const SizedBox(height: ArenaSpacing.sm),
+              _PricingChips(
+                selected: _pricing,
+                onChanged: (p) => setState(() => _pricing = p),
+              ),
             ],
           ),
         ),
@@ -69,8 +77,10 @@ class _CompetitionsListPageState extends ConsumerState<CompetitionsListPage> {
               onRetry: () => ref.invalidate(competitionsListProvider(_game)),
             ),
             data: (items) {
-              final filtered =
-                  items.where((c) => _bucket.matches(c.status)).toList();
+              final filtered = items
+                  .where((c) => _bucket.matches(c.status))
+                  .where((c) => _pricing.matches(c))
+                  .toList();
               if (filtered.isEmpty) {
                 return EmptyState(
                   icon: Icons.sports_esports_outlined,
@@ -152,6 +162,48 @@ String _formatLabel(TournamentFormat f) => switch (f) {
       TournamentFormat.groupsThenKnockout => 'Poules + élimination',
       TournamentFormat.roundRobin => 'Round robin',
     };
+
+enum _PricingBucket {
+  all('Toutes'),
+  free('Gratuites'),
+  paid('Payantes');
+
+  const _PricingBucket(this.label);
+  final String label;
+
+  bool matches(Competition c) => switch (this) {
+        _PricingBucket.all => true,
+        _PricingBucket.free => c.isFree,
+        _PricingBucket.paid => !c.isFree,
+      };
+}
+
+class _PricingChips extends StatelessWidget {
+  const _PricingChips({required this.selected, required this.onChanged});
+
+  final _PricingBucket selected;
+  final ValueChanged<_PricingBucket> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (var i = 0; i < _PricingBucket.values.length; i++) ...[
+            _Chip(
+              label: _PricingBucket.values[i].label,
+              active: _PricingBucket.values[i] == selected,
+              onTap: () => onChanged(_PricingBucket.values[i]),
+            ),
+            if (i < _PricingBucket.values.length - 1)
+              const SizedBox(width: ArenaSpacing.xs),
+          ],
+        ],
+      ),
+    );
+  }
+}
 
 enum _StatusBucket {
   upcoming('À venir'),
@@ -272,13 +324,9 @@ class _Chip extends StatelessWidget {
   }
 }
 
-/// Carte compétition simplifiée — affiche les infos clés pour
-/// décider de s'inscrire : nom, badge GRATUITE/PAYANTE, récompense en
-/// gros caractères pour les compétitions payantes (ou "GRATUIT" pour
-/// les gratuites), et une ligne footer avec date + frais + capacité.
-///
-/// Le détail complet (bracket, matches, chat) reste gated derrière
-/// l'inscription — d'où le minimalisme volontaire ici.
+/// Choisit la carte adaptée selon le tarif. Garde la signature unifiée
+/// pour la liste, mais le rendu visuel diffère franchement entre les
+/// deux modes (cf. design discussion).
 class _CompetitionListCard extends StatelessWidget {
   const _CompetitionListCard({
     required this.competition,
@@ -292,12 +340,38 @@ class _CompetitionListCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return competition.isFree
+        ? _FreeCompetitionCard(
+            competition: competition,
+            isRegistered: isRegistered,
+            onTap: onTap,
+          )
+        : _PaidCompetitionCard(
+            competition: competition,
+            isRegistered: isRegistered,
+            onTap: onTap,
+          );
+  }
+}
+
+/// ─── Card "GRATUITE" : layout léger, fond légèrement verdoyant, vibe
+/// décontractée. Pas de notion de frais. Aucun élément "trophée".
+class _FreeCompetitionCard extends StatelessWidget {
+  const _FreeCompetitionCard({
+    required this.competition,
+    required this.isRegistered,
+    required this.onTap,
+  });
+
+  final Competition competition;
+  final bool isRegistered;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
     final c = competition;
-    final isFree = c.isFree;
-    final accent = isFree ? ArenaColors.statusOk : ArenaColors.signalBlue;
-    final dateLabel = DateFormat('d MMM · HH:mm', 'fr').format(
-      c.startDate.toLocal(),
-    );
+    final dateLabel =
+        DateFormat('d MMM · HH:mm', 'fr').format(c.startDate.toLocal());
 
     return InkWell(
       onTap: onTap,
@@ -305,28 +379,181 @@ class _CompetitionListCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(ArenaSpacing.lg),
         decoration: BoxDecoration(
-          color: ArenaColors.carbon,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              ArenaColors.statusOk.withValues(alpha: 0.10),
+              ArenaColors.carbon,
+            ],
+          ),
           borderRadius: BorderRadius.circular(ArenaRadius.lg),
           border: Border.all(
             color: isRegistered
-                ? ArenaColors.statusOk.withValues(alpha: 0.5)
-                : ArenaColors.border,
+                ? ArenaColors.statusOk
+                : ArenaColors.statusOk.withValues(alpha: 0.35),
             width: isRegistered ? 1.5 : 1,
           ),
-          boxShadow: isRegistered
-              ? [
-                  BoxShadow(
-                    color: ArenaColors.statusOk.withValues(alpha: 0.15),
-                    blurRadius: 18,
-                    spreadRadius: -4,
+        ),
+        child: Row(
+          children: [
+            // Bloc gauche : badge + emoji
+            Column(
+              children: [
+                Container(
+                  width: 54,
+                  height: 54,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: ArenaColors.statusOk.withValues(alpha: 0.18),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: ArenaColors.statusOk.withValues(alpha: 0.5),
+                    ),
                   ),
-                ]
-              : null,
+                  child: Text(
+                    _gameEmoji(c.game),
+                    style: const TextStyle(fontSize: 26),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: ArenaColors.statusOk.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(ArenaRadius.round),
+                  ),
+                  child: Text(
+                    'GRATUITE',
+                    style: ArenaText.small.copyWith(
+                      color: ArenaColors.statusOk,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 9,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(width: ArenaSpacing.md),
+            // Bloc centre : nom + jeu + date
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    c.name,
+                    style: ArenaText.h3,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    c.game.label,
+                    style: ArenaText.bodyMuted,
+                  ),
+                  const SizedBox(height: 2),
+                  Text('🗓 $dateLabel', style: ArenaText.small),
+                  const SizedBox(height: ArenaSpacing.xs),
+                  Row(
+                    children: [
+                      const Icon(Icons.people_outline,
+                          size: 13, color: ArenaColors.silver),
+                      const SizedBox(width: 3),
+                      Text(
+                        '${c.currentPlayers}/${c.maxPlayers}',
+                        style: ArenaText.small,
+                      ),
+                      const SizedBox(width: ArenaSpacing.sm),
+                      if (isRegistered)
+                        Text(
+                          '· ✓ Inscrit',
+                          style: ArenaText.small.copyWith(
+                            color: ArenaColors.statusOk,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: ArenaSpacing.sm),
+            const Icon(
+              Icons.chevron_right,
+              color: ArenaColors.silver,
+              size: 22,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// ─── Card "PAYANTE" : layout premium avec récompense en or, trophée,
+/// glow doré, et footer dédié au prix d'entrée.
+class _PaidCompetitionCard extends StatelessWidget {
+  const _PaidCompetitionCard({
+    required this.competition,
+    required this.isRegistered,
+    required this.onTap,
+  });
+
+  final Competition competition;
+  final bool isRegistered;
+  final VoidCallback onTap;
+
+  static const _gold = Color(0xFFFFC93C);
+  static const _goldDeep = Color(0xFFCB9A1F);
+
+  @override
+  Widget build(BuildContext context) {
+    final c = competition;
+    final dateLabel =
+        DateFormat('d MMM · HH:mm', 'fr').format(c.startDate.toLocal());
+    final prize = _formatPrize(c.prizePoolLocal,
+        c.prizePoolCurrency ?? c.registrationCurrency);
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(ArenaRadius.lg),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(
+          ArenaSpacing.lg,
+          ArenaSpacing.md,
+          ArenaSpacing.lg,
+          ArenaSpacing.lg,
+        ),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0x1AFFC93C), // gold tint top
+              ArenaColors.carbon, // fades to carbon
+            ],
+          ),
+          borderRadius: BorderRadius.circular(ArenaRadius.lg),
+          border: Border.all(
+            color: isRegistered
+                ? ArenaColors.statusOk
+                : _gold.withValues(alpha: 0.4),
+            width: isRegistered ? 1.5 : 1.2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: _gold.withValues(alpha: 0.12),
+              blurRadius: 22,
+              spreadRadius: -4,
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ─── Header : emoji + nom + badge tarif ─────────────────
+            // ─── Header : emoji + nom + chip PAYANTE ──────────────
             Row(
               children: [
                 Text(
@@ -343,7 +570,24 @@ class _CompetitionListCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: ArenaSpacing.xs),
-                _PricingChip(isFree: isFree),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: _gold.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(ArenaRadius.round),
+                    border: Border.all(color: _gold.withValues(alpha: 0.6)),
+                  ),
+                  child: Text(
+                    'PAYANTE',
+                    style: ArenaText.small.copyWith(
+                      color: _gold,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1,
+                      fontSize: 10,
+                    ),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 2),
@@ -353,57 +597,84 @@ class _CompetitionListCard extends StatelessWidget {
             ),
             const SizedBox(height: ArenaSpacing.md),
 
-            // ─── Récompense en gros (ou GRATUIT) ────────────────────
-            Center(
-              child: Column(
-                children: [
-                  if (isFree)
-                    Text(
-                      'GRATUIT',
-                      style: ArenaText.bigNumber.copyWith(
-                        color: accent,
-                        fontSize: 36,
-                        letterSpacing: 2,
-                      ),
-                    )
-                  else
-                    Text(
-                      _formatPrize(c.prizePoolLocal, c.prizePoolCurrency,
-                          c.registrationCurrency),
-                      style: ArenaText.bigNumber.copyWith(
-                        color: accent,
-                        fontSize: 32,
-                        letterSpacing: 1,
-                      ),
+            // ─── Trophée + récompense en gros (gradient or) ──────
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [_gold, _goldDeep],
                     ),
-                  const SizedBox(height: 2),
-                  Text(
-                    isFree ? 'Inscription libre' : 'À gagner',
-                    style: ArenaText.bodyMuted.copyWith(letterSpacing: 1.5),
+                    borderRadius:
+                        BorderRadius.circular(ArenaRadius.lg),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _gold.withValues(alpha: 0.35),
+                        blurRadius: 14,
+                        spreadRadius: -2,
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                  child: const Text('🏆',
+                      style: TextStyle(fontSize: 30)),
+                ),
+                const SizedBox(width: ArenaSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'À GAGNER',
+                        style: ArenaText.small.copyWith(
+                          color: _gold,
+                          letterSpacing: 2,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      ShaderMask(
+                        shaderCallback: (b) => const LinearGradient(
+                          colors: [_gold, _goldDeep],
+                        ).createShader(b),
+                        child: Text(
+                          prize,
+                          style: ArenaText.bigNumber.copyWith(
+                            fontSize: 30,
+                            color: Colors.white,
+                            height: 1.1,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: ArenaSpacing.md),
             const Divider(height: 1, color: ArenaColors.border),
             const SizedBox(height: ArenaSpacing.sm),
 
-            // ─── Footer : frais (si payante) + capacité + état inscr. ─
+            // ─── Footer : frais + capacité + chip INSCRIT ────────
             Row(
               children: [
-                if (!isFree) ...[
-                  const Icon(
-                    Icons.payments_outlined,
-                    size: 14,
-                    color: ArenaColors.silver,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${_money(c.registrationFee)} ${c.registrationCurrency}',
-                    style: ArenaText.bodyMuted,
-                  ),
-                  const SizedBox(width: ArenaSpacing.md),
-                ],
+                const Icon(
+                  Icons.payments_outlined,
+                  size: 14,
+                  color: ArenaColors.silver,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '${_money(c.registrationFee)} ${c.registrationCurrency}',
+                  style: ArenaText.bodyMuted
+                      .copyWith(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(width: ArenaSpacing.md),
                 const Icon(
                   Icons.people_outline,
                   size: 14,
@@ -446,42 +717,13 @@ class _CompetitionListCard extends StatelessWidget {
     );
   }
 
-  static String _formatPrize(double pool, String? poolCurrency, String fee) {
+  static String _formatPrize(double pool, String currency) {
     final formatted = NumberFormat.decimalPattern('fr')
         .format(pool.round())
         .replaceAll(',', ' ');
-    final currency = poolCurrency ?? fee;
     return '$formatted $currency';
   }
 
   static String _money(double v) =>
       NumberFormat.decimalPattern('fr').format(v).replaceAll(',', ' ');
-}
-
-class _PricingChip extends StatelessWidget {
-  const _PricingChip({required this.isFree});
-  final bool isFree;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = isFree ? ArenaColors.statusOk : ArenaColors.signalBlue;
-    final label = isFree ? 'GRATUITE' : 'PAYANTE';
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(ArenaRadius.round),
-        border: Border.all(color: color.withValues(alpha: 0.5)),
-      ),
-      child: Text(
-        label,
-        style: ArenaText.small.copyWith(
-          color: color,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 1,
-          fontSize: 10,
-        ),
-      ),
-    );
-  }
 }
