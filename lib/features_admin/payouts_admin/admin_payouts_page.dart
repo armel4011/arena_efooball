@@ -457,7 +457,10 @@ class _PayoutCard extends ConsumerWidget {
         ],
       ),
     );
-    ctrl.dispose();
+    // Différer la dispose pour laisser le framework finir le tear-down
+    // du dialog (sinon "_dependents.isEmpty: is not true" + "controller
+    // used after dispose").
+    WidgetsBinding.instance.addPostFrameCallback((_) => ctrl.dispose());
     return result;
   }
 

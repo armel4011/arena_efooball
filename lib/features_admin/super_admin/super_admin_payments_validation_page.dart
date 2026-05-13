@@ -170,6 +170,9 @@ class _SuperAdminPaymentsValidationPageState
         ],
       ),
     );
+    // Différer la dispose pour laisser le framework finir le tear-down
+    // du dialog avant de libérer le controller.
+    WidgetsBinding.instance.addPostFrameCallback((_) => reasonCtrl.dispose());
     if (reason == null || !mounted) return;
     try {
       await ref.read(adminPaymentsRepositoryProvider).reject(
