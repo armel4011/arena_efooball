@@ -44,6 +44,8 @@ _$CompetitionImpl _$$CompetitionImplFromJson(Map<String, dynamic> json) =>
       updatedAt: json['updated_at'] == null
           ? null
           : DateTime.parse(json['updated_at'] as String),
+      orangeMoneyCode: json['orange_money_code'] as String?,
+      mtnMomoCode: json['mtn_momo_code'] as String?,
     );
 
 Map<String, dynamic> _$$CompetitionImplToJson(_$CompetitionImpl instance) =>
@@ -81,4 +83,7 @@ Map<String, dynamic> _$$CompetitionImplToJson(_$CompetitionImpl instance) =>
         'created_at': value,
       if (instance.updatedAt?.toIso8601String() case final value?)
         'updated_at': value,
+      if (instance.orangeMoneyCode case final value?)
+        'orange_money_code': value,
+      if (instance.mtnMomoCode case final value?) 'mtn_momo_code': value,
     };

@@ -1,0 +1,162 @@
+import 'package:arena/data/repositories/profile_repository.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+/// Snapshot d'un paiement P2P manuel (PHASE 11bis).
+///
+/// Mappé directement sur la table `payments`. On garde un modèle flat,
+/// pas freezed, parce que les paiements n'ont pas vocation à être passés
+/// au build_runner pour V1 (le modèle reste interne à la feature).
+@immutable
+class PaymentRecord {
+  const PaymentRecord({
+    required this.id,
+    required this.userId,
+    required this.competitionId,
+    required this.amountLocal,
+    required this.currency,
+    required this.status,
+    required this.payerMethod,
+    required this.payerPhone,
+    required this.createdAt,
+    this.expiresAt,
+    this.validatedAt,
+    this.validatedByAdminId,
+    this.rejectionReason,
+  });
+
+  final String id;
+  final String userId;
+  final String competitionId;
+  final double amountLocal;
+  final String currency;
+
+  /// `pending` · `awaiting_admin` · `succeeded` · `rejected` · `expired`.
+  final String status;
+
+  /// `MTN_MOMO` ou `ORANGE_MONEY`.
+  final String? payerMethod;
+
+  /// Numéro Mobile Money utilisé par le joueur pour payer.
+  final String? payerPhone;
+  final DateTime createdAt;
+  final DateTime? expiresAt;
+  final DateTime? validatedAt;
+  final String? validatedByAdminId;
+  final String? rejectionReason;
+
+  factory PaymentRecord.fromJson(Map<String, dynamic> row) {
+    return PaymentRecord(
+      id: row['id'] as String,
+      userId: row['user_id'] as String,
+      competitionId: row['competition_id'] as String,
+      amountLocal: (row['amount_local'] as num).toDouble(),
+      currency: row['currency'] as String? ?? 'XAF',
+      status: row['status'] as String,
+      payerMethod: row['payer_method'] as String?,
+      payerPhone: row['payer_phone'] as String?,
+      createdAt: DateTime.parse(row['created_at'] as String),
+      expiresAt: row['expires_at'] == null
+          ? null
+          : DateTime.parse(row['expires_at'] as String),
+      validatedAt: row['validated_at'] == null
+          ? null
+          : DateTime.parse(row['validated_at'] as String),
+      validatedByAdminId: row['validated_by_admin_id'] as String?,
+      rejectionReason: row['rejection_reason'] as String?,
+    );
+  }
+}
+
+class PaymentRepository {
+  PaymentRepository(this._client);
+
+  static const _table = 'payments';
+  static const _windowMinutes = 15;
+
+  final SupabaseClient _client;
+
+  /// INSERT manuel d'un paiement P2P après que le joueur ait cliqué
+  /// "J'AI PAYÉ" sur P2. Retourne l'id du row pour permettre à P3 de
+  /// streamer son statut.
+  Future<String> submitManualPayment({
+    required String competitionId,
+    required double amountLocal,
+    required String currency,
+    required String payerMethodCode,
+    required String payerPhone,
+  }) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) {
+      throw StateError('No authenticated user — cannot submit payment.');
+    }
+    final now = DateTime.now().toUtc();
+    final expiresAt = now.add(const Duration(minutes: _windowMinutes));
+    final inserted = await _client
+        .from(_table)
+        .insert({
+          'user_id': userId,
+          'competition_id': competitionId,
+          'amount_local': amountLocal,
+          'currency': currency,
+          'provider': 'mobile_money_manual',
+          'provider_method': payerMethodCode,
+          'payer_method': payerMethodCode,
+          'payer_phone': payerPhone,
+          'status': 'awaiting_admin',
+          'expires_at': expiresAt.toIso8601String(),
+        })
+        .select('id')
+        .single();
+    return inserted['id'] as String;
+  }
+
+  /// Stream realtime du row payment — utilisé par P3 pour passer à P4 ou
+  /// P5 dès que le super-admin valide / rejette / le row expire.
+  Stream<PaymentRecord?> watchById(String paymentId) {
+    return _client
+        .from(_table)
+        .stream(primaryKey: ['id'])
+        .eq('id', paymentId)
+        .map((rows) => rows.isEmpty ? null : PaymentRecord.fromJson(rows.first));
+  }
+
+  /// Cancel la transaction côté joueur — utilisé sur P3 si l'utilisateur
+  /// abandonne avant l'expiration. RLS : seul l'auteur peut le faire.
+  Future<void> cancel(String paymentId) async {
+    await _client
+        .from(_table)
+        .update({'status': 'failed'})
+        .eq('id', paymentId);
+  }
+
+  /// Stream de l'historique paiements du joueur courant (P6).
+  Stream<List<PaymentRecord>> watchMine() {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) {
+      return const Stream.empty();
+    }
+    return _client
+        .from(_table)
+        .stream(primaryKey: ['id'])
+        .eq('user_id', userId)
+        .order('created_at')
+        .map((rows) => [
+              for (final row in rows.reversed) PaymentRecord.fromJson(row),
+            ]);
+  }
+}
+
+final paymentRepositoryProvider = Provider<PaymentRepository>((ref) {
+  return PaymentRepository(ref.watch(supabaseClientProvider));
+});
+
+final paymentByIdProvider =
+    StreamProvider.family<PaymentRecord?, String>((ref, id) {
+  return ref.watch(paymentRepositoryProvider).watchById(id);
+});
+
+final myPaymentsProvider = StreamProvider<List<PaymentRecord>>((ref) {
+  return ref.watch(paymentRepositoryProvider).watchMine();
+});

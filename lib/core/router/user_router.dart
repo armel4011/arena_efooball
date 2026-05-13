@@ -340,6 +340,9 @@ final userRouterProvider = Provider<GoRouter>((ref) {
           return MobileMoneyDetailsPage(
             method: extra?.method ?? PaymentMethod.mtnMoMo,
             amountXaf: extra?.amountXaf ?? 0,
+            competitionId: extra?.competitionId ?? '',
+            competitionName: extra?.competitionName ?? '',
+            merchantCode: extra?.merchantCode ?? '',
           );
         },
       ),
@@ -349,9 +352,10 @@ final userRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final extra = state.extra as PaymentProcessingArgs?;
           return PaymentProcessingPage(
+            paymentId: extra?.paymentId ?? '',
             method: extra?.method ?? PaymentMethod.mtnMoMo,
             amountXaf: extra?.amountXaf ?? 0,
-            reference: extra?.reference ?? 'CP-PENDING',
+            competitionName: extra?.competitionName ?? '',
             maskedPhone: extra?.maskedPhone ?? '+••• •• •• ••',
           );
         },
@@ -366,13 +370,21 @@ final userRouterProvider = Provider<GoRouter>((ref) {
             method: extra?.method ?? PaymentMethod.mtnMoMo,
             transactionId: extra?.transactionId ?? '—',
             dateLabel: extra?.dateLabel ?? '',
+            tournamentName: extra?.tournamentName ?? 'COMPÉTITION',
           );
         },
       ),
       GoRoute(
         path: UserRoutes.paymentFailed,
         name: 'user.paymentFailed',
-        builder: (context, state) => const PaymentFailedPage(),
+        builder: (context, state) {
+          final extra = state.extra as PaymentFailedArgs?;
+          return PaymentFailedPage(
+            reason: extra?.reason ?? PaymentFailReason.unknown,
+            adminReason: extra?.adminReason,
+            method: extra?.method,
+          );
+        },
       ),
       GoRoute(
         path: UserRoutes.paymentHistory,
@@ -415,26 +427,39 @@ class PaymentPickerArgs {
   final String contextLabel;
 }
 
-/// Args carried into `MobileMoneyDetailsPage` (P2) once the picker
-/// returns a mobile-money [PaymentMethod].
+/// Args carried into `MobileMoneyDetailsPage` (P2) once la P1 a renvoyé
+/// la méthode. La P2 a besoin de l'ID compétition (pour persister le
+/// paiement) + du code marchand correspondant à la méthode choisie.
 class PaymentMomoArgs {
-  const PaymentMomoArgs({required this.method, required this.amountXaf});
-  final PaymentMethod method;
-  final int amountXaf;
-}
-
-/// Args carried into `PaymentProcessingPage` (P3).
-class PaymentProcessingArgs {
-  const PaymentProcessingArgs({
+  const PaymentMomoArgs({
     required this.method,
     required this.amountXaf,
-    required this.reference,
+    required this.competitionId,
+    required this.competitionName,
+    required this.merchantCode,
+  });
+  final PaymentMethod method;
+  final int amountXaf;
+  final String competitionId;
+  final String competitionName;
+  final String merchantCode;
+}
+
+/// Args carried into `PaymentProcessingPage` (P3) — page d'attente de
+/// validation super-admin (15 min max).
+class PaymentProcessingArgs {
+  const PaymentProcessingArgs({
+    required this.paymentId,
+    required this.method,
+    required this.amountXaf,
+    required this.competitionName,
     required this.maskedPhone,
   });
 
+  final String paymentId;
   final PaymentMethod method;
   final int amountXaf;
-  final String reference;
+  final String competitionName;
   final String maskedPhone;
 }
 
@@ -445,12 +470,26 @@ class PaymentResultArgs {
     required this.amountXaf,
     required this.transactionId,
     required this.dateLabel,
+    this.tournamentName = 'COMPÉTITION',
   });
 
   final PaymentMethod method;
   final int amountXaf;
   final String transactionId;
   final String dateLabel;
+  final String tournamentName;
+}
+
+/// Args carried into `PaymentFailedPage` (P5).
+class PaymentFailedArgs {
+  const PaymentFailedArgs({
+    required this.reason,
+    this.adminReason,
+    this.method,
+  });
+  final PaymentFailReason reason;
+  final String? adminReason;
+  final PaymentMethod? method;
 }
 
 /// Args carried into `PayoutKycPage` (P7) when a payout > 100 000 XAF

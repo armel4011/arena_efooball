@@ -1,11 +1,12 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:flutter/material.dart';
 
-/// Catalog of supported payment methods for V1.0.
+/// V1.0 supported mobile-money providers (paiement P2P manuel).
 ///
-/// Mobile money providers route through CinetPay (PHASE 11bis); crypto
-/// goes via NowPayments. Each entry carries the brand colour, label and
-/// a short context line so the picker UI can stay declarative.
+/// CinetPay / NowPayments / Wave / Moov / crypto sont reportés en V2.
+/// En V1, seuls MTN MoMo et Orange Money sont actifs : le joueur paie
+/// directement sur le code marchand affiché en P2 (saisi par l'admin
+/// créateur de la compétition), puis le super-admin valide manuellement.
 enum PaymentMethod {
   mtnMoMo(
     code: 'MTN_MOMO',
@@ -14,7 +15,6 @@ enum PaymentMethod {
     countriesLine: "Cameroun, Côte d'Ivoire, Bénin",
     brandColor: Color(0xFFFFA500),
     foreground: Colors.white,
-    family: PaymentFamily.mobileMoney,
   ),
   orangeMoney(
     code: 'ORANGE_MONEY',
@@ -23,43 +23,6 @@ enum PaymentMethod {
     countriesLine: 'Cameroun, Sénégal, Mali',
     brandColor: Color(0xFFFF6B00),
     foreground: Colors.white,
-    family: PaymentFamily.mobileMoney,
-  ),
-  wave(
-    code: 'WAVE',
-    label: 'Wave',
-    badge: 'W',
-    countriesLine: "Sénégal, Côte d'Ivoire",
-    brandColor: Color(0xFF0066CC),
-    foreground: Colors.white,
-    family: PaymentFamily.mobileMoney,
-  ),
-  moovMoney(
-    code: 'MOOV_MONEY',
-    label: 'Moov Money',
-    badge: 'M',
-    countriesLine: 'Bénin, Togo, Burkina',
-    brandColor: Color(0xFF003DA5),
-    foreground: Colors.white,
-    family: PaymentFamily.mobileMoney,
-  ),
-  usdt(
-    code: 'USDT_TRC20',
-    label: 'USDT (TRC20)',
-    badge: '₮',
-    countriesLine: 'Stablecoin · réseau Tron',
-    brandColor: Color(0xFF26A17B),
-    foreground: Colors.white,
-    family: PaymentFamily.crypto,
-  ),
-  bitcoin(
-    code: 'BITCOIN',
-    label: 'Bitcoin',
-    badge: '₿',
-    countriesLine: 'Réseau lightning supporté',
-    brandColor: Color(0xFFF7931A),
-    foreground: Colors.white,
-    family: PaymentFamily.crypto,
   );
 
   const PaymentMethod({
@@ -69,7 +32,6 @@ enum PaymentMethod {
     required this.countriesLine,
     required this.brandColor,
     required this.foreground,
-    required this.family,
   });
 
   final String code;
@@ -78,10 +40,14 @@ enum PaymentMethod {
   final String countriesLine;
   final Color brandColor;
   final Color foreground;
-  final PaymentFamily family;
-}
 
-enum PaymentFamily { mobileMoney, crypto }
+  static PaymentMethod fromCode(String code) {
+    return PaymentMethod.values.firstWhere(
+      (m) => m.code == code,
+      orElse: () => PaymentMethod.mtnMoMo,
+    );
+  }
+}
 
 /// Square brand-coloured chip with the provider initials. Reusable across
 /// the picker, details, processing, success and history screens.

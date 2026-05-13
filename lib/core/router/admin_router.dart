@@ -16,6 +16,7 @@ import 'package:arena/features_admin/payouts_admin/admin_payouts_page.dart';
 import 'package:arena/features_admin/streams_admin/admin_stream_moderation_page.dart';
 import 'package:arena/features_admin/super_admin/super_admin_dashboard.dart';
 import 'package:arena/features_admin/super_admin/super_admin_invitations.dart';
+import 'package:arena/features_admin/super_admin/super_admin_payments_validation_page.dart';
 import 'package:arena/features_admin/super_admin/super_admin_revenue.dart';
 import 'package:arena/features_admin/super_admin/super_admin_users.dart';
 import 'package:arena/features_shared/presentation/dev_preview_page.dart';
@@ -55,6 +56,7 @@ abstract final class AdminRoutes {
   static const superInvitations = '/super/invitations';
   static const superUsers = '/super/users';
   static const superRevenue = '/super/revenue';
+  static const superPaymentsValidation = '/super/payments';
 
   static const devPreview = '/_dev/widgets';
 
@@ -223,6 +225,12 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
         path: AdminRoutes.superRevenue,
         name: 'admin.superRevenue',
         builder: (context, state) => const SuperAdminRevenue(),
+      ),
+      GoRoute(
+        path: AdminRoutes.superPaymentsValidation,
+        name: 'admin.superPaymentsValidation',
+        builder: (context, state) =>
+            const SuperAdminPaymentsValidationPage(),
       ),
       GoRoute(
         path: AdminRoutes.devPreview,

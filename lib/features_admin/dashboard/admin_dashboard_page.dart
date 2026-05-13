@@ -179,6 +179,14 @@ class AdminDashboardPage extends ConsumerWidget {
                 ),
                 const SizedBox(height: ArenaSpacing.xs),
                 ArenaButton(
+                  label: '💸 VALIDER PAIEMENTS',
+                  fullWidth: true,
+                  variant: ArenaButtonVariant.primary,
+                  onPressed: () =>
+                      context.push(AdminRoutes.superPaymentsValidation),
+                ),
+                const SizedBox(height: ArenaSpacing.xs),
+                ArenaButton(
                   label: 'REVENUE PLATEFORME',
                   fullWidth: true,
                   variant: ArenaButtonVariant.secondary,

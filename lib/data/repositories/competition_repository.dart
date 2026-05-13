@@ -59,6 +59,21 @@ class CompetitionRepository {
         .eq('id', id)
         .map((rows) => rows.isEmpty ? null : Competition.fromJson(rows.first));
   }
+
+  /// PHASE 11bis — inscription directe sur compétition GRATUITE.
+  /// L'INSERT passe par la policy `registrations_free_self_insert` qui
+  /// vérifie côté DB que `competitions.registration_fee = 0`.
+  Future<void> registerSelfFree(String competitionId) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) {
+      throw StateError('No authenticated user — cannot register.');
+    }
+    await _client.from('competition_registrations').insert({
+      'competition_id': competitionId,
+      'player_id': userId,
+      'status': 'confirmed',
+    });
+  }
 }
 
 final competitionRepositoryProvider = Provider<CompetitionRepository>((ref) {

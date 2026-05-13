@@ -1,47 +1,52 @@
 import 'dart:async';
 
+import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/data/repositories/payment_repository.dart';
+import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:arena/features_user/payments/payment_failed_page.dart';
 import 'package:arena/features_user/payments/payment_method.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
-/// PHASE 11bis · P3 — payment processor receipt + countdown.
+/// PHASE 11bis · P3 — Attente de validation par le super-admin.
 ///
-/// Real flow lands inside a CinetPay/NowPayments WebView; this Flutter
-/// page renders the same visual but locally so QA + designers can
-/// validate the layout. The 90-second countdown matches CinetPay's
-/// MoMo confirmation window. Tap CONFIRMER MAINTENANT routes to
-/// [PaymentSuccessPage]; "Annuler" pops back.
+/// Une fois "J'AI PAYÉ" cliqué sur P2, le row `payments` est inséré en
+/// `status='awaiting_admin'`. Cette page :
+///   • affiche un countdown 15:00 (basé sur `expires_at`)
+///   • stream le status du row en realtime
+///   • bascule sur P4 si `status='succeeded'`
+///   • bascule sur P5 si `status='rejected'` ou `'expired'`
 ///
-/// Maps to screen P3 of `arena_v2.html`.
-class PaymentProcessingPage extends StatefulWidget {
+/// Maps to screen P3 of `arena_v2.html` (mais sans WebView CinetPay).
+class PaymentProcessingPage extends ConsumerStatefulWidget {
   const PaymentProcessingPage({
+    required this.paymentId,
     required this.method,
     required this.amountXaf,
-    required this.reference,
+    required this.competitionName,
     required this.maskedPhone,
-    this.beneficiary = 'ARENA SAS',
-    this.onConfirm,
-    this.onCancel,
     super.key,
   });
 
+  final String paymentId;
   final PaymentMethod method;
   final int amountXaf;
-  final String reference;
+  final String competitionName;
   final String maskedPhone;
-  final String beneficiary;
-  final VoidCallback? onConfirm;
-  final VoidCallback? onCancel;
 
   @override
-  State<PaymentProcessingPage> createState() => _PaymentProcessingPageState();
+  ConsumerState<PaymentProcessingPage> createState() =>
+      _PaymentProcessingPageState();
 }
 
-class _PaymentProcessingPageState extends State<PaymentProcessingPage> {
-  static const _windowSec = 90;
-  late Timer _ticker;
-  int _remaining = _windowSec;
+class _PaymentProcessingPageState
+    extends ConsumerState<PaymentProcessingPage> {
+  Timer? _ticker;
+  Duration _remaining = const Duration(minutes: 15);
+  bool _navigatedAway = false;
 
   @override
   void initState() {
@@ -49,115 +54,209 @@ class _PaymentProcessingPageState extends State<PaymentProcessingPage> {
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       setState(() {
-        if (_remaining > 0) _remaining--;
+        if (_remaining.inSeconds > 0) {
+          _remaining -= const Duration(seconds: 1);
+        }
       });
     });
   }
 
   @override
   void dispose() {
-    _ticker.cancel();
+    _ticker?.cancel();
     super.dispose();
   }
 
   String get _countdown {
-    final m = (_remaining ~/ 60).toString().padLeft(2, '0');
-    final s = (_remaining % 60).toString().padLeft(2, '0');
+    final m = _remaining.inMinutes.toString().padLeft(2, '0');
+    final s = (_remaining.inSeconds % 60).toString().padLeft(2, '0');
     return '$m:$s';
+  }
+
+  void _handleStatus(BuildContext context, PaymentRecord rec) {
+    if (_navigatedAway) return;
+    if (rec.status == 'succeeded') {
+      _navigatedAway = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        context.go(
+          UserRoutes.paymentSuccess,
+          extra: PaymentResultArgs(
+            method: widget.method,
+            amountXaf: widget.amountXaf,
+            transactionId: 'ARENA-${rec.id.substring(0, 8).toUpperCase()}',
+            dateLabel: DateFormat('dd/MM HH:mm').format(
+              (rec.validatedAt ?? rec.createdAt).toLocal(),
+            ),
+            tournamentName: widget.competitionName,
+          ),
+        );
+      });
+    } else if (rec.status == 'rejected' || rec.status == 'expired') {
+      _navigatedAway = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        context.go(
+          UserRoutes.paymentFailed,
+          extra: PaymentFailedArgs(
+            reason: rec.status == 'expired'
+                ? PaymentFailReason.expired
+                : PaymentFailReason.rejected,
+            adminReason: rec.rejectionReason,
+            method: widget.method,
+          ),
+        );
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final accent = widget.method.brandColor;
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Column(
-        children: [
-          _ProcessorBar(
-            method: widget.method,
-            onClose:
-                widget.onCancel ?? () => Navigator.maybePop(context),
-          ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(ArenaSpacing.lg),
-              children: [
-                Center(
-                  child: Column(
-                    children: [
-                      PaymentMethodLogo(method: widget.method, size: 60),
-                      const SizedBox(height: ArenaSpacing.sm),
-                      Text(
-                        'Confirmer le paiement',
-                        style: GoogleFonts.spaceGrotesk(
-                          color: Colors.black,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: ArenaSpacing.lg),
-                _Receipt(
-                  method: widget.method,
-                  amountXaf: widget.amountXaf,
-                  beneficiary: widget.beneficiary,
-                  reference: widget.reference,
-                  maskedPhone: widget.maskedPhone,
-                ),
-                const SizedBox(height: ArenaSpacing.md),
-                Text(
-                  '📱 Tu vas recevoir un SMS ${widget.method.label}.\n'
-                  'Confirme avec ton code PIN.',
+    final stream = ref.watch(paymentByIdProvider(widget.paymentId));
+    stream.whenData((rec) {
+      if (rec != null) _handleStatus(context, rec);
+    });
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
+        backgroundColor: ArenaColors.void_,
+        body: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.all(ArenaSpacing.lg),
+            children: [
+              const SizedBox(height: ArenaSpacing.xl),
+              Center(
+                child: PaymentMethodLogo(method: widget.method, size: 70),
+              ),
+              const SizedBox(height: ArenaSpacing.md),
+              Center(
+                child: Text(
+                  'EN ATTENTE DE VALIDATION',
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.spaceGrotesk(
-                    color: const Color(0xFF666666),
-                    fontSize: 11,
-                    height: 1.4,
+                  style: ArenaText.h1.copyWith(fontSize: 22),
+                ),
+              ),
+              const SizedBox(height: ArenaSpacing.sm),
+              Center(
+                child: Text(
+                  'Le super-admin vérifie la réception du paiement '
+                  'sur son compte ${widget.method.label}.',
+                  textAlign: TextAlign.center,
+                  style: ArenaText.bodyMuted,
+                ),
+              ),
+              const SizedBox(height: ArenaSpacing.xl),
+              _CountdownCard(
+                countdown: _countdown,
+                isWarning: _remaining.inMinutes < 5,
+              ),
+              const SizedBox(height: ArenaSpacing.md),
+              Center(
+                child: SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
+                    valueColor: AlwaysStoppedAnimation(accent),
                   ),
                 ),
-                const SizedBox(height: ArenaSpacing.lg),
-                Center(
-                  child: SizedBox(
-                    width: 32,
-                    height: 32,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 3,
-                      valueColor: AlwaysStoppedAnimation(accent),
-                      backgroundColor: const Color(0xFFF5F5F0),
-                    ),
-                  ),
+              ),
+              const SizedBox(height: ArenaSpacing.lg),
+              _PaymentRecap(
+                method: widget.method,
+                amountXaf: widget.amountXaf,
+                competitionName: widget.competitionName,
+                maskedPhone: widget.maskedPhone,
+                paymentId: widget.paymentId,
+              ),
+              const SizedBox(height: ArenaSpacing.lg),
+              Container(
+                padding: const EdgeInsets.all(ArenaSpacing.md),
+                decoration: BoxDecoration(
+                  color: ArenaColors.carbon,
+                  borderRadius: BorderRadius.circular(ArenaRadius.md),
+                  border: Border.all(color: ArenaColors.border),
                 ),
-                const SizedBox(height: ArenaSpacing.sm),
-                Center(
-                  child: Text(
-                    'En attente · $_countdown',
-                    style: GoogleFonts.jetBrainsMono(
-                      color: const Color(0xFF999999),
-                      fontSize: 11,
-                    ),
-                  ),
+                child: Text(
+                  '💡 Ferme l\'app si tu veux : tu seras notifié dès que '
+                  'l\'admin valide. Tu peux aussi revenir sur cette page '
+                  'depuis "Historique paiements".',
+                  style: ArenaText.small,
                 ),
-                const SizedBox(height: ArenaSpacing.lg),
-                _ConfirmButton(
-                  color: accent,
-                  onTap: widget.onConfirm ??
-                      () => Navigator.maybePop(context, true),
-                ),
-                const SizedBox(height: ArenaSpacing.xs),
-                TextButton(
-                  onPressed: widget.onCancel ??
-                      () => Navigator.maybePop(context, false),
-                  child: Text(
-                    'Annuler la transaction',
-                    style: GoogleFonts.spaceGrotesk(
-                      color: const Color(0xFF999999),
-                      fontSize: 11,
-                    ),
-                  ),
-                ),
-              ],
+              ),
+              const SizedBox(height: ArenaSpacing.lg),
+              ArenaButton(
+                label: 'ANNULER LA TRANSACTION',
+                variant: ArenaButtonVariant.ghost,
+                fullWidth: true,
+                onPressed: () => _confirmCancel(context),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmCancel(BuildContext context) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: ArenaColors.carbon,
+        title: const Text('Annuler le paiement ?'),
+        content: const Text(
+          'Si tu as déjà payé sur Mobile Money, attends la validation '
+          'plutôt que d\'annuler ici (sinon l\'admin n\'inscrira pas '
+          'ton compte).',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Rester'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: ArenaColors.neonRed),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Annuler quand même'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    await ref.read(paymentRepositoryProvider).cancel(widget.paymentId);
+    if (!mounted) return;
+    context.go(UserRoutes.home);
+  }
+}
+
+class _CountdownCard extends StatelessWidget {
+  const _CountdownCard({required this.countdown, required this.isWarning});
+  final String countdown;
+  final bool isWarning;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isWarning ? ArenaColors.neonRed : ArenaColors.signalBlue;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: ArenaSpacing.lg,
+        vertical: ArenaSpacing.md,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(ArenaRadius.lg),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text('⏱ Validation sous', style: ArenaText.body),
+          Text(
+            countdown,
+            style: ArenaText.bigNumber.copyWith(
+              color: color,
+              fontSize: 26,
             ),
           ),
         ],
@@ -166,119 +265,44 @@ class _PaymentProcessingPageState extends State<PaymentProcessingPage> {
   }
 }
 
-class _ProcessorBar extends StatelessWidget {
-  const _ProcessorBar({required this.method, required this.onClose});
-
-  final PaymentMethod method;
-  final VoidCallback onClose;
-
-  @override
-  Widget build(BuildContext context) {
-    final processor = method.family == PaymentFamily.crypto
-        ? 'NowPayments'
-        : 'CinetPay';
-    return SafeArea(
-      bottom: false,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: ArenaSpacing.lg,
-          vertical: ArenaSpacing.md,
-        ),
-        color: method.brandColor,
-        child: Row(
-          children: [
-            InkWell(
-              onTap: onClose,
-              child: Container(
-                width: 28,
-                height: 28,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Icon(Icons.close, size: 16, color: Colors.white),
-              ),
-            ),
-            const SizedBox(width: ArenaSpacing.sm),
-            Expanded(
-              child: Text(
-                '$processor · ${method.label}',
-                style: GoogleFonts.spaceGrotesk(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
-                ),
-              ),
-            ),
-            Text(
-              '🔒 SSL',
-              style: GoogleFonts.spaceGrotesk(
-                color: Colors.white,
-                fontSize: 11,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Receipt extends StatelessWidget {
-  const _Receipt({
+class _PaymentRecap extends StatelessWidget {
+  const _PaymentRecap({
     required this.method,
     required this.amountXaf,
-    required this.beneficiary,
-    required this.reference,
+    required this.competitionName,
     required this.maskedPhone,
+    required this.paymentId,
   });
 
   final PaymentMethod method;
   final int amountXaf;
-  final String beneficiary;
-  final String reference;
+  final String competitionName;
   final String maskedPhone;
+  final String paymentId;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(ArenaSpacing.md),
+      padding: const EdgeInsets.all(ArenaSpacing.lg),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F0),
-        borderRadius: BorderRadius.circular(10),
+        color: ArenaColors.carbon,
+        borderRadius: BorderRadius.circular(ArenaRadius.lg),
+        border: Border.all(color: ArenaColors.border),
       ),
       child: Column(
         children: [
-          _Row(label: 'Bénéficiaire', value: beneficiary),
+          _Row(label: 'Compétition', value: competitionName),
           const SizedBox(height: 4),
-          _Row(label: 'Référence', value: reference, mono: true),
+          _Row(label: 'Montant', value: '${_formatXaf(amountXaf)} XAF'),
           const SizedBox(height: 4),
-          _Row(label: 'Numéro', value: maskedPhone),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: ArenaSpacing.sm),
-            child: Divider(color: Color(0xFFDDDDDD), height: 1),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Total',
-                style: GoogleFonts.spaceGrotesk(
-                  color: Colors.black,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                ),
-              ),
-              Text(
-                '${_formatXaf(amountXaf)} XAF',
-                style: GoogleFonts.spaceGrotesk(
-                  color: method.brandColor,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                ),
-              ),
-            ],
+          _Row(label: 'Méthode', value: method.label),
+          const SizedBox(height: 4),
+          _Row(label: 'Ton numéro', value: maskedPhone),
+          const SizedBox(height: 4),
+          _Row(
+            label: 'Référence',
+            value: 'ARENA-${paymentId.substring(0, 8).toUpperCase()}',
+            mono: true,
           ),
         ],
       ),
@@ -297,58 +321,12 @@ class _Row extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: GoogleFonts.spaceGrotesk(
-            fontSize: 11,
-            color: const Color(0xFF666666),
-          ),
-        ),
+        Expanded(child: Text(label, style: ArenaText.bodyMuted)),
         Text(
           value,
-          style: (mono ? GoogleFonts.jetBrainsMono : GoogleFonts.spaceGrotesk)(
-            fontSize: 11,
-            color: Colors.black,
-            fontWeight: FontWeight.w600,
-          ),
+          style: mono ? ArenaText.mono : ArenaText.body,
         ),
       ],
-    );
-  }
-}
-
-class _ConfirmButton extends StatelessWidget {
-  const _ConfirmButton({required this.color, required this.onTap});
-
-  final Color color;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    // Use a raw button — this whole page mocks an external WebView
-    // (CinetPay), so we intentionally bypass ArenaButton to keep the
-    // styling on-brand for the processor.
-    return Material(
-      color: color,
-      borderRadius: BorderRadius.circular(ArenaRadius.sm),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(ArenaRadius.sm),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          child: Center(
-            child: Text(
-              'CONFIRMER MAINTENANT',
-              style: GoogleFonts.spaceGrotesk(
-                color: Colors.white,
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1,
-              ),
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

@@ -37,6 +37,10 @@ class CompetitionCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: ArenaSpacing.sm),
+              if (competition.isFree) ...[
+                const _FreeBadge(),
+                const SizedBox(width: ArenaSpacing.xs),
+              ],
               _StatusBadge(status: competition.status),
             ],
           ),
@@ -168,6 +172,34 @@ class CompetitionCard extends StatelessWidget {
         TournamentFormat.groupsThenKnockout => 'Poules + élimination',
         TournamentFormat.roundRobin => 'Round robin',
       };
+}
+
+class _FreeBadge extends StatelessWidget {
+  const _FreeBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: ArenaSpacing.sm,
+        vertical: 4,
+      ),
+      decoration: BoxDecoration(
+        color: ArenaColors.success.withValues(alpha: 0.16),
+        borderRadius: ArenaRadius.pill,
+        border: Border.all(
+          color: ArenaColors.success.withValues(alpha: 0.4),
+        ),
+      ),
+      child: Text(
+        'GRATUIT',
+        style: ArenaTypography.labelLarge.copyWith(
+          color: ArenaColors.success,
+          fontSize: 11,
+        ),
+      ),
+    );
+  }
 }
 
 class _StatusBadge extends StatelessWidget {

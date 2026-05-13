@@ -7,10 +7,9 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 /// PHASE 11bis · P1 — moyen de paiement picker.
 ///
-/// Top card recaps the fee + competition the user is paying for, then two
-/// sections (📱 Mobile Money / ₿ Crypto) list the available methods.
-/// The actual settlement runs through CinetPay (mobile money) or
-/// NowPayments (crypto) and is wired in PHASE 11bis-3.
+/// V1.0 expose 2 entrées Mobile Money (MTN + Orange). Wave / Moov /
+/// USDT / Bitcoin sont reportés en V2 quand les passerelles automatiques
+/// CinetPay + NowPayments seront branchées. Sélection → P2.
 ///
 /// Maps to screen P1 of `arena_v2.html`.
 class PaymentMethodPickerPage extends StatefulWidget {
@@ -21,14 +20,8 @@ class PaymentMethodPickerPage extends StatefulWidget {
     super.key,
   });
 
-  /// Amount in XAF the user is paying — same value carried over from
-  /// `RegistrationConfirmPage` (#12).
   final int amountXaf;
-
-  /// Human-readable label of what the fee is for, e.g. "FIFA Weekend Cup".
   final String contextLabel;
-
-  /// Override hook for tests / preview gallery.
   final ValueChanged<PaymentMethod>? onConfirm;
 
   @override
@@ -41,10 +34,6 @@ class _PaymentMethodPickerPageState extends State<PaymentMethodPickerPage> {
 
   @override
   Widget build(BuildContext context) {
-    final mobile = PaymentMethod.values
-        .where((m) => m.family == PaymentFamily.mobileMoney);
-    final crypto = PaymentMethod.values
-        .where((m) => m.family == PaymentFamily.crypto);
     return Scaffold(
       appBar: const ArenaAppBar(title: 'Moyen de paiement'),
       body: SafeArea(
@@ -58,7 +47,7 @@ class _PaymentMethodPickerPageState extends State<PaymentMethodPickerPage> {
             const SizedBox(height: ArenaSpacing.lg),
             Text('📱 MOBILE MONEY', style: ArenaText.inputLabel),
             const SizedBox(height: ArenaSpacing.sm),
-            for (final m in mobile)
+            for (final m in PaymentMethod.values)
               Padding(
                 padding: const EdgeInsets.only(bottom: ArenaSpacing.sm),
                 child: _MethodTile(
@@ -68,17 +57,19 @@ class _PaymentMethodPickerPageState extends State<PaymentMethodPickerPage> {
                 ),
               ),
             const SizedBox(height: ArenaSpacing.md),
-            Text('₿ CRYPTO', style: ArenaText.inputLabel),
-            const SizedBox(height: ArenaSpacing.sm),
-            for (final m in crypto)
-              Padding(
-                padding: const EdgeInsets.only(bottom: ArenaSpacing.sm),
-                child: _MethodTile(
-                  method: m,
-                  selected: _selected == m,
-                  onTap: () => setState(() => _selected = m),
-                ),
+            Container(
+              padding: const EdgeInsets.all(ArenaSpacing.md),
+              decoration: BoxDecoration(
+                color: ArenaColors.carbon,
+                borderRadius: BorderRadius.circular(ArenaRadius.md),
+                border: Border.all(color: ArenaColors.border),
               ),
+              child: Text(
+                "₿ Crypto + Wave + Moov disponibles en V2 (passerelles "
+                'automatiques CinetPay / NowPayments).',
+                style: ArenaText.small,
+              ),
+            ),
             const SizedBox(height: ArenaSpacing.xl),
             ArenaButton(
               label: 'CONTINUER →',

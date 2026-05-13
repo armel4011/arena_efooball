@@ -1,19 +1,25 @@
+import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/data/repositories/competition_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_divider.dart';
+import 'package:arena/features_user/payments/payment_method.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 /// Final inscription confirmation before payment (PHASE 4 + 11bis).
 ///
-/// Reached from `CompetitionDetailPage` CTA "S'inscrire" — shows a summary
-/// of the competition, fee breakdown, prize distribution, and routes to
-/// the payment picker on confirmation. Wave 1 ships the v2 visual; the
-/// payment flow itself lives in PHASE 11bis (`/payments/*`).
+/// Deux flow possibles :
+///   • Compétition **gratuite** (`registration_fee = 0`) → INSERT direct
+///     dans `competition_registrations` (RLS self-insert) + retour HOME.
+///   • Compétition **payante** → routing vers P1 PaymentMethodPicker
+///     puis P2 avec le code marchand correspondant.
 ///
 /// Maps to screen #12 of `arena_v2.html`.
-class RegistrationConfirmPage extends StatefulWidget {
+class RegistrationConfirmPage extends ConsumerStatefulWidget {
   const RegistrationConfirmPage({
     required this.competitionId,
     required this.competitionName,
@@ -36,12 +42,16 @@ class RegistrationConfirmPage extends StatefulWidget {
   final int totalPrizeXaf;
 
   @override
-  State<RegistrationConfirmPage> createState() =>
+  ConsumerState<RegistrationConfirmPage> createState() =>
       _RegistrationConfirmPageState();
 }
 
-class _RegistrationConfirmPageState extends State<RegistrationConfirmPage> {
+class _RegistrationConfirmPageState
+    extends ConsumerState<RegistrationConfirmPage> {
   bool _ack = false;
+  bool _submitting = false;
+
+  bool get _isFree => widget.entryFeeXaf == 0;
 
   @override
   Widget build(BuildContext context) {
@@ -57,14 +67,17 @@ class _RegistrationConfirmPageState extends State<RegistrationConfirmPage> {
               gameEmoji: widget.gameEmoji,
               dateLabel: widget.dateLabel,
               formatLabel: widget.formatLabel,
+              isFree: _isFree,
             ).animate().fadeIn(duration: ArenaDurations.medium),
             const SizedBox(height: ArenaSpacing.lg),
-            _SectionLabel('Paiement'),
-            const SizedBox(height: ArenaSpacing.sm),
-            _PaymentBreakdown(entryFeeXaf: widget.entryFeeXaf)
-                .animate(delay: 100.ms)
-                .fadeIn(duration: ArenaDurations.medium),
-            const SizedBox(height: ArenaSpacing.lg),
+            if (!_isFree) ...[
+              _SectionLabel('Paiement'),
+              const SizedBox(height: ArenaSpacing.sm),
+              _PaymentBreakdown(entryFeeXaf: widget.entryFeeXaf)
+                  .animate(delay: 100.ms)
+                  .fadeIn(duration: ArenaDurations.medium),
+              const SizedBox(height: ArenaSpacing.lg),
+            ],
             _SectionLabel('Récompense du tournoi'),
             const SizedBox(height: ArenaSpacing.sm),
             _PrizeDistribution(totalXaf: widget.totalPrizeXaf)
@@ -77,11 +90,14 @@ class _RegistrationConfirmPageState extends State<RegistrationConfirmPage> {
             ),
             const SizedBox(height: ArenaSpacing.xl),
             ArenaButton(
-              label: 'PROCÉDER AU PAIEMENT '
-                  '· ${_formatXaf(widget.entryFeeXaf)} XAF',
+              label: _isFree
+                  ? "M'INSCRIRE GRATUITEMENT"
+                  : 'PROCÉDER AU PAIEMENT '
+                      '· ${_formatXaf(widget.entryFeeXaf)} XAF',
               fullWidth: true,
               size: ArenaButtonSize.large,
-              onPressed: _ack ? () => _onPay(context) : null,
+              isLoading: _submitting,
+              onPressed: (_ack && !_submitting) ? _onSubmit : null,
             ),
             const SizedBox(height: ArenaSpacing.sm),
             ArenaButton(
@@ -96,16 +112,62 @@ class _RegistrationConfirmPageState extends State<RegistrationConfirmPage> {
     );
   }
 
-  void _onPay(BuildContext context) {
-    // Routed in PHASE 11bis when /payments/method-picker lands. For wave 1
-    // the CTA acknowledges the action so the user gets feedback.
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Paiement disponible en PHASE 11bis (CinetPay + NowPayments).',
-        ),
-      ),
-    );
+  Future<void> _onSubmit() async {
+    setState(() => _submitting = true);
+    try {
+      if (_isFree) {
+        await ref
+            .read(competitionRepositoryProvider)
+            .registerSelfFree(widget.competitionId);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Inscription confirmée à ${widget.competitionName}.'),
+            backgroundColor: ArenaColors.statusOk,
+          ),
+        );
+        context.go(UserRoutes.home);
+      } else {
+        // Récupère la compétition pour passer les codes marchands à la P2.
+        final comp = await ref
+            .read(competitionRepositoryProvider)
+            .getById(widget.competitionId);
+        if (!mounted) return;
+        // P1 picker → on capture la méthode puis on push P2 avec le code.
+        final selected = await context.push<PaymentMethod>(
+          UserRoutes.paymentMethodPicker,
+          extra: PaymentPickerArgs(
+            amountXaf: widget.entryFeeXaf,
+            contextLabel: widget.competitionName,
+          ),
+        );
+        if (selected == null || !mounted) {
+          setState(() => _submitting = false);
+          return;
+        }
+        final merchantCode = switch (selected) {
+          PaymentMethod.mtnMoMo => comp?.mtnMomoCode,
+          PaymentMethod.orangeMoney => comp?.orangeMoneyCode,
+        };
+        if (!mounted) return;
+        context.go(
+          UserRoutes.paymentMomoDetails,
+          extra: PaymentMomoArgs(
+            method: selected,
+            amountXaf: widget.entryFeeXaf,
+            competitionId: widget.competitionId,
+            competitionName: widget.competitionName,
+            merchantCode: merchantCode ?? '',
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur : $e')),
+      );
+    }
   }
 }
 
@@ -126,6 +188,7 @@ class _CompetitionSummary extends StatelessWidget {
     required this.gameEmoji,
     required this.dateLabel,
     required this.formatLabel,
+    required this.isFree,
   });
 
   final String name;
@@ -133,6 +196,7 @@ class _CompetitionSummary extends StatelessWidget {
   final String gameEmoji;
   final String dateLabel;
   final String formatLabel;
+  final bool isFree;
 
   @override
   Widget build(BuildContext context) {
@@ -142,7 +206,32 @@ class _CompetitionSummary extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(name, style: ArenaText.h2),
+          Row(
+            children: [
+              Expanded(child: Text(name, style: ArenaText.h2)),
+              if (isFree)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: ArenaColors.statusOk.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(ArenaRadius.round),
+                    border: Border.all(
+                      color: ArenaColors.statusOk.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  child: Text(
+                    'GRATUIT',
+                    style: ArenaText.button.copyWith(
+                      color: ArenaColors.statusOk,
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+            ],
+          ),
           const SizedBox(height: ArenaSpacing.sm),
           Text('$gameEmoji $gameLabel', style: ArenaText.bodyMuted),
           const SizedBox(height: 2),

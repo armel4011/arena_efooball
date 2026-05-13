@@ -46,6 +46,8 @@ class _CreateCompetitionPageState
   int _maxPlayers = 16;
   DateTime? _startDate;
   final _entryFeeCtrl = TextEditingController(text: '0');
+  final _orangeMomoCtrl = TextEditingController();
+  final _mtnMomoCtrl = TextEditingController();
   String _currency = 'XAF';
   double _commissionPct = 15;
   final _shareCtrls = [
@@ -61,6 +63,8 @@ class _CreateCompetitionPageState
     _nameCtrl.dispose();
     _descCtrl.dispose();
     _entryFeeCtrl.dispose();
+    _orangeMomoCtrl.dispose();
+    _mtnMomoCtrl.dispose();
     for (final c in _shareCtrls) {
       c.dispose();
     }
@@ -79,7 +83,14 @@ class _CreateCompetitionPageState
         return _prizeMode == _PrizeMode.fixed || total == 100;
       case 3:
         final fee = double.tryParse(_entryFeeCtrl.text) ?? -1;
-        return fee >= 0;
+        if (fee < 0) return false;
+        // Compétition payante : on exige les 2 codes marchands (sinon le
+        // joueur tombe sur un P2 vide).
+        if (fee > 0) {
+          if (_orangeMomoCtrl.text.trim().isEmpty) return false;
+          if (_mtnMomoCtrl.text.trim().isEmpty) return false;
+        }
+        return true;
       default:
         return true;
     }
@@ -249,69 +260,116 @@ class _CreateCompetitionPageState
         _ShareTotalCard(controllers: _shareCtrls, mode: _prizeMode),
       ];
 
-  List<Widget> _buildFeesStep() => [
+  List<Widget> _buildFeesStep() {
+    final fee = double.tryParse(_entryFeeCtrl.text) ?? 0;
+    final isPaid = fee > 0;
+    return [
+      Container(
+        padding: const EdgeInsets.all(ArenaSpacing.md),
+        decoration: BoxDecoration(
+          color: ArenaColors.signalBlue.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(ArenaRadius.md),
+          border: Border.all(
+            color: ArenaColors.signalBlue.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Text(
+          'ℹ Frais d\'inscription = 0 → compétition GRATUITE (badge sur la '
+          'carte + bypass paiement). Sinon le joueur paie en P2P sur les '
+          'codes marchands ci-dessous, et le super-admin valide manuellement.',
+          style: ArenaText.body,
+        ),
+      ),
+      const SizedBox(height: ArenaSpacing.md),
+      Text('Frais d\'inscription', style: ArenaText.inputLabel),
+      const SizedBox(height: ArenaSpacing.xs),
+      Row(
+        children: [
+          Expanded(
+            flex: 2,
+            child: ArenaTextField(
+              controller: _entryFeeCtrl,
+              hint: '0',
+              keyboardType: TextInputType.number,
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+              ],
+              onChanged: (_) => setState(() {}),
+            ),
+          ),
+          const SizedBox(width: ArenaSpacing.xs),
+          Expanded(child: _CurrencyPicker(
+            current: _currency,
+            onChanged: (c) => setState(() => _currency = c),
+          )),
+        ],
+      ),
+      const SizedBox(height: ArenaSpacing.md),
+      Text('Commission ARENA', style: ArenaText.inputLabel),
+      const SizedBox(height: ArenaSpacing.xs),
+      Row(
+        children: [
+          Expanded(
+            child: Slider(
+              value: _commissionPct,
+              min: 0,
+              max: 30,
+              divisions: 30,
+              label: '${_commissionPct.round()}%',
+              onChanged: (v) => setState(() => _commissionPct = v),
+              activeColor: ArenaColors.signalBlue,
+            ),
+          ),
+          SizedBox(
+            width: 60,
+            child: Text(
+              '${_commissionPct.round()}%',
+              style: ArenaText.mono,
+              textAlign: TextAlign.right,
+            ),
+          ),
+        ],
+      ),
+      if (isPaid) ...[
+        const SizedBox(height: ArenaSpacing.lg),
         Container(
           padding: const EdgeInsets.all(ArenaSpacing.md),
           decoration: arenaWarningCardDecoration(),
-          child: Text(
-            '⚠ Les compétitions payantes (frais > 0) ne sont pas '
-            'fonctionnelles tant que la PHASE 11bis (paiements CinetPay / '
-            'NowPayments) n\'est pas déployée. Tu peux quand même créer le '
-            'brouillon, mais aucun joueur ne pourra payer.',
-            style: ArenaText.body,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '📱 Codes marchands (requis pour comp. payante)',
+                style: ArenaText.h3,
+              ),
+              const SizedBox(height: ArenaSpacing.xs),
+              Text(
+                'Affichés au joueur sur P2 quand il paie. Le super-admin '
+                'valide ensuite manuellement chaque transaction reçue.',
+                style: ArenaText.small,
+              ),
+            ],
           ),
         ),
         const SizedBox(height: ArenaSpacing.md),
-        Text('Frais d\'inscription', style: ArenaText.inputLabel),
+        Text('Code marchand Orange Money', style: ArenaText.inputLabel),
         const SizedBox(height: ArenaSpacing.xs),
-        Row(
-          children: [
-            Expanded(
-              flex: 2,
-              child: ArenaTextField(
-                controller: _entryFeeCtrl,
-                hint: '0',
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-                ],
-                onChanged: (_) => setState(() {}),
-              ),
-            ),
-            const SizedBox(width: ArenaSpacing.xs),
-            Expanded(child: _CurrencyPicker(
-              current: _currency,
-              onChanged: (c) => setState(() => _currency = c),
-            )),
-          ],
+        ArenaTextField(
+          controller: _orangeMomoCtrl,
+          hint: 'ex. *126*1*001234#',
+          onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: ArenaSpacing.md),
-        Text('Commission ARENA', style: ArenaText.inputLabel),
+        Text('Code marchand MTN MoMo', style: ArenaText.inputLabel),
         const SizedBox(height: ArenaSpacing.xs),
-        Row(
-          children: [
-            Expanded(
-              child: Slider(
-                value: _commissionPct,
-                min: 0,
-                max: 30,
-                divisions: 30,
-                label: '${_commissionPct.round()}%',
-                onChanged: (v) => setState(() => _commissionPct = v),
-                activeColor: ArenaColors.signalBlue,
-              ),
-            ),
-            SizedBox(
-              width: 60,
-              child: Text(
-                '${_commissionPct.round()}%',
-                style: ArenaText.mono,
-                textAlign: TextAlign.right,
-              ),
-            ),
-          ],
+        ArenaTextField(
+          controller: _mtnMomoCtrl,
+          hint: 'ex. *126*7*009876#',
+          onChanged: (_) => setState(() {}),
         ),
-      ];
+      ],
+    ];
+  }
 
   List<Widget> _buildReviewStep() {
     final fee = double.tryParse(_entryFeeCtrl.text) ?? 0;
@@ -380,6 +438,8 @@ class _CreateCompetitionPageState
         'prize_pool_local': pool,
         'prize_pool_currency': _currency,
         'created_by': adminId,
+        if (fee > 0) 'orange_money_code': _orangeMomoCtrl.text.trim(),
+        if (fee > 0) 'mtn_momo_code': _mtnMomoCtrl.text.trim(),
       });
       await ref.read(adminAuditLogRepositoryProvider).record(
         adminId: adminId,

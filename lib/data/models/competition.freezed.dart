@@ -49,6 +49,11 @@ mixin _$Competition {
   DateTime? get createdAt => throw _privateConstructorUsedError;
   DateTime? get updatedAt => throw _privateConstructorUsedError;
 
+  /// Merchant codes saisis par l'admin créateur — affichés sur P2
+  /// quand le joueur choisit la méthode correspondante. PHASE 11bis.
+  String? get orangeMoneyCode => throw _privateConstructorUsedError;
+  String? get mtnMomoCode => throw _privateConstructorUsedError;
+
   /// Serializes this Competition to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
 
@@ -87,7 +92,9 @@ abstract class $CompetitionCopyWith<$Res> {
       String? prizePoolCurrency,
       String? createdBy,
       DateTime? createdAt,
-      DateTime? updatedAt});
+      DateTime? updatedAt,
+      String? orangeMoneyCode,
+      String? mtnMomoCode});
 }
 
 /// @nodoc
@@ -127,6 +134,8 @@ class _$CompetitionCopyWithImpl<$Res, $Val extends Competition>
     Object? createdBy = freezed,
     Object? createdAt = freezed,
     Object? updatedAt = freezed,
+    Object? orangeMoneyCode = freezed,
+    Object? mtnMomoCode = freezed,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -217,6 +226,14 @@ class _$CompetitionCopyWithImpl<$Res, $Val extends Competition>
           ? _value.updatedAt
           : updatedAt // ignore: cast_nullable_to_non_nullable
               as DateTime?,
+      orangeMoneyCode: freezed == orangeMoneyCode
+          ? _value.orangeMoneyCode
+          : orangeMoneyCode // ignore: cast_nullable_to_non_nullable
+              as String?,
+      mtnMomoCode: freezed == mtnMomoCode
+          ? _value.mtnMomoCode
+          : mtnMomoCode // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 }
@@ -251,7 +268,9 @@ abstract class _$$CompetitionImplCopyWith<$Res>
       String? prizePoolCurrency,
       String? createdBy,
       DateTime? createdAt,
-      DateTime? updatedAt});
+      DateTime? updatedAt,
+      String? orangeMoneyCode,
+      String? mtnMomoCode});
 }
 
 /// @nodoc
@@ -289,6 +308,8 @@ class __$$CompetitionImplCopyWithImpl<$Res>
     Object? createdBy = freezed,
     Object? createdAt = freezed,
     Object? updatedAt = freezed,
+    Object? orangeMoneyCode = freezed,
+    Object? mtnMomoCode = freezed,
   }) {
     return _then(_$CompetitionImpl(
       id: null == id
@@ -379,6 +400,14 @@ class __$$CompetitionImplCopyWithImpl<$Res>
           ? _value.updatedAt
           : updatedAt // ignore: cast_nullable_to_non_nullable
               as DateTime?,
+      orangeMoneyCode: freezed == orangeMoneyCode
+          ? _value.orangeMoneyCode
+          : orangeMoneyCode // ignore: cast_nullable_to_non_nullable
+              as String?,
+      mtnMomoCode: freezed == mtnMomoCode
+          ? _value.mtnMomoCode
+          : mtnMomoCode // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -408,7 +437,9 @@ class _$CompetitionImpl extends _Competition {
       this.prizePoolCurrency,
       this.createdBy,
       this.createdAt,
-      this.updatedAt})
+      this.updatedAt,
+      this.orangeMoneyCode,
+      this.mtnMomoCode})
       : super._();
 
   factory _$CompetitionImpl.fromJson(Map<String, dynamic> json) =>
@@ -473,9 +504,16 @@ class _$CompetitionImpl extends _Competition {
   @override
   final DateTime? updatedAt;
 
+  /// Merchant codes saisis par l'admin créateur — affichés sur P2
+  /// quand le joueur choisit la méthode correspondante. PHASE 11bis.
+  @override
+  final String? orangeMoneyCode;
+  @override
+  final String? mtnMomoCode;
+
   @override
   String toString() {
-    return 'Competition(id: $id, name: $name, game: $game, format: $format, startDate: $startDate, status: $status, maxPlayers: $maxPlayers, currentPlayers: $currentPlayers, registrationFee: $registrationFee, registrationCurrency: $registrationCurrency, commissionPct: $commissionPct, prizePoolLocal: $prizePoolLocal, sponsorBonusLocal: $sponsorBonusLocal, description: $description, bannerUrl: $bannerUrl, registrationOpensAt: $registrationOpensAt, registrationClosesAt: $registrationClosesAt, endDate: $endDate, prizePoolCurrency: $prizePoolCurrency, createdBy: $createdBy, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'Competition(id: $id, name: $name, game: $game, format: $format, startDate: $startDate, status: $status, maxPlayers: $maxPlayers, currentPlayers: $currentPlayers, registrationFee: $registrationFee, registrationCurrency: $registrationCurrency, commissionPct: $commissionPct, prizePoolLocal: $prizePoolLocal, sponsorBonusLocal: $sponsorBonusLocal, description: $description, bannerUrl: $bannerUrl, registrationOpensAt: $registrationOpensAt, registrationClosesAt: $registrationClosesAt, endDate: $endDate, prizePoolCurrency: $prizePoolCurrency, createdBy: $createdBy, createdAt: $createdAt, updatedAt: $updatedAt, orangeMoneyCode: $orangeMoneyCode, mtnMomoCode: $mtnMomoCode)';
   }
 
   @override
@@ -520,7 +558,11 @@ class _$CompetitionImpl extends _Competition {
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
             (identical(other.updatedAt, updatedAt) ||
-                other.updatedAt == updatedAt));
+                other.updatedAt == updatedAt) &&
+            (identical(other.orangeMoneyCode, orangeMoneyCode) ||
+                other.orangeMoneyCode == orangeMoneyCode) &&
+            (identical(other.mtnMomoCode, mtnMomoCode) ||
+                other.mtnMomoCode == mtnMomoCode));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -548,7 +590,9 @@ class _$CompetitionImpl extends _Competition {
         prizePoolCurrency,
         createdBy,
         createdAt,
-        updatedAt
+        updatedAt,
+        orangeMoneyCode,
+        mtnMomoCode
       ]);
 
   /// Create a copy of Competition
@@ -590,7 +634,9 @@ abstract class _Competition extends Competition {
       final String? prizePoolCurrency,
       final String? createdBy,
       final DateTime? createdAt,
-      final DateTime? updatedAt}) = _$CompetitionImpl;
+      final DateTime? updatedAt,
+      final String? orangeMoneyCode,
+      final String? mtnMomoCode}) = _$CompetitionImpl;
   const _Competition._() : super._();
 
   factory _Competition.fromJson(Map<String, dynamic> json) =
@@ -646,6 +692,13 @@ abstract class _Competition extends Competition {
   DateTime? get createdAt;
   @override
   DateTime? get updatedAt;
+
+  /// Merchant codes saisis par l'admin créateur — affichés sur P2
+  /// quand le joueur choisit la méthode correspondante. PHASE 11bis.
+  @override
+  String? get orangeMoneyCode;
+  @override
+  String? get mtnMomoCode;
 
   /// Create a copy of Competition
   /// with the given fields replaced by the non-null parameter values.

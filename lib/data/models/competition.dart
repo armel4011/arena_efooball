@@ -41,6 +41,11 @@ sealed class Competition with _$Competition {
     String? createdBy,
     DateTime? createdAt,
     DateTime? updatedAt,
+
+    /// Merchant codes saisis par l'admin créateur — affichés sur P2
+    /// quand le joueur choisit la méthode correspondante. PHASE 11bis.
+    String? orangeMoneyCode,
+    String? mtnMomoCode,
   }) = _Competition;
 
   const Competition._();
@@ -49,6 +54,10 @@ sealed class Competition with _$Competition {
       _$CompetitionFromJson(json);
 
   // ─── Computed helpers ────────────────────────────────────────────────────
+
+  /// `true` quand la compétition est gratuite (frais d'inscription = 0).
+  /// L'inscription bypass alors le flow paiement P1-P5.
+  bool get isFree => registrationFee == 0;
 
   /// `true` when registration is officially open AND there's still room.
   bool get canRegister =>
