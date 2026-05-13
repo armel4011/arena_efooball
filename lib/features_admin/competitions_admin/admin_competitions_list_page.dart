@@ -239,18 +239,22 @@ class _CompCard extends ConsumerWidget {
       onTap: () => context.push(AdminRoutes.competitionDetailPath(competition.id)),
       borderRadius: BorderRadius.circular(ArenaRadius.lg),
       child: Container(
-        padding: const EdgeInsets.all(ArenaSpacing.md),
         decoration: BoxDecoration(
           color: ArenaColors.carbon,
           borderRadius: BorderRadius.circular(ArenaRadius.lg),
-          border: Border(
-            top: const BorderSide(color: ArenaColors.border),
-            right: const BorderSide(color: ArenaColors.border),
-            bottom: const BorderSide(color: ArenaColors.border),
-            left: BorderSide(color: visual.color, width: 3),
-          ),
+          border: Border.all(color: ArenaColors.border),
         ),
-        child: Column(
+        clipBehavior: Clip.antiAlias,
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Accent strip on the left, tinted by the comp status.
+              Container(width: 3, color: visual.color),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(ArenaSpacing.md),
+                  child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
@@ -317,9 +321,14 @@ class _CompCard extends ConsumerWidget {
                 onPressed: () => _confirmDelete(context, ref),
               ),
             ],
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
+        ),
     );
   }
 
