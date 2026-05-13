@@ -1,10 +1,13 @@
+import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/payment_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
+import 'package:arena/features_user/payments/payment_method.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 /// PHASE 11bis · P6 — Historique paiements (live).
@@ -131,6 +134,8 @@ class _TxCard extends StatelessWidget {
 
   final PaymentRecord payment;
 
+  bool get _isResumable => payment.status == 'awaiting_admin';
+
   @override
   Widget build(BuildContext context) {
     final spec = _spec(payment.status);
@@ -143,12 +148,16 @@ class _TxCard extends StatelessWidget {
     final amount = NumberFormat('#,##0', 'fr_FR')
         .format(payment.amountLocal)
         .replaceAll(',', ' ');
-    return Container(
+    final card = Container(
       padding: const EdgeInsets.all(ArenaSpacing.md),
       decoration: BoxDecoration(
         color: ArenaColors.carbon,
         borderRadius: BorderRadius.circular(ArenaRadius.lg),
-        border: Border.all(color: ArenaColors.border),
+        border: Border.all(
+          color: _isResumable
+              ? ArenaColors.signalBlue.withValues(alpha: 0.4)
+              : ArenaColors.border,
+        ),
       ),
       child: Row(
         children: [
@@ -194,6 +203,28 @@ class _TxCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+
+    if (!_isResumable) return card;
+
+    return InkWell(
+      onTap: () => _resume(context),
+      borderRadius: BorderRadius.circular(ArenaRadius.lg),
+      child: card,
+    );
+  }
+
+  void _resume(BuildContext context) {
+    final method = PaymentMethod.fromCode(payment.payerMethod ?? 'MTN_MOMO');
+    context.push(
+      UserRoutes.paymentProcessing,
+      extra: PaymentProcessingArgs(
+        paymentId: payment.id,
+        method: method,
+        amountXaf: payment.amountLocal.round(),
+        competitionName: 'Compétition',
+        maskedPhone: payment.payerPhone ?? '+••• •• •• ••',
       ),
     );
   }

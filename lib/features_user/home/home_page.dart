@@ -2,10 +2,12 @@ import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/profile.dart';
 import 'package:arena/data/repositories/notification_repository.dart';
+import 'package:arena/data/repositories/payment_repository.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
 import 'package:arena/features_shared/widgets/arena_banner.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
+import 'package:arena/features_user/payments/payment_method.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -36,6 +38,7 @@ class HomePage extends ConsumerWidget {
         padding: EdgeInsets.zero,
         children: [
           _Header(profile: profile),
+          const _PendingPaymentBanner(),
           const SizedBox(height: ArenaSpacing.lg),
           Padding(
             padding: const EdgeInsets.symmetric(
@@ -91,6 +94,91 @@ class HomePage extends ConsumerWidget {
           ),
           const SizedBox(height: ArenaSpacing.xl),
         ],
+      ),
+    );
+  }
+}
+
+/// Banner d'alerte affiché en haut de la home quand le joueur a au
+/// moins un paiement en `awaiting_admin`. Tap → ré-ouvre P3 sur la
+/// transaction la plus récente.
+class _PendingPaymentBanner extends ConsumerWidget {
+  const _PendingPaymentBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final payments = ref.watch(myPaymentsProvider).valueOrNull ?? const [];
+    final pending = payments
+        .where((p) => p.status == 'awaiting_admin')
+        .toList(growable: false);
+    if (pending.isEmpty) return const SizedBox.shrink();
+    final p = pending.first; // déjà trié desc par created_at
+    final method = PaymentMethod.fromCode(p.payerMethod ?? 'MTN_MOMO');
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        ArenaSpacing.lg,
+        ArenaSpacing.sm,
+        ArenaSpacing.lg,
+        0,
+      ),
+      child: InkWell(
+        onTap: () => context.push(
+          UserRoutes.paymentProcessing,
+          extra: PaymentProcessingArgs(
+            paymentId: p.id,
+            method: method,
+            amountXaf: p.amountLocal.round(),
+            competitionName: 'Compétition',
+            maskedPhone: p.payerPhone ?? '+••• •• •• ••',
+          ),
+        ),
+        borderRadius: BorderRadius.circular(ArenaRadius.lg),
+        child: Container(
+          padding: const EdgeInsets.all(ArenaSpacing.md),
+          decoration: BoxDecoration(
+            color: ArenaColors.signalBlue.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(ArenaRadius.lg),
+            border: Border.all(
+              color: ArenaColors.signalBlue.withValues(alpha: 0.4),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: ArenaColors.signalBlue.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Text('⏱', style: TextStyle(fontSize: 18)),
+              ),
+              const SizedBox(width: ArenaSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      pending.length == 1
+                          ? 'Paiement en attente de validation'
+                          : '${pending.length} paiements en attente',
+                      style: ArenaText.body
+                          .copyWith(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Tape pour vérifier le statut',
+                      style: ArenaText.small,
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right,
+                  color: ArenaColors.signalBlue),
+            ],
+          ),
+        ),
       ),
     );
   }

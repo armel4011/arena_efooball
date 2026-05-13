@@ -1,6 +1,7 @@
 import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/payment_repository.dart';
+import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_user/payments/payment_failed_page.dart';
 import 'package:arena/features_user/payments/payment_method.dart';
@@ -89,81 +90,100 @@ class _PaymentProcessingPageState
     stream.whenData((rec) {
       if (rec != null) _handleStatus(context, rec);
     });
-    return PopScope(
-      canPop: false,
-      child: Scaffold(
-        backgroundColor: ArenaColors.void_,
-        body: SafeArea(
-          child: ListView(
-            padding: const EdgeInsets.all(ArenaSpacing.lg),
-            children: [
-              const SizedBox(height: ArenaSpacing.xl),
-              Center(
-                child: PaymentMethodLogo(method: widget.method, size: 70),
+    return Scaffold(
+      backgroundColor: ArenaColors.void_,
+      appBar: ArenaAppBar(
+        title: 'Statut paiement',
+        onBack: () => _leaveScreen(context),
+      ),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(ArenaSpacing.lg),
+          children: [
+            const SizedBox(height: ArenaSpacing.lg),
+            Center(
+              child: PaymentMethodLogo(method: widget.method, size: 70),
+            ),
+            const SizedBox(height: ArenaSpacing.md),
+            Center(
+              child: Text(
+                'EN ATTENTE DE VALIDATION',
+                textAlign: TextAlign.center,
+                style: ArenaText.h1.copyWith(fontSize: 22),
               ),
-              const SizedBox(height: ArenaSpacing.md),
-              Center(
-                child: Text(
-                  'EN ATTENTE DE VALIDATION',
-                  textAlign: TextAlign.center,
-                  style: ArenaText.h1.copyWith(fontSize: 22),
+            ),
+            const SizedBox(height: ArenaSpacing.sm),
+            Center(
+              child: Text(
+                'Le super-admin vérifie la réception du paiement '
+                'sur son compte ${widget.method.label}.',
+                textAlign: TextAlign.center,
+                style: ArenaText.bodyMuted,
+              ),
+            ),
+            const SizedBox(height: ArenaSpacing.xl),
+            Center(
+              child: SizedBox(
+                width: 36,
+                height: 36,
+                child: CircularProgressIndicator(
+                  strokeWidth: 3,
+                  valueColor: AlwaysStoppedAnimation(accent),
                 ),
               ),
-              const SizedBox(height: ArenaSpacing.sm),
-              Center(
-                child: Text(
-                  'Le super-admin vérifie la réception du paiement '
-                  'sur son compte ${widget.method.label}.',
-                  textAlign: TextAlign.center,
-                  style: ArenaText.bodyMuted,
-                ),
+            ),
+            const SizedBox(height: ArenaSpacing.lg),
+            _PaymentRecap(
+              method: widget.method,
+              amountXaf: widget.amountXaf,
+              competitionName: widget.competitionName,
+              maskedPhone: widget.maskedPhone,
+              paymentId: widget.paymentId,
+            ),
+            const SizedBox(height: ArenaSpacing.lg),
+            Container(
+              padding: const EdgeInsets.all(ArenaSpacing.md),
+              decoration: BoxDecoration(
+                color: ArenaColors.carbon,
+                borderRadius: BorderRadius.circular(ArenaRadius.md),
+                border: Border.all(color: ArenaColors.border),
               ),
-              const SizedBox(height: ArenaSpacing.xl),
-              Center(
-                child: SizedBox(
-                  width: 36,
-                  height: 36,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 3,
-                    valueColor: AlwaysStoppedAnimation(accent),
-                  ),
-                ),
+              child: Text(
+                '💡 Tu peux fermer cette page : la transaction reste '
+                'en attente côté admin. Tu reviendras vérifier le statut '
+                'depuis "Historique paiements" ou la bannière sur la home.',
+                style: ArenaText.small,
               ),
-              const SizedBox(height: ArenaSpacing.lg),
-              _PaymentRecap(
-                method: widget.method,
-                amountXaf: widget.amountXaf,
-                competitionName: widget.competitionName,
-                maskedPhone: widget.maskedPhone,
-                paymentId: widget.paymentId,
-              ),
-              const SizedBox(height: ArenaSpacing.lg),
-              Container(
-                padding: const EdgeInsets.all(ArenaSpacing.md),
-                decoration: BoxDecoration(
-                  color: ArenaColors.carbon,
-                  borderRadius: BorderRadius.circular(ArenaRadius.md),
-                  border: Border.all(color: ArenaColors.border),
-                ),
-                child: Text(
-                  '💡 Ferme l\'app si tu veux : tu seras notifié dès que '
-                  'l\'admin valide. Tu peux aussi revenir sur cette page '
-                  'depuis "Historique paiements".',
-                  style: ArenaText.small,
-                ),
-              ),
-              const SizedBox(height: ArenaSpacing.lg),
-              ArenaButton(
-                label: 'ANNULER LA TRANSACTION',
-                variant: ArenaButtonVariant.ghost,
-                fullWidth: true,
-                onPressed: () => _confirmCancel(context),
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(height: ArenaSpacing.lg),
+            ArenaButton(
+              label: 'QUITTER (LA TRANSACTION CONTINUE)',
+              variant: ArenaButtonVariant.secondary,
+              fullWidth: true,
+              onPressed: () => _leaveScreen(context),
+            ),
+            const SizedBox(height: ArenaSpacing.sm),
+            ArenaButton(
+              label: 'Annuler la transaction',
+              variant: ArenaButtonVariant.ghost,
+              fullWidth: true,
+              onPressed: () => _confirmCancel(context),
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  /// Quitte la page sans annuler le paiement — la row payment reste
+  /// en `awaiting_admin`, l'utilisateur peut revenir depuis l'historique
+  /// ou la bannière home.
+  void _leaveScreen(BuildContext context) {
+    if (Navigator.canPop(context)) {
+      Navigator.pop(context);
+    } else {
+      context.go(UserRoutes.home);
+    }
   }
 
   Future<void> _confirmCancel(BuildContext context) async {
