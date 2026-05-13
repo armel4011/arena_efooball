@@ -166,17 +166,20 @@ class _MobileMoneyDetailsPageState
   }
 
   Future<void> _dialPayment(BuildContext context) async {
-    // Sur la plupart des opérateurs MoMo / Orange en Afrique francophone,
-    // le code marchand est un short-code à envoyer directement par dial,
-    // ex. *126*1*MERCHANT*AMOUNT#. On laisse le joueur compléter dans
-    // l'app dialer — pré-remplir n'est pas standard d'un opérateur à
-    // l'autre.
-    final uri = Uri.parse('tel:${widget.merchantCode}');
+    // Codes USSD MoMo / Orange : `*` doit rester littéral (USSD séparateur),
+    // mais `#` doit être encodé `%23` pour ne pas être interprété comme
+    // fragment URI par Android — sinon le code arrive coupé dans le
+    // composeur (et `%23` apparaît en `23` dans certains dialers).
+    final ussd = widget.merchantCode.replaceAll('#', '%23');
+    final uri = Uri.parse('tel:$ussd');
     final ok = await launchUrl(uri);
     if (!ok && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Impossible d'ouvrir le composeur. Copie le code."),
+          content: Text(
+            "Impossible d'ouvrir le composeur. Copie le code et compose-le "
+            'à la main.',
+          ),
         ),
       );
     }

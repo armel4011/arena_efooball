@@ -1,3 +1,4 @@
+import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
@@ -11,6 +12,7 @@ import 'package:arena/features_user/bracket/bracket_view_page.dart';
 import 'package:arena/features_user/bracket/group_standings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 /// PHASE 4 — single competition detail page with 4 tabs.
@@ -346,22 +348,43 @@ class _RegistrationCta extends StatelessWidget {
           label: label,
           fullWidth: true,
           size: ArenaButtonSize.large,
-          onPressed: enabled
-              ? () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        "Paiement de l'inscription : PHASE 11bis"
-                        ' (CinetPay / NowPayments).',
-                      ),
-                    ),
-                  );
-                }
-              : null,
+          onPressed: enabled ? () => _openRegistrationFlow(context) : null,
         ),
       ),
     );
   }
+
+  void _openRegistrationFlow(BuildContext context) {
+    final c = competition;
+    final fee = c.registrationFee.round();
+    final pool = c.prizePoolLocal.round();
+    final dateLabel = DateFormat('dd MMM yyyy · HH:mm', 'fr')
+        .format(c.startDate.toLocal());
+    context.push(
+      UserRoutes.registrationConfirmPath(c.id),
+      extra: RegistrationConfirmArgs(
+        competitionName: c.name,
+        gameLabel: c.game.label,
+        gameEmoji: _gameEmoji(c.game),
+        dateLabel: dateLabel,
+        formatLabel: _formatLabelStatic(c.format),
+        entryFeeXaf: fee,
+        totalPrizeXaf: pool,
+      ),
+    );
+  }
+
+  static String _gameEmoji(GameType g) => switch (g) {
+        GameType.efootball => '⚽',
+        GameType.fifaMobile => '🏆',
+        GameType.eaSportsFc => '🎮',
+      };
+
+  static String _formatLabelStatic(TournamentFormat f) => switch (f) {
+        TournamentFormat.singleElimination => 'Élimination directe',
+        TournamentFormat.groupsThenKnockout => 'Poules + élimination',
+        TournamentFormat.roundRobin => 'Round robin',
+      };
 
   static (String, bool) _ctaState(Competition c) {
     if (c.status.isCancelled) return ('ANNULÉ', false);
