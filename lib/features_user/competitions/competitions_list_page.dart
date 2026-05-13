@@ -150,6 +150,13 @@ void _onCardTap(
     context.push(UserRoutes.competitionPath(c.id));
     return;
   }
+  // Si la comp n'accepte plus d'inscription (annulée/terminée/etc.) →
+  // on ouvre la vue gated du détail qui explique pourquoi, plutôt que
+  // de pousser inutilement vers la confirmation d'inscription.
+  if (!c.canRegister) {
+    context.push(UserRoutes.competitionPath(c.id));
+    return;
+  }
   // Sinon, s'il y a un paiement en attente, on saute la confirmation
   // et P1/P2 et on ré-ouvre P3 directement.
   _onRegisterTap(context, c, pending);
