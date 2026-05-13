@@ -57,6 +57,7 @@ class _CreateCompetitionPageState
     TextEditingController(text: '10'),
   ];
   _PrizeMode _prizeMode = _PrizeMode.percentage;
+  bool _publishNow = true;
 
   @override
   void dispose() {
@@ -154,8 +155,11 @@ class _CreateCompetitionPageState
                   const SizedBox(width: ArenaSpacing.xs),
                   Expanded(
                     child: ArenaButton(
-                      label:
-                          _step < _stepCount - 1 ? 'SUIVANT →' : '🚀 CRÉER',
+                      label: _step < _stepCount - 1
+                          ? 'SUIVANT →'
+                          : (_publishNow
+                              ? '🚀 CRÉER & PUBLIER'
+                              : '💾 SAUVER EN BROUILLON'),
                       fullWidth: true,
                       onPressed: !_canAdvance || _submitting
                           ? null
@@ -402,6 +406,11 @@ class _CreateCompetitionPageState
           value: '${fmt.format(pool.round())} $_currency '
               '(commission ${_commissionPct.round()}%)',
         ),
+      const SizedBox(height: ArenaSpacing.lg),
+      _PublishToggleCard(
+        publishNow: _publishNow,
+        onChanged: (v) => setState(() => _publishNow = v),
+      ),
       const SizedBox(height: ArenaSpacing.md),
       if (_submitting)
         const Center(child: CircularProgressIndicator()),
@@ -426,7 +435,7 @@ class _CreateCompetitionPageState
         'name': _nameCtrl.text.trim(),
         'game': _game.value,
         'format': _format.value,
-        'status': 'draft',
+        'status': _publishNow ? 'registration_open' : 'draft',
         'description': _descCtrl.text.trim().isEmpty
             ? null
             : _descCtrl.text.trim(),
@@ -450,11 +459,18 @@ class _CreateCompetitionPageState
           'name': created.name,
           'game': _game.value,
           'format': _format.value,
+          'published_immediately': _publishNow,
         },
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Compétition créée.')),
+        SnackBar(
+          content: Text(
+            _publishNow
+                ? 'Compétition publiée — inscriptions ouvertes.'
+                : 'Compétition sauvée en brouillon.',
+          ),
+        ),
       );
       Navigator.of(context).pop();
     } catch (e) {
@@ -822,6 +838,70 @@ class _ReviewRow extends StatelessWidget {
           Expanded(child: Text(label, style: ArenaText.bodyMuted)),
           Text(value, style: ArenaText.body),
         ],
+      ),
+    );
+  }
+}
+
+class _PublishToggleCard extends StatelessWidget {
+  const _PublishToggleCard({
+    required this.publishNow,
+    required this.onChanged,
+  });
+
+  final bool publishNow;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent =
+        publishNow ? ArenaColors.statusOk : ArenaColors.signalBlue;
+    return InkWell(
+      onTap: () => onChanged(!publishNow),
+      borderRadius: BorderRadius.circular(ArenaRadius.lg),
+      child: Container(
+        padding: const EdgeInsets.all(ArenaSpacing.md),
+        decoration: BoxDecoration(
+          color: accent.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(ArenaRadius.lg),
+          border: Border.all(
+            color: accent.withValues(alpha: 0.4),
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    publishNow
+                        ? '🚀 Publier maintenant'
+                        : '💾 Sauver en brouillon',
+                    style: ArenaText.h3,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    publishNow
+                        ? 'Les inscriptions s\'ouvrent immédiatement — '
+                            'la compét. apparaît côté joueur avec le bouton '
+                            'S\'INSCRIRE.'
+                        : 'La compét. reste en brouillon — invisible côté '
+                            'joueur. À publier plus tard depuis le détail '
+                            'admin.',
+                    style: ArenaText.small,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: ArenaSpacing.md),
+            Switch.adaptive(
+              value: publishNow,
+              onChanged: onChanged,
+              activeThumbColor: ArenaColors.statusOk,
+            ),
+          ],
+        ),
       ),
     );
   }
