@@ -92,6 +92,7 @@ class _AdminCompetitionsListPageState
                       ),
                     )
                   : Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         for (final c in comps) ...[
                           _CompCard(competition: c),
