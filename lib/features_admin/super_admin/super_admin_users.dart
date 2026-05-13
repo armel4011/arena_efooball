@@ -324,6 +324,16 @@ class _UserCard extends ConsumerWidget {
         );
       }
       ref.invalidate(adminUsersProvider);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            shouldBan
+                ? '${profile.username} banni.'
+                : '${profile.username} débanni.',
+          ),
+        ),
+      );
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -358,6 +368,12 @@ class _UserCard extends ConsumerWidget {
         afterState: {'kyc_status': status},
       );
       ref.invalidate(adminUsersProvider);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('KYC → $status pour ${profile.username}.'),
+        ),
+      );
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

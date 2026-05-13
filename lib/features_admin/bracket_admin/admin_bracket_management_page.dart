@@ -263,8 +263,10 @@ class _EmptyStateState extends ConsumerState<_EmptyState> {
         ],
       ),
     );
-    groupsCtrl.dispose();
-    qualCtrl.dispose();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      groupsCtrl.dispose();
+      qualCtrl.dispose();
+    });
     return out;
   }
 }
@@ -457,8 +459,10 @@ class _MatchRow extends ConsumerWidget {
         ],
       ),
     );
-    p1Ctrl.dispose();
-    p2Ctrl.dispose();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      p1Ctrl.dispose();
+      p2Ctrl.dispose();
+    });
     if (result == null) return;
     final (s1, s2) = result;
     final adminId = ref.read(currentSessionProvider)?.user.id;

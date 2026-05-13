@@ -266,9 +266,22 @@ class _CodeCard extends ConsumerWidget {
                       variant: ArenaButtonVariant.danger,
                       fullWidth: true,
                       onPressed: () async {
-                        await ref
-                            .read(adminInvitationsRepositoryProvider)
-                            .revoke(code.id);
+                        try {
+                          await ref
+                              .read(adminInvitationsRepositoryProvider)
+                              .revoke(code.id);
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Code révoqué.'),
+                            ),
+                          );
+                        } catch (e) {
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Échec : $e')),
+                          );
+                        }
                       },
                     ),
                   ),
