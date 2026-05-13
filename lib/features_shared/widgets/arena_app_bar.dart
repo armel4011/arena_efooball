@@ -33,9 +33,14 @@ class ArenaAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     final canPop = Navigator.canPop(context);
+    final topInset = MediaQuery.of(context).padding.top;
     return Container(
-      height: 56,
-      padding: const EdgeInsets.symmetric(horizontal: ArenaSpacing.lg),
+      height: 56 + topInset,
+      padding: EdgeInsets.only(
+        top: topInset,
+        left: ArenaSpacing.lg,
+        right: ArenaSpacing.lg,
+      ),
       decoration: BoxDecoration(
         color: ArenaColors.void_,
         border: bordered

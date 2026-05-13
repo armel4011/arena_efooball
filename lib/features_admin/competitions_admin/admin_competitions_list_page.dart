@@ -50,7 +50,7 @@ class _AdminCompetitionsListPageState
               color: ArenaColors.signalBlue,
               size: 22,
             ),
-            onPressed: () => context.go(AdminRoutes.competitionsCreate),
+            onPressed: () => context.push(AdminRoutes.competitionsCreate),
           ),
         ],
       ),
@@ -231,7 +231,7 @@ class _CompCard extends ConsumerWidget {
         : null;
 
     return InkWell(
-      onTap: () => context.go(AdminRoutes.competitionDetailPath(competition.id)),
+      onTap: () => context.push(AdminRoutes.competitionDetailPath(competition.id)),
       borderRadius: BorderRadius.circular(ArenaRadius.lg),
       child: Container(
         padding: const EdgeInsets.all(ArenaSpacing.md),
@@ -285,7 +285,7 @@ class _CompCard extends ConsumerWidget {
                       label: 'VOIR',
                       variant: ArenaButtonVariant.secondary,
                       fullWidth: true,
-                      onPressed: () => context.go(
+                      onPressed: () => context.push(
                         AdminRoutes.competitionDetailPath(competition.id),
                       ),
                     ),
@@ -296,7 +296,7 @@ class _CompCard extends ConsumerWidget {
                       label: 'BRACKET',
                       variant: ArenaButtonVariant.secondary,
                       fullWidth: true,
-                      onPressed: () => context.go(
+                      onPressed: () => context.push(
                         AdminRoutes.bracketPath(competition.id),
                       ),
                     ),

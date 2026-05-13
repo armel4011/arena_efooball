@@ -388,7 +388,7 @@ class _ActionsTab extends ConsumerWidget {
         ArenaButton(
           label: '🏆 GÉRER LE BRACKET',
           fullWidth: true,
-          onPressed: () => context.go(
+          onPressed: () => context.push(
             AdminRoutes.bracketPath(competition.id),
           ),
         ),

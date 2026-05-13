@@ -6,6 +6,7 @@ import 'package:arena/data/repositories/admin/admin_kpis_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -31,11 +32,57 @@ class AdminDashboardPage extends ConsumerWidget {
     final recent = ref.watch(
       adminAuditLogProvider(const AdminAuditLogFilter(periodDays: 7)),
     );
+    final isSuperAdmin = ref.watch(currentProfileProvider).maybeWhen(
+          data: (p) => p?.isSuperAdmin ?? false,
+          orElse: () => false,
+        );
 
     return Scaffold(
-      appBar: const ArenaAppBar(
+      appBar: ArenaAppBar(
         title: 'Dashboard',
         showBack: false,
+        actions: [
+          IconButton(
+            icon: const Icon(
+              Icons.logout,
+              color: ArenaColors.bone,
+              size: 20,
+            ),
+            tooltip: 'Déconnexion',
+            onPressed: () async {
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  backgroundColor: ArenaColors.carbon,
+                  title: Text(
+                    'Se déconnecter ?',
+                    style: ArenaText.h3,
+                  ),
+                  content: Text(
+                    "Tu reviendras à l'écran de login admin.",
+                    style: ArenaText.body,
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: const Text('Annuler'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: const Text(
+                        'Déconnexion',
+                        style: TextStyle(color: ArenaColors.neonRed),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+              if (confirmed ?? false) {
+                await ref.read(signOutProvider)();
+              }
+            },
+          ),
+        ],
       ),
       body: SafeArea(
         child: RefreshIndicator(
@@ -69,22 +116,75 @@ class AdminDashboardPage extends ConsumerWidget {
                 label: '+ NOUVELLE COMPÉTITION',
                 fullWidth: true,
                 onPressed: () =>
-                    context.go(AdminRoutes.competitionsCreate),
+                    context.push(AdminRoutes.competitionsCreate),
               ),
               const SizedBox(height: ArenaSpacing.xs),
               ArenaButton(
-                label: '⚖ VOIR LES DISPUTES',
+                label: '🏆 VOIR LES COMPÉTITIONS',
                 fullWidth: true,
                 variant: ArenaButtonVariant.secondary,
-                onPressed: () => context.go(AdminRoutes.matches),
+                onPressed: () => context.push(AdminRoutes.competitions),
+              ),
+              const SizedBox(height: ArenaSpacing.xs),
+              ArenaButton(
+                label: '⚔ VOIR LES MATCHS',
+                fullWidth: true,
+                variant: ArenaButtonVariant.secondary,
+                onPressed: () => context.push(AdminRoutes.matches),
               ),
               const SizedBox(height: ArenaSpacing.xs),
               ArenaButton(
                 label: '💰 VALIDER PAYOUTS',
                 fullWidth: true,
                 variant: ArenaButtonVariant.secondary,
-                onPressed: () => context.go(AdminRoutes.payouts),
+                onPressed: () => context.push(AdminRoutes.payouts),
               ),
+              const SizedBox(height: ArenaSpacing.xs),
+              ArenaButton(
+                label: '📺 MODÉRATION STREAMS',
+                fullWidth: true,
+                variant: ArenaButtonVariant.secondary,
+                onPressed: () => context.push(AdminRoutes.streams),
+              ),
+              const SizedBox(height: ArenaSpacing.xs),
+              ArenaButton(
+                label: "📜 JOURNAL D'AUDIT",
+                fullWidth: true,
+                variant: ArenaButtonVariant.secondary,
+                onPressed: () => context.push(AdminRoutes.auditLog),
+              ),
+              if (isSuperAdmin) ...[
+                const SizedBox(height: ArenaSpacing.lg),
+                Text('👑 Super-admin', style: ArenaText.h3),
+                const SizedBox(height: ArenaSpacing.sm),
+                ArenaButton(
+                  label: 'DASHBOARD SUPER-ADMIN',
+                  fullWidth: true,
+                  variant: ArenaButtonVariant.secondary,
+                  onPressed: () => context.push(AdminRoutes.superDashboard),
+                ),
+                const SizedBox(height: ArenaSpacing.xs),
+                ArenaButton(
+                  label: 'GESTION UTILISATEURS',
+                  fullWidth: true,
+                  variant: ArenaButtonVariant.secondary,
+                  onPressed: () => context.push(AdminRoutes.superUsers),
+                ),
+                const SizedBox(height: ArenaSpacing.xs),
+                ArenaButton(
+                  label: 'INVITATIONS ADMIN',
+                  fullWidth: true,
+                  variant: ArenaButtonVariant.secondary,
+                  onPressed: () => context.push(AdminRoutes.superInvitations),
+                ),
+                const SizedBox(height: ArenaSpacing.xs),
+                ArenaButton(
+                  label: 'REVENUE PLATEFORME',
+                  fullWidth: true,
+                  variant: ArenaButtonVariant.secondary,
+                  onPressed: () => context.push(AdminRoutes.superRevenue),
+                ),
+              ],
               const SizedBox(height: ArenaSpacing.lg),
               Text('📜 Activité récente', style: ArenaText.h3),
               const SizedBox(height: ArenaSpacing.sm),
