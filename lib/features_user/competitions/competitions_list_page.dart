@@ -3,6 +3,7 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
+import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:arena/features_shared/widgets/error_state.dart';
 import 'package:flutter/material.dart';
@@ -107,10 +108,14 @@ class _CompetitionsListPageState extends ConsumerState<CompetitionsListPage> {
                       const SizedBox(height: ArenaSpacing.md),
                   itemBuilder: (context, i) {
                     final c = filtered[i];
+                    final isReg = registeredIds.contains(c.id);
                     return _CompetitionListCard(
                       competition: c,
-                      isRegistered: registeredIds.contains(c.id),
+                      isRegistered: isReg,
                       onTap: () => _onCardTap(context, c, registeredIds),
+                      onRegister: !isReg && c.canRegister
+                          ? () => _openInscriptionFlow(context, c)
+                          : null,
                     );
                   },
                 ),
@@ -135,6 +140,10 @@ void _onCardTap(
   }
   // Pas inscrit → on saute le détail et on envoie directement vers la
   // page de confirmation d'inscription (gate).
+  _openInscriptionFlow(context, c);
+}
+
+void _openInscriptionFlow(BuildContext context, Competition c) {
   final dateLabel =
       DateFormat('dd MMM yyyy · HH:mm', 'fr').format(c.startDate.toLocal());
   context.push(
@@ -332,11 +341,16 @@ class _CompetitionListCard extends StatelessWidget {
     required this.competition,
     required this.isRegistered,
     required this.onTap,
+    required this.onRegister,
   });
 
   final Competition competition;
   final bool isRegistered;
   final VoidCallback onTap;
+
+  /// `null` quand le joueur est déjà inscrit OU que la comp n'accepte
+  /// plus d'inscriptions. Sinon, bouton S'INSCRIRE visible sur la card.
+  final VoidCallback? onRegister;
 
   @override
   Widget build(BuildContext context) {
@@ -345,11 +359,13 @@ class _CompetitionListCard extends StatelessWidget {
             competition: competition,
             isRegistered: isRegistered,
             onTap: onTap,
+            onRegister: onRegister,
           )
         : _PaidCompetitionCard(
             competition: competition,
             isRegistered: isRegistered,
             onTap: onTap,
+            onRegister: onRegister,
           );
   }
 }
@@ -361,11 +377,13 @@ class _FreeCompetitionCard extends StatelessWidget {
     required this.competition,
     required this.isRegistered,
     required this.onTap,
+    required this.onRegister,
   });
 
   final Competition competition;
   final bool isRegistered;
   final VoidCallback onTap;
+  final VoidCallback? onRegister;
 
   @override
   Widget build(BuildContext context) {
@@ -373,7 +391,7 @@ class _FreeCompetitionCard extends StatelessWidget {
     final dateLabel =
         DateFormat('d MMM · HH:mm', 'fr').format(c.startDate.toLocal());
 
-    return InkWell(
+    final body = InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(ArenaRadius.lg),
       child: Container(
@@ -489,6 +507,22 @@ class _FreeCompetitionCard extends StatelessWidget {
         ),
       ),
     );
+
+    if (onRegister == null) return body;
+    // Card avec bouton S'INSCRIRE en bas — wrap dans Column pour empiler
+    // la card cliquable + bouton dédié à l'inscription.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        body,
+        const SizedBox(height: ArenaSpacing.sm),
+        ArenaButton(
+          label: "✓ M'INSCRIRE GRATUITEMENT",
+          fullWidth: true,
+          onPressed: onRegister,
+        ),
+      ],
+    );
   }
 }
 
@@ -499,11 +533,13 @@ class _PaidCompetitionCard extends StatelessWidget {
     required this.competition,
     required this.isRegistered,
     required this.onTap,
+    required this.onRegister,
   });
 
   final Competition competition;
   final bool isRegistered;
   final VoidCallback onTap;
+  final VoidCallback? onRegister;
 
   static const _gold = Color(0xFFFFC93C);
   static const _goldDeep = Color(0xFFCB9A1F);
@@ -516,7 +552,7 @@ class _PaidCompetitionCard extends StatelessWidget {
     final prize = _formatPrize(c.prizePoolLocal,
         c.prizePoolCurrency ?? c.registrationCurrency);
 
-    return InkWell(
+    final body = InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(ArenaRadius.lg),
       child: Container(
@@ -714,6 +750,21 @@ class _PaidCompetitionCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+
+    if (onRegister == null) return body;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        body,
+        const SizedBox(height: ArenaSpacing.sm),
+        ArenaButton(
+          label: "✓ S'INSCRIRE · "
+              '${_money(c.registrationFee)} ${c.registrationCurrency}',
+          fullWidth: true,
+          onPressed: onRegister,
+        ),
+      ],
     );
   }
 

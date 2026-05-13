@@ -1,6 +1,7 @@
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
+import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -116,8 +117,17 @@ final competitionByIdProvider =
 /// Realtime set des ids de comps où le joueur courant est inscrit
 /// (status='confirmed'). Utilisé pour le gate du détail + le routage
 /// liste → détail vs inscription.
+///
+/// Dépend explicitement de `currentSessionProvider` pour que la stream
+/// soit reconstruite quand l'auth devient prête (sinon, lors d'un
+/// cold-start avec session restaurée tardivement, la stream se crée
+/// alors que `auth.currentUser` est encore null et reste vide).
 final myRegisteredCompetitionIdsProvider =
     StreamProvider<Set<String>>((ref) {
+  final session = ref.watch(currentSessionProvider);
+  if (session == null) {
+    return Stream.value(const <String>{});
+  }
   return ref
       .watch(competitionRepositoryProvider)
       .watchMyRegisteredCompetitionIds();

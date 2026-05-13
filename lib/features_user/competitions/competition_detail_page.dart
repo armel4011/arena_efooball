@@ -1,10 +1,8 @@
-import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
-import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_card.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:arena/features_shared/widgets/error_state.dart';
@@ -12,7 +10,6 @@ import 'package:arena/features_user/bracket/bracket_view_page.dart';
 import 'package:arena/features_user/bracket/group_standings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 /// PHASE 4 — single competition detail page with 4 tabs.
@@ -166,37 +163,23 @@ class _GatedDetailView extends ConsumerWidget {
               ),
             ),
             const Spacer(),
-            if (c.canRegister)
-              ArenaButton(
-                label: isFree
-                    ? "M'INSCRIRE GRATUITEMENT"
-                    : "S'INSCRIRE · "
-                        '${_money(c.registrationFee)} ${c.registrationCurrency}',
-                fullWidth: true,
-                size: ArenaButtonSize.large,
-                onPressed: () => _openRegistrationConfirm(context, c),
-              )
-            else
-              ArenaButton(
-                label: _ctaStateGated(c),
-                fullWidth: true,
-                size: ArenaButtonSize.large,
-                onPressed: null,
+            Container(
+              padding: const EdgeInsets.all(ArenaSpacing.md),
+              decoration: BoxDecoration(
+                color: ArenaColors.carbon,
+                borderRadius: BorderRadius.circular(ArenaRadius.md),
+                border: Border.all(color: ArenaColors.border),
               ),
+              child: Text(
+                '↩ Reviens à la liste des compétitions et tape le bouton '
+                '"S\'INSCRIRE" sur la carte pour rejoindre cette compétition.',
+                style: ArenaText.small,
+              ),
+            ),
           ],
         ),
       ),
     );
-  }
-
-  static String _ctaStateGated(Competition c) {
-    if (c.status.isCancelled) return 'ANNULÉ';
-    if (c.status.isCompleted) return 'TERMINÉ';
-    if (c.status == CompetitionStatus.registrationClosed) {
-      return 'INSCRIPTIONS FERMÉES';
-    }
-    if (c.spotsLeft == 0) return 'COMPLET';
-    return 'BIENTÔT OUVERT';
   }
 
   static String _prizeFmt(double pool, String currency) {
@@ -204,26 +187,6 @@ class _GatedDetailView extends ConsumerWidget {
         .format(pool.round())
         .replaceAll(',', ' ');
     return '$formatted $currency';
-  }
-
-  static String _money(double v) =>
-      NumberFormat.decimalPattern('fr').format(v).replaceAll(',', ' ');
-
-  void _openRegistrationConfirm(BuildContext context, Competition c) {
-    final dateLabel = DateFormat('dd MMM yyyy · HH:mm', 'fr')
-        .format(c.startDate.toLocal());
-    context.push(
-      UserRoutes.registrationConfirmPath(c.id),
-      extra: RegistrationConfirmArgs(
-        competitionName: c.name,
-        gameLabel: c.game.label,
-        gameEmoji: _gameEmoji(c.game),
-        dateLabel: dateLabel,
-        formatLabel: _formatLabelStatic(c.format),
-        entryFeeXaf: c.registrationFee.round(),
-        totalPrizeXaf: c.prizePoolLocal.round(),
-      ),
-    );
   }
 }
 
@@ -291,7 +254,6 @@ class _DetailBody extends StatelessWidget {
               ],
             ),
           ),
-          _RegistrationCta(competition: competition),
         ],
       ),
     );
@@ -518,58 +480,4 @@ class _DeferredTab extends StatelessWidget {
   }
 }
 
-class _RegistrationCta extends StatelessWidget {
-  const _RegistrationCta({required this.competition});
-
-  final Competition competition;
-
-  @override
-  Widget build(BuildContext context) {
-    final (label, enabled) = _ctaState(competition);
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.all(ArenaSpacing.lg),
-        child: ArenaButton(
-          label: label,
-          fullWidth: true,
-          size: ArenaButtonSize.large,
-          onPressed: enabled ? () => _openRegistrationFlow(context) : null,
-        ),
-      ),
-    );
-  }
-
-  void _openRegistrationFlow(BuildContext context) {
-    final c = competition;
-    final fee = c.registrationFee.round();
-    final pool = c.prizePoolLocal.round();
-    final dateLabel = DateFormat('dd MMM yyyy · HH:mm', 'fr')
-        .format(c.startDate.toLocal());
-    context.push(
-      UserRoutes.registrationConfirmPath(c.id),
-      extra: RegistrationConfirmArgs(
-        competitionName: c.name,
-        gameLabel: c.game.label,
-        gameEmoji: _gameEmoji(c.game),
-        dateLabel: dateLabel,
-        formatLabel: _formatLabelStatic(c.format),
-        entryFeeXaf: fee,
-        totalPrizeXaf: pool,
-      ),
-    );
-  }
-
-  static (String, bool) _ctaState(Competition c) {
-    if (c.status.isCancelled) return ('ANNULÉ', false);
-    if (c.status.isCompleted) return ('TERMINÉ', false);
-    if (c.status == CompetitionStatus.registrationClosed) {
-      return ('INSCRIPTIONS FERMÉES', false);
-    }
-    if (!c.canRegister) {
-      return c.spotsLeft == 0 ? ('COMPLET', false) : ('BIENTÔT OUVERT', false);
-    }
-    return ("S'INSCRIRE", true);
-  }
-}
 

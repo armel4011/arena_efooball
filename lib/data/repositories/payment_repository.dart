@@ -1,4 +1,5 @@
 import 'package:arena/data/repositories/profile_repository.dart';
+import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -150,5 +151,10 @@ final paymentByIdProvider =
 });
 
 final myPaymentsProvider = StreamProvider<List<PaymentRecord>>((ref) {
+  // Re-bâti la stream quand l'auth devient prête.
+  final session = ref.watch(currentSessionProvider);
+  if (session == null) {
+    return Stream.value(const <PaymentRecord>[]);
+  }
   return ref.watch(paymentRepositoryProvider).watchMine();
 });
