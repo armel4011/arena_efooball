@@ -8,17 +8,13 @@ import 'package:go_router/go_router.dart';
 
 /// Pourquoi le paiement a échoué — pilote le message + le code erreur
 /// de [PaymentFailedPage]. PHASE 11bis.
-enum PaymentFailReason { expired, rejected, network, unknown }
+enum PaymentFailReason { rejected, network, unknown }
 
 /// PHASE 11bis · P5 — Paiement échoué.
 ///
-/// Atteinte depuis P3 quand :
-///   • le row payment passe en `status='expired'` (15 min écoulées sans
-///     validation super-admin)
-///   • le super-admin a refusé manuellement (`status='rejected'` +
-///     `rejection_reason`)
-///   • erreur réseau / autre (cas générique pour V2 quand on aura les
-///     passerelles automatiques)
+/// Atteinte depuis P3 quand le super-admin a refusé manuellement
+/// (`status='rejected'` + `rejection_reason`), ou pour un cas générique
+/// (réseau / inconnu) qui reste en place pour V2.
 ///
 /// Maps to screen P5 of `arena_v2.html`.
 class PaymentFailedPage extends StatelessWidget {
@@ -41,10 +37,6 @@ class PaymentFailedPage extends StatelessWidget {
 
   String get _causeMessage {
     switch (reason) {
-      case PaymentFailReason.expired:
-        return 'Le délai de 15 minutes pour valider la transaction est '
-            'expiré. Si tu as bien envoyé le paiement, contacte le '
-            'support — il faudra réinitialiser ton inscription.';
       case PaymentFailReason.rejected:
         return adminReason?.trim().isNotEmpty == true
             ? 'Le super-admin a refusé ton paiement : $adminReason'
@@ -61,8 +53,6 @@ class PaymentFailedPage extends StatelessWidget {
 
   String get _errorCode {
     switch (reason) {
-      case PaymentFailReason.expired:
-        return 'PAY_TIMEOUT_15MIN';
       case PaymentFailReason.rejected:
         return 'PAY_ADMIN_REJECTED';
       case PaymentFailReason.network:
@@ -74,12 +64,6 @@ class PaymentFailedPage extends StatelessWidget {
 
   List<String> get _solutions {
     switch (reason) {
-      case PaymentFailReason.expired:
-        return [
-          'Vérifie si le débit Mobile Money a bien eu lieu',
-          'Si oui : contacte le support avec ta référence ARENA-…',
-          'Si non : recommence depuis la page Inscription',
-        ];
       case PaymentFailReason.rejected:
         return [
           'Vérifie le montant exact + le code marchand',
@@ -182,8 +166,6 @@ class PaymentFailedPage extends StatelessWidget {
 
   String get _title {
     switch (reason) {
-      case PaymentFailReason.expired:
-        return 'DÉLAI EXPIRÉ';
       case PaymentFailReason.rejected:
         return 'PAIEMENT REFUSÉ';
       case PaymentFailReason.network:

@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/payment_repository.dart';
@@ -15,10 +13,13 @@ import 'package:intl/intl.dart';
 ///
 /// Une fois "J'AI PAYÉ" cliqué sur P2, le row `payments` est inséré en
 /// `status='awaiting_admin'`. Cette page :
-///   • affiche un countdown 15:00 (basé sur `expires_at`)
 ///   • stream le status du row en realtime
 ///   • bascule sur P4 si `status='succeeded'`
-///   • bascule sur P5 si `status='rejected'` ou `'expired'`
+///   • bascule sur P5 si `status='rejected'` (refus admin)
+///
+/// Pas de timeout : la page reste en attente indéfiniment jusqu'à ce
+/// que le super-admin valide ou refuse. L'utilisateur peut quitter
+/// l'app et revenir plus tard via l'historique paiements.
 ///
 /// Maps to screen P3 of `arena_v2.html` (mais sans WebView CinetPay).
 class PaymentProcessingPage extends ConsumerStatefulWidget {
@@ -44,34 +45,7 @@ class PaymentProcessingPage extends ConsumerStatefulWidget {
 
 class _PaymentProcessingPageState
     extends ConsumerState<PaymentProcessingPage> {
-  Timer? _ticker;
-  Duration _remaining = const Duration(minutes: 15);
   bool _navigatedAway = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
-      setState(() {
-        if (_remaining.inSeconds > 0) {
-          _remaining -= const Duration(seconds: 1);
-        }
-      });
-    });
-  }
-
-  @override
-  void dispose() {
-    _ticker?.cancel();
-    super.dispose();
-  }
-
-  String get _countdown {
-    final m = _remaining.inMinutes.toString().padLeft(2, '0');
-    final s = (_remaining.inSeconds % 60).toString().padLeft(2, '0');
-    return '$m:$s';
-  }
 
   void _handleStatus(BuildContext context, PaymentRecord rec) {
     if (_navigatedAway) return;
@@ -92,16 +66,14 @@ class _PaymentProcessingPageState
           ),
         );
       });
-    } else if (rec.status == 'rejected' || rec.status == 'expired') {
+    } else if (rec.status == 'rejected') {
       _navigatedAway = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         context.go(
           UserRoutes.paymentFailed,
           extra: PaymentFailedArgs(
-            reason: rec.status == 'expired'
-                ? PaymentFailReason.expired
-                : PaymentFailReason.rejected,
+            reason: PaymentFailReason.rejected,
             adminReason: rec.rejectionReason,
             method: widget.method,
           ),
@@ -147,15 +119,10 @@ class _PaymentProcessingPageState
                 ),
               ),
               const SizedBox(height: ArenaSpacing.xl),
-              _CountdownCard(
-                countdown: _countdown,
-                isWarning: _remaining.inMinutes < 5,
-              ),
-              const SizedBox(height: ArenaSpacing.md),
               Center(
                 child: SizedBox(
-                  width: 28,
-                  height: 28,
+                  width: 36,
+                  height: 36,
                   child: CircularProgressIndicator(
                     strokeWidth: 3,
                     valueColor: AlwaysStoppedAnimation(accent),
@@ -227,41 +194,6 @@ class _PaymentProcessingPageState
     await ref.read(paymentRepositoryProvider).cancel(widget.paymentId);
     if (!mounted) return;
     context.go(UserRoutes.home);
-  }
-}
-
-class _CountdownCard extends StatelessWidget {
-  const _CountdownCard({required this.countdown, required this.isWarning});
-  final String countdown;
-  final bool isWarning;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = isWarning ? ArenaColors.neonRed : ArenaColors.signalBlue;
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: ArenaSpacing.lg,
-        vertical: ArenaSpacing.md,
-      ),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(ArenaRadius.lg),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text('⏱ Validation sous', style: ArenaText.body),
-          Text(
-            countdown,
-            style: ArenaText.bigNumber.copyWith(
-              color: color,
-              fontSize: 26,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
 

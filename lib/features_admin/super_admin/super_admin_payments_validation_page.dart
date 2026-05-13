@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_payments_repository.dart';
@@ -13,15 +11,15 @@ import 'package:intl/intl.dart';
 
 /// PHASE 11bis · SA — Validation manuelle des paiements P2P.
 ///
-/// Le super-admin voit la file des paiements `awaiting_admin` (triés par
-/// expiration croissante = les plus urgents en haut), avec pour chaque
-/// ligne : joueur, compétition, montant, méthode + numéro payeur,
-/// temps restant avant expiration auto.
+/// Le super-admin voit la file des paiements `awaiting_admin` (triés du
+/// plus ancien au plus récent), avec pour chaque ligne : joueur,
+/// compétition, montant, méthode + numéro payeur, temps écoulé depuis
+/// réception.
 ///
 /// Deux actions par carte : **VALIDER** (status → succeeded → trigger
 /// DB insère la registration en confirmed) et **REFUSER** (status →
 /// rejected + raison saisie). L'onglet *Historique* liste les rows
-/// fermés (validés / rejetés / expirés).
+/// fermés (validés / rejetés).
 class SuperAdminPaymentsValidationPage extends ConsumerStatefulWidget {
   const SuperAdminPaymentsValidationPage({super.key});
 
@@ -32,34 +30,6 @@ class SuperAdminPaymentsValidationPage extends ConsumerStatefulWidget {
 
 class _SuperAdminPaymentsValidationPageState
     extends ConsumerState<SuperAdminPaymentsValidationPage> {
-  Timer? _sweepTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    // Sweep des paiements expirés au mount puis toutes les 30s, pour
-    // que la liste soit toujours à jour côté admin sans dépendre du
-    // pg_cron qui n'arrive qu'en PHASE 12.5.
-    _runSweep();
-    _sweepTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (mounted) _runSweep();
-    });
-  }
-
-  Future<void> _runSweep() async {
-    try {
-      await ref.read(adminPaymentsRepositoryProvider).sweepExpired();
-    } catch (_) {
-      // best-effort — la prochaine tick réessaiera
-    }
-  }
-
-  @override
-  void dispose() {
-    _sweepTimer?.cancel();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
@@ -282,7 +252,7 @@ class _PendingList extends ConsumerWidget {
   }
 }
 
-class _PendingCard extends StatefulWidget {
+class _PendingCard extends StatelessWidget {
   const _PendingCard({
     required this.row,
     required this.onValidate,
@@ -294,47 +264,12 @@ class _PendingCard extends StatefulWidget {
   final VoidCallback onReject;
 
   @override
-  State<_PendingCard> createState() => _PendingCardState();
-}
-
-class _PendingCardState extends State<_PendingCard> {
-  Timer? _ticker;
-  Duration _left = Duration.zero;
-
-  @override
-  void initState() {
-    super.initState();
-    _recompute();
-    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
-      setState(_recompute);
-    });
-  }
-
-  void _recompute() {
-    final exp = widget.row.payment.expiresAt;
-    if (exp == null) {
-      _left = Duration.zero;
-    } else {
-      final d = exp.difference(DateTime.now());
-      _left = d.isNegative ? Duration.zero : d;
-    }
-  }
-
-  @override
-  void dispose() {
-    _ticker?.cancel();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final p = widget.row.payment;
-    final urgent = _left.inMinutes < 5;
-    final color = urgent ? ArenaColors.neonRed : ArenaColors.signalBlue;
-    final countdown =
-        '${_left.inMinutes.toString().padLeft(2, '0')}:'
-        '${(_left.inSeconds % 60).toString().padLeft(2, '0')}';
+    final p = row.payment;
+    final age = DateTime.now().difference(p.createdAt);
+    final ageLabel = _ageLabel(age);
+    final urgent = age.inHours >= 1;
+    final color = urgent ? ArenaColors.statusWarn : ArenaColors.signalBlue;
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.md),
       decoration: BoxDecoration(
@@ -349,7 +284,7 @@ class _PendingCardState extends State<_PendingCard> {
             children: [
               Expanded(
                 child: Text(
-                  widget.row.username,
+                  row.username,
                   style: ArenaText.body
                       .copyWith(fontWeight: FontWeight.w700),
                 ),
@@ -365,14 +300,14 @@ class _PendingCardState extends State<_PendingCard> {
                   border: Border.all(color: color.withValues(alpha: 0.4)),
                 ),
                 child: Text(
-                  '⏱ $countdown',
+                  '⏱ $ageLabel',
                   style: ArenaText.mono.copyWith(color: color, fontSize: 12),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 4),
-          Text(widget.row.competitionName, style: ArenaText.bodyMuted),
+          Text(row.competitionName, style: ArenaText.bodyMuted),
           const SizedBox(height: ArenaSpacing.sm),
           Container(
             padding: const EdgeInsets.all(ArenaSpacing.sm),
@@ -408,14 +343,14 @@ class _PendingCardState extends State<_PendingCard> {
                 child: ArenaButton(
                   label: '✗ REFUSER',
                   variant: ArenaButtonVariant.secondary,
-                  onPressed: widget.onReject,
+                  onPressed: onReject,
                 ),
               ),
               const SizedBox(width: ArenaSpacing.sm),
               Expanded(
                 child: ArenaButton(
                   label: '✓ VALIDER',
-                  onPressed: widget.onValidate,
+                  onPressed: onValidate,
                 ),
               ),
             ],
@@ -423,6 +358,13 @@ class _PendingCardState extends State<_PendingCard> {
         ],
       ),
     );
+  }
+
+  static String _ageLabel(Duration d) {
+    if (d.inMinutes < 1) return "à l'instant";
+    if (d.inHours < 1) return 'il y a ${d.inMinutes} min';
+    if (d.inDays < 1) return 'il y a ${d.inHours}h';
+    return 'il y a ${d.inDays}j';
   }
 
   Widget _kv(
@@ -499,7 +441,6 @@ class _HistoryCard extends StatelessWidget {
     final (label, variant, color) = switch (p.status) {
       'succeeded' => ('VALIDÉ', ArenaBadgeVariant.success, ArenaColors.statusOk),
       'rejected' => ('REFUSÉ', ArenaBadgeVariant.danger, ArenaColors.neonRed),
-      'expired' => ('EXPIRÉ', ArenaBadgeVariant.warn, ArenaColors.statusWarn),
       _ => ('—', ArenaBadgeVariant.info, ArenaColors.silver),
     };
     return Container(

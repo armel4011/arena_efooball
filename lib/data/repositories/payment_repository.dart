@@ -20,7 +20,6 @@ class PaymentRecord {
     required this.payerMethod,
     required this.payerPhone,
     required this.createdAt,
-    this.expiresAt,
     this.validatedAt,
     this.validatedByAdminId,
     this.rejectionReason,
@@ -32,7 +31,7 @@ class PaymentRecord {
   final double amountLocal;
   final String currency;
 
-  /// `pending` · `awaiting_admin` · `succeeded` · `rejected` · `expired`.
+  /// `pending` · `awaiting_admin` · `succeeded` · `rejected`.
   final String status;
 
   /// `MTN_MOMO` ou `ORANGE_MONEY`.
@@ -41,7 +40,6 @@ class PaymentRecord {
   /// Numéro Mobile Money utilisé par le joueur pour payer.
   final String? payerPhone;
   final DateTime createdAt;
-  final DateTime? expiresAt;
   final DateTime? validatedAt;
   final String? validatedByAdminId;
   final String? rejectionReason;
@@ -57,9 +55,6 @@ class PaymentRecord {
       payerMethod: row['payer_method'] as String?,
       payerPhone: row['payer_phone'] as String?,
       createdAt: DateTime.parse(row['created_at'] as String),
-      expiresAt: row['expires_at'] == null
-          ? null
-          : DateTime.parse(row['expires_at'] as String),
       validatedAt: row['validated_at'] == null
           ? null
           : DateTime.parse(row['validated_at'] as String),
@@ -73,13 +68,13 @@ class PaymentRepository {
   PaymentRepository(this._client);
 
   static const _table = 'payments';
-  static const _windowMinutes = 15;
 
   final SupabaseClient _client;
 
   /// INSERT manuel d'un paiement P2P après que le joueur ait cliqué
   /// "J'AI PAYÉ" sur P2. Retourne l'id du row pour permettre à P3 de
-  /// streamer son statut.
+  /// streamer son statut. Le row reste en `awaiting_admin` jusqu'à
+  /// validation/refus manuel par le super-admin (pas de timeout).
   Future<String> submitManualPayment({
     required String competitionId,
     required double amountLocal,
@@ -91,8 +86,6 @@ class PaymentRepository {
     if (userId == null) {
       throw StateError('No authenticated user — cannot submit payment.');
     }
-    final now = DateTime.now().toUtc();
-    final expiresAt = now.add(const Duration(minutes: _windowMinutes));
     final inserted = await _client
         .from(_table)
         .insert({
@@ -105,7 +98,6 @@ class PaymentRepository {
           'payer_method': payerMethodCode,
           'payer_phone': payerPhone,
           'status': 'awaiting_admin',
-          'expires_at': expiresAt.toIso8601String(),
         })
         .select('id')
         .single();

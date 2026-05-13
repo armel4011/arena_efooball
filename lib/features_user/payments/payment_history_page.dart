@@ -231,7 +231,6 @@ class _TxCard extends StatelessWidget {
           isFail: false,
         );
       case 'rejected':
-      case 'expired':
       case 'failed':
       default:
         return (
@@ -239,7 +238,7 @@ class _TxCard extends StatelessWidget {
           iconColor: ArenaColors.neonRed,
           tint: Color(0x33FF2D55),
           amountColor: ArenaColors.silverDim,
-          badge: status == 'expired' ? 'EXPIRÉ' : 'ÉCHEC',
+          badge: 'ÉCHEC',
           badgeVariant: ArenaBadgeVariant.danger,
           isFail: true,
         );

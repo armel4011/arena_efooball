@@ -23,13 +23,14 @@ class AdminPaymentRow {
 /// PHASE 11bis — super-admin reads + writes sur `payments`.
 ///
 /// Permet de :
-///   • streamer les paiements `awaiting_admin` triés par expiration croissante
-///   • streamer l'historique (validés + rejetés + expirés)
+///   • streamer les paiements `awaiting_admin` (les plus anciens en haut)
+///   • streamer l'historique (validés + rejetés)
 ///   • valider un paiement (status → succeeded → trigger DB insère la
 ///     registration en confirmed)
 ///   • refuser un paiement (status → rejected + raison)
-///   • forcer l'expiration des rows dont expires_at < now() (via RPC
-///     `expire_stale_payments`)
+///
+/// Pas de timeout : un paiement reste en `awaiting_admin` jusqu'à
+/// validation ou refus manuel par le super-admin.
 class AdminPaymentsRepository {
   const AdminPaymentsRepository(this._client);
 
@@ -41,7 +42,7 @@ class AdminPaymentsRepository {
     return _client
         .from(_table)
         .stream(primaryKey: ['id'])
-        .order('expires_at')
+        .order('created_at')
         .map((rows) {
           final pending = rows
               .where((r) => r['status'] == 'awaiting_admin')
@@ -67,7 +68,7 @@ class AdminPaymentsRepository {
         .map((rows) {
           final closed = rows.where((r) {
             final s = r['status'] as String?;
-            return s == 'succeeded' || s == 'rejected' || s == 'expired';
+            return s == 'succeeded' || s == 'rejected';
           }).toList(growable: false);
           return [
             for (final r in closed)
@@ -141,12 +142,6 @@ class AdminPaymentsRepository {
     }).eq('id', paymentId);
   }
 
-  /// Marque les paiements awaiting_admin dont expires_at est dépassé en
-  /// `expired`. Retourne le nombre de rows mis à jour.
-  Future<int> sweepExpired() async {
-    final result = await _client.rpc<dynamic>('expire_stale_payments');
-    return result is int ? result : (result as num?)?.toInt() ?? 0;
-  }
 }
 
 final adminPaymentsRepositoryProvider =

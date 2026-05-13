@@ -385,7 +385,7 @@ class _Disclaimer extends StatelessWidget {
   static const _items = <String>[
     'Paie le montant EXACT — sinon le super-admin refusera',
     'Garde le SMS de confirmation Mobile Money en preuve',
-    'Tu as 15 min après "J\'AI PAYÉ" pour la validation',
+    'L\'admin valide manuellement ton paiement après réception',
   ];
 
   @override
