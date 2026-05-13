@@ -282,37 +282,28 @@ class _CompCard extends ConsumerWidget {
               ),
             if (showActions) ...[
               const SizedBox(height: ArenaSpacing.sm),
-              Row(
+              Wrap(
+                spacing: 4,
+                runSpacing: 4,
                 children: [
-                  Expanded(
-                    child: ArenaButton(
-                      label: 'VOIR',
-                      variant: ArenaButtonVariant.secondary,
-                      fullWidth: true,
-                      onPressed: () => context.push(
-                        AdminRoutes.competitionDetailPath(competition.id),
-                      ),
+                  ArenaButton(
+                    label: 'VOIR',
+                    variant: ArenaButtonVariant.secondary,
+                    onPressed: () => context.push(
+                      AdminRoutes.competitionDetailPath(competition.id),
                     ),
                   ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: ArenaButton(
-                      label: 'BRACKET',
-                      variant: ArenaButtonVariant.secondary,
-                      fullWidth: true,
-                      onPressed: () => context.push(
-                        AdminRoutes.bracketPath(competition.id),
-                      ),
+                  ArenaButton(
+                    label: 'BRACKET',
+                    variant: ArenaButtonVariant.secondary,
+                    onPressed: () => context.push(
+                      AdminRoutes.bracketPath(competition.id),
                     ),
                   ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: ArenaButton(
-                      label: 'ANNULER',
-                      variant: ArenaButtonVariant.danger,
-                      fullWidth: true,
-                      onPressed: () => _confirmCancel(context, ref),
-                    ),
+                  ArenaButton(
+                    label: 'ANNULER',
+                    variant: ArenaButtonVariant.danger,
+                    onPressed: () => _confirmCancel(context, ref),
                   ),
                 ],
               ),
