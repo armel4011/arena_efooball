@@ -28,6 +28,10 @@ class CompetitionDetailPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(competitionByIdProvider(competitionId));
+    final registeredIds =
+        ref.watch(myRegisteredCompetitionIdsProvider).valueOrNull ??
+            const <String>{};
+    final isRegistered = registeredIds.contains(competitionId);
 
     return Scaffold(
       appBar: const ArenaAppBar(title: 'Compétition'),
@@ -46,12 +50,194 @@ class CompetitionDetailPage extends ConsumerWidget {
               description: 'Elle a peut-être été supprimée par un admin.',
             );
           }
+          // Gate : sans inscription confirmée, on n'expose pas les
+          // détails (bracket, matches, etc.) — le joueur passe d'abord
+          // par la page Confirmer inscription.
+          if (!isRegistered) {
+            return _GatedDetailView(competition: c);
+          }
           return _DetailBody(competition: c);
         },
       ),
     );
   }
 }
+
+/// Vue affichée quand le joueur n'est pas inscrit à la compétition.
+/// Récap minimal de la comp + CTA pour s'inscrire.
+class _GatedDetailView extends ConsumerWidget {
+  const _GatedDetailView({required this.competition});
+
+  final Competition competition;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = competition;
+    final isFree = c.isFree;
+    final accent = isFree ? ArenaColors.statusOk : ArenaColors.signalBlue;
+    final dateLabel = DateFormat('EEEE d MMM yyyy · HH:mm', 'fr')
+        .format(c.startDate.toLocal());
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(ArenaSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(ArenaSpacing.lg),
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(ArenaRadius.lg),
+                border: Border.all(
+                  color: accent.withValues(alpha: 0.35),
+                ),
+              ),
+              child: Column(
+                children: [
+                  Text('🔒', style: ArenaText.h1.copyWith(fontSize: 38)),
+                  const SizedBox(height: ArenaSpacing.sm),
+                  Text(
+                    'Inscris-toi pour accéder au détail',
+                    textAlign: TextAlign.center,
+                    style: ArenaText.h3,
+                  ),
+                  const SizedBox(height: ArenaSpacing.xs),
+                  Text(
+                    'Bracket, matches en direct et chat 1-on-1 sont '
+                    'réservés aux joueurs inscrits.',
+                    textAlign: TextAlign.center,
+                    style: ArenaText.bodyMuted,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: ArenaSpacing.lg),
+            Container(
+              padding: const EdgeInsets.all(ArenaSpacing.lg),
+              decoration: BoxDecoration(
+                color: ArenaColors.carbon,
+                borderRadius: BorderRadius.circular(ArenaRadius.lg),
+                border: Border.all(color: ArenaColors.border),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(c.name, style: ArenaText.h2),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${_gameEmoji(c.game)} ${c.game.label} · '
+                    '${_formatLabelStatic(c.format)}',
+                    style: ArenaText.bodyMuted,
+                  ),
+                  const SizedBox(height: 4),
+                  Text('🗓 $dateLabel', style: ArenaText.bodyMuted),
+                  const SizedBox(height: ArenaSpacing.md),
+                  Center(
+                    child: Column(
+                      children: [
+                        if (isFree)
+                          Text(
+                            'GRATUIT',
+                            style: ArenaText.bigNumber.copyWith(
+                              color: accent,
+                              fontSize: 40,
+                              letterSpacing: 2,
+                            ),
+                          )
+                        else
+                          Text(
+                            _prizeFmt(c.prizePoolLocal,
+                                c.prizePoolCurrency ?? c.registrationCurrency),
+                            style: ArenaText.bigNumber.copyWith(
+                              color: accent,
+                              fontSize: 32,
+                            ),
+                          ),
+                        const SizedBox(height: 2),
+                        Text(
+                          isFree ? 'Inscription libre' : 'À gagner',
+                          style: ArenaText.bodyMuted,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Spacer(),
+            if (c.canRegister)
+              ArenaButton(
+                label: isFree
+                    ? "M'INSCRIRE GRATUITEMENT"
+                    : "S'INSCRIRE · "
+                        '${_money(c.registrationFee)} ${c.registrationCurrency}',
+                fullWidth: true,
+                size: ArenaButtonSize.large,
+                onPressed: () => _openRegistrationConfirm(context, c),
+              )
+            else
+              ArenaButton(
+                label: _ctaStateGated(c),
+                fullWidth: true,
+                size: ArenaButtonSize.large,
+                onPressed: null,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static String _ctaStateGated(Competition c) {
+    if (c.status.isCancelled) return 'ANNULÉ';
+    if (c.status.isCompleted) return 'TERMINÉ';
+    if (c.status == CompetitionStatus.registrationClosed) {
+      return 'INSCRIPTIONS FERMÉES';
+    }
+    if (c.spotsLeft == 0) return 'COMPLET';
+    return 'BIENTÔT OUVERT';
+  }
+
+  static String _prizeFmt(double pool, String currency) {
+    final formatted = NumberFormat.decimalPattern('fr')
+        .format(pool.round())
+        .replaceAll(',', ' ');
+    return '$formatted $currency';
+  }
+
+  static String _money(double v) =>
+      NumberFormat.decimalPattern('fr').format(v).replaceAll(',', ' ');
+
+  void _openRegistrationConfirm(BuildContext context, Competition c) {
+    final dateLabel = DateFormat('dd MMM yyyy · HH:mm', 'fr')
+        .format(c.startDate.toLocal());
+    context.push(
+      UserRoutes.registrationConfirmPath(c.id),
+      extra: RegistrationConfirmArgs(
+        competitionName: c.name,
+        gameLabel: c.game.label,
+        gameEmoji: _gameEmoji(c.game),
+        dateLabel: dateLabel,
+        formatLabel: _formatLabelStatic(c.format),
+        entryFeeXaf: c.registrationFee.round(),
+        totalPrizeXaf: c.prizePoolLocal.round(),
+      ),
+    );
+  }
+}
+
+String _gameEmoji(GameType g) => switch (g) {
+      GameType.efootball => '⚽',
+      GameType.fifaMobile => '🏆',
+      GameType.eaSportsFc => '🎮',
+    };
+
+String _formatLabelStatic(TournamentFormat f) => switch (f) {
+      TournamentFormat.singleElimination => 'Élimination directe',
+      TournamentFormat.groupsThenKnockout => 'Poules + élimination',
+      TournamentFormat.roundRobin => 'Round robin',
+    };
 
 class _DetailBody extends StatelessWidget {
   const _DetailBody({required this.competition});
@@ -373,18 +559,6 @@ class _RegistrationCta extends StatelessWidget {
       ),
     );
   }
-
-  static String _gameEmoji(GameType g) => switch (g) {
-        GameType.efootball => '⚽',
-        GameType.fifaMobile => '🏆',
-        GameType.eaSportsFc => '🎮',
-      };
-
-  static String _formatLabelStatic(TournamentFormat f) => switch (f) {
-        TournamentFormat.singleElimination => 'Élimination directe',
-        TournamentFormat.groupsThenKnockout => 'Poules + élimination',
-        TournamentFormat.roundRobin => 'Round robin',
-      };
 
   static (String, bool) _ctaState(Competition c) {
     if (c.status.isCancelled) return ('ANNULÉ', false);

@@ -3,7 +3,6 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
-import 'package:arena/features_shared/widgets/arena_banner.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:arena/features_shared/widgets/error_state.dart';
 import 'package:flutter/material.dart';
@@ -82,6 +81,9 @@ class _CompetitionsListPageState extends ConsumerState<CompetitionsListPage> {
                       ' semaine. Reviens bientôt !',
                 );
               }
+              final registeredIds =
+                  ref.watch(myRegisteredCompetitionIdsProvider).valueOrNull ??
+                      const <String>{};
               return RefreshIndicator(
                 onRefresh: () async {
                   ref.invalidate(competitionsListProvider(_game));
@@ -95,10 +97,10 @@ class _CompetitionsListPageState extends ConsumerState<CompetitionsListPage> {
                       const SizedBox(height: ArenaSpacing.md),
                   itemBuilder: (context, i) {
                     final c = filtered[i];
-                    return _CompetitionBanner(
+                    return _CompetitionListCard(
                       competition: c,
-                      onTap: () =>
-                          context.push(UserRoutes.competitionPath(c.id)),
+                      isRegistered: registeredIds.contains(c.id),
+                      onTap: () => _onCardTap(context, c, registeredIds),
                     );
                   },
                 ),
@@ -110,6 +112,46 @@ class _CompetitionsListPageState extends ConsumerState<CompetitionsListPage> {
     );
   }
 }
+
+void _onCardTap(
+  BuildContext context,
+  Competition c,
+  Set<String> registeredIds,
+) {
+  // Si déjà inscrit → accès direct au détail (bracket / matches / etc).
+  if (registeredIds.contains(c.id)) {
+    context.push(UserRoutes.competitionPath(c.id));
+    return;
+  }
+  // Pas inscrit → on saute le détail et on envoie directement vers la
+  // page de confirmation d'inscription (gate).
+  final dateLabel =
+      DateFormat('dd MMM yyyy · HH:mm', 'fr').format(c.startDate.toLocal());
+  context.push(
+    UserRoutes.registrationConfirmPath(c.id),
+    extra: RegistrationConfirmArgs(
+      competitionName: c.name,
+      gameLabel: c.game.label,
+      gameEmoji: _gameEmoji(c.game),
+      dateLabel: dateLabel,
+      formatLabel: _formatLabel(c.format),
+      entryFeeXaf: c.registrationFee.round(),
+      totalPrizeXaf: c.prizePoolLocal.round(),
+    ),
+  );
+}
+
+String _gameEmoji(GameType g) => switch (g) {
+      GameType.efootball => '⚽',
+      GameType.fifaMobile => '🏆',
+      GameType.eaSportsFc => '🎮',
+    };
+
+String _formatLabel(TournamentFormat f) => switch (f) {
+      TournamentFormat.singleElimination => 'Élimination directe',
+      TournamentFormat.groupsThenKnockout => 'Poules + élimination',
+      TournamentFormat.roundRobin => 'Round robin',
+    };
 
 enum _StatusBucket {
   upcoming('À venir'),
@@ -230,69 +272,216 @@ class _Chip extends StatelessWidget {
   }
 }
 
-class _CompetitionBanner extends StatelessWidget {
-  const _CompetitionBanner({
+/// Carte compétition simplifiée — affiche les infos clés pour
+/// décider de s'inscrire : nom, badge GRATUITE/PAYANTE, récompense en
+/// gros caractères pour les compétitions payantes (ou "GRATUIT" pour
+/// les gratuites), et une ligne footer avec date + frais + capacité.
+///
+/// Le détail complet (bracket, matches, chat) reste gated derrière
+/// l'inscription — d'où le minimalisme volontaire ici.
+class _CompetitionListCard extends StatelessWidget {
+  const _CompetitionListCard({
     required this.competition,
+    required this.isRegistered,
     required this.onTap,
   });
 
   final Competition competition;
+  final bool isRegistered;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final c = competition;
+    final isFree = c.isFree;
+    final accent = isFree ? ArenaColors.statusOk : ArenaColors.signalBlue;
+    final dateLabel = DateFormat('d MMM · HH:mm', 'fr').format(
+      c.startDate.toLocal(),
+    );
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(ArenaRadius.lg),
-      child: ArenaBanner(
-        game: _gameFor(competition.game),
-        title: competition.name,
-        subtitle: _subtitleFor(competition),
-        trailing: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: ArenaSpacing.sm,
-            vertical: 4,
+      child: Container(
+        padding: const EdgeInsets.all(ArenaSpacing.lg),
+        decoration: BoxDecoration(
+          color: ArenaColors.carbon,
+          borderRadius: BorderRadius.circular(ArenaRadius.lg),
+          border: Border.all(
+            color: isRegistered
+                ? ArenaColors.statusOk.withValues(alpha: 0.5)
+                : ArenaColors.border,
+            width: isRegistered ? 1.5 : 1,
           ),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.4),
-            borderRadius: BorderRadius.circular(ArenaRadius.round),
-          ),
-          child: Text(
-            '${competition.currentPlayers}/${competition.maxPlayers}',
-            style: ArenaText.mono.copyWith(
-              color: Colors.white.withValues(alpha: 0.9),
+          boxShadow: isRegistered
+              ? [
+                  BoxShadow(
+                    color: ArenaColors.statusOk.withValues(alpha: 0.15),
+                    blurRadius: 18,
+                    spreadRadius: -4,
+                  ),
+                ]
+              : null,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ─── Header : emoji + nom + badge tarif ─────────────────
+            Row(
+              children: [
+                Text(
+                  _gameEmoji(c.game),
+                  style: const TextStyle(fontSize: 20),
+                ),
+                const SizedBox(width: ArenaSpacing.sm),
+                Expanded(
+                  child: Text(
+                    c.name,
+                    style: ArenaText.h3,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: ArenaSpacing.xs),
+                _PricingChip(isFree: isFree),
+              ],
             ),
-          ),
+            const SizedBox(height: 2),
+            Text(
+              '${c.game.label} · $dateLabel',
+              style: ArenaText.bodyMuted,
+            ),
+            const SizedBox(height: ArenaSpacing.md),
+
+            // ─── Récompense en gros (ou GRATUIT) ────────────────────
+            Center(
+              child: Column(
+                children: [
+                  if (isFree)
+                    Text(
+                      'GRATUIT',
+                      style: ArenaText.bigNumber.copyWith(
+                        color: accent,
+                        fontSize: 36,
+                        letterSpacing: 2,
+                      ),
+                    )
+                  else
+                    Text(
+                      _formatPrize(c.prizePoolLocal, c.prizePoolCurrency,
+                          c.registrationCurrency),
+                      style: ArenaText.bigNumber.copyWith(
+                        color: accent,
+                        fontSize: 32,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  const SizedBox(height: 2),
+                  Text(
+                    isFree ? 'Inscription libre' : 'À gagner',
+                    style: ArenaText.bodyMuted.copyWith(letterSpacing: 1.5),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: ArenaSpacing.md),
+            const Divider(height: 1, color: ArenaColors.border),
+            const SizedBox(height: ArenaSpacing.sm),
+
+            // ─── Footer : frais (si payante) + capacité + état inscr. ─
+            Row(
+              children: [
+                if (!isFree) ...[
+                  const Icon(
+                    Icons.payments_outlined,
+                    size: 14,
+                    color: ArenaColors.silver,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${_money(c.registrationFee)} ${c.registrationCurrency}',
+                    style: ArenaText.bodyMuted,
+                  ),
+                  const SizedBox(width: ArenaSpacing.md),
+                ],
+                const Icon(
+                  Icons.people_outline,
+                  size: 14,
+                  color: ArenaColors.silver,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '${c.currentPlayers}/${c.maxPlayers}',
+                  style: ArenaText.bodyMuted,
+                ),
+                const Spacer(),
+                if (isRegistered)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: ArenaColors.statusOk.withValues(alpha: 0.15),
+                      borderRadius:
+                          BorderRadius.circular(ArenaRadius.round),
+                      border: Border.all(
+                        color: ArenaColors.statusOk.withValues(alpha: 0.4),
+                      ),
+                    ),
+                    child: Text(
+                      '✓ INSCRIT',
+                      style: ArenaText.small.copyWith(
+                        color: ArenaColors.statusOk,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
         ),
       ),
     );
   }
 
-  static ArenaBannerGame _gameFor(GameType g) => switch (g) {
-        GameType.efootball => ArenaBannerGame.efoot,
-        GameType.fifaMobile => ArenaBannerGame.fifa,
-        GameType.eaSportsFc => ArenaBannerGame.fc,
-      };
-
-  static String _subtitleFor(Competition c) {
-    final dateLabel = _formatDateRange(c.startDate, c.endDate);
-    final fee = c.registrationFee == 0
-        ? 'Gratuit'
-        : '${_money(c.registrationFee)} ${c.registrationCurrency}';
-    if (c.prizePoolLocal > 0) {
-      final pool = '${_money(c.prizePoolLocal)} '
-          '${c.prizePoolCurrency ?? c.registrationCurrency}';
-      return '$dateLabel · Récompense $pool';
-    }
-    return '$dateLabel · $fee';
+  static String _formatPrize(double pool, String? poolCurrency, String fee) {
+    final formatted = NumberFormat.decimalPattern('fr')
+        .format(pool.round())
+        .replaceAll(',', ' ');
+    final currency = poolCurrency ?? fee;
+    return '$formatted $currency';
   }
 
-  static String _formatDateRange(DateTime start, DateTime? end) {
-    final s = DateFormat('d MMM', 'fr').format(start.toLocal());
-    if (end == null) return s;
-    final e = DateFormat('d MMM', 'fr').format(end.toLocal());
-    return '$s → $e';
-  }
+  static String _money(double v) =>
+      NumberFormat.decimalPattern('fr').format(v).replaceAll(',', ' ');
+}
 
-  static String _money(double v) => NumberFormat.decimalPattern('fr').format(v);
+class _PricingChip extends StatelessWidget {
+  const _PricingChip({required this.isFree});
+  final bool isFree;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isFree ? ArenaColors.statusOk : ArenaColors.signalBlue;
+    final label = isFree ? 'GRATUITE' : 'PAYANTE';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(ArenaRadius.round),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
+      ),
+      child: Text(
+        label,
+        style: ArenaText.small.copyWith(
+          color: color,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1,
+          fontSize: 10,
+        ),
+      ),
+    );
+  }
 }

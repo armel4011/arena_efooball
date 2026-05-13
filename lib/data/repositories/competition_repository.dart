@@ -74,6 +74,25 @@ class CompetitionRepository {
       'status': 'confirmed',
     });
   }
+
+  /// Stream realtime des ids de compétitions où le joueur courant est
+  /// inscrit en `status='confirmed'`. Utilisé par la liste pour décider
+  /// si on route vers le détail ou vers la page d'inscription.
+  Stream<Set<String>> watchMyRegisteredCompetitionIds() {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) {
+      return const Stream.empty();
+    }
+    return _client
+        .from('competition_registrations')
+        .stream(primaryKey: ['competition_id', 'player_id'])
+        .eq('player_id', userId)
+        .map((rows) => {
+              for (final r in rows)
+                if (r['status'] == 'confirmed')
+                  r['competition_id'] as String,
+            });
+  }
 }
 
 final competitionRepositoryProvider = Provider<CompetitionRepository>((ref) {
@@ -92,4 +111,14 @@ final competitionsListProvider =
 final competitionByIdProvider =
     StreamProvider.family<Competition?, String>((ref, id) {
   return ref.watch(competitionRepositoryProvider).watchById(id);
+});
+
+/// Realtime set des ids de comps où le joueur courant est inscrit
+/// (status='confirmed'). Utilisé pour le gate du détail + le routage
+/// liste → détail vs inscription.
+final myRegisteredCompetitionIdsProvider =
+    StreamProvider<Set<String>>((ref) {
+  return ref
+      .watch(competitionRepositoryProvider)
+      .watchMyRegisteredCompetitionIds();
 });
