@@ -714,10 +714,29 @@ class _RankingTab extends ConsumerWidget {
               if (i == 0) {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: ArenaSpacing.sm),
-                  child: Text(
-                    '$ranked/${list.length} classé${ranked > 1 ? "s" : ""} · '
-                    'attribue un rang à chaque participant.',
-                    style: ArenaText.inputLabel,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      ArenaButton(
+                        label: '⚡ CLASSEMENT AUTOMATIQUE',
+                        variant: ArenaButtonVariant.secondary,
+                        fullWidth: true,
+                        onPressed: () => _autoRank(context, ref),
+                      ),
+                      const SizedBox(height: ArenaSpacing.xs),
+                      Text(
+                        'Critères : niveau atteint dans la compétition, '
+                        'puis buts marqués, puis ordre alphabétique. '
+                        'Ajustable manuellement ensuite.',
+                        style: ArenaText.small,
+                      ),
+                      const SizedBox(height: ArenaSpacing.sm),
+                      Text(
+                        '$ranked/${list.length} '
+                        'classé${ranked > 1 ? "s" : ""}',
+                        style: ArenaText.inputLabel,
+                      ),
+                    ],
                   ),
                 );
               }
@@ -731,6 +750,48 @@ class _RankingTab extends ConsumerWidget {
         },
       ),
     );
+  }
+
+  Future<void> _autoRank(BuildContext context, WidgetRef ref) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        backgroundColor: ArenaColors.carbon,
+        title: Text('Calculer le classement ?', style: ArenaText.h3),
+        content: Text(
+          'Les rangs seront recalculés à partir des résultats de matchs '
+          '(niveau atteint, buts marqués, ordre alphabétique). Cela '
+          'écrase les rangs déjà saisis manuellement.',
+          style: ArenaText.bodyMuted,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(c).pop(false),
+            child: const Text('ANNULER'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(c).pop(true),
+            child: const Text('CALCULER'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ref
+          .read(adminCompetitionsRepositoryProvider)
+          .autoRankFromResults(competitionId);
+      ref.invalidate(adminCompetitionRegistrantsProvider(competitionId));
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Classement calculé automatiquement.')),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Échec : $e')),
+      );
+    }
   }
 }
 

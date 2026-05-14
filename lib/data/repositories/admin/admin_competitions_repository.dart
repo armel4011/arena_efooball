@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/models/user_role.dart';
@@ -136,6 +138,66 @@ class AdminCompetitionsRepository {
         .update({'final_rank': rank})
         .eq('competition_id', competitionId)
         .eq('player_id', playerId);
+  }
+
+  /// Calcule et écrit le classement final automatiquement à partir des
+  /// résultats de matchs. Critères, du plus discriminant au moins :
+  ///   1. niveau atteint dans la compétition (round le plus élevé joué)
+  ///   2. nombre de buts marqués sur l'ensemble de ses matchs
+  ///   3. ordre alphabétique du pseudo (départage par défaut)
+  ///
+  /// Écrase les rangs déjà saisis. Une seule écriture groupée via upsert
+  /// sur la PK `(competition_id, player_id)` — seul `final_rank` change.
+  Future<void> autoRankFromResults(String competitionId) async {
+    final registrants = await listRegistrations(competitionId);
+    if (registrants.isEmpty) return;
+
+    final matchRows = await _client
+        .from('matches')
+        .select('round, player1_id, player2_id, score1, score2')
+        .eq('competition_id', competitionId);
+
+    // Agrège, par joueur, le niveau atteint et les buts marqués.
+    final levelReached = <String, int>{};
+    final goalsScored = <String, int>{};
+    for (final row in matchRows as List<dynamic>) {
+      final m = row as Map<String, dynamic>;
+      final round = (m['round'] as int?) ?? 0;
+      final p1 = m['player1_id'] as String?;
+      final p2 = m['player2_id'] as String?;
+      final s1 = (m['score1'] as int?) ?? 0;
+      final s2 = (m['score2'] as int?) ?? 0;
+      if (p1 != null) {
+        levelReached[p1] = max(levelReached[p1] ?? 0, round);
+        goalsScored[p1] = (goalsScored[p1] ?? 0) + s1;
+      }
+      if (p2 != null) {
+        levelReached[p2] = max(levelReached[p2] ?? 0, round);
+        goalsScored[p2] = (goalsScored[p2] ?? 0) + s2;
+      }
+    }
+
+    final ordered = [...registrants]..sort((a, b) {
+        final la = levelReached[a.playerId] ?? 0;
+        final lb = levelReached[b.playerId] ?? 0;
+        if (la != lb) return lb.compareTo(la);
+        final ga = goalsScored[a.playerId] ?? 0;
+        final gb = goalsScored[b.playerId] ?? 0;
+        if (ga != gb) return gb.compareTo(ga);
+        return a.username.toLowerCase().compareTo(b.username.toLowerCase());
+      });
+
+    await _client.from('competition_registrations').upsert(
+      [
+        for (var i = 0; i < ordered.length; i++)
+          {
+            'competition_id': competitionId,
+            'player_id': ordered[i].playerId,
+            'final_rank': i + 1,
+          },
+      ],
+      onConflict: 'competition_id,player_id',
+    );
   }
 
   /// Flips a competition into `cancelled`. The Edge Function that
