@@ -56,11 +56,14 @@ class MobileMoneyDetailsPage extends ConsumerStatefulWidget {
 class _MobileMoneyDetailsPageState
     extends ConsumerState<MobileMoneyDetailsPage> {
   final _phoneCtrl = TextEditingController();
+  late final TextEditingController _countryCtrl =
+      TextEditingController(text: widget.country);
   bool _submitting = false;
 
   @override
   void dispose() {
     _phoneCtrl.dispose();
+    _countryCtrl.dispose();
     super.dispose();
   }
 
@@ -94,7 +97,7 @@ class _MobileMoneyDetailsPageState
             Text('Pays', style: ArenaText.inputLabel),
             const SizedBox(height: ArenaSpacing.xs),
             ArenaTextField(
-              controller: TextEditingController(text: widget.country),
+              controller: _countryCtrl,
               enabled: false,
             ),
             const SizedBox(height: ArenaSpacing.md),

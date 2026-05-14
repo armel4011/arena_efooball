@@ -110,7 +110,9 @@ class ManualVideoUploadService {
       // forever in the player's history.
       try {
         await _repo.markEnded(session.id);
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[manual-upload] markEnded cleanup failed: $e');
+      }
       rethrow;
     }
   }

@@ -110,7 +110,9 @@ class AgoraStreamingService {
       try {
         await _platform.leaveChannel(eng);
         await _platform.releaseEngine(eng);
-      } catch (_) {/* swallow */}
+      } catch (e) {
+        debugPrint('[agora] dispose cleanup failed: $e');
+      }
     }
     _engine = null;
     await _stateController.close();

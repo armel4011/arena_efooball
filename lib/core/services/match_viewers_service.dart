@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:arena/data/repositories/profile_repository.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -58,10 +59,14 @@ class MatchViewersService {
     controller.onCancel = () async {
       try {
         if (tracking) await channel.untrack();
-      } catch (_) {/* swallow — channel may already be closed */}
+      } catch (e) {
+        debugPrint('[viewers] untrack failed (channel may be closed): $e');
+      }
       try {
         await channel.unsubscribe();
-      } catch (_) {/* swallow */}
+      } catch (e) {
+        debugPrint('[viewers] unsubscribe failed: $e');
+      }
       await controller.close();
     };
 
