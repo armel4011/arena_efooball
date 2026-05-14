@@ -69,7 +69,10 @@ class GameDetectorService {
       return true;
     } on PlatformException {
       return false;
-    } catch (_) {
+    } catch (e, st) {
+      if (kDebugMode) {
+        debugPrint('[game-detector] hasUsageStatsAccess failed: $e\n$st');
+      }
       return false;
     }
   }
@@ -87,7 +90,10 @@ class GameDetectorService {
       infos = await _platform.getAppUsage(now.subtract(_foregroundLookback), now);
     } on PlatformException {
       return null;
-    } catch (_) {
+    } catch (e, st) {
+      if (kDebugMode) {
+        debugPrint('[game-detector] currentForegroundGame failed: $e\n$st');
+      }
       return null;
     }
 

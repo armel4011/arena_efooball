@@ -77,6 +77,10 @@ class StartStreamingBanner extends ConsumerWidget {
                     final svc = ref.read(agoraStreamingServiceProvider);
                     try {
                       await svc.joinAsBroadcaster(matchId: matchId);
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Diffusion démarrée.')),
+                      );
                     } catch (e) {
                       if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(

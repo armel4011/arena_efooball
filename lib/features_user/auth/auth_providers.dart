@@ -3,6 +3,7 @@ import 'package:arena/data/models/profile.dart';
 import 'package:arena/data/repositories/auth_failure.dart';
 import 'package:arena/data/repositories/auth_repository.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 
@@ -13,7 +14,10 @@ import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 final authStateChangesProvider = StreamProvider<sb.AuthState>((ref) {
   try {
     return ref.watch(authRepositoryProvider).authStateChanges();
-  } catch (_) {
+  } catch (e) {
+    if (kDebugMode) {
+      debugPrint('[auth] authStateChanges unavailable — empty stream: $e');
+    }
     return const Stream.empty();
   }
 });
@@ -24,7 +28,10 @@ final currentSessionProvider = Provider<sb.Session?>((ref) {
   ref.watch(authStateChangesProvider);
   try {
     return ref.watch(authRepositoryProvider).currentSession;
-  } catch (_) {
+  } catch (e) {
+    if (kDebugMode) {
+      debugPrint('[auth] currentSession unavailable — null: $e');
+    }
     return null;
   }
 });

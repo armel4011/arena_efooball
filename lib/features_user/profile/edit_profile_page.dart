@@ -79,7 +79,11 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         'country_code': _countryCode,
       });
       ref.invalidate(currentProfileProvider);
-      if (mounted) context.pop();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profil mis à jour.')),
+      );
+      context.pop();
     } catch (e) {
       if (mounted) {
         setState(() {
