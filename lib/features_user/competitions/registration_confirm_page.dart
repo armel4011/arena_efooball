@@ -324,7 +324,8 @@ class _PrizeDistribution extends StatelessWidget {
   final int totalXaf;
 
   /// Pourcentages de gains par rang, fournis par la compétition
-  /// (ex. `[50, 25, 15, 10]`). On n'affiche que les rangs > 0.
+  /// (ex. `[50, 25, 15, 10]`). Toutes les places configurées par l'admin
+  /// sont affichées, y compris celles à 0 %.
   final List<int> distribution;
 
   @override
@@ -349,30 +350,29 @@ class _PrizeDistribution extends StatelessWidget {
           for (var i = 0;
               i < distribution.length && i < kMaxRewardedRanks;
               i++)
-            if (distribution[i] > 0)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  children: [
-                    Text(
-                      prizeRankEmoji(i),
-                      style: const TextStyle(fontSize: 18),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  Text(
+                    prizeRankEmoji(i),
+                    style: const TextStyle(fontSize: 18),
+                  ),
+                  const SizedBox(width: ArenaSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      '${prizeRankLabel(i)} place',
+                      style: ArenaText.body,
                     ),
-                    const SizedBox(width: ArenaSpacing.sm),
-                    Expanded(
-                      child: Text(
-                        '${prizeRankLabel(i)} place',
-                        style: ArenaText.body,
-                      ),
-                    ),
-                    Text(
-                      '${_formatXaf((totalXaf * distribution[i] / 100).round())}'
-                      ' XAF',
-                      style: ArenaText.mono,
-                    ),
-                  ],
-                ),
+                  ),
+                  Text(
+                    '${_formatXaf((totalXaf * distribution[i] / 100).round())}'
+                    ' XAF',
+                    style: ArenaText.mono,
+                  ),
+                ],
               ),
+            ),
         ],
       ),
     );
