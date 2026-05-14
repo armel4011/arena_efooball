@@ -54,9 +54,9 @@ mixin _$Competition {
   String? get orangeMoneyCode => throw _privateConstructorUsedError;
   String? get mtnMomoCode => throw _privateConstructorUsedError;
 
-  /// Répartition des gains par rang d'arrivée, en pourcentages
-  /// (ex. `[50, 25, 15, 10]`, somme = 100). Saisie dans le wizard admin
-  /// et affichée sur l'écran « Confirmer inscription ».
+  /// Répartition des gains par rang d'arrivée, en **montants** (monnaie
+  /// locale, ex. `[100000, 50000, 25000, 10000]`). Saisie dans le
+  /// wizard admin ; `prizePoolLocal` en est la somme.
   List<int> get prizeDistribution => throw _privateConstructorUsedError;
 
   /// Serializes this Competition to a JSON map.
@@ -457,7 +457,7 @@ class _$CompetitionImpl extends _Competition {
       this.updatedAt,
       this.orangeMoneyCode,
       this.mtnMomoCode,
-      final List<int> prizeDistribution = const <int>[50, 25, 15, 10]})
+      final List<int> prizeDistribution = const <int>[0, 0, 0, 0]})
       : _prizeDistribution = prizeDistribution,
         super._();
 
@@ -530,14 +530,14 @@ class _$CompetitionImpl extends _Competition {
   @override
   final String? mtnMomoCode;
 
-  /// Répartition des gains par rang d'arrivée, en pourcentages
-  /// (ex. `[50, 25, 15, 10]`, somme = 100). Saisie dans le wizard admin
-  /// et affichée sur l'écran « Confirmer inscription ».
+  /// Répartition des gains par rang d'arrivée, en **montants** (monnaie
+  /// locale, ex. `[100000, 50000, 25000, 10000]`). Saisie dans le
+  /// wizard admin ; `prizePoolLocal` en est la somme.
   final List<int> _prizeDistribution;
 
-  /// Répartition des gains par rang d'arrivée, en pourcentages
-  /// (ex. `[50, 25, 15, 10]`, somme = 100). Saisie dans le wizard admin
-  /// et affichée sur l'écran « Confirmer inscription ».
+  /// Répartition des gains par rang d'arrivée, en **montants** (monnaie
+  /// locale, ex. `[100000, 50000, 25000, 10000]`). Saisie dans le
+  /// wizard admin ; `prizePoolLocal` en est la somme.
   @override
   @JsonKey()
   List<int> get prizeDistribution {
@@ -740,9 +740,9 @@ abstract class _Competition extends Competition {
   @override
   String? get mtnMomoCode;
 
-  /// Répartition des gains par rang d'arrivée, en pourcentages
-  /// (ex. `[50, 25, 15, 10]`, somme = 100). Saisie dans le wizard admin
-  /// et affichée sur l'écran « Confirmer inscription ».
+  /// Répartition des gains par rang d'arrivée, en **montants** (monnaie
+  /// locale, ex. `[100000, 50000, 25000, 10000]`). Saisie dans le
+  /// wizard admin ; `prizePoolLocal` en est la somme.
   @override
   List<int> get prizeDistribution;
 

@@ -549,9 +549,8 @@ class _RankingEntryRow extends StatelessWidget {
         rank >= 1 &&
         rank <= dist.length &&
         dist[rank - 1] > 0;
-    final prize = hasPrize
-        ? (competition.prizePoolLocal * dist[rank - 1] / 100).round()
-        : null;
+    // prize_distribution stocke directement les montants par rang.
+    final prize = hasPrize ? dist[rank - 1] : null;
     final currency =
         competition.prizePoolCurrency ?? competition.registrationCurrency;
     final initials = entry.username.isNotEmpty

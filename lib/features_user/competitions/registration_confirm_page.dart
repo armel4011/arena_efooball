@@ -323,9 +323,9 @@ class _PrizeDistribution extends StatelessWidget {
 
   final int totalXaf;
 
-  /// Pourcentages de gains par rang, fournis par la compétition
-  /// (ex. `[50, 25, 15, 10]`). Toutes les places configurées par l'admin
-  /// sont affichées, y compris celles à 0 %.
+  /// Montants de gain par rang (en monnaie locale), fournis par la
+  /// compétition. Toutes les places configurées par l'admin sont
+  /// affichées, y compris celles à 0.
   final List<int> distribution;
 
   @override
@@ -366,8 +366,7 @@ class _PrizeDistribution extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    '${_formatXaf((totalXaf * distribution[i] / 100).round())}'
-                    ' XAF',
+                    '${_formatXaf(distribution[i])} XAF',
                     style: ArenaText.mono,
                   ),
                 ],

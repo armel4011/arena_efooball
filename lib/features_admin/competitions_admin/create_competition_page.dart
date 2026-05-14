@@ -32,6 +32,18 @@ import 'package:intl/intl.dart';
 /// verrouillés (ils impactent bracket et paiements).
 ///
 /// Maps to screen A8 of `arena_v2.html`.
+
+/// Blocs de récompenses au-delà du top 4 : (libellé, taille, dernier
+/// rang). Le bloc d'index `i` est actif dès que le nombre de
+/// récompensés atteint son `lastRank`. La valeur saisie pour un bloc
+/// est le % attribué à *chaque* place du bloc.
+const List<({String label, int size, int lastRank})> _prizeBlocks = [
+  (label: '5ème – 8ème', size: 4, lastRank: 8),
+  (label: '9ème – 16ème', size: 8, lastRank: 16),
+  (label: '17ème – 32ème', size: 16, lastRank: 32),
+  (label: '33ème – 64ème', size: 32, lastRank: 64),
+];
+
 class CreateCompetitionPage extends ConsumerStatefulWidget {
   const CreateCompetitionPage({this.editing, super.key});
 
@@ -61,15 +73,23 @@ class _CreateCompetitionPageState
   final _mtnMomoCtrl = TextEditingController();
   String _currency = 'XAF';
   double _commissionPct = 15;
-  // Une part par rang récompensé. La taille de cette liste = nombre de
-  // récompensés choisi par l'admin (1 à 16), pilotée par _setRewardedCount.
-  final List<TextEditingController> _shareCtrls = [
+  // Places 1 à 4 : une part individuelle modifiable chacune.
+  final List<TextEditingController> _topShareCtrls = [
     TextEditingController(text: '50'),
     TextEditingController(text: '25'),
     TextEditingController(text: '15'),
     TextEditingController(text: '10'),
   ];
-  _PrizeMode _prizeMode = _PrizeMode.percentage;
+  // Blocs 5-8 / 9-16 / 17-32 / 33-64 : un % « par place » saisi par bloc.
+  final List<TextEditingController> _blockShareCtrls = [
+    TextEditingController(text: '0'),
+    TextEditingController(text: '0'),
+    TextEditingController(text: '0'),
+    TextEditingController(text: '0'),
+  ];
+  // Nombre de récompensés : 1 / 2 / 4 (places individuelles seules) puis
+  // 8 / 16 / 32 / 64 qui activent les blocs successifs.
+  int _rewardedCount = 4;
   bool _publishNow = true;
 
   bool get _isEditing => widget.editing != null;
@@ -93,19 +113,32 @@ class _CreateCompetitionPageState
     _mtnMomoCtrl.text = c.mtnMomoCode ?? '';
     _currency = c.registrationCurrency;
     _commissionPct = c.commissionPct.clamp(10, 100).toDouble();
-    // Remplace les parts par défaut par la distribution stockée.
-    for (final ctrl in _shareCtrls) {
-      ctrl.dispose();
+    // Reconstruit places individuelles + blocs depuis la liste plate
+    // stockée (best-effort : un bloc relit le % de sa 1ère place).
+    final dist = c.prizeDistribution;
+    _rewardedCount = _snapRewardedCount(dist.length);
+    final topCount = _rewardedCount < 4 ? _rewardedCount : 4;
+    for (var i = 0; i < topCount && i < dist.length; i++) {
+      _topShareCtrls[i].text = dist[i].toString();
     }
-    _shareCtrls
-      ..clear()
-      ..addAll([
-        for (final pct in c.prizeDistribution)
-          TextEditingController(text: pct.toString()),
-      ]);
-    if (_shareCtrls.isEmpty) {
-      _shareCtrls.add(TextEditingController(text: '100'));
+    for (var b = 0; b < _prizeBlocks.length; b++) {
+      final block = _prizeBlocks[b];
+      if (_rewardedCount < block.lastRank) break;
+      final firstIndex = block.lastRank - block.size;
+      if (firstIndex < dist.length) {
+        _blockShareCtrls[b].text = dist[firstIndex].toString();
+      }
     }
+  }
+
+  /// Ramène une longueur de distribution arbitraire au palier valide
+  /// le plus proche par défaut (1, 2, 4, 8, 16, 32, 64).
+  static int _snapRewardedCount(int length) {
+    var snapped = kRewardedRankOptions.first;
+    for (final opt in kRewardedRankOptions) {
+      if (opt <= length) snapped = opt;
+    }
+    return snapped;
   }
 
   @override
@@ -115,7 +148,10 @@ class _CreateCompetitionPageState
     _entryFeeCtrl.dispose();
     _orangeMomoCtrl.dispose();
     _mtnMomoCtrl.dispose();
-    for (final c in _shareCtrls) {
+    for (final c in _topShareCtrls) {
+      c.dispose();
+    }
+    for (final c in _blockShareCtrls) {
       c.dispose();
     }
     super.dispose();
@@ -128,9 +164,8 @@ class _CreateCompetitionPageState
       case 1:
         return _maxPlayers >= 2;
       case 2:
-        final total =
-            _shareCtrls.map((c) => int.tryParse(c.text) ?? 0).reduce((a, b) => a + b);
-        return _prizeMode == _PrizeMode.fixed || total == 100;
+        // Les montants des récompenses sont libres (y compris 0).
+        return true;
       case 3:
         final fee = double.tryParse(_entryFeeCtrl.text) ?? -1;
         if (fee < 0) return false;
@@ -331,31 +366,55 @@ class _CreateCompetitionPageState
         ),
       ];
 
-  List<Widget> _buildPrizesStep() => [
-        _PrizeModeCard(
-          mode: _prizeMode,
-          onChanged: (m) => setState(() => _prizeMode = m),
+  List<Widget> _buildPrizesStep() {
+    final topCount = _rewardedCount < 4 ? _rewardedCount : 4;
+    return [
+      Container(
+        padding: const EdgeInsets.all(ArenaSpacing.md),
+        decoration: BoxDecoration(
+          color: ArenaColors.signalBlue.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(ArenaRadius.md),
+          border: Border.all(
+            color: ArenaColors.signalBlue.withValues(alpha: 0.3),
+          ),
         ),
-        const SizedBox(height: ArenaSpacing.lg),
-        Text('Nombre de récompensés', style: ArenaText.inputLabel),
-        const SizedBox(height: ArenaSpacing.xs),
-        _RewardedCountPicker(
-          current: _shareCtrls.length,
-          onChanged: _setRewardedCount,
+        child: Text(
+          'ℹ Saisis le montant attribué à chaque place — en $_currency. '
+          'La cagnotte de la compétition est la somme de ces montants.',
+          style: ArenaText.body,
         ),
-        const SizedBox(height: ArenaSpacing.lg),
-        for (var i = 0; i < _shareCtrls.length; i++) ...[
-          _ShareRow(
-            position: i,
-            controller: _shareCtrls[i],
-            mode: _prizeMode,
+      ),
+      const SizedBox(height: ArenaSpacing.lg),
+      Text('Nombre de récompensés', style: ArenaText.inputLabel),
+      const SizedBox(height: ArenaSpacing.xs),
+      _RewardedCountPicker(
+        current: _rewardedCount,
+        onChanged: _setRewardedCount,
+      ),
+      const SizedBox(height: ArenaSpacing.lg),
+      // Places 1 à 4 : une ligne individuelle modifiable chacune.
+      for (var i = 0; i < topCount; i++) ...[
+        _ShareRow(
+          position: i,
+          controller: _topShareCtrls[i],
+          onChanged: () => setState(() {}),
+        ),
+        const SizedBox(height: ArenaSpacing.sm),
+      ],
+      // Blocs 5-8 / 9-16 / 17-32 / 33-64 : un montant par place, saisi une fois.
+      for (var b = 0; b < _prizeBlocks.length; b++)
+        if (_rewardedCount >= _prizeBlocks[b].lastRank) ...[
+          _BlockShareRow(
+            block: _prizeBlocks[b],
+            controller: _blockShareCtrls[b],
             onChanged: () => setState(() {}),
           ),
           const SizedBox(height: ArenaSpacing.sm),
         ],
-        const SizedBox(height: ArenaSpacing.md),
-        _ShareTotalCard(controllers: _shareCtrls, mode: _prizeMode),
-      ];
+      const SizedBox(height: ArenaSpacing.md),
+      _ShareTotalCard(total: _shareTotal(), currency: _currency),
+    ];
+  }
 
   List<Widget> _buildFeesStep() {
     final fee = double.tryParse(_entryFeeCtrl.text) ?? 0;
@@ -476,7 +535,7 @@ class _CreateCompetitionPageState
 
   List<Widget> _buildReviewStep() {
     final fee = double.tryParse(_entryFeeCtrl.text) ?? 0;
-    final pool = fee * _maxPlayers * (1 - _commissionPct / 100);
+    final pool = _computedPool();
     final fmt = NumberFormat('#,###', 'fr_FR');
 
     return [
@@ -499,12 +558,10 @@ class _CreateCompetitionPageState
         label: 'Inscription',
         value: fee == 0 ? 'Gratuit' : '${fmt.format(fee.round())} $_currency',
       ),
-      if (fee > 0)
-        _ReviewRow(
-          label: 'Cagnotte estimée',
-          value: '${fmt.format(pool.round())} $_currency '
-              '(commission ${_commissionPct.round()}%)',
-        ),
+      _ReviewRow(
+        label: 'Cagnotte (somme des récompenses)',
+        value: '${fmt.format(pool.round())} $_currency',
+      ),
       const SizedBox(height: ArenaSpacing.lg),
       if (!_isEditing)
         _PublishToggleCard(
@@ -529,7 +586,7 @@ class _CreateCompetitionPageState
     }
 
     final fee = double.tryParse(_entryFeeCtrl.text) ?? 0;
-    final pool = fee * _maxPlayers * (1 - _commissionPct / 100);
+    final pool = _computedPool();
 
     if (_isEditing) {
       await _submitEdit(adminId, pool);
@@ -633,35 +690,52 @@ class _CreateCompetitionPageState
     }
   }
 
-  /// Ajuste le nombre de rangs récompensés (1 à [kMaxRewardedRanks]) en
-  /// redimensionnant [_shareCtrls] : on crée des parts à 0 quand on
-  /// agrandit, on dispose les contrôleurs retirés quand on réduit.
+  /// Change le nombre de récompensés (1, 2, 4, 8, 16, 32, 64). Les
+  /// contrôleurs sont fixes — seul [_rewardedCount] pilote ce qui
+  /// s'affiche et entre dans le calcul.
   void _setRewardedCount(int count) {
-    final n = count.clamp(1, kMaxRewardedRanks);
-    if (n == _shareCtrls.length) return;
-    setState(() {
-      if (n > _shareCtrls.length) {
-        for (var i = _shareCtrls.length; i < n; i++) {
-          _shareCtrls.add(TextEditingController(text: '0'));
-        }
-      } else {
-        for (var i = _shareCtrls.length - 1; i >= n; i--) {
-          _shareCtrls.removeAt(i).dispose();
-        }
-      }
-    });
+    setState(() => _rewardedCount = count.clamp(1, kMaxRewardedRanks));
   }
 
-  /// Répartition des gains à persister, toujours en pourcentages.
-  /// En mode « montant fixe », on normalise les montants saisis en
-  /// pourcentages de leur somme.
+  /// Construit la liste plate des **montants** par place : places
+  /// individuelles 1-4 puis chaque bloc actif déplié (même montant
+  /// répété sur toutes ses places).
   List<int> _prizeDistribution() {
-    final raw = _shareCtrls.map((c) => int.tryParse(c.text) ?? 0).toList();
-    if (_prizeMode == _PrizeMode.percentage) return raw;
-    final total = raw.fold<int>(0, (a, b) => a + b);
-    if (total <= 0) return const [50, 25, 15, 10];
-    return raw.map((s) => (s / total * 100).round()).toList();
+    final raw = <int>[];
+    final topCount = _rewardedCount < 4 ? _rewardedCount : 4;
+    for (var i = 0; i < topCount; i++) {
+      raw.add(int.tryParse(_topShareCtrls[i].text) ?? 0);
+    }
+    for (var b = 0; b < _prizeBlocks.length; b++) {
+      final block = _prizeBlocks[b];
+      if (_rewardedCount < block.lastRank) break;
+      final perPlace = int.tryParse(_blockShareCtrls[b].text) ?? 0;
+      for (var k = 0; k < block.size; k++) {
+        raw.add(perPlace);
+      }
+    }
+    return raw;
   }
+
+  /// Somme des montants : places individuelles + (montant de bloc × sa
+  /// taille). C'est la cagnotte totale distribuée.
+  int _shareTotal() {
+    var total = 0;
+    final topCount = _rewardedCount < 4 ? _rewardedCount : 4;
+    for (var i = 0; i < topCount; i++) {
+      total += int.tryParse(_topShareCtrls[i].text) ?? 0;
+    }
+    for (var b = 0; b < _prizeBlocks.length; b++) {
+      final block = _prizeBlocks[b];
+      if (_rewardedCount < block.lastRank) break;
+      total += (int.tryParse(_blockShareCtrls[b].text) ?? 0) * block.size;
+    }
+    return total;
+  }
+
+  /// Cagnotte à persister dans `prize_pool_local` : la somme des
+  /// montants de récompense saisis.
+  double _computedPool() => _shareTotal().toDouble();
 
   Future<void> _pickStartDate() async {
     final now = DateTime.now();
@@ -701,7 +775,7 @@ class _CreateCompetitionPageState
       case 1:
         return 'Format';
       case 2:
-        return 'Prix (Top 4)';
+        return 'Récompenses';
       case 3:
         return 'Frais';
       case 4:
@@ -722,8 +796,6 @@ class _CreateCompetitionPageState
     }
   }
 }
-
-enum _PrizeMode { percentage, fixed }
 
 class _GamePicker extends StatelessWidget {
   const _GamePicker({required this.current, required this.onChanged});
@@ -898,68 +970,15 @@ class _OptionChip extends StatelessWidget {
   }
 }
 
-class _PrizeModeCard extends StatelessWidget {
-  const _PrizeModeCard({required this.mode, required this.onChanged});
-
-  final _PrizeMode mode;
-  final ValueChanged<_PrizeMode> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(ArenaSpacing.md),
-      decoration: BoxDecoration(
-        color: ArenaColors.carbon,
-        borderRadius: BorderRadius.circular(ArenaRadius.lg),
-        border: Border.all(color: ArenaColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('MODE DE DISTRIBUTION', style: ArenaText.inputLabel),
-          const SizedBox(height: ArenaSpacing.sm),
-          Row(
-            children: [
-              Expanded(
-                child: ArenaButton(
-                  label: '% POURCENTAGE',
-                  variant: mode == _PrizeMode.percentage
-                      ? ArenaButtonVariant.primary
-                      : ArenaButtonVariant.secondary,
-                  fullWidth: true,
-                  onPressed: () => onChanged(_PrizeMode.percentage),
-                ),
-              ),
-              const SizedBox(width: ArenaSpacing.xs),
-              Expanded(
-                child: ArenaButton(
-                  label: '💰 MONTANTS FIXES',
-                  variant: mode == _PrizeMode.fixed
-                      ? ArenaButtonVariant.primary
-                      : ArenaButtonVariant.secondary,
-                  fullWidth: true,
-                  onPressed: () => onChanged(_PrizeMode.fixed),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _ShareRow extends StatelessWidget {
   const _ShareRow({
     required this.position,
     required this.controller,
-    required this.mode,
     required this.onChanged,
   });
 
   final int position;
   final TextEditingController controller;
-  final _PrizeMode mode;
   final VoidCallback onChanged;
 
   @override
@@ -974,11 +993,51 @@ class _ShareRow extends StatelessWidget {
         const SizedBox(height: ArenaSpacing.xs),
         ArenaTextField(
           controller: controller,
-          hint: mode == _PrizeMode.percentage ? '%' : 'Montant',
+          hint: 'Montant',
           keyboardType: TextInputType.number,
           inputFormatters: [
             FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
-            LengthLimitingTextInputFormatter(7),
+            LengthLimitingTextInputFormatter(9),
+          ],
+          onChanged: (_) => onChanged(),
+        ),
+      ],
+    );
+  }
+}
+
+/// Ligne de configuration d'un bloc de places (5-8, 9-16, …) : une
+/// seule saisie = le montant attribué à *chaque* place du bloc.
+class _BlockShareRow extends StatelessWidget {
+  const _BlockShareRow({
+    required this.block,
+    required this.controller,
+    required this.onChanged,
+  });
+
+  final ({String label, int size, int lastRank}) block;
+  final TextEditingController controller;
+  final VoidCallback onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('🏅 ${block.label} place', style: ArenaText.inputLabel),
+        const SizedBox(height: 2),
+        Text(
+          'Montant attribué à chacune des ${block.size} places du bloc',
+          style: ArenaText.small,
+        ),
+        const SizedBox(height: ArenaSpacing.xs),
+        ArenaTextField(
+          controller: controller,
+          hint: 'Montant par place',
+          keyboardType: TextInputType.number,
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
+            LengthLimitingTextInputFormatter(9),
           ],
           onChanged: (_) => onChanged(),
         ),
@@ -989,37 +1048,30 @@ class _ShareRow extends StatelessWidget {
 
 class _ShareTotalCard extends StatelessWidget {
   const _ShareTotalCard({
-    required this.controllers,
-    required this.mode,
+    required this.total,
+    required this.currency,
   });
-  final List<TextEditingController> controllers;
-  final _PrizeMode mode;
+  final int total;
+  final String currency;
 
   @override
   Widget build(BuildContext context) {
-    final total =
-        controllers.map((c) => int.tryParse(c.text) ?? 0).reduce((a, b) => a + b);
-
-    final isPct = mode == _PrizeMode.percentage;
-    final valid = !isPct || total == 100;
-
+    final fmt = NumberFormat('#,###', 'fr_FR');
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.md),
-      decoration: valid
-          ? arenaSuccessCardDecoration()
-          : arenaDangerCardDecoration(),
+      decoration: arenaSuccessCardDecoration(),
       child: Row(
         children: [
           Expanded(
             child: Text(
-              valid ? '✓ Total' : '⚠ Total invalide',
+              '🏆 Cagnotte totale',
               style: ArenaText.body.copyWith(fontWeight: FontWeight.w700),
             ),
           ),
           Text(
-            isPct ? '$total%' : '$total',
+            '${fmt.format(total)} $currency',
             style: ArenaText.mono.copyWith(
-              color: valid ? ArenaColors.statusOk : ArenaColors.neonRed,
+              color: ArenaColors.statusOk,
               fontWeight: FontWeight.w700,
             ),
           ),

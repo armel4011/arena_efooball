@@ -47,10 +47,10 @@ sealed class Competition with _$Competition {
     String? orangeMoneyCode,
     String? mtnMomoCode,
 
-    /// Répartition des gains par rang d'arrivée, en pourcentages
-    /// (ex. `[50, 25, 15, 10]`, somme = 100). Saisie dans le wizard admin
-    /// et affichée sur l'écran « Confirmer inscription ».
-    @Default(<int>[50, 25, 15, 10]) List<int> prizeDistribution,
+    /// Répartition des gains par rang d'arrivée, en **montants** (monnaie
+    /// locale, ex. `[100000, 50000, 25000, 10000]`). Saisie dans le
+    /// wizard admin ; `prizePoolLocal` en est la somme.
+    @Default(<int>[0, 0, 0, 0]) List<int> prizeDistribution,
   }) = _Competition;
 
   const Competition._();

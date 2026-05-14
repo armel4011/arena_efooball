@@ -49,7 +49,7 @@ _$CompetitionImpl _$$CompetitionImplFromJson(Map<String, dynamic> json) =>
       prizeDistribution: (json['prize_distribution'] as List<dynamic>?)
               ?.map((e) => (e as num).toInt())
               .toList() ??
-          const <int>[50, 25, 15, 10],
+          const <int>[0, 0, 0, 0],
     );
 
 Map<String, dynamic> _$$CompetitionImplToJson(_$CompetitionImpl instance) =>
