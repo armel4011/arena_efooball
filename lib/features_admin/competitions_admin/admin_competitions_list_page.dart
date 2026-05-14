@@ -362,6 +362,10 @@ class _CompCard extends ConsumerWidget {
       await ref
           .read(adminCompetitionsRepositoryProvider)
           .cancel(competition.id);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('« ${competition.name} » annulée.')),
+      );
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

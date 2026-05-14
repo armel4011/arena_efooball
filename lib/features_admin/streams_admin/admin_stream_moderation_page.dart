@@ -257,6 +257,10 @@ class _StreamTile extends ConsumerWidget {
         targetId: stream.id,
         afterState: {'match_id': stream.matchId},
       );
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Stream coupé.')),
+      );
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

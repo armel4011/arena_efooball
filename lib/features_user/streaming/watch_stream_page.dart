@@ -47,7 +47,9 @@ class _WatchStreamPageState extends ConsumerState<WatchStreamPage> {
   @override
   void dispose() {
     // Fire-and-forget — we don't want to block pop on the network leave.
-    ref.read(agoraStreamingServiceProvider).leave();
+    ref.read(agoraStreamingServiceProvider).leave().catchError(
+          (Object e) => debugPrint('WatchStreamPage.leave error: $e'),
+        );
     super.dispose();
   }
 

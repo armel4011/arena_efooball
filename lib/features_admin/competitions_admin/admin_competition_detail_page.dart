@@ -438,6 +438,10 @@ class _ActionsTab extends ConsumerWidget {
         competition.id,
         {'status': status.value},
       );
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Statut → ${status.value}.')),
+      );
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -475,6 +479,10 @@ class _ActionsTab extends ConsumerWidget {
       await ref
           .read(adminCompetitionsRepositoryProvider)
           .cancel(competition.id);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('« ${competition.name} » annulée.')),
+      );
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
