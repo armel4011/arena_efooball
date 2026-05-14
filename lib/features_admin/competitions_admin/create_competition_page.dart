@@ -15,7 +15,7 @@ import 'package:intl/intl.dart';
 
 /// PHASE 11 · A8 — 5-step competition creation wizard.
 ///
-/// Steps : Infos → Format → Prix (1 à 16 rangs) → Frais → Review. Each
+/// Steps : Infos → Format → Prix (1 à 64 rangs) → Frais → Review. Each
 /// step validates its own slice of state. The final INSERT goes through
 /// [AdminCompetitionsRepository.create], stamps a `competition_created`
 /// audit log row and pops back to the list.
@@ -664,7 +664,7 @@ class _RewardedCountPicker extends StatelessWidget {
       spacing: ArenaSpacing.xs,
       runSpacing: ArenaSpacing.xs,
       children: [
-        for (var n = 1; n <= kMaxRewardedRanks; n++)
+        for (final n in kRewardedRankOptions)
           _OptionChip(
             label: '$n',
             active: n == current,
