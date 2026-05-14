@@ -1,4 +1,5 @@
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_competitions_repository.dart';
@@ -24,9 +25,18 @@ import 'package:intl/intl.dart';
 /// payment stack to actually function — the form lets the admin set a
 /// fee but warns them clearly.
 ///
+/// En mode édition (`editing` non nul), le wizard pré-remplit tous les
+/// champs et n'autorise que les modifications « sûres » : nom,
+/// description, date, commission, distribution des prix, codes
+/// marchands. Jeu / format / capacité / frais d'inscription restent
+/// verrouillés (ils impactent bracket et paiements).
+///
 /// Maps to screen A8 of `arena_v2.html`.
 class CreateCompetitionPage extends ConsumerStatefulWidget {
-  const CreateCompetitionPage({super.key});
+  const CreateCompetitionPage({this.editing, super.key});
+
+  /// Compétition à modifier — `null` en mode création.
+  final Competition? editing;
 
   @override
   ConsumerState<CreateCompetitionPage> createState() =>
@@ -61,6 +71,42 @@ class _CreateCompetitionPageState
   ];
   _PrizeMode _prizeMode = _PrizeMode.percentage;
   bool _publishNow = true;
+
+  bool get _isEditing => widget.editing != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final c = widget.editing;
+    if (c == null) return;
+    // Mode édition : pré-remplit tous les champs depuis la compétition.
+    _nameCtrl.text = c.name;
+    _descCtrl.text = c.description ?? '';
+    _game = c.game;
+    _format = c.format;
+    _maxPlayers = c.maxPlayers;
+    _startDate = c.startDate;
+    _entryFeeCtrl.text = c.registrationFee == c.registrationFee.roundToDouble()
+        ? c.registrationFee.round().toString()
+        : c.registrationFee.toString();
+    _orangeMomoCtrl.text = c.orangeMoneyCode ?? '';
+    _mtnMomoCtrl.text = c.mtnMomoCode ?? '';
+    _currency = c.registrationCurrency;
+    _commissionPct = c.commissionPct.clamp(10, 100).toDouble();
+    // Remplace les parts par défaut par la distribution stockée.
+    for (final ctrl in _shareCtrls) {
+      ctrl.dispose();
+    }
+    _shareCtrls
+      ..clear()
+      ..addAll([
+        for (final pct in c.prizeDistribution)
+          TextEditingController(text: pct.toString()),
+      ]);
+    if (_shareCtrls.isEmpty) {
+      _shareCtrls.add(TextEditingController(text: '100'));
+    }
+  }
 
   @override
   void dispose() {
@@ -103,7 +149,9 @@ class _CreateCompetitionPageState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const ArenaAppBar(title: 'Nouvelle compét.'),
+      appBar: ArenaAppBar(
+        title: _isEditing ? 'Modifier la compét.' : 'Nouvelle compét.',
+      ),
       body: SafeArea(
         child: Column(
           children: [
@@ -160,9 +208,11 @@ class _CreateCompetitionPageState
                     child: ArenaButton(
                       label: _step < _stepCount - 1
                           ? 'SUIVANT →'
-                          : (_publishNow
-                              ? '🚀 CRÉER & PUBLIER'
-                              : '💾 SAUVER EN BROUILLON'),
+                          : (_isEditing
+                              ? '💾 ENREGISTRER'
+                              : (_publishNow
+                                  ? '🚀 CRÉER & PUBLIER'
+                                  : '💾 SAUVER EN BROUILLON')),
                       fullWidth: true,
                       onPressed: !_canAdvance || _submitting
                           ? null
@@ -182,6 +232,15 @@ class _CreateCompetitionPageState
 
   // ─── Steps ────────────────────────────────────────────────────────
 
+  /// En mode édition, grise et désactive un champ verrouillé (jeu,
+  /// format, capacité, frais). En création, renvoie [child] tel quel.
+  Widget _lockable(Widget child) {
+    if (!_isEditing) return child;
+    return IgnorePointer(
+      child: Opacity(opacity: 0.45, child: child),
+    );
+  }
+
   List<Widget> _buildInfosStep() => [
         Text('Nom de la compétition', style: ArenaText.inputLabel),
         const SizedBox(height: ArenaSpacing.xs),
@@ -193,9 +252,11 @@ class _CreateCompetitionPageState
         const SizedBox(height: ArenaSpacing.md),
         Text('Jeu', style: ArenaText.inputLabel),
         const SizedBox(height: ArenaSpacing.xs),
-        _GamePicker(
-          current: _game,
-          onChanged: (g) => setState(() => _game = g),
+        _lockable(
+          _GamePicker(
+            current: _game,
+            onChanged: (g) => setState(() => _game = g),
+          ),
         ),
         const SizedBox(height: ArenaSpacing.md),
         Text('Description (optionnel)', style: ArenaText.inputLabel),
@@ -233,18 +294,40 @@ class _CreateCompetitionPageState
       ];
 
   List<Widget> _buildFormatStep() => [
+        if (_isEditing) ...[
+          Container(
+            padding: const EdgeInsets.all(ArenaSpacing.md),
+            decoration: BoxDecoration(
+              color: ArenaColors.signalBlue.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(ArenaRadius.md),
+              border: Border.all(
+                color: ArenaColors.signalBlue.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Text(
+              'ℹ Format et capacité ne sont pas modifiables après '
+              'création — ils conditionnent le bracket déjà calculé.',
+              style: ArenaText.body,
+            ),
+          ),
+          const SizedBox(height: ArenaSpacing.md),
+        ],
         Text('Format du tournoi', style: ArenaText.inputLabel),
         const SizedBox(height: ArenaSpacing.xs),
-        _FormatPicker(
-          current: _format,
-          onChanged: (f) => setState(() => _format = f),
+        _lockable(
+          _FormatPicker(
+            current: _format,
+            onChanged: (f) => setState(() => _format = f),
+          ),
         ),
         const SizedBox(height: ArenaSpacing.md),
         Text('Nombre de joueurs max', style: ArenaText.inputLabel),
         const SizedBox(height: ArenaSpacing.xs),
-        _MaxPlayersPicker(
-          current: _maxPlayers,
-          onChanged: (n) => setState(() => _maxPlayers = n),
+        _lockable(
+          _MaxPlayersPicker(
+            current: _maxPlayers,
+            onChanged: (n) => setState(() => _maxPlayers = n),
+          ),
         ),
       ];
 
@@ -301,21 +384,27 @@ class _CreateCompetitionPageState
         children: [
           Expanded(
             flex: 2,
-            child: ArenaTextField(
-              controller: _entryFeeCtrl,
-              hint: '0',
-              keyboardType: TextInputType.number,
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-              ],
-              onChanged: (_) => setState(() {}),
+            child: _lockable(
+              ArenaTextField(
+                controller: _entryFeeCtrl,
+                hint: '0',
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                ],
+                onChanged: (_) => setState(() {}),
+              ),
             ),
           ),
           const SizedBox(width: ArenaSpacing.xs),
-          Expanded(child: _CurrencyPicker(
-            current: _currency,
-            onChanged: (c) => setState(() => _currency = c),
-          )),
+          Expanded(
+            child: _lockable(
+              _CurrencyPicker(
+                current: _currency,
+                onChanged: (c) => setState(() => _currency = c),
+              ),
+            ),
+          ),
         ],
       ),
       const SizedBox(height: ArenaSpacing.md),
@@ -417,10 +506,11 @@ class _CreateCompetitionPageState
               '(commission ${_commissionPct.round()}%)',
         ),
       const SizedBox(height: ArenaSpacing.lg),
-      _PublishToggleCard(
-        publishNow: _publishNow,
-        onChanged: (v) => setState(() => _publishNow = v),
-      ),
+      if (!_isEditing)
+        _PublishToggleCard(
+          publishNow: _publishNow,
+          onChanged: (v) => setState(() => _publishNow = v),
+        ),
       const SizedBox(height: ArenaSpacing.md),
       if (_submitting)
         const Center(child: CircularProgressIndicator()),
@@ -433,10 +523,18 @@ class _CreateCompetitionPageState
     if (_submitting) return;
     setState(() => _submitting = true);
     final adminId = ref.read(currentSessionProvider)?.user.id;
-    if (adminId == null || _startDate == null) return;
+    if (adminId == null || _startDate == null) {
+      setState(() => _submitting = false);
+      return;
+    }
 
     final fee = double.tryParse(_entryFeeCtrl.text) ?? 0;
     final pool = fee * _maxPlayers * (1 - _commissionPct / 100);
+
+    if (_isEditing) {
+      await _submitEdit(adminId, pool);
+      return;
+    }
 
     try {
       final created = await ref
@@ -493,6 +591,48 @@ class _CreateCompetitionPageState
     }
   }
 
+  /// Branche édition : ne pousse que les champs « sûrs ». Jeu, format,
+  /// capacité, frais et devise restent ceux d'origine.
+  Future<void> _submitEdit(String adminId, double pool) async {
+    final id = widget.editing!.id;
+    final fee = double.tryParse(_entryFeeCtrl.text) ?? 0;
+    try {
+      await ref.read(adminCompetitionsRepositoryProvider).update(id, {
+        'name': _nameCtrl.text.trim(),
+        'description': _descCtrl.text.trim().isEmpty
+            ? null
+            : _descCtrl.text.trim(),
+        'start_date': _startDate!.toUtc().toIso8601String(),
+        'commission_pct': _commissionPct,
+        'prize_pool_local': pool,
+        'prize_distribution': _prizeDistribution(),
+        if (fee > 0) 'orange_money_code': _orangeMomoCtrl.text.trim(),
+        if (fee > 0) 'mtn_momo_code': _mtnMomoCtrl.text.trim(),
+      });
+      await ref.read(adminAuditLogRepositoryProvider).record(
+        adminId: adminId,
+        action: 'competition_updated',
+        targetType: 'competition',
+        targetId: id,
+        afterState: {
+          'name': _nameCtrl.text.trim(),
+          'commission_pct': _commissionPct,
+        },
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Compétition mise à jour.')),
+      );
+      Navigator.of(context).pop();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Échec : $e')),
+      );
+    }
+  }
+
   /// Ajuste le nombre de rangs récompensés (1 à [kMaxRewardedRanks]) en
   /// redimensionnant [_shareCtrls] : on crée des parts à 0 quand on
   /// agrandit, on dispose les contrôleurs retirés quand on réduit.
@@ -525,10 +665,15 @@ class _CreateCompetitionPageState
 
   Future<void> _pickStartDate() async {
     final now = DateTime.now();
+    // En édition, la date d'origine peut être passée : on autorise alors
+    // de remonter jusqu'à elle plutôt que de planter le date picker.
+    final earliest = _startDate != null && _startDate!.isBefore(now)
+        ? _startDate!
+        : now;
     final date = await showDatePicker(
       context: context,
       initialDate: _startDate ?? now.add(const Duration(days: 1)),
-      firstDate: now,
+      firstDate: earliest,
       lastDate: now.add(const Duration(days: 365)),
     );
     if (date == null) return;

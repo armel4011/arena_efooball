@@ -393,6 +393,16 @@ class _ActionsTab extends ConsumerWidget {
         ),
         const SizedBox(height: ArenaSpacing.sm),
         ArenaButton(
+          label: '✏️ MODIFIER LA COMPÉTITION',
+          variant: ArenaButtonVariant.secondary,
+          fullWidth: true,
+          onPressed: () => context.push(
+            AdminRoutes.competitionEditPath(competition.id),
+            extra: competition,
+          ),
+        ),
+        const SizedBox(height: ArenaSpacing.xs),
+        ArenaButton(
           label: '🏆 GÉRER LE BRACKET',
           fullWidth: true,
           onPressed: () => context.push(

@@ -1,4 +1,5 @@
 import 'package:arena/core/router/router_refresh.dart';
+import 'package:arena/data/models/competition.dart';
 import 'package:arena/features_admin/audit/admin_audit_log_page.dart';
 import 'package:arena/features_admin/auth_admin/invitation_redeem_screen.dart';
 import 'package:arena/features_admin/auth_admin/login_admin_screen.dart';
@@ -44,6 +45,7 @@ abstract final class AdminRoutes {
   static const competitions = '/competitions';
   static const competitionsCreate = '/competitions/create';
   static const competitionDetail = '/competitions/:id';
+  static const competitionEdit = '/competitions/:id/edit';
   static const matches = '/matches';
   static const bracket = '/competitions/:id/bracket';
   static const streams = '/streams';
@@ -72,6 +74,9 @@ abstract final class AdminRoutes {
 
   /// Builds the concrete `/competitions/<id>` URL.
   static String competitionDetailPath(String id) => '/competitions/$id';
+
+  /// Builds the concrete `/competitions/<id>/edit` URL.
+  static String competitionEditPath(String id) => '/competitions/$id/edit';
 
   /// Builds the concrete `/competitions/<id>/bracket` URL.
   static String bracketPath(String id) => '/competitions/$id/bracket';
@@ -170,6 +175,13 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
         name: 'admin.competitionDetail',
         builder: (context, state) => AdminCompetitionDetailPage(
           competitionId: state.pathParameters['id'] ?? '',
+        ),
+      ),
+      GoRoute(
+        path: AdminRoutes.competitionEdit,
+        name: 'admin.competitionEdit',
+        builder: (context, state) => CreateCompetitionPage(
+          editing: state.extra as Competition?,
         ),
       ),
       GoRoute(
