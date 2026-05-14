@@ -113,10 +113,17 @@ class _PreferencesSection extends ConsumerWidget {
             onChanged: profile == null
                 ? null
                 : (v) async {
-                    await ref
-                        .read(profileRepositoryProvider)
-                        .update(profile.id, {'marketing_consent': v});
-                    ref.invalidate(currentProfileProvider);
+                    try {
+                      await ref
+                          .read(profileRepositoryProvider)
+                          .update(profile.id, {'marketing_consent': v});
+                      ref.invalidate(currentProfileProvider);
+                    } catch (e) {
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Erreur: $e')),
+                      );
+                    }
                   },
           ),
         ],
@@ -199,6 +206,7 @@ class _AccountSection extends ConsumerWidget {
         ],
       ),
     );
+    WidgetsBinding.instance.addPostFrameCallback((_) => controller.dispose());
     if (newEmail == null || newEmail.isEmpty) return;
     try {
       await Supabase.instance.client.auth
@@ -244,6 +252,7 @@ class _AccountSection extends ConsumerWidget {
         ],
       ),
     );
+    WidgetsBinding.instance.addPostFrameCallback((_) => controller.dispose());
     if (newPwd == null || newPwd.length < 8) return;
     try {
       await Supabase.instance.client.auth

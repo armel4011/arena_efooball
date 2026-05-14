@@ -134,7 +134,9 @@ class MatchRecordingActionsSheet extends ConsumerWidget {
     String? localPath;
     try {
       localPath = await coord.stopCleanly();
-    } catch (_) {/* best-effort */}
+    } catch (e) {
+      debugPrint('[recording] stopAndExport stopCleanly failed: $e');
+    }
     if (localPath == null || localPath.isEmpty) return;
     final uri = await gallery.saveVideoToGallery(localPath);
     messenger.showSnackBar(

@@ -162,7 +162,9 @@ class _MatchRecordingLifecycleState
     if (isTerminal && coord.state is! CoordinatorIdle) {
       try {
         await coord.stopCleanly();
-      } catch (_) {/* best-effort */}
+      } catch (e) {
+        debugPrint('[recording] terminal stopCleanly failed: $e');
+      }
     }
   }
 

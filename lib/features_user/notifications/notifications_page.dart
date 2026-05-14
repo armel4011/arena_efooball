@@ -77,7 +77,11 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
   Future<void> _onTap(ArenaNotification notif) async {
     final repo = ref.read(notificationRepositoryProvider);
     if (notif.isUnread) {
-      unawaited(repo.markRead(notif.id));
+      unawaited(
+        repo.markRead(notif.id).catchError(
+              (Object e) => debugPrint('markRead failed for ${notif.id}: $e'),
+            ),
+      );
     }
     final route = notif.route;
     if (!mounted) return;
