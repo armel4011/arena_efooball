@@ -17,6 +17,7 @@ class AdminCompetitionRegistrant {
     required this.role,
     required this.status,
     required this.registeredAt,
+    this.finalRank,
   });
 
   final String playerId;
@@ -28,6 +29,10 @@ class AdminCompetitionRegistrant {
   /// One of `pending`, `confirmed`, `refunded`, `withdrawn`.
   final String status;
   final DateTime registeredAt;
+
+  /// Rang d'arrivée final saisi par l'admin — null tant que le
+  /// classement n'a pas été publié.
+  final int? finalRank;
 }
 
 /// Admin-side CRUD for `competitions`.
@@ -94,7 +99,7 @@ class AdminCompetitionsRepository {
     final rows = await _client
         .from('competition_registrations')
         .select(
-          'player_id, registered_at, status, '
+          'player_id, registered_at, status, final_rank, '
           'profiles!player_id(username, country_code, avatar_color, role)',
         )
         .eq('competition_id', competitionId)
@@ -115,7 +120,22 @@ class AdminCompetitionsRepository {
       role: UserRole.fromValue(profile['role'] as String?),
       status: row['status'] as String? ?? 'confirmed',
       registeredAt: DateTime.parse(row['registered_at'] as String),
+      finalRank: row['final_rank'] as int?,
     );
+  }
+
+  /// Saisit — ou efface, si [rank] est `null` — le rang d'arrivée final
+  /// d'un participant. Passe par la policy `registrations_update_admin`.
+  Future<void> setFinalRank(
+    String competitionId,
+    String playerId,
+    int? rank,
+  ) async {
+    await _client
+        .from('competition_registrations')
+        .update({'final_rank': rank})
+        .eq('competition_id', competitionId)
+        .eq('player_id', playerId);
   }
 
   /// Flips a competition into `cancelled`. The Edge Function that

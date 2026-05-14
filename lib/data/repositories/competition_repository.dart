@@ -2,8 +2,31 @@ import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+/// Une ligne du classement général final d'une compétition, telle que
+/// vue côté joueur (lecture seule) : le participant joint à son profil
+/// et son rang d'arrivée.
+@immutable
+class CompetitionRankingEntry {
+  const CompetitionRankingEntry({
+    required this.playerId,
+    required this.username,
+    required this.countryCode,
+    required this.avatarColor,
+    required this.finalRank,
+  });
+
+  final String playerId;
+  final String username;
+  final String countryCode;
+  final String avatarColor;
+
+  /// Rang d'arrivée — `null` tant que l'admin n'a pas publié le classement.
+  final int? finalRank;
+}
 
 /// CRUD + Realtime over the `competitions` table.
 ///
@@ -76,6 +99,43 @@ class CompetitionRepository {
     });
   }
 
+  /// Classement général final d'une compétition : les participants
+  /// joints à leur profil, triés par `final_rank` croissant. Les
+  /// non-classés (`final_rank` null) sont renvoyés en fin de liste.
+  Future<List<CompetitionRankingEntry>> getRanking(
+    String competitionId,
+  ) async {
+    final rows = await _client
+        .from('competition_registrations')
+        .select(
+          'player_id, final_rank, '
+          'profiles!player_id(username, country_code, avatar_color)',
+        )
+        .eq('competition_id', competitionId);
+    final list = [
+      for (final row in rows as List<dynamic>)
+        _mapRankingEntry(row as Map<String, dynamic>),
+    ]..sort((a, b) {
+        // Les non-classés tombent en fin de liste.
+        final ra = a.finalRank ?? 1 << 30;
+        final rb = b.finalRank ?? 1 << 30;
+        if (ra != rb) return ra.compareTo(rb);
+        return a.username.toLowerCase().compareTo(b.username.toLowerCase());
+      });
+    return list;
+  }
+
+  CompetitionRankingEntry _mapRankingEntry(Map<String, dynamic> row) {
+    final profile = row['profiles'] as Map<String, dynamic>? ?? const {};
+    return CompetitionRankingEntry(
+      playerId: row['player_id'] as String,
+      username: profile['username'] as String? ?? '—',
+      countryCode: profile['country_code'] as String? ?? '',
+      avatarColor: profile['avatar_color'] as String? ?? '#4C7AFF',
+      finalRank: row['final_rank'] as int?,
+    );
+  }
+
   /// Stream realtime des ids de compétitions où le joueur courant est
   /// inscrit en `status='confirmed'`. Utilisé par la liste pour décider
   /// si on route vers le détail ou vers la page d'inscription.
@@ -112,6 +172,15 @@ final competitionsListProvider =
 final competitionByIdProvider =
     StreamProvider.family<Competition?, String>((ref, id) {
   return ref.watch(competitionRepositoryProvider).watchById(id);
+});
+
+/// Classement général final d'une compétition (lecture seule côté
+/// joueur). `FutureProvider` — pas de Realtime en V1.0, on invalide au
+/// pull-to-refresh, comme les standings de poule.
+final competitionRankingProvider =
+    FutureProvider.family<List<CompetitionRankingEntry>, String>(
+        (ref, competitionId) {
+  return ref.watch(competitionRepositoryProvider).getRanking(competitionId);
 });
 
 /// Realtime set des ids de comps où le joueur courant est inscrit

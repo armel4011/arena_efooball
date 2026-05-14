@@ -2,7 +2,9 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
+import 'package:arena/features_shared/prize_ranks.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
+import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_card.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:arena/features_shared/widgets/error_state.dart';
@@ -226,7 +228,7 @@ class _DetailBody extends StatelessWidget {
               Tab(text: 'INFOS'),
               Tab(text: 'PARTICIP.'),
               Tab(text: 'BRACKET'),
-              Tab(text: 'PRIX'),
+              Tab(text: 'CLASSEMENT'),
             ],
           ),
           Expanded(
@@ -244,13 +246,7 @@ class _DetailBody extends StatelessWidget {
                   BracketView(competitionId: competition.id)
                 else
                   GroupStandingsPage(competitionId: competition.id),
-                const _DeferredTab(
-                  phase: 'PHASE 4.E',
-                  icon: Icons.emoji_events_outlined,
-                  title: 'Top 4 récompenses',
-                  description: 'Les prix (mode pourcentage ou montant fixe)'
-                      ' apparaîtront ici. Source : table `prizes`.',
-                ),
+                _RankingTab(competition: competition),
               ],
             ),
           ),
@@ -480,4 +476,149 @@ class _DeferredTab extends StatelessWidget {
   }
 }
 
+/// Onglet CLASSEMENT — classement général final de la compétition.
+/// Lecture seule : l'admin publie les rangs depuis la console, le
+/// joueur voit ici le podium et, pour les rangs couverts par
+/// `prize_distribution`, le gain associé.
+class _RankingTab extends ConsumerWidget {
+  const _RankingTab({required this.competition});
 
+  final Competition competition;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(competitionRankingProvider(competition.id));
+
+    return async.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => ErrorState(
+        description: e.toString(),
+        onRetry: () =>
+            ref.invalidate(competitionRankingProvider(competition.id)),
+      ),
+      data: (entries) {
+        if (entries.isEmpty) {
+          return const EmptyState(
+            icon: Icons.emoji_events_outlined,
+            title: 'Aucun participant',
+            description: "Personne n'est encore inscrit à cette "
+                'compétition.',
+          );
+        }
+        if (!entries.any((e) => e.finalRank != null)) {
+          return const EmptyState(
+            icon: Icons.emoji_events_outlined,
+            title: 'Classement pas encore publié',
+            description: 'Les organisateurs publieront le classement '
+                'final une fois la compétition terminée.',
+          );
+        }
+        return RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(competitionRankingProvider(competition.id));
+            await ref
+                .read(competitionRankingProvider(competition.id).future);
+          },
+          child: ListView.separated(
+            padding: const EdgeInsets.all(ArenaSpacing.lg),
+            itemCount: entries.length,
+            separatorBuilder: (_, __) =>
+                const SizedBox(height: ArenaSpacing.xs),
+            itemBuilder: (_, i) => _RankingEntryRow(
+              entry: entries[i],
+              competition: competition,
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _RankingEntryRow extends StatelessWidget {
+  const _RankingEntryRow({required this.entry, required this.competition});
+
+  final CompetitionRankingEntry entry;
+  final Competition competition;
+
+  @override
+  Widget build(BuildContext context) {
+    final rank = entry.finalRank;
+    final dist = competition.prizeDistribution;
+    final hasPrize = rank != null &&
+        rank >= 1 &&
+        rank <= dist.length &&
+        dist[rank - 1] > 0;
+    final prize = hasPrize
+        ? (competition.prizePoolLocal * dist[rank - 1] / 100).round()
+        : null;
+    final currency =
+        competition.prizePoolCurrency ?? competition.registrationCurrency;
+    final initials = entry.username.isNotEmpty
+        ? entry.username.substring(0, 1).toUpperCase()
+        : '?';
+
+    return Container(
+      padding: const EdgeInsets.all(ArenaSpacing.md),
+      decoration: BoxDecoration(
+        color: ArenaColors.carbon,
+        borderRadius: BorderRadius.circular(ArenaRadius.lg),
+        border: Border.all(color: ArenaColors.border),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 30,
+            child: Text(
+              rank == null ? '—' : prizeRankEmoji(rank - 1),
+              style: ArenaText.body.copyWith(fontSize: 18),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(width: ArenaSpacing.xs),
+          ArenaAvatar(
+            initials: initials,
+            color: _avatarColorForSeed(entry.username),
+            size: ArenaAvatarSize.sm,
+          ),
+          const SizedBox(width: ArenaSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  entry.username,
+                  style: ArenaText.body,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  rank == null
+                      ? 'Non classé'
+                      : '${prizeRankLabel(rank - 1)} place',
+                  style: ArenaText.bodyMuted,
+                ),
+              ],
+            ),
+          ),
+          if (prize != null) ...[
+            const SizedBox(width: ArenaSpacing.sm),
+            Text(
+              '${_formatMoney(prize)} $currency',
+              style: ArenaText.mono.copyWith(color: ArenaColors.statusOk),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+ArenaAvatarColor _avatarColorForSeed(String seed) {
+  if (seed.isEmpty) return ArenaAvatarColor.blue;
+  return ArenaAvatarColor
+      .values[seed.codeUnitAt(0) % ArenaAvatarColor.values.length];
+}
+
+String _formatMoney(num v) =>
+    NumberFormat.decimalPattern('fr').format(v).replaceAll(',', ' ');
