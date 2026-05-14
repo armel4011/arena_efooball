@@ -288,6 +288,8 @@ final userRouterProvider = Provider<GoRouter>((ref) {
             formatLabel: extra?.formatLabel ?? '',
             entryFeeXaf: extra?.entryFeeXaf ?? 0,
             totalPrizeXaf: extra?.totalPrizeXaf ?? 0,
+            prizeDistribution:
+                extra?.prizeDistribution ?? const [50, 25, 15, 10],
           );
         },
       ),
@@ -518,6 +520,7 @@ class RegistrationConfirmArgs {
     required this.formatLabel,
     required this.entryFeeXaf,
     required this.totalPrizeXaf,
+    required this.prizeDistribution,
   });
 
   final String competitionName;
@@ -527,4 +530,7 @@ class RegistrationConfirmArgs {
   final String formatLabel;
   final int entryFeeXaf;
   final int totalPrizeXaf;
+
+  /// Pourcentages de gains par rang (ex. `[50, 25, 15, 10]`).
+  final List<int> prizeDistribution;
 }

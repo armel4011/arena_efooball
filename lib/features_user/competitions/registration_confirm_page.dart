@@ -1,6 +1,7 @@
 import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
+import 'package:arena/features_shared/prize_ranks.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_divider.dart';
@@ -29,6 +30,7 @@ class RegistrationConfirmPage extends ConsumerStatefulWidget {
     required this.formatLabel,
     required this.entryFeeXaf,
     required this.totalPrizeXaf,
+    required this.prizeDistribution,
     super.key,
   });
 
@@ -40,6 +42,9 @@ class RegistrationConfirmPage extends ConsumerStatefulWidget {
   final String formatLabel;
   final int entryFeeXaf;
   final int totalPrizeXaf;
+
+  /// Pourcentages de gains par rang, fournis par la compétition.
+  final List<int> prizeDistribution;
 
   @override
   ConsumerState<RegistrationConfirmPage> createState() =>
@@ -80,7 +85,10 @@ class _RegistrationConfirmPageState
             ],
             _SectionLabel('Récompense du tournoi'),
             const SizedBox(height: ArenaSpacing.sm),
-            _PrizeDistribution(totalXaf: widget.totalPrizeXaf)
+            _PrizeDistribution(
+              totalXaf: widget.totalPrizeXaf,
+              distribution: widget.prizeDistribution,
+            )
                 .animate(delay: 200.ms)
                 .fadeIn(duration: ArenaDurations.medium),
             const SizedBox(height: ArenaSpacing.lg),
@@ -308,15 +316,16 @@ class _Row extends StatelessWidget {
 }
 
 class _PrizeDistribution extends StatelessWidget {
-  const _PrizeDistribution({required this.totalXaf});
+  const _PrizeDistribution({
+    required this.totalXaf,
+    required this.distribution,
+  });
 
   final int totalXaf;
 
-  static const _shares = <(String, String, double)>[
-    ('🥇', '1ʳᵉ place', 0.5),
-    ('🥈', '2ᵉ place', 0.3),
-    ('🥉', '3ᵉ place', 0.2),
-  ];
+  /// Pourcentages de gains par rang, fournis par la compétition
+  /// (ex. `[50, 25, 15, 10]`). On n'affiche que les rangs > 0.
+  final List<int> distribution;
 
   @override
   Widget build(BuildContext context) {
@@ -337,21 +346,33 @@ class _PrizeDistribution extends StatelessWidget {
             ),
           ),
           const SizedBox(height: ArenaSpacing.md),
-          for (final (emoji, label, share) in _shares)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                children: [
-                  Text(emoji, style: const TextStyle(fontSize: 18)),
-                  const SizedBox(width: ArenaSpacing.sm),
-                  Expanded(child: Text(label, style: ArenaText.body)),
-                  Text(
-                    '${_formatXaf((totalXaf * share).round())} XAF',
-                    style: ArenaText.mono,
-                  ),
-                ],
+          for (var i = 0;
+              i < distribution.length && i < kMaxRewardedRanks;
+              i++)
+            if (distribution[i] > 0)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    Text(
+                      prizeRankEmoji(i),
+                      style: const TextStyle(fontSize: 18),
+                    ),
+                    const SizedBox(width: ArenaSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        '${prizeRankLabel(i)} place',
+                        style: ArenaText.body,
+                      ),
+                    ),
+                    Text(
+                      '${_formatXaf((totalXaf * distribution[i] / 100).round())}'
+                      ' XAF',
+                      style: ArenaText.mono,
+                    ),
+                  ],
+                ),
               ),
-            ),
         ],
       ),
     );

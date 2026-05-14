@@ -46,6 +46,11 @@ sealed class Competition with _$Competition {
     /// quand le joueur choisit la méthode correspondante. PHASE 11bis.
     String? orangeMoneyCode,
     String? mtnMomoCode,
+
+    /// Répartition des gains par rang d'arrivée, en pourcentages
+    /// (ex. `[50, 25, 15, 10]`, somme = 100). Saisie dans le wizard admin
+    /// et affichée sur l'écran « Confirmer inscription ».
+    @Default(<int>[50, 25, 15, 10]) List<int> prizeDistribution,
   }) = _Competition;
 
   const Competition._();

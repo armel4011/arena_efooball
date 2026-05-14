@@ -54,6 +54,11 @@ mixin _$Competition {
   String? get orangeMoneyCode => throw _privateConstructorUsedError;
   String? get mtnMomoCode => throw _privateConstructorUsedError;
 
+  /// Répartition des gains par rang d'arrivée, en pourcentages
+  /// (ex. `[50, 25, 15, 10]`, somme = 100). Saisie dans le wizard admin
+  /// et affichée sur l'écran « Confirmer inscription ».
+  List<int> get prizeDistribution => throw _privateConstructorUsedError;
+
   /// Serializes this Competition to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
 
@@ -94,7 +99,8 @@ abstract class $CompetitionCopyWith<$Res> {
       DateTime? createdAt,
       DateTime? updatedAt,
       String? orangeMoneyCode,
-      String? mtnMomoCode});
+      String? mtnMomoCode,
+      List<int> prizeDistribution});
 }
 
 /// @nodoc
@@ -136,6 +142,7 @@ class _$CompetitionCopyWithImpl<$Res, $Val extends Competition>
     Object? updatedAt = freezed,
     Object? orangeMoneyCode = freezed,
     Object? mtnMomoCode = freezed,
+    Object? prizeDistribution = null,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -234,6 +241,10 @@ class _$CompetitionCopyWithImpl<$Res, $Val extends Competition>
           ? _value.mtnMomoCode
           : mtnMomoCode // ignore: cast_nullable_to_non_nullable
               as String?,
+      prizeDistribution: null == prizeDistribution
+          ? _value.prizeDistribution
+          : prizeDistribution // ignore: cast_nullable_to_non_nullable
+              as List<int>,
     ) as $Val);
   }
 }
@@ -270,7 +281,8 @@ abstract class _$$CompetitionImplCopyWith<$Res>
       DateTime? createdAt,
       DateTime? updatedAt,
       String? orangeMoneyCode,
-      String? mtnMomoCode});
+      String? mtnMomoCode,
+      List<int> prizeDistribution});
 }
 
 /// @nodoc
@@ -310,6 +322,7 @@ class __$$CompetitionImplCopyWithImpl<$Res>
     Object? updatedAt = freezed,
     Object? orangeMoneyCode = freezed,
     Object? mtnMomoCode = freezed,
+    Object? prizeDistribution = null,
   }) {
     return _then(_$CompetitionImpl(
       id: null == id
@@ -408,6 +421,10 @@ class __$$CompetitionImplCopyWithImpl<$Res>
           ? _value.mtnMomoCode
           : mtnMomoCode // ignore: cast_nullable_to_non_nullable
               as String?,
+      prizeDistribution: null == prizeDistribution
+          ? _value._prizeDistribution
+          : prizeDistribution // ignore: cast_nullable_to_non_nullable
+              as List<int>,
     ));
   }
 }
@@ -439,8 +456,10 @@ class _$CompetitionImpl extends _Competition {
       this.createdAt,
       this.updatedAt,
       this.orangeMoneyCode,
-      this.mtnMomoCode})
-      : super._();
+      this.mtnMomoCode,
+      final List<int> prizeDistribution = const <int>[50, 25, 15, 10]})
+      : _prizeDistribution = prizeDistribution,
+        super._();
 
   factory _$CompetitionImpl.fromJson(Map<String, dynamic> json) =>
       _$$CompetitionImplFromJson(json);
@@ -511,9 +530,26 @@ class _$CompetitionImpl extends _Competition {
   @override
   final String? mtnMomoCode;
 
+  /// Répartition des gains par rang d'arrivée, en pourcentages
+  /// (ex. `[50, 25, 15, 10]`, somme = 100). Saisie dans le wizard admin
+  /// et affichée sur l'écran « Confirmer inscription ».
+  final List<int> _prizeDistribution;
+
+  /// Répartition des gains par rang d'arrivée, en pourcentages
+  /// (ex. `[50, 25, 15, 10]`, somme = 100). Saisie dans le wizard admin
+  /// et affichée sur l'écran « Confirmer inscription ».
+  @override
+  @JsonKey()
+  List<int> get prizeDistribution {
+    if (_prizeDistribution is EqualUnmodifiableListView)
+      return _prizeDistribution;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_prizeDistribution);
+  }
+
   @override
   String toString() {
-    return 'Competition(id: $id, name: $name, game: $game, format: $format, startDate: $startDate, status: $status, maxPlayers: $maxPlayers, currentPlayers: $currentPlayers, registrationFee: $registrationFee, registrationCurrency: $registrationCurrency, commissionPct: $commissionPct, prizePoolLocal: $prizePoolLocal, sponsorBonusLocal: $sponsorBonusLocal, description: $description, bannerUrl: $bannerUrl, registrationOpensAt: $registrationOpensAt, registrationClosesAt: $registrationClosesAt, endDate: $endDate, prizePoolCurrency: $prizePoolCurrency, createdBy: $createdBy, createdAt: $createdAt, updatedAt: $updatedAt, orangeMoneyCode: $orangeMoneyCode, mtnMomoCode: $mtnMomoCode)';
+    return 'Competition(id: $id, name: $name, game: $game, format: $format, startDate: $startDate, status: $status, maxPlayers: $maxPlayers, currentPlayers: $currentPlayers, registrationFee: $registrationFee, registrationCurrency: $registrationCurrency, commissionPct: $commissionPct, prizePoolLocal: $prizePoolLocal, sponsorBonusLocal: $sponsorBonusLocal, description: $description, bannerUrl: $bannerUrl, registrationOpensAt: $registrationOpensAt, registrationClosesAt: $registrationClosesAt, endDate: $endDate, prizePoolCurrency: $prizePoolCurrency, createdBy: $createdBy, createdAt: $createdAt, updatedAt: $updatedAt, orangeMoneyCode: $orangeMoneyCode, mtnMomoCode: $mtnMomoCode, prizeDistribution: $prizeDistribution)';
   }
 
   @override
@@ -562,7 +598,9 @@ class _$CompetitionImpl extends _Competition {
             (identical(other.orangeMoneyCode, orangeMoneyCode) ||
                 other.orangeMoneyCode == orangeMoneyCode) &&
             (identical(other.mtnMomoCode, mtnMomoCode) ||
-                other.mtnMomoCode == mtnMomoCode));
+                other.mtnMomoCode == mtnMomoCode) &&
+            const DeepCollectionEquality()
+                .equals(other._prizeDistribution, _prizeDistribution));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -592,7 +630,8 @@ class _$CompetitionImpl extends _Competition {
         createdAt,
         updatedAt,
         orangeMoneyCode,
-        mtnMomoCode
+        mtnMomoCode,
+        const DeepCollectionEquality().hash(_prizeDistribution)
       ]);
 
   /// Create a copy of Competition
@@ -636,7 +675,8 @@ abstract class _Competition extends Competition {
       final DateTime? createdAt,
       final DateTime? updatedAt,
       final String? orangeMoneyCode,
-      final String? mtnMomoCode}) = _$CompetitionImpl;
+      final String? mtnMomoCode,
+      final List<int> prizeDistribution}) = _$CompetitionImpl;
   const _Competition._() : super._();
 
   factory _Competition.fromJson(Map<String, dynamic> json) =
@@ -699,6 +739,12 @@ abstract class _Competition extends Competition {
   String? get orangeMoneyCode;
   @override
   String? get mtnMomoCode;
+
+  /// Répartition des gains par rang d'arrivée, en pourcentages
+  /// (ex. `[50, 25, 15, 10]`, somme = 100). Saisie dans le wizard admin
+  /// et affichée sur l'écran « Confirmer inscription ».
+  @override
+  List<int> get prizeDistribution;
 
   /// Create a copy of Competition
   /// with the given fields replaced by the non-null parameter values.

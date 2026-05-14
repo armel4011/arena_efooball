@@ -46,6 +46,10 @@ _$CompetitionImpl _$$CompetitionImplFromJson(Map<String, dynamic> json) =>
           : DateTime.parse(json['updated_at'] as String),
       orangeMoneyCode: json['orange_money_code'] as String?,
       mtnMomoCode: json['mtn_momo_code'] as String?,
+      prizeDistribution: (json['prize_distribution'] as List<dynamic>?)
+              ?.map((e) => (e as num).toInt())
+              .toList() ??
+          const <int>[50, 25, 15, 10],
     );
 
 Map<String, dynamic> _$$CompetitionImplToJson(_$CompetitionImpl instance) =>
@@ -86,4 +90,5 @@ Map<String, dynamic> _$$CompetitionImplToJson(_$CompetitionImpl instance) =>
       if (instance.orangeMoneyCode case final value?)
         'orange_money_code': value,
       if (instance.mtnMomoCode case final value?) 'mtn_momo_code': value,
+      'prize_distribution': instance.prizeDistribution,
     };

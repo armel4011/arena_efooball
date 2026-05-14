@@ -204,6 +204,7 @@ void _openInscriptionFlow(BuildContext context, Competition c) {
       formatLabel: _formatLabel(c.format),
       entryFeeXaf: c.registrationFee.round(),
       totalPrizeXaf: c.prizePoolLocal.round(),
+      prizeDistribution: c.prizeDistribution,
     ),
   );
 }

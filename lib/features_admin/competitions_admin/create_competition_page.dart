@@ -2,6 +2,7 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_competitions_repository.dart';
+import 'package:arena/features_shared/prize_ranks.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_stepper.dart';
@@ -14,8 +15,8 @@ import 'package:intl/intl.dart';
 
 /// PHASE 11 · A8 — 5-step competition creation wizard.
 ///
-/// Steps : Infos → Format → Prix (Top 4) → Frais → Review. Each step
-/// validates its own slice of state. The final INSERT goes through
+/// Steps : Infos → Format → Prix (1 à 16 rangs) → Frais → Review. Each
+/// step validates its own slice of state. The final INSERT goes through
 /// [AdminCompetitionsRepository.create], stamps a `competition_created`
 /// audit log row and pops back to the list.
 ///
@@ -50,7 +51,9 @@ class _CreateCompetitionPageState
   final _mtnMomoCtrl = TextEditingController();
   String _currency = 'XAF';
   double _commissionPct = 15;
-  final _shareCtrls = [
+  // Une part par rang récompensé. La taille de cette liste = nombre de
+  // récompensés choisi par l'admin (1 à 16), pilotée par _setRewardedCount.
+  final List<TextEditingController> _shareCtrls = [
     TextEditingController(text: '50'),
     TextEditingController(text: '25'),
     TextEditingController(text: '15'),
@@ -251,7 +254,14 @@ class _CreateCompetitionPageState
           onChanged: (m) => setState(() => _prizeMode = m),
         ),
         const SizedBox(height: ArenaSpacing.lg),
-        for (var i = 0; i < 4; i++) ...[
+        Text('Nombre de récompensés', style: ArenaText.inputLabel),
+        const SizedBox(height: ArenaSpacing.xs),
+        _RewardedCountPicker(
+          current: _shareCtrls.length,
+          onChanged: _setRewardedCount,
+        ),
+        const SizedBox(height: ArenaSpacing.lg),
+        for (var i = 0; i < _shareCtrls.length; i++) ...[
           _ShareRow(
             position: i,
             controller: _shareCtrls[i],
@@ -316,9 +326,9 @@ class _CreateCompetitionPageState
           Expanded(
             child: Slider(
               value: _commissionPct,
-              min: 0,
-              max: 30,
-              divisions: 30,
+              min: 10,
+              max: 100,
+              divisions: 90,
               label: '${_commissionPct.round()}%',
               onChanged: (v) => setState(() => _commissionPct = v),
               activeColor: ArenaColors.signalBlue,
@@ -446,6 +456,7 @@ class _CreateCompetitionPageState
         'commission_pct': _commissionPct,
         'prize_pool_local': pool,
         'prize_pool_currency': _currency,
+        'prize_distribution': _prizeDistribution(),
         'created_by': adminId,
         if (fee > 0) 'orange_money_code': _orangeMomoCtrl.text.trim(),
         if (fee > 0) 'mtn_momo_code': _mtnMomoCtrl.text.trim(),
@@ -480,6 +491,36 @@ class _CreateCompetitionPageState
         SnackBar(content: Text('Échec : $e')),
       );
     }
+  }
+
+  /// Ajuste le nombre de rangs récompensés (1 à [kMaxRewardedRanks]) en
+  /// redimensionnant [_shareCtrls] : on crée des parts à 0 quand on
+  /// agrandit, on dispose les contrôleurs retirés quand on réduit.
+  void _setRewardedCount(int count) {
+    final n = count.clamp(1, kMaxRewardedRanks);
+    if (n == _shareCtrls.length) return;
+    setState(() {
+      if (n > _shareCtrls.length) {
+        for (var i = _shareCtrls.length; i < n; i++) {
+          _shareCtrls.add(TextEditingController(text: '0'));
+        }
+      } else {
+        for (var i = _shareCtrls.length - 1; i >= n; i--) {
+          _shareCtrls.removeAt(i).dispose();
+        }
+      }
+    });
+  }
+
+  /// Répartition des gains à persister, toujours en pourcentages.
+  /// En mode « montant fixe », on normalise les montants saisis en
+  /// pourcentages de leur somme.
+  List<int> _prizeDistribution() {
+    final raw = _shareCtrls.map((c) => int.tryParse(c.text) ?? 0).toList();
+    if (_prizeMode == _PrizeMode.percentage) return raw;
+    final total = raw.fold<int>(0, (a, b) => a + b);
+    if (total <= 0) return const [50, 25, 15, 10];
+    return raw.map((s) => (s / total * 100).round()).toList();
   }
 
   Future<void> _pickStartDate() async {
@@ -602,6 +643,28 @@ class _MaxPlayersPicker extends StatelessWidget {
       runSpacing: ArenaSpacing.xs,
       children: [
         for (final n in _options)
+          _OptionChip(
+            label: '$n',
+            active: n == current,
+            onTap: () => onChanged(n),
+          ),
+      ],
+    );
+  }
+}
+
+class _RewardedCountPicker extends StatelessWidget {
+  const _RewardedCountPicker({required this.current, required this.onChanged});
+  final int current;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: ArenaSpacing.xs,
+      runSpacing: ArenaSpacing.xs,
+      children: [
+        for (var n = 1; n <= kMaxRewardedRanks; n++)
           _OptionChip(
             label: '$n',
             active: n == current,
@@ -754,16 +817,13 @@ class _ShareRow extends StatelessWidget {
   final _PrizeMode mode;
   final VoidCallback onChanged;
 
-  static const _emojis = ['🥇', '🥈', '🥉', '4️⃣'];
-  static const _labels = ['1ère', '2e', '3e', '4e'];
-
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '${_emojis[position]} ${_labels[position]} place',
+          '${prizeRankEmoji(position)} ${prizeRankLabel(position)} place',
           style: ArenaText.inputLabel,
         ),
         const SizedBox(height: ArenaSpacing.xs),
