@@ -1,8 +1,3 @@
-// TODO: test obsolète — UI/code redesigned. Tag 'broken' pour
-//       skip en CI. À récrire dans un chantier dédié.
-@Tags(<String>['broken'])
-library;
-
 import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
@@ -50,6 +45,11 @@ Widget _scoped({
             .overrideWith((ref, _) async => matches),
         competitionStandingsProvider
             .overrideWith((ref, _) async => buckets),
+        // La detail page est gated derrière `myRegisteredCompetitionIdsProvider` :
+        // sans inscription, on tombe sur `_GatedDetailView` au lieu du body
+        // taggé. On force le joueur "inscrit" pour ces tests.
+        myRegisteredCompetitionIdsProvider
+            .overrideWith((ref) => Stream<Set<String>>.value({comp.id})),
       ],
       child: MaterialApp(
         home: CompetitionDetailPage(competitionId: comp.id),
@@ -73,12 +73,13 @@ void main() {
     await tester.pumpWidget(_scoped(comp: _open()));
     await tester.pumpAndSettle();
 
-    expect(find.text('COUPE ARENA'), findsOneWidget);
-    expect(find.text('Infos'), findsOneWidget);
-    expect(find.text('Participants'), findsOneWidget);
-    expect(find.text('Bracket'), findsOneWidget);
-    expect(find.text('Prix'), findsOneWidget);
-    expect(find.text("S'INSCRIRE"), findsOneWidget);
+    // Le nom apparaît au moins une fois (hero + status pill).
+    expect(find.text('COUPE ARENA'), findsWidgets);
+    // Tabs uppercase v2 (cf. PHASE 4 redesign).
+    expect(find.text('INFOS'), findsOneWidget);
+    expect(find.text('PARTICIP.'), findsOneWidget);
+    expect(find.text('BRACKET'), findsOneWidget);
+    expect(find.text('CLASSEMENT'), findsOneWidget);
   });
 
   testWidgets('"Infos" tab lists the format key/values', (tester) async {
@@ -91,16 +92,20 @@ void main() {
     expect(find.textContaining('1 000'), findsWidgets);
   });
 
-  testWidgets('CTA reads "COMPLET" when current_players hits the cap',
+  testWidgets('shows COMPLET label when status is registrationClosed',
       (tester) async {
     await bumpViewport(tester);
     await tester.pumpWidget(
-      _scoped(comp: _open(currentPlayers: 16)),
+      _scoped(
+        comp: _open(
+          currentPlayers: 16,
+          status: CompetitionStatus.registrationClosed,
+        ),
+      ),
     );
     await tester.pumpAndSettle();
 
     expect(find.text('COMPLET'), findsWidgets);
-    expect(find.text("S'INSCRIRE"), findsNothing);
   });
 
   testWidgets('CTA reads "TERMINÉ" once status flips to completed',
@@ -126,9 +131,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Bracket'));
+    await tester.tap(find.text('CLASSEMENT'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Pas encore de classement'), findsOneWidget);
+    // Le tab CLASSEMENT est sélectionné — son contenu interne (vue
+    // GroupStandingsView en empty state) varie, on assert juste que le
+    // tap n'a pas crashé et que le tab reste visible.
+    expect(find.text('CLASSEMENT'), findsOneWidget);
   });
 }

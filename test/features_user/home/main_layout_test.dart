@@ -1,7 +1,7 @@
-// TODO: test obsolète — UI/code redesigned. Tag 'broken' pour
-//       skip en CI. À récrire dans un chantier dédié.
-@Tags(<String>['broken'])
-library;
+// Smoke tests du `MainLayout` v2 (4 tabs Bottom Nav). Vérifie le
+// rendu initial sur Accueil et la rotation des titres d'AppBar quand
+// on tape les autres tabs. On ne fait pas `pumpAndSettle` parce que la
+// HomePage embarque une LIVE card qui pulse indéfiniment.
 
 import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/models/competition.dart';
@@ -25,12 +25,8 @@ Profile _player() => const Profile(
 Widget _scoped() => ProviderScope(
       overrides: [
         currentProfileProvider.overrideWith((ref) async => _player()),
-        // Stub the competitions stream so the page mounts without
-        // touching Supabase (which isn't initialized in widget tests).
         competitionsListProvider
             .overrideWith((ref, _) => Stream<List<Competition>>.value([])),
-        // Stub the profile-tab providers so PlayerProfilePage doesn't
-        // try to hit Supabase at mount time.
         playerStatsProvider
             .overrideWith((ref, _) async => const PlayerStats.empty()),
         playerRecentMatchesProvider
@@ -39,75 +35,74 @@ Widget _scoped() => ProviderScope(
       child: const MaterialApp(home: MainLayout()),
     );
 
+Future<void> _pumpShallow(WidgetTester tester) async {
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 200));
+}
+
 void main() {
-  testWidgets('starts on the Home tab and shows the username', (tester) async {
+  setUpAll(TestWidgetsFlutterBinding.ensureInitialized);
+
+  Future<void> bumpViewport(WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 2000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+  }
+
+  testWidgets('starts on the Accueil tab with the matching AppBar title',
+      (tester) async {
+    await bumpViewport(tester);
     await tester.pumpWidget(_scoped());
-    await tester.pumpAndSettle();
+    await _pumpShallow(tester);
 
     expect(find.text('ACCUEIL'), findsOneWidget);
-    expect(find.text('MARADONA'), findsOneWidget);
+    // 4 tab labels du BottomNav (Accueil/Compétitions/Chat/Profil).
+    expect(find.text('Accueil'), findsOneWidget);
+    expect(find.text('Compétitions'), findsOneWidget);
+    expect(find.text('Chat'), findsOneWidget);
+    expect(find.text('Profil'), findsOneWidget);
   });
 
-  testWidgets(
-      'switching to the Compétitions tab mounts the list (empty state here)',
+  testWidgets('tapping Compétitions swaps the AppBar title',
       (tester) async {
+    await bumpViewport(tester);
     await tester.pumpWidget(_scoped());
-    await tester.pumpAndSettle();
+    await _pumpShallow(tester);
 
     await tester.tap(find.text('Compétitions'));
-    await tester.pumpAndSettle();
+    await _pumpShallow(tester);
 
-    // AppBar title + the empty-state copy from CompetitionsListPage.
     expect(find.text('COMPÉTITIONS'), findsOneWidget);
-    expect(find.text('Aucune compétition'), findsOneWidget);
-    // The 4 game filter chips should also be there: "Tous" + 3 games.
-    expect(find.text('Tous'), findsOneWidget);
-    expect(find.text('eFootball'), findsOneWidget);
   });
 
-  testWidgets('switching to the Chat tab shows the PHASE 6 panel',
+  testWidgets('tapping Profil swaps the AppBar title and shows Maradona',
       (tester) async {
+    await bumpViewport(tester);
     await tester.pumpWidget(_scoped());
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Chat'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('PHASE 6'), findsOneWidget);
-  });
-
-  testWidgets(
-      'switching to the Profil tab reveals the logout button (others hide it)',
-      (tester) async {
-    await tester.pumpWidget(_scoped());
-    await tester.pumpAndSettle();
-
-    // Home tab: no logout icon yet.
-    expect(find.byIcon(Icons.logout), findsNothing);
+    await _pumpShallow(tester);
 
     await tester.tap(find.text('Profil'));
-    await tester.pumpAndSettle();
+    await _pumpShallow(tester);
 
-    // PlayerProfilePage shows the username and the stats label, plus
-    // the AppBar exposes the logout button on tab 3.
-    expect(find.text('Maradona'), findsOneWidget);
-    expect(find.text('STATS'), findsOneWidget);
-    expect(find.byIcon(Icons.logout), findsOneWidget);
+    expect(find.text('PROFIL'), findsOneWidget);
+    // Le username apparaît dans la PlayerProfilePage (et l'avatar
+    // arrondi le réutilise comme initiale).
+    expect(find.text('Maradona'), findsWidgets);
   });
 
-  testWidgets('IndexedStack keeps Home mounted when switching tabs',
+  testWidgets('IndexedStack keeps prior tabs in the tree (offstage)',
       (tester) async {
+    await bumpViewport(tester);
     await tester.pumpWidget(_scoped());
-    await tester.pumpAndSettle();
+    await _pumpShallow(tester);
 
-    // Home tab shows the uppercase greeting.
-    expect(find.text('MARADONA'), findsOneWidget);
+    // Sur l'accueil : on voit le username dans le header HomePage.
+    expect(find.text('Maradona'), findsWidgets);
 
     await tester.tap(find.text('Profil'));
-    await tester.pumpAndSettle();
+    await _pumpShallow(tester);
 
-    // The Home page is still in the tree (IndexedStack keeps state),
-    // even though it's marked offstage and not painted.
-    expect(find.text('MARADONA', skipOffstage: false), findsOneWidget);
+    // Maradona toujours dans le tree (HomePage offstage + PlayerProfilePage
+    // qui réaffiche aussi le username).
+    expect(find.text('Maradona', skipOffstage: false), findsWidgets);
   });
 }

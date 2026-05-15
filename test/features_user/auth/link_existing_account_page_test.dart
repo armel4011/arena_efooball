@@ -1,8 +1,3 @@
-// TODO: test obsolète — UI/code redesigned. Tag 'broken' pour
-//       skip en CI. À récrire dans un chantier dédié.
-@Tags(<String>['broken'])
-library;
-
 import 'package:arena/core/router/user_router.dart';
 import 'package:arena/features_user/auth/link_existing_account_page.dart';
 import 'package:flutter/material.dart';
@@ -34,8 +29,8 @@ void main() {
     await tester.pumpWidget(_scoped(const LinkExistingAccountPage()));
     await tester.pumpAndSettle();
 
-    expect(find.text('COMPTE EXISTANT DÉTECTÉ'), findsOneWidget);
-    expect(find.text('LIER LES DEUX COMPTES'), findsOneWidget);
+    expect(find.text('Compte déjà existant'), findsOneWidget);
+    expect(find.text('🔗 LIER LES DEUX COMPTES'), findsOneWidget);
     expect(find.text('ME CONNECTER AVEC MOT DE PASSE'), findsOneWidget);
   });
 
@@ -58,7 +53,7 @@ void main() {
     await tester.pumpWidget(_scoped(const LinkExistingAccountPage()));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('LIER LES DEUX COMPTES'));
+    await tester.tap(find.text('🔗 LIER LES DEUX COMPTES'));
     await tester.pump(); // let the snackbar mount
 
     expect(find.textContaining('PHASE 2.3'), findsOneWidget);

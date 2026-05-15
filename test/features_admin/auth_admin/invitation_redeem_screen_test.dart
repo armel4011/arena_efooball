@@ -1,8 +1,3 @@
-// TODO: test obsolète — UI/code redesigned. Tag 'broken' pour
-//       skip en CI. À récrire dans un chantier dédié.
-@Tags(<String>['broken'])
-library;
-
 import 'package:arena/core/router/admin_router.dart';
 import 'package:arena/features_admin/auth_admin/admin_auth_providers.dart';
 import 'package:arena/features_admin/auth_admin/invitation_redeem_screen.dart';
@@ -59,9 +54,10 @@ void main() {
     await tester.pumpWidget(_scoped(repo));
     await tester.pumpAndSettle();
 
-    expect(find.text('INSCRIPTION ADMIN'), findsOneWidget);
+    // Hero du corps (l'AppBar affiche "CODE INVITATION" en uppercase).
+    expect(find.text('DEVENIR ADMIN'), findsOneWidget);
     expect(find.byType(TextField), findsNWidgets(5));
-    expect(find.byType(Checkbox), findsOneWidget);
+    expect(find.byType(CheckboxListTile), findsOneWidget);
   });
 
   testWidgets('"create" button stays disabled until CGU checkbox is checked',
@@ -94,7 +90,7 @@ void main() {
     await tester.tap(find.byType(CheckboxListTile));
     await tester.pump();
 
-    await tester.tap(find.text('CRÉER LE COMPTE'));
+    await tester.tap(find.text('VALIDER LE CODE'));
     await tester.pumpAndSettle();
 
     // The hint text and the validator both contain "ARENA-XXXX" — assert
@@ -126,7 +122,7 @@ void main() {
     await tester.tap(find.byType(CheckboxListTile));
     await tester.pump();
 
-    await tester.tap(find.text('CRÉER LE COMPTE'));
+    await tester.tap(find.text('VALIDER LE CODE'));
     await tester.pumpAndSettle();
 
     expect(find.text('Minimum 12 caractères'), findsOneWidget);

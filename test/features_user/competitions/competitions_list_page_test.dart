@@ -1,8 +1,3 @@
-// TODO: test obsolète — UI/code redesigned. Tag 'broken' pour
-//       skip en CI. À récrire dans un chantier dédié.
-@Tags(<String>['broken'])
-library;
-
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
@@ -63,25 +58,26 @@ void main() {
     expect(find.text('EA SPORTS FC Mobile'), findsOneWidget);
   });
 
-  testWidgets('renders one card per competition with name + status',
+  testWidgets('renders one card per competition under the default filter',
       (tester) async {
+    // Bucket statut "À venir" par défaut → ne montre que les comps en
+    // registrationOpen / draft / registrationClosed. On donne 2 comps
+    // qui matchent ce bucket pour vérifier qu'elles rendent toutes.
+    // (Le nom est affiché tel quel dans le _FreeCompetitionCard, donc
+    // pas d'uppercase dans l'assertion.)
     await bumpViewport(tester);
     await tester.pumpWidget(
       _scoped([
         _comp(id: 'c-1', name: 'Coupe Cameroun'),
-        _comp(
-          id: 'c-2',
-          name: 'Trophée RDC',
-          status: CompetitionStatus.ongoing,
-        ),
+        _comp(id: 'c-2', name: 'Trophée RDC'),
       ]),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('COUPE CAMEROUN'), findsOneWidget);
-    expect(find.text('TROPHÉE RDC'), findsOneWidget);
-    expect(find.text('INSCRIPTIONS'), findsOneWidget);
-    expect(find.text('EN COURS'), findsOneWidget);
+    expect(find.text('Coupe Cameroun'), findsOneWidget);
+    expect(find.text('Trophée RDC'), findsOneWidget);
+    // Deux comps gratuites (fee = 0 par défaut) → 2 badges "GRATUITE".
+    expect(find.text('GRATUITE'), findsNWidgets(2));
   });
 
   testWidgets('filter chip toggles selection visually', (tester) async {

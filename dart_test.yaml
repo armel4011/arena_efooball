@@ -1,7 +1,0 @@
-tags:
-  broken:
-    description: >
-      Tests obsolètes — l'UI ou l'API qu'ils ciblaient a été redesignée
-      (waves 1-2 du rebuild v2) mais les assertions n'ont pas suivi. Ils
-      doivent être ré-écrits, pas patchés à l'arrache. La CI exclut ce
-      tag (`flutter test --exclude-tags broken`).

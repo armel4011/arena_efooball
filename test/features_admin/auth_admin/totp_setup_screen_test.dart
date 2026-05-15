@@ -1,8 +1,3 @@
-// TODO: test obsolète — UI/code redesigned. Tag 'broken' pour
-//       skip en CI. À récrire dans un chantier dédié.
-@Tags(<String>['broken'])
-library;
-
 import 'package:arena/core/router/admin_router.dart';
 import 'package:arena/data/repositories/auth_failure.dart';
 import 'package:arena/features_admin/auth_admin/admin_auth_providers.dart';
@@ -126,7 +121,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final btn = tester.widget<ArenaButton>(
-      find.widgetWithText(ArenaButton, 'CONTINUER'),
+      find.widgetWithText(ArenaButton, 'CONTINUER →'),
     );
     expect(btn.onPressed, isNull);
 
@@ -134,7 +129,7 @@ void main() {
     await tester.pump();
 
     final btnAfter = tester.widget<ArenaButton>(
-      find.widgetWithText(ArenaButton, 'CONTINUER'),
+      find.widgetWithText(ArenaButton, 'CONTINUER →'),
     );
     expect(btnAfter.onPressed, isNotNull);
   });

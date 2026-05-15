@@ -1,8 +1,3 @@
-// TODO: test obsolète — UI/code redesigned. Tag 'broken' pour
-//       skip en CI. À récrire dans un chantier dédié.
-@Tags(<String>['broken'])
-library;
-
 import 'package:arena/core/router/admin_router.dart';
 import 'package:arena/data/models/profile.dart';
 import 'package:arena/data/models/user_role.dart';
@@ -69,7 +64,9 @@ void main() {
     await tester.pumpWidget(_scoped(repo));
     await tester.pumpAndSettle();
 
-    expect(find.text('CONNEXION ADMIN'), findsOneWidget);
+    // "CONSOLE ADMIN" apparaît 2× : titre de l'AppBar (uppercase de
+    // "Console admin") + hero du corps.
+    expect(find.text('CONSOLE ADMIN'), findsNWidgets(2));
     expect(find.text('SE CONNECTER'), findsOneWidget);
     expect(find.textContaining('Je suis invité'), findsOneWidget);
   });

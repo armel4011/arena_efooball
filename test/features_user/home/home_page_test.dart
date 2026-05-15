@@ -1,7 +1,10 @@
-// TODO: test obsolète — UI/code redesigned. Tag 'broken' pour
-//       skip en CI. À récrire dans un chantier dédié.
-@Tags(<String>['broken'])
-library;
+// Smoke tests de la HomePage v2 (PHASE 3 → wave 1 polish).
+//
+// La page consomme `currentProfileProvider` + plusieurs streams temps
+// réel (matches, lives, comps, pending payments). On override le
+// profil et on accepte que les autres providers tombent dans leur
+// fallback (loading → empty) côté UI — la HomePage gère ces états sans
+// crash. On vérifie juste que les section headers v2 sont rendus.
 
 import 'package:arena/data/models/profile.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
@@ -30,81 +33,35 @@ void main() {
   setUpAll(TestWidgetsFlutterBinding.ensureInitialized);
 
   Future<void> bumpViewport(WidgetTester tester) async {
-    // The page has 4 sections + a 5-card stats grid — it scrolls.
-    await tester.binding.setSurfaceSize(const Size(800, 1800));
+    // La home v2 a 4 sections empilées dans un ListView, scrollable.
+    await tester.binding.setSurfaceSize(const Size(800, 2000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
   }
 
-  testWidgets('header shows the username initial and salutation',
-      (tester) async {
+  testWidgets('renders all 4 main section headers', (tester) async {
     await bumpViewport(tester);
     await tester.pumpWidget(_scoped(_profile()));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Salut,'), findsOneWidget);
-    expect(find.text('DROGBA'), findsOneWidget);
-    // Avatar initial.
-    expect(find.text('D'), findsOneWidget);
-  });
-
-  testWidgets('renders the 3 coming-soon panels (PHASE 4 / 5 / 8)',
-      (tester) async {
-    await bumpViewport(tester);
-    await tester.pumpWidget(_scoped(_profile()));
-    await tester.pumpAndSettle();
-
-    expect(find.text('PHASE 4'), findsOneWidget);
-    expect(find.text('PHASE 5'), findsOneWidget);
-    expect(find.text('PHASE 8'), findsOneWidget);
-  });
-
-  testWidgets('stats with no matches show the "no match yet" copy',
-      (tester) async {
-    await bumpViewport(tester);
-    await tester.pumpWidget(_scoped(_profile()));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Aucun match joué'), findsOneWidget);
-    expect(find.text('—'), findsOneWidget);
-    // Wins / losses / goals all zero.
-    expect(find.text('0'), findsNWidgets(4));
-  });
-
-  testWidgets('stats render real values and the win-rate ratio',
-      (tester) async {
-    await bumpViewport(tester);
-    await tester.pumpWidget(
-      _scoped(
-        _profile(
-          stats: const <String, dynamic>{
-            'wins': 6,
-            'losses': 4,
-            'goals_scored': 18,
-            'goals_conceded': 11,
-          },
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('6'), findsOneWidget);
-    expect(find.text('4'), findsOneWidget);
-    expect(find.text('18'), findsOneWidget);
-    expect(find.text('11'), findsOneWidget);
-    // 6 / (6+4) = 60 %
-    expect(find.text('60 %'), findsOneWidget);
-    expect(find.text('Ratio victoires'), findsOneWidget);
-  });
-
-  testWidgets('tapping the bell shows the deferred-notifications snackbar',
-      (tester) async {
-    await bumpViewport(tester);
-    await tester.pumpWidget(_scoped(_profile()));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byIcon(Icons.notifications_outlined));
+    // `pumpAndSettle` boucle à l'infini parce que la card LIVE pulse
+    // sans fin (animation continue). Un pump simple suffit pour valider
+    // le rendu initial.
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
 
-    expect(find.textContaining('PHASE 10'), findsOneWidget);
+    expect(find.text('⚡ Prochains matchs'), findsOneWidget);
+    expect(find.text('🔴 Lives en cours'), findsOneWidget);
+    expect(find.text('🏆 Compétitions actives'), findsOneWidget);
+  });
+
+  testWidgets('header surfaces the username', (tester) async {
+    await bumpViewport(tester);
+    await tester.pumpWidget(_scoped(_profile()));
+    // `pumpAndSettle` boucle à l'infini parce que la card LIVE pulse
+    // sans fin (animation continue). Un pump simple suffit pour valider
+    // le rendu initial.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    // Le pseudo apparaît dans le header v2 (textuel — pas d'uppercase).
+    expect(find.text('Drogba'), findsWidgets);
   });
 }

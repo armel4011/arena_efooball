@@ -1,20 +1,23 @@
-// TODO: test obsolète — UI/code redesigned. Tag 'broken' pour
-//       skip en CI. À récrire dans un chantier dédié.
-@Tags(<String>['broken'])
-library;
-
-// Smoke tests for ARENA boot flow.
+// Smoke tests boot ARENA. Exercice le router (PHASE 2) + redirect
+// logic en isolation : on évite de pumper `ArenaUserApp` / `ArenaAdminApp`
+// directement parce que leur `initState` lit `notificationRepositoryProvider`
+// → `supabaseClientProvider`, ce qui crash sans `Supabase.initialize()`
+// (et on ne veut pas init un vrai Supabase en test unitaire).
 //
-// These rely on the router's redirect logic (PHASE 2). Because the
-// ArenaUserApp now wires MaterialApp.router, we exercise it end-to-end.
+// On utilise ici les providers `userRouterProvider` / `adminRouterProvider`
+// dans un MaterialApp.router minimal. Les helpers d'auth en cascade
+// (currentSession, currentProfile) catchent leurs propres exceptions et
+// renvoient null, ce qui équivaut à un user pas connecté — c'est l'état
+// que ces smoke tests valident.
 
 import 'package:arena/core/flavors/flavor_config.dart';
+import 'package:arena/core/router/admin_router.dart';
+import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/services/onboarding_service.dart';
+import 'package:arena/features_admin/auth_admin/splash_admin_screen.dart';
 import 'package:arena/features_user/auth/splash_user_screen.dart';
 import 'package:arena/features_user/onboarding/onboarding_page.dart';
-import 'package:arena/main_admin.dart';
-import 'package:arena/main_user.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -29,39 +32,52 @@ Future<ProviderContainer> _container({
   );
 }
 
-Future<Widget> _scopedUserApp({
+Future<Widget> _routerHost({
+  required Flavor flavor,
   Map<String, Object> initial = const {},
 }) async {
   SharedPreferences.setMockInitialValues(initial);
   final prefs = await SharedPreferences.getInstance();
   return ProviderScope(
     overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
-    child: const ArenaUserApp(),
+    child: Consumer(
+      builder: (context, ref, _) {
+        final router = flavor == Flavor.user
+            ? ref.watch(userRouterProvider)
+            : ref.watch(adminRouterProvider);
+        return MaterialApp.router(
+          routerConfig: router,
+          debugShowCheckedModeBanner: false,
+        );
+      },
+    ),
   );
 }
 
 void main() {
-  setUp(() {
-    FlavorConfig.init(
-      flavor: Flavor.user,
-      appName: 'ARENA',
-      bundleId: 'com.arena.app',
-    );
-  });
-
   group('ArenaUserApp router redirect', () {
+    setUp(() {
+      FlavorConfig.init(
+        flavor: Flavor.user,
+        appName: 'ARENA',
+        bundleId: 'com.arena.app',
+      );
+    });
+
     testWidgets('first launch → onboarding (slide 1 visible)', (tester) async {
-      final app = await _scopedUserApp();
+      final app = await _routerHost(flavor: Flavor.user);
       await tester.pumpWidget(app);
       await tester.pumpAndSettle();
 
       expect(find.byType(OnboardingPage), findsOneWidget);
-      expect(find.textContaining('BIENVENUE'), findsOneWidget);
+      // Slide 1 v2 : emoji + titre Bebas majuscules.
+      expect(find.text('TOURNOIS E-SPORT PANAFRICAINS'), findsOneWidget);
     });
 
     testWidgets('onboarding done + no session → splash screen',
         (tester) async {
-      final app = await _scopedUserApp(
+      final app = await _routerHost(
+        flavor: Flavor.user,
         initial: <String, Object>{'onboarding_completed': true},
       );
       await tester.pumpWidget(app);
@@ -69,7 +85,7 @@ void main() {
 
       expect(find.byType(SplashUserScreen), findsOneWidget);
       expect(find.text('SE CONNECTER'), findsOneWidget);
-      expect(find.text("S'INSCRIRE"), findsOneWidget);
+      expect(find.text('CRÉER UN COMPTE'), findsOneWidget);
     });
   });
 
@@ -80,21 +96,14 @@ void main() {
       appName: 'ARENA Admin',
       bundleId: 'com.arena.admin',
     );
-    SharedPreferences.setMockInitialValues(<String, Object>{});
-    final prefs = await SharedPreferences.getInstance();
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
-        child: const ArenaAdminApp(),
-      ),
-    );
+    final app = await _routerHost(flavor: Flavor.admin);
+    await tester.pumpWidget(app);
     await tester.pumpAndSettle();
 
-    // PHASE 2bis splash : title + 2 CTAs.
-    expect(find.text('ARENA ADMIN'), findsOneWidget);
+    expect(find.byType(SplashAdminScreen), findsOneWidget);
+    expect(find.text('admin console'), findsOneWidget);
     expect(find.text('SE CONNECTER'), findsOneWidget);
-    expect(find.text('JE SUIS INVITÉ'), findsOneWidget);
+    expect(find.text("🎟 J'AI UN CODE D'INVITATION"), findsOneWidget);
   });
 
   group('OnboardingFlagController', () {

@@ -1,8 +1,3 @@
-// TODO: test obsolète — UI/code redesigned. Tag 'broken' pour
-//       skip en CI. À récrire dans un chantier dédié.
-@Tags(<String>['broken'])
-library;
-
 import 'dart:async';
 
 import 'package:arena/core/services/bring_to_front.dart';
@@ -60,6 +55,11 @@ void main() {
     when(() => overlay.start(matchId: any(named: 'matchId')))
         .thenAnswer((_) async {});
     when(() => overlay.stop()).thenAnswer((_) async {});
+    // L'overlay a aussi pause()/resume() pour figer le chrono pendant
+    // une pause — les stubber empêche les appels de tomber dans le
+    // mock null-default (qui throw silently et bloque la transition).
+    when(() => overlay.pause()).thenAnswer((_) async {});
+    when(() => overlay.resume()).thenAnswer((_) async {});
     when(
       () => matches.markForfeit(
         matchId: any(named: 'matchId'),

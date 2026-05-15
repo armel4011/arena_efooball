@@ -1,8 +1,3 @@
-// TODO: test obsolète — UI/code redesigned. Tag 'broken' pour
-//       skip en CI. À récrire dans un chantier dédié.
-@Tags(<String>['broken'])
-library;
-
 import 'package:arena/core/router/admin_router.dart';
 import 'package:arena/data/models/profile.dart';
 import 'package:arena/data/models/user_role.dart';
@@ -55,14 +50,15 @@ void main() {
 
   setUp(() => repo = _FakeAdminAuthRepository());
 
-  testWidgets('renders the 6-digit code field and the recovery link',
+  testWidgets('renders the 6-digit code field and the backup-code link',
       (tester) async {
     await tester.pumpWidget(_scoped(repo));
     await tester.pumpAndSettle();
 
-    expect(find.text('VÉRIFICATION TOTP'), findsOneWidget);
+    // Hero du corps + CTA + lien fallback (recovery via backup code).
+    expect(find.text('CODE À 6 CHIFFRES'), findsOneWidget);
     expect(find.text('VÉRIFIER'), findsOneWidget);
-    expect(find.textContaining('code de récupération'), findsOneWidget);
+    expect(find.textContaining('backup code'), findsOneWidget);
   });
 
   testWidgets('does not call repo when fewer than 6 digits are entered',
@@ -85,8 +81,9 @@ void main() {
     await tester.pumpWidget(_scoped(repo));
     await tester.pumpAndSettle();
 
+    // L'écran auto-submit dès que le code atteint 6 chiffres
+    // (cf. `_onCodeChanged`) — pas besoin de taper sur VÉRIFIER.
     await tester.enterText(find.byType(TextField), '123456');
-    await tester.tap(find.text('VÉRIFIER'));
     await tester.pumpAndSettle();
 
     expect(find.text('HOME_STUB'), findsOneWidget);
@@ -100,20 +97,20 @@ void main() {
     await tester.pumpWidget(_scoped(repo));
     await tester.pumpAndSettle();
 
+    // Auto-submit à 6 chiffres ; pas de tap VÉRIFIER ici non plus.
     await tester.enterText(find.byType(TextField), '000000');
-    await tester.tap(find.text('VÉRIFIER'));
     await tester.pumpAndSettle();
 
     expect(find.byIcon(Icons.error_outline), findsOneWidget);
     expect(find.text('HOME_STUB'), findsNothing);
   });
 
-  testWidgets('"recovery code" button shows the deferred-backend snackbar',
+  testWidgets('"backup code" button shows the deferred-backend snackbar',
       (tester) async {
     await tester.pumpWidget(_scoped(repo));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.textContaining('code de récupération'));
+    await tester.tap(find.textContaining('backup code'));
     await tester.pump();
 
     expect(find.textContaining('PHASE 2bis backend'), findsOneWidget);
