@@ -1,0 +1,21 @@
+# Template — copie en `android/key.properties` (gitignored) et renseigne
+# les valeurs réelles. Le fichier `key.properties` ne doit JAMAIS être
+# commit (cf. .gitignore).
+#
+# Génération du keystore (à faire une seule fois — sauvegarde-le !) :
+#
+#   keytool -genkey -v \
+#     -keystore android/app/arena-release.keystore \
+#     -alias arena \
+#     -keyalg RSA -keysize 2048 \
+#     -validity 10000
+#
+# keytool te demandera : storePassword, keyPassword (peuvent être
+# identiques pour la simplicité), puis nom / org / pays. Le fichier
+# `.keystore` produit est ce que tu sauvegardes dans 1Password +
+# 1 copie offline.
+
+storePassword=
+keyPassword=
+keyAlias=arena
+storeFile=arena-release.keystore

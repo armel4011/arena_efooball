@@ -55,6 +55,14 @@ GoogleService-Info.plist
 firebase_options.dart
 secrets/
 
+# Android release signing — NE JAMAIS commiter le keystore prod, sa perte
+# = perte de l'identité Play Store de l'app. Le keystore vit en local
+# (sauvegarde chiffrée recommandée : 1Password / coffre-fort) ; sur CI
+# il est injecté via un secret GitHub. Idem pour les mots de passe.
+android/key.properties
+android/app/*.keystore
+android/app/*.jks
+
 # Sentry
 .sentryclirc
 
