@@ -50,6 +50,9 @@ void main() {
       expect(btn.onPressed, isNull);
 
       // Tick CGU only — still disabled (no WhatsApp).
+      // La page contient maintenant pays + WhatsApp + 2 doc links avant
+      // les checkboxes — ensureVisible() pour que le tap atterrisse.
+      await tester.ensureVisible(find.byType(Checkbox).first);
       await tester.tap(find.byType(Checkbox).first);
       await tester.pump();
       btn = tester.widget<ArenaButton>(find.byType(ArenaButton));
@@ -68,6 +71,7 @@ void main() {
     await tester.pumpWidget(_scoped());
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(find.byType(Checkbox).last);
     await tester.tap(find.byType(Checkbox).last);
     await tester.pump();
 
@@ -84,6 +88,7 @@ void main() {
     await tester.pumpWidget(_scoped());
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(find.textContaining('Lire les Conditions'));
     await tester.tap(find.textContaining('Lire les Conditions'));
     await tester.pumpAndSettle();
 
