@@ -145,22 +145,29 @@ final userRouterProvider = Provider<GoRouter>((ref) {
       }
 
       // Authenticated. Force CGU acceptance for legacy / SSO accounts
-      // that landed here without a `cgu_accepted_at` stamp.
+      // qui ont atterri ici sans `cgu_accepted_at`.
       //
-      // Use `valueOrNull` (not `value`) so a transient profile fetch
-      // failure — typically a SocketException when the device DNS goes
-      // out — doesn't throw inside the router redirect and spam the
-      // console on every refresh tick. Treating the error as "profile
-      // not loaded yet" keeps redirects idempotent until the fetch
-      // recovers.
-      final profile = ref.read(currentProfileProvider).valueOrNull;
+      // `valueOrNull` retourne null pendant qu'un fetch est en vol
+      // (typique : un token refresh Supabase invalide
+      // `currentProfileProvider` et le repasse en `AsyncLoading` quelques
+      // ms le temps de re-fetch). Pendant ce trou, on NE doit PAS
+      // décider que "tout est OK → home" sinon on arrache l'utilisateur
+      // de la page CGU à chaque refresh de token (flip-flop).
+      final profileAsync = ref.read(currentProfileProvider);
+      final profile = profileAsync.valueOrNull;
+
       if (profile != null && !profile.hasAcceptedCgu) {
         return loc == UserRoutes.cguAcceptance
             ? null
             : UserRoutes.cguAcceptance;
       }
 
-      // CGU OK — keep them out of auth + cgu screens.
+      // Si le profil n'est pas encore résolu, on reste où on est —
+      // surtout pas de "redirect vers home" qui écraserait /cgu-acceptance
+      // pendant qu'on attend la prochaine émission du provider.
+      if (profile == null) return null;
+
+      // CGU OK + profil chargé — on évacue des écrans d'auth et CGU.
       if (UserRoutes.unauthenticated.contains(loc) ||
           loc == UserRoutes.onboarding ||
           loc == UserRoutes.cguAcceptance) {

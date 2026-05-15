@@ -1,6 +1,7 @@
 import 'package:arena/core/i18n/i18n_service.dart';
 import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/core/utils/supported_countries.dart';
 import 'package:arena/data/repositories/auth_failure.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
@@ -16,29 +17,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 const _cguVersion = '2026-05-01';
-
-/// Liste des pays supportés au signup, avec indicatif téléphonique E.164.
-/// Partagée entre `_RegisterUserScreenState` (pour construire le numéro
-/// WhatsApp E.164) et `_ProfileStep` (pour afficher le picker + le préfixe
-/// dans le label du champ WhatsApp).
-const _supportedCountries = <_Country>[
-  _Country('CM', 'Cameroun', '🇨🇲', '+237'),
-  _Country('SN', 'Sénégal', '🇸🇳', '+221'),
-  _Country('CI', "Côte d'Ivoire", '🇨🇮', '+225'),
-  _Country('GA', 'Gabon', '🇬🇦', '+241'),
-  _Country('BJ', 'Bénin', '🇧🇯', '+229'),
-  _Country('TG', 'Togo', '🇹🇬', '+228'),
-  _Country('BF', 'Burkina Faso', '🇧🇫', '+226'),
-  _Country('ML', 'Mali', '🇲🇱', '+223'),
-  _Country('NE', 'Niger', '🇳🇪', '+227'),
-  _Country('TD', 'Tchad', '🇹🇩', '+235'),
-  _Country('GN', 'Guinée', '🇬🇳', '+224'),
-  _Country('CD', 'RD Congo', '🇨🇩', '+243'),
-  _Country('MG', 'Madagascar', '🇲🇬', '+261'),
-];
-
-String _dialCodeFor(String countryCode) =>
-    _supportedCountries.firstWhere((c) => c.code == countryCode).dialCode;
 
 class RegisterUserScreen extends ConsumerStatefulWidget {
   const RegisterUserScreen({super.key});
@@ -104,16 +82,6 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
     }
   }
 
-  /// Construit le numéro WhatsApp au format E.164 : `${dialCode}${local}`
-  /// avec le `0` de tête local stripé. L'input n'accepte que des chiffres
-  /// donc on est sûr de ne pas avoir de caractères parasites.
-  String _whatsappE164() {
-    final dial = _dialCodeFor(_countryCode);
-    var local = _whatsappCtrl.text.replaceAll(RegExp(r'\D'), '');
-    if (local.startsWith('0')) local = local.substring(1);
-    return '$dial$local';
-  }
-
   Future<void> _submit() async {
     final now = DateTime.now().toUtc();
     final locale = ref.read(currentLocaleProvider);
@@ -124,7 +92,10 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
           countryCode: _countryCode,
           preferredLanguage: locale.locale.languageCode,
           preferredCurrency: 'XAF', // can be adjusted later by feature flags
-          whatsappNumber: _whatsappE164(),
+          whatsappNumber: buildE164Phone(
+            countryCode: _countryCode,
+            local: _whatsappCtrl.text,
+          ),
           cguAcceptedAt: now,
           cguVersionAccepted: _cguVersion,
           privacyPolicyAcceptedAt: now,
@@ -367,16 +338,9 @@ class _ProfileStep extends StatelessWidget {
   final VoidCallback onSubmit;
   final bool isLoading;
 
-  String get _dialCode => _dialCodeFor(countryCode);
+  String get _dialCode => dialCodeFor(countryCode);
 
-  /// Le numéro WhatsApp local doit être 7+ chiffres une fois le `0`
-  /// de tête éventuel retiré. Validation permissive pour couvrir les
-  /// formats variables entre opérateurs (Orange, MTN, Moov, Wave, etc.).
-  bool get _isWhatsappValid {
-    final digits = whatsappCtrl.text.replaceAll(RegExp(r'\D'), '');
-    final stripped = digits.startsWith('0') ? digits.substring(1) : digits;
-    return stripped.length >= 7 && stripped.length <= 12;
-  }
+  bool get _isWhatsappValid => isLocalPhoneValid(whatsappCtrl.text);
 
   bool get _canSubmit =>
       cgu &&
@@ -406,7 +370,7 @@ class _ProfileStep extends StatelessWidget {
           _CountryPicker(
             selected: countryCode,
             onSelect: onCountry,
-            options: _supportedCountries,
+            options: kSupportedCountries,
             isLoading: isLoading,
           ),
           const SizedBox(height: ArenaSpacing.md),
@@ -471,14 +435,6 @@ class _ProfileStep extends StatelessWidget {
   }
 }
 
-class _Country {
-  const _Country(this.code, this.name, this.flag, this.dialCode);
-  final String code;
-  final String name;
-  final String flag;
-  final String dialCode;
-}
-
 class _AvatarColorPicker extends StatelessWidget {
   const _AvatarColorPicker({
     required this.initial,
@@ -522,7 +478,7 @@ class _CountryPicker extends StatelessWidget {
 
   final String selected;
   final ValueChanged<String> onSelect;
-  final List<_Country> options;
+  final List<SupportedCountry> options;
   final bool isLoading;
 
   @override

@@ -238,9 +238,18 @@ class AcceptCguController extends AsyncNotifier<bool> {
   @override
   Future<bool> build() async => false;
 
+  /// Persiste l'acceptation des CGU sur le profil. Pour les comptes SSO
+  /// (Google sign-in qui crée un profil minimal), c'est aussi le moment
+  /// où on collecte le pays et le numéro WhatsApp manquants.
+  ///
+  /// Si [countryCode] ou [whatsappNumber] sont null, le champ correspondant
+  /// n'est pas modifié — utile pour les rares comptes legacy qui passent
+  /// par cette page sans avoir besoin de mettre à jour ces champs.
   Future<void> accept({
     required String cguVersion,
     bool marketingConsent = false,
+    String? countryCode,
+    String? whatsappNumber,
   }) async {
     final session = ref.read(currentSessionProvider);
     if (session == null) {
@@ -254,15 +263,15 @@ class AcceptCguController extends AsyncNotifier<bool> {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final now = DateTime.now().toUtc();
-      await ref.read(profileRepositoryProvider).update(
-        session.user.id,
-        {
-          'cgu_accepted_at': now.toIso8601String(),
-          'cgu_version_accepted': cguVersion,
-          'privacy_policy_accepted_at': now.toIso8601String(),
-          'marketing_consent': marketingConsent,
-        },
-      );
+      final patch = <String, dynamic>{
+        'cgu_accepted_at': now.toIso8601String(),
+        'cgu_version_accepted': cguVersion,
+        'privacy_policy_accepted_at': now.toIso8601String(),
+        'marketing_consent': marketingConsent,
+      };
+      if (countryCode != null) patch['country_code'] = countryCode;
+      if (whatsappNumber != null) patch['whatsapp_number'] = whatsappNumber;
+      await ref.read(profileRepositoryProvider).update(session.user.id, patch);
       ref.invalidate(currentProfileProvider);
       return true;
     });

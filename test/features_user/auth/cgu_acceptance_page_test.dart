@@ -28,47 +28,53 @@ Widget _scoped() => ProviderScope(
     );
 
 void main() {
-  testWidgets('renders title, doc links and the two consent tiles',
+  testWidgets('renders title, country picker, WhatsApp field and two consents',
       (tester) async {
     await tester.pumpWidget(_scoped());
     await tester.pumpAndSettle();
 
-    expect(find.text('CONDITIONS GÉNÉRALES'), findsOneWidget);
-    expect(find.textContaining('Conditions Générales'), findsWidgets);
-    expect(find.textContaining('politique de confidentialité'), findsWidgets);
+    expect(find.textContaining('COMPLÈTE TON'), findsOneWidget);
+    expect(find.text('PAYS'), findsOneWidget);
+    expect(find.textContaining('WHATSAPP'), findsOneWidget);
     expect(find.byType(Checkbox), findsNWidgets(2));
   });
 
-  testWidgets('"accept" button is disabled until the CGU checkbox is checked',
-      (tester) async {
-    await tester.pumpWidget(_scoped());
-    await tester.pumpAndSettle();
+  testWidgets(
+    'CTA stays disabled until CGU is checked AND a valid WhatsApp is typed',
+    (tester) async {
+      await tester.pumpWidget(_scoped());
+      await tester.pumpAndSettle();
 
-    final btn = tester.widget<ArenaButton>(find.byType(ArenaButton));
-    expect(btn.onPressed, isNull, reason: 'CTA must start disabled');
+      // Disabled at start.
+      var btn = tester.widget<ArenaButton>(find.byType(ArenaButton));
+      expect(btn.onPressed, isNull);
 
-    // Tick the first (mandatory) checkbox.
-    await tester.tap(find.byType(Checkbox).first);
-    await tester.pump();
+      // Tick CGU only — still disabled (no WhatsApp).
+      await tester.tap(find.byType(Checkbox).first);
+      await tester.pump();
+      btn = tester.widget<ArenaButton>(find.byType(ArenaButton));
+      expect(btn.onPressed, isNull);
 
-    final btnAfter = tester.widget<ArenaButton>(find.byType(ArenaButton));
-    expect(btnAfter.onPressed, isNotNull);
-  });
+      // Type a valid WhatsApp local number — CTA enables.
+      await tester.enterText(find.byType(TextField).first, '0707070707');
+      await tester.pump();
+      btn = tester.widget<ArenaButton>(find.byType(ArenaButton));
+      expect(btn.onPressed, isNotNull);
+    },
+  );
 
   testWidgets('marketing checkbox can be toggled independently',
       (tester) async {
     await tester.pumpWidget(_scoped());
     await tester.pumpAndSettle();
 
-    // Tap second checkbox alone.
     await tester.tap(find.byType(Checkbox).last);
     await tester.pump();
 
-    // Submit is still disabled — only marketing was ticked.
+    // CTA still disabled (no CGU + no WhatsApp).
     final btn = tester.widget<ArenaButton>(find.byType(ArenaButton));
     expect(btn.onPressed, isNull);
 
-    // The marketing tile checkbox is now checked.
     final marketingCheckbox =
         tester.widget<Checkbox>(find.byType(Checkbox).last);
     expect(marketingCheckbox.value, isTrue);
@@ -78,7 +84,7 @@ void main() {
     await tester.pumpWidget(_scoped());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.textContaining("Lire les Conditions"));
+    await tester.tap(find.textContaining('Lire les Conditions'));
     await tester.pumpAndSettle();
 
     expect(find.byType(AlertDialog), findsOneWidget);

@@ -1,22 +1,24 @@
 import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/core/utils/supported_countries.dart';
 import 'package:arena/data/repositories/auth_failure.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/auth/widgets/auth_failure_message.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-/// Forced after first sign-in when `cgu_accepted_at` is null on the
-/// profile (legacy accounts, SSO sign-ups that skipped the multi-step
-/// register form, etc.).
+/// Forcée après le premier sign-in pour les comptes SSO (Google) qui
+/// arrivent sans `cgu_accepted_at` ni `whatsapp_number`. C'est ici qu'on
+/// collecte l'acceptation légale + le pays + le numéro WhatsApp avant
+/// de laisser l'utilisateur accéder à l'app.
 ///
-/// Hard-coded CGU version for V1.0 — kept in sync with
-/// `register_user_screen.dart` (`_cguVersion = '2026-05-01'`). When
-/// admin starts editing CGU from the super-admin app (PHASE 12), swap
-/// both for a fetch from `app_config.cgu_version`.
+/// Hard-coded CGU version pour V1.0 — gardée en sync avec
+/// `register_user_screen.dart`.
 const String _kCguVersion = '2026-05-01';
 
 class CguAcceptancePage extends ConsumerStatefulWidget {
@@ -27,14 +29,45 @@ class CguAcceptancePage extends ConsumerStatefulWidget {
 }
 
 class _CguAcceptancePageState extends ConsumerState<CguAcceptancePage> {
+  final _whatsappCtrl = TextEditingController();
+  String _countryCode = 'CM';
   bool _cguChecked = false;
   bool _marketingChecked = false;
+  bool _seededFromProfile = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _whatsappCtrl.addListener(_onChanged);
+  }
+
+  @override
+  void dispose() {
+    _whatsappCtrl
+      ..removeListener(_onChanged)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _onChanged() {
+    if (mounted) setState(() {});
+  }
+
+  bool get _isWhatsappValid => isLocalPhoneValid(_whatsappCtrl.text);
+
+  bool get _canSubmit => _cguChecked && _isWhatsappValid;
 
   Future<void> _submit() async {
-    if (!_cguChecked) return;
+    if (!_canSubmit) return;
+    FocusScope.of(context).unfocus();
     await ref.read(acceptCguControllerProvider.notifier).accept(
           cguVersion: _kCguVersion,
           marketingConsent: _marketingChecked,
+          countryCode: _countryCode,
+          whatsappNumber: buildE164Phone(
+            countryCode: _countryCode,
+            local: _whatsappCtrl.text,
+          ),
         );
     if (!mounted) return;
     final state = ref.read(acceptCguControllerProvider);
@@ -51,8 +84,18 @@ class _CguAcceptancePageState extends ConsumerState<CguAcceptancePage> {
         ? authFailureToMessage(_asFailure(state.error))
         : null;
 
+    // Pré-remplir le pays avec celui déjà présent sur le profil SSO
+    // (Google sign-in pose 'CI' par défaut, mais un compte legacy peut
+    // avoir autre chose).
+    final profile = ref.watch(currentProfileProvider).valueOrNull;
+    if (profile != null && !_seededFromProfile) {
+      final inList = kSupportedCountries.any((c) => c.code == profile.countryCode);
+      _countryCode = inList ? profile.countryCode : 'CM';
+      _seededFromProfile = true;
+    }
+
     return Scaffold(
-      // No back button — acceptance is mandatory once we're here.
+      // Pas de back — l'acceptation est obligatoire pour continuer.
       appBar: const ArenaAppBar(title: '', showBack: false),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -60,18 +103,42 @@ class _CguAcceptancePageState extends ConsumerState<CguAcceptancePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('CONDITIONS GÉNÉRALES', style: ArenaTypography.displayMedium),
+              Text('COMPLÈTE TON\nPROFIL', style: ArenaTypography.displayMedium),
               const SizedBox(height: ArenaSpacing.sm),
               Text(
-                'Avant de jouer, on a besoin de ton accord sur les'
-                ' conditions et la politique de confidentialité d\'ARENA.',
+                'Quelques infos manquantes avant de pouvoir jouer.',
                 style: ArenaTypography.bodyMedium.copyWith(
                   color: ArenaColors.textMuted,
                 ),
               ),
+              const SizedBox(height: ArenaSpacing.xl),
+              _CountryPicker(
+                selected: _countryCode,
+                onSelect: (v) => setState(() => _countryCode = v),
+                isLoading: isLoading,
+              ),
+              const SizedBox(height: ArenaSpacing.md),
+              ArenaTextField(
+                label: 'WHATSAPP (${dialCodeFor(_countryCode)})',
+                hint: 'Ex. 07 07 07 07 07',
+                helper:
+                    "Le code pays ${dialCodeFor(_countryCode)} est ajouté"
+                    ' automatiquement.',
+                controller: _whatsappCtrl,
+                keyboardType: TextInputType.phone,
+                textInputAction: TextInputAction.done,
+                prefixIcon: Icons.chat_outlined,
+                enabled: !isLoading,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[\d\s]')),
+                ],
+                errorText: _whatsappCtrl.text.isEmpty || _isWhatsappValid
+                    ? null
+                    : 'Numéro WhatsApp invalide.',
+              ),
               const SizedBox(height: ArenaSpacing.lg),
               _DocLink(
-                label: 'Lire les Conditions Générales d\'Utilisation',
+                label: "Lire les Conditions Générales d'Utilisation",
                 onTap: () => _showDocPlaceholder(context, 'CGU'),
               ),
               const SizedBox(height: ArenaSpacing.sm),
@@ -85,7 +152,7 @@ class _CguAcceptancePageState extends ConsumerState<CguAcceptancePage> {
                 onChanged: isLoading
                     ? null
                     : (v) => setState(() => _cguChecked = v ?? false),
-                title: 'J\'accepte les CGU et la politique de confidentialité',
+                title: "J'accepte les CGU et la politique de confidentialité",
                 required: true,
               ),
               const SizedBox(height: ArenaSpacing.sm),
@@ -95,7 +162,7 @@ class _CguAcceptancePageState extends ConsumerState<CguAcceptancePage> {
                     ? null
                     : (v) => setState(() => _marketingChecked = v ?? false),
                 title:
-                    'J\'accepte de recevoir des informations sur les nouveaux'
+                    "J'accepte de recevoir des informations sur les nouveaux"
                     ' tournois (optionnel)',
               ),
               if (errorMessage != null) ...[
@@ -104,11 +171,11 @@ class _CguAcceptancePageState extends ConsumerState<CguAcceptancePage> {
               ],
               const SizedBox(height: ArenaSpacing.xl),
               ArenaButton(
-                label: 'ACCEPTER ET CONTINUER',
+                label: 'CONTINUER',
                 fullWidth: true,
                 size: ArenaButtonSize.large,
                 isLoading: isLoading,
-                onPressed: _cguChecked ? _submit : null,
+                onPressed: _canSubmit ? _submit : null,
               ),
               const SizedBox(height: ArenaSpacing.md),
               TextButton(
@@ -133,7 +200,7 @@ class _CguAcceptancePageState extends ConsumerState<CguAcceptancePage> {
       context: context,
       builder: (_) => AlertDialog(
         title: Text(docName),
-        content: Text(
+        content: const Text(
           'La version complète sera affichée ici (PHASE 9 — '
           'AboutPage + WebView vers les docs hébergés).',
         ),
@@ -144,6 +211,51 @@ class _CguAcceptancePageState extends ConsumerState<CguAcceptancePage> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _CountryPicker extends StatelessWidget {
+  const _CountryPicker({
+    required this.selected,
+    required this.onSelect,
+    required this.isLoading,
+  });
+
+  final String selected;
+  final ValueChanged<String> onSelect;
+  final bool isLoading;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('PAYS', style: ArenaTypography.labelMedium),
+        const SizedBox(height: ArenaSpacing.sm),
+        DropdownButtonFormField<String>(
+          initialValue: selected,
+          isExpanded: true,
+          dropdownColor: ArenaColors.surfaceLight,
+          onChanged: isLoading ? null : (v) => v == null ? null : onSelect(v),
+          items: [
+            for (final c in kSupportedCountries)
+              DropdownMenuItem(
+                value: c.code,
+                child: Row(
+                  children: [
+                    Text(
+                      c.flag,
+                      style: ArenaTypography.bodyLarge.copyWith(fontSize: 20),
+                    ),
+                    const SizedBox(width: ArenaSpacing.sm),
+                    Text(c.name, style: ArenaTypography.bodyLarge),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ],
     );
   }
 }
