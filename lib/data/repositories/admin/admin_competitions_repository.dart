@@ -217,7 +217,7 @@ class AdminCompetitionsRepository {
   /// Les registrations / matches / brackets cascadent via leurs FK
   /// `on delete cascade` propres.
   Future<void> delete(String competitionId) async {
-    await _client.rpc(
+    await _client.rpc<void>(
       'delete_competition_cascade',
       params: {'p_competition_id': competitionId},
     );
