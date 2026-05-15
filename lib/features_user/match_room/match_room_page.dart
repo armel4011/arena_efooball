@@ -14,8 +14,9 @@ import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:arena/features_shared/widgets/error_state.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
-import 'package:arena/features_user/match_room/widgets/manual_upload_button.dart';
+import 'package:arena/features_user/match_room/widgets/match_outcome_views.dart';
 import 'package:arena/features_user/match_room/widgets/match_recording_lifecycle.dart';
+import 'package:arena/features_user/match_room/widgets/match_room_internals.dart';
 import 'package:arena/features_user/match_room/widgets/score_edit_dialog.dart';
 import 'package:arena/features_user/streaming/start_streaming_banner.dart';
 import 'package:flutter/material.dart';
@@ -45,87 +46,6 @@ class _MatchPlayers {
   const _MatchPlayers({required this.p1, required this.p2});
   final Profile? p1;
   final Profile? p2;
-}
-
-/// Picks the most recent `score_submitted` event per player from a
-/// flat list of events. Sorted by `created_at` ascending so the last
-/// write to the map is the latest event — Supabase realtime returns
-/// in arrival order and we can't rely on that being insertion order
-/// when the dispute view triggers a resubmit.
-Map<String, Map<String, dynamic>> _latestSubmissionPerPlayer(
-  List<Map<String, dynamic>> submissions,
-) {
-  final sorted = [...submissions]..sort((a, b) {
-    final ta = DateTime.tryParse(a['created_at']?.toString() ?? '') ??
-        DateTime.fromMillisecondsSinceEpoch(0);
-    final tb = DateTime.tryParse(b['created_at']?.toString() ?? '') ??
-        DateTime.fromMillisecondsSinceEpoch(0);
-    return ta.compareTo(tb);
-  });
-  final byPlayer = <String, Map<String, dynamic>>{};
-  for (final s in sorted) {
-    final by = s['created_by'] as String?;
-    if (by != null) byPlayer[by] = s;
-  }
-  return byPlayer;
-}
-
-/// Compares two submitted score payloads and either commits the match
-/// (concordant) or flips it to disputed. Pulled out of `_ScoreFlowView`
-/// so the dispute resubmit flow shares the same comparison logic.
-Future<void> _resolveSubmissions({
-  required ArenaMatch match,
-  required Map<String, dynamic> p1Submission,
-  required Map<String, dynamic> p2Submission,
-  required MatchRepository repo,
-  required void Function(Object error) onError,
-}) async {
-  final pl1 = (p1Submission['payload'] as Map?)?.cast<String, dynamic>() ?? {};
-  final pl2 = (p2Submission['payload'] as Map?)?.cast<String, dynamic>() ?? {};
-  final s1A = pl1['score1'] as int?;
-  final s2A = pl1['score2'] as int?;
-  final s1B = pl2['score1'] as int?;
-  final s2B = pl2['score2'] as int?;
-  if (s1A == null || s2A == null || s1B == null || s2B == null) return;
-
-  final viaPenA = pl1['via_penalties'] == true;
-  final viaPenB = pl2['via_penalties'] == true;
-  final pen1A = pl1['penalty1'] as int?;
-  final pen2A = pl1['penalty2'] as int?;
-  final pen1B = pl2['penalty1'] as int?;
-  final pen2B = pl2['penalty2'] as int?;
-
-  final regulationConcordant = s1A == s1B && s2A == s2B;
-  final penaltiesConcordant = viaPenA == viaPenB &&
-      (!viaPenA || (pen1A == pen1B && pen2A == pen2B));
-  final concordant = regulationConcordant && penaltiesConcordant;
-
-  try {
-    if (concordant) {
-      String? winner;
-      if (viaPenA && pen1A != null && pen2A != null) {
-        if (pen1A > pen2A) {
-          winner = match.player1Id;
-        } else if (pen2A > pen1A) {
-          winner = match.player2Id;
-        }
-      } else if (s1A > s2A) {
-        winner = match.player1Id;
-      } else if (s2A > s1A) {
-        winner = match.player2Id;
-      }
-      await repo.commitScore(
-        matchId: match.id,
-        scoreP1: s1A,
-        scoreP2: s2A,
-        winnerId: winner,
-      );
-    } else {
-      await repo.flagDisputed(match.id);
-    }
-  } catch (e) {
-    onError(e);
-  }
 }
 
 /// Maps the match status onto the four-step v2 progress indicator.
@@ -520,15 +440,15 @@ class _StepBody extends StatelessWidget {
                     ' valider le score.',
               )
             : _ScoreFlowView(match: match, role: role),
-      MatchStatus.disputed => _DisputedView(match: match, selfId: selfId),
-      MatchStatus.completed => _CompletedView(match: match, selfId: selfId),
-      MatchStatus.cancelled => const _TerminalCard(
+      MatchStatus.disputed => DisputedView(match: match, selfId: selfId),
+      MatchStatus.completed => CompletedView(match: match, selfId: selfId),
+      MatchStatus.cancelled => const TerminalCard(
           icon: Icons.block,
           color: ArenaColors.silverDim,
           title: 'MATCH ANNULÉ',
           description: "L'admin a annulé ce match.",
         ),
-      MatchStatus.forfeited => const _TerminalCard(
+      MatchStatus.forfeited => const TerminalCard(
           icon: Icons.exit_to_app,
           color: ArenaColors.neonRed,
           title: 'FORFAIT',
@@ -1266,7 +1186,7 @@ class _ScoreFlowViewState extends ConsumerState<_ScoreFlowView> {
     Map<String, dynamic> p1Submission,
     Map<String, dynamic> p2Submission,
   ) async {
-    await _resolveSubmissions(
+    await resolveSubmissions(
       match: widget.match,
       p1Submission: p1Submission,
       p2Submission: p2Submission,
@@ -1306,7 +1226,7 @@ class _ScoreFlowViewState extends ConsumerState<_ScoreFlowView> {
         ),
       ),
       data: (submissions) {
-        final byPlayer = _latestSubmissionPerPlayer(submissions);
+        final byPlayer = latestSubmissionPerPlayer(submissions);
         final optimistic =
             ref.watch(_pendingScoreSubmissionProvider(widget.match.id));
         if (optimistic != null && !byPlayer.containsKey(selfId)) {
@@ -1639,374 +1559,6 @@ class _ProofAttachmentBlock extends StatelessWidget {
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(0)} Ko';
     return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} Mo';
-  }
-}
-
-// ─── Step 4 — Result (completed / disputed / cancelled / forfeited) ─────
-
-class _CompletedView extends StatelessWidget {
-  const _CompletedView({required this.match, required this.selfId});
-
-  final ArenaMatch match;
-  final String? selfId;
-
-  bool get _isPlayer =>
-      selfId != null &&
-      (selfId == match.player1Id || selfId == match.player2Id);
-
-  @override
-  Widget build(BuildContext context) {
-    final s1 = match.score1 ?? 0;
-    final s2 = match.score2 ?? 0;
-    return Container(
-      padding: const EdgeInsets.all(ArenaSpacing.xl),
-      decoration: arenaSuccessCardDecoration(),
-      child: Column(
-        children: [
-          const Icon(
-            Icons.emoji_events,
-            color: ArenaColors.statusWarn,
-            size: 56,
-          ),
-          const SizedBox(height: ArenaSpacing.sm),
-          Text('SCORE FINAL', style: ArenaText.inputLabel),
-          const SizedBox(height: ArenaSpacing.sm),
-          Text(
-            '$s1 — $s2',
-            style: ArenaText.bigNumber.copyWith(fontSize: 48),
-          ),
-          const SizedBox(height: ArenaSpacing.sm),
-          Text(
-            match.winnerId == null
-                ? 'Match nul.'
-                : 'Gagnant : Joueur ${match.winnerId!.substring(0, 6)}…',
-            style: ArenaText.bodyMuted,
-          ),
-          if (_isPlayer) ...[
-            const SizedBox(height: ArenaSpacing.lg),
-            ManualUploadButton(matchId: match.id, playerId: selfId!),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _DisputedView extends ConsumerStatefulWidget {
-  const _DisputedView({required this.match, required this.selfId});
-
-  final ArenaMatch match;
-  final String? selfId;
-
-  @override
-  ConsumerState<_DisputedView> createState() => _DisputedViewState();
-}
-
-class _DisputedViewState extends ConsumerState<_DisputedView> {
-  bool _resolving = false;
-
-  bool get _isPlayer =>
-      widget.selfId != null &&
-      (widget.selfId == widget.match.player1Id ||
-          widget.selfId == widget.match.player2Id);
-
-  bool get _isPlayer1 => widget.selfId == widget.match.player1Id;
-  bool get _isKnockout => widget.match.groupId == null;
-
-  @override
-  Widget build(BuildContext context) {
-    if (!_isPlayer) {
-      return _buildBanner();
-    }
-
-    final submissionsAsync =
-        ref.watch(matchScoreSubmissionsProvider(widget.match.id));
-    return submissionsAsync.when(
-      loading: _buildBanner,
-      error: (_, __) => _buildBanner(),
-      data: (submissions) {
-        final byPlayer = _latestSubmissionPerPlayer(submissions);
-        final p1Sub = widget.match.player1Id == null
-            ? null
-            : byPlayer[widget.match.player1Id];
-        final p2Sub = widget.match.player2Id == null
-            ? null
-            : byPlayer[widget.match.player2Id];
-
-        // If both players already concord on their LATEST submission
-        // (e.g. the opponent corrected first and we just landed back on
-        // this view), commit silently — _resolveSubmissions promotes
-        // the match to completed which collapses this view.
-        if (p1Sub != null && p2Sub != null && !_resolving) {
-          _resolving = true;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) _autoResolve(p1Sub, p2Sub);
-          });
-        }
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildBanner(),
-            const SizedBox(height: ArenaSpacing.lg),
-            _SubmittedScoresGrid(
-              match: widget.match,
-              p1Sub: p1Sub,
-              p2Sub: p2Sub,
-              selfIsPlayer1: _isPlayer1,
-            ),
-            const SizedBox(height: ArenaSpacing.lg),
-            ArenaButton(
-              label: 'MODIFIER MON SCORE',
-              icon: Icons.edit_outlined,
-              fullWidth: true,
-              onPressed: () => _openEditDialog(
-                _isPlayer1 ? p1Sub : p2Sub,
-              ),
-            ),
-            const SizedBox(height: ArenaSpacing.sm),
-            ManualUploadButton(
-              matchId: widget.match.id,
-              playerId: widget.selfId!,
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<void> _autoResolve(
-    Map<String, dynamic> p1Sub,
-    Map<String, dynamic> p2Sub,
-  ) async {
-    await _resolveSubmissions(
-      match: widget.match,
-      p1Submission: p1Sub,
-      p2Submission: p2Sub,
-      repo: ref.read(matchRepositoryProvider),
-      onError: (_) {/* silent — dispute view can retry on next build */},
-    );
-    if (mounted) _resolving = false;
-  }
-
-  Future<void> _openEditDialog(Map<String, dynamic>? mine) async {
-    final pl = (mine?['payload'] as Map?)?.cast<String, dynamic>() ?? {};
-    final s1 = pl['score1'] as int?;
-    final s2 = pl['score2'] as int?;
-    final viaPen = pl['via_penalties'] == true;
-    final pen1 = pl['penalty1'] as int?;
-    final pen2 = pl['penalty2'] as int?;
-    final myInitial = (_isPlayer1 ? s1 : s2)?.toString() ?? '';
-    final oppInitial = (_isPlayer1 ? s2 : s1)?.toString() ?? '';
-    final myPenInitial = viaPen
-        ? ((_isPlayer1 ? pen1 : pen2)?.toString() ?? '')
-        : '';
-    final oppPenInitial = viaPen
-        ? ((_isPlayer1 ? pen2 : pen1)?.toString() ?? '')
-        : '';
-
-    final updated = await showDialog<EditedScore>(
-      context: context,
-      builder: (_) => EditScoreDialog(
-        myInitial: myInitial,
-        oppInitial: oppInitial,
-        viaPenaltiesInitial: viaPen,
-        myPenInitial: myPenInitial,
-        oppPenInitial: oppPenInitial,
-        knockout: _isKnockout,
-      ),
-    );
-    if (updated == null || !mounted) return;
-
-    final selfId = widget.selfId;
-    if (selfId == null) return;
-
-    final myGoals = updated.my;
-    final oppGoals = updated.opp;
-    final s1New = _isPlayer1 ? myGoals : oppGoals;
-    final s2New = _isPlayer1 ? oppGoals : myGoals;
-    final pen1New = updated.viaPenalties
-        ? (_isPlayer1 ? updated.myPen : updated.oppPen)
-        : null;
-    final pen2New = updated.viaPenalties
-        ? (_isPlayer1 ? updated.oppPen : updated.myPen)
-        : null;
-
-    try {
-      await ref.read(matchRepositoryProvider).submitScore(
-            matchId: widget.match.id,
-            byProfileId: selfId,
-            scoreP1: s1New,
-            scoreP2: s2New,
-            decidedByPenalties: updated.viaPenalties,
-            penaltyP1: pen1New,
-            penaltyP2: pen2New,
-          );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Impossible de renvoyer : $e')),
-      );
-      return;
-    }
-    // The realtime stream will pick up the new event and trigger
-    // _autoResolve on the next build.
-    setState(() => _resolving = false);
-  }
-
-  Widget _buildBanner() {
-    return Container(
-      padding: const EdgeInsets.all(ArenaSpacing.lg),
-      decoration: arenaDangerCardDecoration(),
-      child: Column(
-        children: [
-          const Icon(Icons.gavel, color: ArenaColors.neonRed, size: 40),
-          const SizedBox(height: ArenaSpacing.sm),
-          Text(
-            'LITIGE EN COURS',
-            style: ArenaText.inputLabel.copyWith(color: ArenaColors.neonRed),
-          ),
-          const SizedBox(height: ArenaSpacing.sm),
-          Text(
-            "Vos scores ne concordent pas. Si tu t'es trompé, corrige-le ;"
-            ' sinon attends que ton adversaire corrige le sien. Sans accord,'
-            ' un admin tranchera à partir des preuves.',
-            textAlign: TextAlign.center,
-            style: ArenaText.bodyMuted,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SubmittedScoresGrid extends StatelessWidget {
-  const _SubmittedScoresGrid({
-    required this.match,
-    required this.p1Sub,
-    required this.p2Sub,
-    required this.selfIsPlayer1,
-  });
-
-  final ArenaMatch match;
-  final Map<String, dynamic>? p1Sub;
-  final Map<String, dynamic>? p2Sub;
-  final bool selfIsPlayer1;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _ScoreSubmissionCard(
-            label: selfIsPlayer1 ? 'TOI' : 'JOUEUR 1',
-            highlight: selfIsPlayer1,
-            payload: (p1Sub?['payload'] as Map?)?.cast<String, dynamic>(),
-          ),
-        ),
-        const SizedBox(width: ArenaSpacing.md),
-        Expanded(
-          child: _ScoreSubmissionCard(
-            label: selfIsPlayer1 ? 'JOUEUR 2' : 'TOI',
-            highlight: !selfIsPlayer1,
-            payload: (p2Sub?['payload'] as Map?)?.cast<String, dynamic>(),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ScoreSubmissionCard extends StatelessWidget {
-  const _ScoreSubmissionCard({
-    required this.label,
-    required this.highlight,
-    required this.payload,
-  });
-
-  final String label;
-  final bool highlight;
-  final Map<String, dynamic>? payload;
-
-  @override
-  Widget build(BuildContext context) {
-    final s1 = payload?['score1'] as int?;
-    final s2 = payload?['score2'] as int?;
-    final viaPen = payload?['via_penalties'] == true;
-    final pen1 = payload?['penalty1'] as int?;
-    final pen2 = payload?['penalty2'] as int?;
-    final accent = highlight ? ArenaColors.signalBlue : ArenaColors.silverDim;
-
-    return Container(
-      padding: const EdgeInsets.all(ArenaSpacing.md),
-      decoration: BoxDecoration(
-        color: ArenaColors.carbon,
-        border: Border.all(color: accent.withValues(alpha: 0.5)),
-        borderRadius: BorderRadius.circular(ArenaRadius.md),
-      ),
-      child: Column(
-        children: [
-          Text(
-            label,
-            style: ArenaText.inputLabel.copyWith(color: accent),
-          ),
-          const SizedBox(height: ArenaSpacing.sm),
-          Text(
-            (s1 == null || s2 == null) ? '— : —' : '$s1 — $s2',
-            style: ArenaText.bigNumber.copyWith(fontSize: 32),
-          ),
-          if (viaPen && pen1 != null && pen2 != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              'TAB $pen1 — $pen2',
-              style: ArenaText.small.copyWith(color: ArenaColors.silver),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _TerminalCard extends StatelessWidget {
-  const _TerminalCard({
-    required this.icon,
-    required this.color,
-    required this.title,
-    required this.description,
-  });
-
-  final IconData icon;
-  final Color color;
-  final String title;
-  final String description;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(ArenaSpacing.xl),
-      decoration: BoxDecoration(
-        color: ArenaColors.carbon,
-        border: Border.all(color: color.withValues(alpha: 0.4)),
-        borderRadius: BorderRadius.circular(ArenaRadius.lg),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 48),
-          const SizedBox(height: ArenaSpacing.sm),
-          Text(
-            title,
-            style: ArenaText.inputLabel.copyWith(color: color),
-          ),
-          const SizedBox(height: ArenaSpacing.sm),
-          Text(
-            description,
-            textAlign: TextAlign.center,
-            style: ArenaText.bodyMuted,
-          ),
-        ],
-      ),
-    );
   }
 }
 
