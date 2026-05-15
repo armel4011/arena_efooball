@@ -9,8 +9,10 @@ import 'package:arena/features_shared/widgets/arena_badge.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
+import 'package:arena/core/router/admin_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 /// PHASE 11 · SA3 — super-admin user management.
 ///
@@ -32,6 +34,11 @@ class _SuperAdminUsersState extends ConsumerState<SuperAdminUsers> {
   String? _statusFilter;
   String? _countryCode;
   String _searchQuery = '';
+  bool _wonCompetition = false;
+  bool _paidEntry = false;
+  bool _receivedReward = false;
+  bool _hadDispute = false;
+  bool _guiltyInDispute = false;
 
   static const _statusFilters = <(String?, String)>[
     (null, 'Tous'),
@@ -52,16 +59,46 @@ class _SuperAdminUsersState extends ConsumerState<SuperAdminUsers> {
     super.dispose();
   }
 
+  AdminUsersFilter get _filter => AdminUsersFilter(
+        countryCode: _countryCode,
+        filter: _statusFilter,
+        searchQuery: _searchQuery.isEmpty ? null : _searchQuery,
+        wonCompetition: _wonCompetition,
+        paidEntry: _paidEntry,
+        receivedReward: _receivedReward,
+        hadDispute: _hadDispute,
+        guiltyInDispute: _guiltyInDispute,
+      );
+
+  void _resetAdvanced() {
+    setState(() {
+      _wonCompetition = false;
+      _paidEntry = false;
+      _receivedReward = false;
+      _hadDispute = false;
+      _guiltyInDispute = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final users = ref.watch(adminUsersProvider(AdminUsersFilter(
-      countryCode: _countryCode,
-      filter: _statusFilter,
-      searchQuery: _searchQuery.isEmpty ? null : _searchQuery,
-    )));
+    final filter = _filter;
+    final users = ref.watch(adminUsersProvider(filter));
 
     return Scaffold(
-      appBar: const ArenaAppBar(title: 'Utilisateurs'),
+      appBar: ArenaAppBar(
+        title: 'Utilisateurs',
+        actions: [
+          IconButton(
+            icon: const Icon(
+              Icons.campaign_outlined,
+              color: ArenaColors.bone,
+            ),
+            tooltip: 'Notif broadcast',
+            onPressed: () => context.go(AdminRoutes.superBroadcast),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(ArenaSpacing.lg),
@@ -88,6 +125,57 @@ class _SuperAdminUsersState extends ConsumerState<SuperAdminUsers> {
                   _countryFilters.indexWhere((e) => e.$1 == _countryCode),
               onTap: (i) =>
                   setState(() => _countryCode = _countryFilters[i].$1),
+            ),
+            const SizedBox(height: ArenaSpacing.md),
+            Row(
+              children: [
+                Expanded(
+                  child: Text('ACTIVITÉ', style: ArenaText.inputLabel),
+                ),
+                if (filter.hasAdvancedFilter)
+                  TextButton(
+                    onPressed: _resetAdvanced,
+                    child: Text(
+                      'Réinitialiser',
+                      style: ArenaText.small.copyWith(
+                        color: ArenaColors.signalBlue,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: ArenaSpacing.sm),
+            _ToggleChipsWrap(
+              chips: [
+                _ToggleChipData(
+                  label: '🏆 A gagné',
+                  active: _wonCompetition,
+                  onTap: () =>
+                      setState(() => _wonCompetition = !_wonCompetition),
+                ),
+                _ToggleChipData(
+                  label: '💳 A payé',
+                  active: _paidEntry,
+                  onTap: () => setState(() => _paidEntry = !_paidEntry),
+                ),
+                _ToggleChipData(
+                  label: '💰 A reçu un gain',
+                  active: _receivedReward,
+                  onTap: () =>
+                      setState(() => _receivedReward = !_receivedReward),
+                ),
+                _ToggleChipData(
+                  label: '⚖ Litige',
+                  active: _hadDispute,
+                  onTap: () => setState(() => _hadDispute = !_hadDispute),
+                ),
+                _ToggleChipData(
+                  label: '🚨 Coupable',
+                  active: _guiltyInDispute,
+                  onTap: () =>
+                      setState(() => _guiltyInDispute = !_guiltyInDispute),
+                ),
+              ],
             ),
             const SizedBox(height: ArenaSpacing.md),
             users.when(
@@ -177,6 +265,65 @@ class _ChipsRow extends StatelessWidget {
             ),
         ],
       ),
+    );
+  }
+}
+
+/// Données d'un chip toggle multi-select (chaque chip s'allume/éteint
+/// indépendamment, contrairement à `_ChipsRow` qui est mono-select).
+class _ToggleChipData {
+  const _ToggleChipData({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+}
+
+class _ToggleChipsWrap extends StatelessWidget {
+  const _ToggleChipsWrap({required this.chips});
+
+  final List<_ToggleChipData> chips;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: ArenaSpacing.xs,
+      runSpacing: ArenaSpacing.xs,
+      children: [
+        for (final c in chips)
+          InkWell(
+            onTap: c.onTap,
+            borderRadius: BorderRadius.circular(ArenaRadius.round),
+            child: AnimatedContainer(
+              duration: ArenaDurations.short,
+              padding: const EdgeInsets.symmetric(
+                horizontal: ArenaSpacing.md,
+                vertical: 6,
+              ),
+              decoration: BoxDecoration(
+                color: c.active
+                    ? ArenaColors.signalBlue.withValues(alpha: 0.15)
+                    : ArenaColors.carbon,
+                borderRadius: BorderRadius.circular(ArenaRadius.round),
+                border: Border.all(
+                  color: c.active ? ArenaColors.signalBlue : ArenaColors.border,
+                ),
+              ),
+              child: Text(
+                c.label,
+                style: ArenaText.body.copyWith(
+                  color: c.active
+                      ? ArenaColors.signalBlue
+                      : ArenaColors.silver,
+                  fontWeight: c.active ? FontWeight.w600 : FontWeight.w500,
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
