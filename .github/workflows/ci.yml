@@ -38,8 +38,10 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          # Doit rester aligné avec pubspec.yaml -> environment.flutter.
-          flutter-version: '3.24.0'
+          # Pas de pin de version : `app_usage 4.1.0` exige Dart ≥ 3.8,
+          # ce qui n'est dispo qu'à partir de Flutter 3.32. Le channel
+          # `stable` tracking est suffisamment stable pour ARENA, et
+          # évite de devoir bumper la CI à chaque release.
           channel: stable
           cache: true
 
