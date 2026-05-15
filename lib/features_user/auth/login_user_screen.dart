@@ -135,14 +135,6 @@ class _LoginUserScreenState extends ConsumerState<LoginUserScreen> {
                   isLoading: googleState.isLoading,
                   onPressed: isLoading ? null : _submitGoogle,
                 ),
-                const SizedBox(height: ArenaSpacing.sm),
-                ArenaButton(
-                  label: '🍎 Continuer avec Apple',
-                  fullWidth: true,
-                  size: ArenaButtonSize.large,
-                  variant: ArenaButtonVariant.secondary,
-                  onPressed: isLoading ? null : () => _ssoSnack(context),
-                ),
                 const SizedBox(height: ArenaSpacing.lg),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -174,15 +166,6 @@ class _LoginUserScreenState extends ConsumerState<LoginUserScreen> {
     );
   }
 
-  void _ssoSnack(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Sign-in with Apple : disponible quand le compte Apple Developer sera activé.',
-        ),
-      ),
-    );
-  }
 }
 
 class _OrDivider extends StatelessWidget {

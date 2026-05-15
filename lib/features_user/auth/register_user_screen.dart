@@ -99,13 +99,21 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
     }
   }
 
+  Future<void> _submitGoogle() async {
+    FocusScope.of(context).unfocus();
+    await ref.read(googleSsoControllerProvider.notifier).signIn();
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(signUpControllerProvider);
-    final isLoading = state.isLoading;
+    final googleState = ref.watch(googleSsoControllerProvider);
+    final isLoading = state.isLoading || googleState.isLoading;
     final errorMessage = state.hasError
         ? authFailureToMessage(_asFailure(state.error))
-        : null;
+        : googleState.hasError
+            ? authFailureToMessage(_asFailure(googleState.error))
+            : null;
 
     return Scaffold(
       appBar: ArenaAppBar(
@@ -135,6 +143,8 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
                     passwordCtrl: _passwordCtrl,
                     passwordConfirmCtrl: _passwordConfirmCtrl,
                     onNext: _next,
+                    onGoogle: _submitGoogle,
+                    googleLoading: googleState.isLoading,
                     isLoading: isLoading,
                   ),
                 1 => _ProfileStep(
@@ -177,6 +187,8 @@ class _AccountStep extends StatelessWidget {
     required this.passwordCtrl,
     required this.passwordConfirmCtrl,
     required this.onNext,
+    required this.onGoogle,
+    required this.googleLoading,
     required this.isLoading,
   });
 
@@ -184,6 +196,8 @@ class _AccountStep extends StatelessWidget {
   final TextEditingController passwordCtrl;
   final TextEditingController passwordConfirmCtrl;
   final VoidCallback onNext;
+  final Future<void> Function() onGoogle;
+  final bool googleLoading;
   final bool isLoading;
 
   String? _emailError(String value) {
@@ -219,6 +233,17 @@ class _AccountStep extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          ArenaButton(
+            label: "🔵 S'inscrire avec Google",
+            fullWidth: true,
+            size: ArenaButtonSize.large,
+            variant: ArenaButtonVariant.secondary,
+            isLoading: googleLoading,
+            onPressed: isLoading ? null : onGoogle,
+          ),
+          const SizedBox(height: ArenaSpacing.md),
+          const _OrDivider(),
+          const SizedBox(height: ArenaSpacing.md),
           ArenaTextField(
             label: 'EMAIL',
             hint: 'joueur@arena.app',
@@ -600,6 +625,25 @@ class _StepShell extends StatelessWidget {
           child,
         ],
       ),
+    );
+  }
+}
+
+class _OrDivider extends StatelessWidget {
+  const _OrDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        const Expanded(child: Divider(color: ArenaColors.border, height: 1)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: ArenaSpacing.md),
+          child: Text('OU', style: ArenaText.small),
+        ),
+        const Expanded(child: Divider(color: ArenaColors.border, height: 1)),
+      ],
     );
   }
 }
