@@ -3,6 +3,7 @@ import 'package:arena/data/repositories/auth_failure.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
+import 'package:arena/features_shared/widgets/google_sign_in_button.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/auth/widgets/auth_failure_message.dart';
 import 'package:flutter/material.dart';
@@ -57,7 +58,10 @@ class _LoginUserScreenState extends ConsumerState<LoginUserScreen> {
             : null;
 
     return Scaffold(
-      appBar: const ArenaAppBar(title: ''),
+      appBar: ArenaAppBar(
+        title: '',
+        onBack: isLoading ? null : () => context.goNamed('user.splash'),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(ArenaSpacing.lg),
@@ -127,11 +131,9 @@ class _LoginUserScreenState extends ConsumerState<LoginUserScreen> {
                 const SizedBox(height: ArenaSpacing.lg),
                 const _OrDivider(),
                 const SizedBox(height: ArenaSpacing.md),
-                ArenaButton(
-                  label: '🔵 Continuer avec Google',
+                GoogleSignInButton(
+                  label: 'Continuer avec Google',
                   fullWidth: true,
-                  size: ArenaButtonSize.large,
-                  variant: ArenaButtonVariant.secondary,
                   isLoading: googleState.isLoading,
                   onPressed: isLoading ? null : _submitGoogle,
                 ),

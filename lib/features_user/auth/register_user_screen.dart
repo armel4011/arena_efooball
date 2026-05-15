@@ -7,6 +7,7 @@ import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_stepper.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
+import 'package:arena/features_shared/widgets/google_sign_in_button.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/auth/widgets/auth_failure_message.dart';
 import 'package:flutter/material.dart';
@@ -71,7 +72,7 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
   void _next() => setState(() => _step += 1);
   void _back() {
     if (_step == 0) {
-      context.go(UserRoutes.home);
+      context.goNamed('user.login');
     } else {
       setState(() => _step -= 1);
     }
@@ -233,11 +234,9 @@ class _AccountStep extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          ArenaButton(
-            label: "🔵 S'inscrire avec Google",
+          GoogleSignInButton(
+            label: "S'inscrire avec Google",
             fullWidth: true,
-            size: ArenaButtonSize.large,
-            variant: ArenaButtonVariant.secondary,
             isLoading: googleLoading,
             onPressed: isLoading ? null : onGoogle,
           ),
