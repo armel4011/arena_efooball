@@ -9,6 +9,7 @@ import 'package:arena/features_user/auth/login_user_screen.dart';
 import 'package:arena/features_user/auth/register_user_screen.dart';
 import 'package:arena/features_user/auth/reset_password_code_page.dart';
 import 'package:arena/features_user/auth/reset_password_page.dart';
+import 'package:arena/features_user/auth/banned_account_page.dart';
 import 'package:arena/features_user/auth/splash_user_screen.dart';
 import 'package:arena/features_user/chat/chat_page.dart';
 import 'package:arena/features_user/chat/messages_inbox_page.dart';
@@ -53,6 +54,7 @@ abstract final class UserRoutes {
   static const resetPassword = '/reset-password';
   static const linkAccount = '/link-account';
   static const cguAcceptance = '/cgu-acceptance';
+  static const banned = '/banned';
   static const competitionDetail = '/competitions/:id';
   static const matchRoom = '/match/:id';
   static const matchChat = '/chat/match/:id';
@@ -156,6 +158,22 @@ final userRouterProvider = Provider<GoRouter>((ref) {
       final profileAsync = ref.read(currentProfileProvider);
       final profile = profileAsync.valueOrNull;
 
+      // 3-strikes : un compte banni à vie est confiné sur /banned tant
+      // que sa requête de réintégration n'a pas été approuvée (le
+      // trigger DB flippe permanent_ban=false → la prochaine émission
+      // de currentProfileProvider sort de cette branche).
+      if (profile != null && profile.permanentBan) {
+        return loc == UserRoutes.banned ? null : UserRoutes.banned;
+      }
+
+      // Inversement : un user qui n'est plus banni à vie ne doit pas
+      // rester coincé sur /banned (peut survenir juste après l'approval).
+      if (profile != null &&
+          !profile.permanentBan &&
+          loc == UserRoutes.banned) {
+        return UserRoutes.home;
+      }
+
       if (profile != null && !profile.hasAcceptedCgu) {
         return loc == UserRoutes.cguAcceptance
             ? null
@@ -243,6 +261,11 @@ final userRouterProvider = Provider<GoRouter>((ref) {
         path: UserRoutes.cguAcceptance,
         name: 'user.cguAcceptance',
         builder: (context, state) => const CguAcceptancePage(),
+      ),
+      GoRoute(
+        path: UserRoutes.banned,
+        name: 'user.banned',
+        builder: (context, state) => const BannedAccountPage(),
       ),
       GoRoute(
         path: UserRoutes.competitionDetail,

@@ -28,6 +28,7 @@ mixin _$Profile {
   @UserRoleConverter()
   UserRole get role => throw _privateConstructorUsedError;
   bool get isActive => throw _privateConstructorUsedError;
+  bool get permanentBan => throw _privateConstructorUsedError;
   String? get fcmToken => throw _privateConstructorUsedError;
   Map<String, dynamic> get stats => throw _privateConstructorUsedError;
   String get authProvider => throw _privateConstructorUsedError;
@@ -74,6 +75,7 @@ abstract class $ProfileCopyWith<$Res> {
       String avatarColor,
       @UserRoleConverter() UserRole role,
       bool isActive,
+      bool permanentBan,
       String? fcmToken,
       Map<String, dynamic> stats,
       String authProvider,
@@ -120,6 +122,7 @@ class _$ProfileCopyWithImpl<$Res, $Val extends Profile>
     Object? avatarColor = null,
     Object? role = null,
     Object? isActive = null,
+    Object? permanentBan = null,
     Object? fcmToken = freezed,
     Object? stats = null,
     Object? authProvider = null,
@@ -171,6 +174,10 @@ class _$ProfileCopyWithImpl<$Res, $Val extends Profile>
       isActive: null == isActive
           ? _value.isActive
           : isActive // ignore: cast_nullable_to_non_nullable
+              as bool,
+      permanentBan: null == permanentBan
+          ? _value.permanentBan
+          : permanentBan // ignore: cast_nullable_to_non_nullable
               as bool,
       fcmToken: freezed == fcmToken
           ? _value.fcmToken
@@ -279,6 +286,7 @@ abstract class _$$ProfileImplCopyWith<$Res> implements $ProfileCopyWith<$Res> {
       String avatarColor,
       @UserRoleConverter() UserRole role,
       bool isActive,
+      bool permanentBan,
       String? fcmToken,
       Map<String, dynamic> stats,
       String authProvider,
@@ -323,6 +331,7 @@ class __$$ProfileImplCopyWithImpl<$Res>
     Object? avatarColor = null,
     Object? role = null,
     Object? isActive = null,
+    Object? permanentBan = null,
     Object? fcmToken = freezed,
     Object? stats = null,
     Object? authProvider = null,
@@ -374,6 +383,10 @@ class __$$ProfileImplCopyWithImpl<$Res>
       isActive: null == isActive
           ? _value.isActive
           : isActive // ignore: cast_nullable_to_non_nullable
+              as bool,
+      permanentBan: null == permanentBan
+          ? _value.permanentBan
+          : permanentBan // ignore: cast_nullable_to_non_nullable
               as bool,
       fcmToken: freezed == fcmToken
           ? _value.fcmToken
@@ -478,6 +491,7 @@ class _$ProfileImpl extends _Profile {
       this.avatarColor = '#4C7AFF',
       @UserRoleConverter() this.role = UserRole.player,
       this.isActive = true,
+      this.permanentBan = false,
       this.fcmToken,
       final Map<String, dynamic> stats = const <String, dynamic>{},
       this.authProvider = 'email',
@@ -524,6 +538,9 @@ class _$ProfileImpl extends _Profile {
   @override
   @JsonKey()
   final bool isActive;
+  @override
+  @JsonKey()
+  final bool permanentBan;
   @override
   final String? fcmToken;
   final Map<String, dynamic> _stats;
@@ -586,7 +603,7 @@ class _$ProfileImpl extends _Profile {
 
   @override
   String toString() {
-    return 'Profile(id: $id, username: $username, email: $email, countryCode: $countryCode, avatarColor: $avatarColor, role: $role, isActive: $isActive, fcmToken: $fcmToken, stats: $stats, authProvider: $authProvider, authProviderId: $authProviderId, whatsappNumber: $whatsappNumber, preferredLanguage: $preferredLanguage, preferredCurrency: $preferredCurrency, timezone: $timezone, onboardingCompleted: $onboardingCompleted, onboardingCompletedAt: $onboardingCompletedAt, totpEnabled: $totpEnabled, cguAcceptedAt: $cguAcceptedAt, cguVersionAccepted: $cguVersionAccepted, privacyPolicyAcceptedAt: $privacyPolicyAcceptedAt, marketingConsent: $marketingConsent, accountDeletionRequestedAt: $accountDeletionRequestedAt, accountDeletionReason: $accountDeletionReason, deletedAt: $deletedAt, kycStatus: $kycStatus, kycVerifiedAt: $kycVerifiedAt, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'Profile(id: $id, username: $username, email: $email, countryCode: $countryCode, avatarColor: $avatarColor, role: $role, isActive: $isActive, permanentBan: $permanentBan, fcmToken: $fcmToken, stats: $stats, authProvider: $authProvider, authProviderId: $authProviderId, whatsappNumber: $whatsappNumber, preferredLanguage: $preferredLanguage, preferredCurrency: $preferredCurrency, timezone: $timezone, onboardingCompleted: $onboardingCompleted, onboardingCompletedAt: $onboardingCompletedAt, totpEnabled: $totpEnabled, cguAcceptedAt: $cguAcceptedAt, cguVersionAccepted: $cguVersionAccepted, privacyPolicyAcceptedAt: $privacyPolicyAcceptedAt, marketingConsent: $marketingConsent, accountDeletionRequestedAt: $accountDeletionRequestedAt, accountDeletionReason: $accountDeletionReason, deletedAt: $deletedAt, kycStatus: $kycStatus, kycVerifiedAt: $kycVerifiedAt, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -605,6 +622,8 @@ class _$ProfileImpl extends _Profile {
             (identical(other.role, role) || other.role == role) &&
             (identical(other.isActive, isActive) ||
                 other.isActive == isActive) &&
+            (identical(other.permanentBan, permanentBan) ||
+                other.permanentBan == permanentBan) &&
             (identical(other.fcmToken, fcmToken) ||
                 other.fcmToken == fcmToken) &&
             const DeepCollectionEquality().equals(other._stats, _stats) &&
@@ -664,6 +683,7 @@ class _$ProfileImpl extends _Profile {
         avatarColor,
         role,
         isActive,
+        permanentBan,
         fcmToken,
         const DeepCollectionEquality().hash(_stats),
         authProvider,
@@ -713,6 +733,7 @@ abstract class _Profile extends Profile {
       final String avatarColor,
       @UserRoleConverter() final UserRole role,
       final bool isActive,
+      final bool permanentBan,
       final String? fcmToken,
       final Map<String, dynamic> stats,
       final String authProvider,
@@ -754,6 +775,8 @@ abstract class _Profile extends Profile {
   UserRole get role;
   @override
   bool get isActive;
+  @override
+  bool get permanentBan;
   @override
   String? get fcmToken;
   @override

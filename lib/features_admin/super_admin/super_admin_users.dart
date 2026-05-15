@@ -38,7 +38,9 @@ class _SuperAdminUsersState extends ConsumerState<SuperAdminUsers> {
   bool _paidEntry = false;
   bool _receivedReward = false;
   bool _hadDispute = false;
-  bool _guiltyInDispute = false;
+  // null = pas de filtre. 1/2/3 = seuil min de verdicts coupables.
+  // 3 cible spécifiquement les bannis à vie (règle 3-strikes).
+  int? _guiltyMinCount;
 
   static const _statusFilters = <(String?, String)>[
     (null, 'Tous'),
@@ -67,7 +69,7 @@ class _SuperAdminUsersState extends ConsumerState<SuperAdminUsers> {
         paidEntry: _paidEntry,
         receivedReward: _receivedReward,
         hadDispute: _hadDispute,
-        guiltyInDispute: _guiltyInDispute,
+        guiltyMinCount: _guiltyMinCount,
       );
 
   void _resetAdvanced() {
@@ -76,8 +78,13 @@ class _SuperAdminUsersState extends ConsumerState<SuperAdminUsers> {
       _paidEntry = false;
       _receivedReward = false;
       _hadDispute = false;
-      _guiltyInDispute = false;
+      _guiltyMinCount = null;
     });
+  }
+
+  // Toggle exclusif : retape la même valeur → désélectionne.
+  void _setGuiltyMin(int value) {
+    setState(() => _guiltyMinCount = (_guiltyMinCount == value) ? null : value);
   }
 
   @override
@@ -89,6 +96,14 @@ class _SuperAdminUsersState extends ConsumerState<SuperAdminUsers> {
       appBar: ArenaAppBar(
         title: 'Utilisateurs',
         actions: [
+          IconButton(
+            icon: const Icon(
+              Icons.mark_email_unread_outlined,
+              color: ArenaColors.bone,
+            ),
+            tooltip: 'Arena Requête',
+            onPressed: () => context.go(AdminRoutes.superReintegration),
+          ),
           IconButton(
             icon: const Icon(
               Icons.campaign_outlined,
@@ -170,10 +185,19 @@ class _SuperAdminUsersState extends ConsumerState<SuperAdminUsers> {
                   onTap: () => setState(() => _hadDispute = !_hadDispute),
                 ),
                 _ToggleChipData(
-                  label: '🚨 Coupable',
-                  active: _guiltyInDispute,
-                  onTap: () =>
-                      setState(() => _guiltyInDispute = !_guiltyInDispute),
+                  label: '🚨 Coupable ≥ 1',
+                  active: _guiltyMinCount == 1,
+                  onTap: () => _setGuiltyMin(1),
+                ),
+                _ToggleChipData(
+                  label: '🚨🚨 Coupable ≥ 2',
+                  active: _guiltyMinCount == 2,
+                  onTap: () => _setGuiltyMin(2),
+                ),
+                _ToggleChipData(
+                  label: '⛔ Coupable ≥ 3 (banni à vie)',
+                  active: _guiltyMinCount == 3,
+                  onTap: () => _setGuiltyMin(3),
                 ),
               ],
             ),
@@ -335,6 +359,7 @@ class _UserCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final banned = !profile.isActive;
+    final permaBanned = profile.permanentBan;
     final kycPending = profile.kycStatus == 'pending';
     final borderColor = banned
         ? ArenaColors.neonRed
@@ -380,7 +405,12 @@ class _UserCard extends ConsumerWidget {
                   ],
                 ),
               ),
-              if (banned)
+              if (permaBanned)
+                const ArenaBadge(
+                  label: 'BANNI À VIE',
+                  variant: ArenaBadgeVariant.danger,
+                )
+              else if (banned)
                 const ArenaBadge(
                   label: 'BANNI',
                   variant: ArenaBadgeVariant.danger,

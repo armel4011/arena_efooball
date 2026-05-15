@@ -19,6 +19,7 @@ sealed class Profile with _$Profile {
     @Default('#4C7AFF') String avatarColor,
     @Default(UserRole.player) @UserRoleConverter() UserRole role,
     @Default(true) bool isActive,
+    @Default(false) bool permanentBan,
     String? fcmToken,
     @Default(<String, dynamic>{}) Map<String, dynamic> stats,
     @Default('email') String authProvider,

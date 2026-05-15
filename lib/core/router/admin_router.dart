@@ -19,6 +19,7 @@ import 'package:arena/features_admin/super_admin/super_admin_dashboard.dart';
 import 'package:arena/features_admin/super_admin/super_admin_broadcast.dart';
 import 'package:arena/features_admin/super_admin/super_admin_invitations.dart';
 import 'package:arena/features_admin/super_admin/super_admin_payments_validation_page.dart';
+import 'package:arena/features_admin/super_admin/super_admin_reintegration_requests.dart';
 import 'package:arena/features_admin/super_admin/super_admin_revenue.dart';
 import 'package:arena/features_admin/super_admin/super_admin_users.dart';
 import 'package:arena/features_shared/presentation/dev_preview_page.dart';
@@ -61,6 +62,7 @@ abstract final class AdminRoutes {
   static const superRevenue = '/super/revenue';
   static const superPaymentsValidation = '/super/payments';
   static const superBroadcast = '/super/broadcast';
+  static const superReintegration = '/super/reintegration';
 
   static const devPreview = '/_dev/widgets';
 
@@ -250,6 +252,12 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
         path: AdminRoutes.superBroadcast,
         name: 'admin.superBroadcast',
         builder: (context, state) => const SuperAdminBroadcast(),
+      ),
+      GoRoute(
+        path: AdminRoutes.superReintegration,
+        name: 'admin.superReintegration',
+        builder: (context, state) =>
+            const SuperAdminReintegrationRequests(),
       ),
       GoRoute(
         path: AdminRoutes.devPreview,

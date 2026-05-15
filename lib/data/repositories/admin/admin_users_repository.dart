@@ -33,7 +33,7 @@ class AdminUsersRepository {
         'p_paid': f.paidEntry ? true : null,
         'p_rewarded': f.receivedReward ? true : null,
         'p_disputed': f.hadDispute ? true : null,
-        'p_guilty': f.guiltyInDispute ? true : null,
+        'p_guilty_min': f.guiltyMinCount,
         'p_limit': limit,
       },
     );
@@ -50,10 +50,14 @@ class AdminUsersRepository {
   }
 
   Future<void> unban(String userId) async {
-    await _client
-        .from(_table)
-        .update({'is_active': true})
-        .eq('id', userId);
+    // permanent_ban est reset aussi : un super-admin qui débanni
+    // manuellement un compte 3-strikes override la sanction (sinon le
+    // user resterait flaggé permanent_ban=true et serait re-bouclé sur
+    // /banned au prochain login).
+    await _client.from(_table).update({
+      'is_active': true,
+      'permanent_ban': false,
+    }).eq('id', userId);
   }
 
   Future<void> overrideKyc({
@@ -85,8 +89,14 @@ class AdminUsersFilter {
     this.paidEntry = false,
     this.receivedReward = false,
     this.hadDispute = false,
-    this.guiltyInDispute = false,
-  });
+    this.guiltyMinCount,
+  }) : assert(
+          guiltyMinCount == null ||
+              guiltyMinCount == 1 ||
+              guiltyMinCount == 2 ||
+              guiltyMinCount == 3,
+          'guiltyMinCount must be null, 1, 2 or 3',
+        );
 
   /// ISO 3166-1 alpha-2 — ex. 'CM', 'CI'.
   final String? countryCode;
@@ -109,8 +119,9 @@ class AdminUsersFilter {
   /// A été impliqué dans au moins un litige (player1 ou player2 du match).
   final bool hadDispute;
 
-  /// A été désigné coupable dans au moins un litige résolu.
-  final bool guiltyInDispute;
+  /// Seuil minimum de verdicts coupables — 1/2/3 (null = ignore). 3
+  /// correspond aux utilisateurs bannis à vie par la règle 3-strikes.
+  final int? guiltyMinCount;
 
   AdminUsersFilter copyWith({
     String? countryCode,
@@ -120,10 +131,11 @@ class AdminUsersFilter {
     bool? paidEntry,
     bool? receivedReward,
     bool? hadDispute,
-    bool? guiltyInDispute,
+    int? guiltyMinCount,
     bool resetCountryCode = false,
     bool resetFilter = false,
     bool resetSearch = false,
+    bool resetGuiltyMin = false,
   }) {
     return AdminUsersFilter(
       countryCode:
@@ -134,18 +146,19 @@ class AdminUsersFilter {
       paidEntry: paidEntry ?? this.paidEntry,
       receivedReward: receivedReward ?? this.receivedReward,
       hadDispute: hadDispute ?? this.hadDispute,
-      guiltyInDispute: guiltyInDispute ?? this.guiltyInDispute,
+      guiltyMinCount:
+          resetGuiltyMin ? null : (guiltyMinCount ?? this.guiltyMinCount),
     );
   }
 
-  /// `true` quand au moins un des 5 critères avancés est actif. Utile
+  /// `true` quand au moins un des critères avancés est actif. Utile
   /// pour l'UI (badge "filtres avancés actifs" + bouton reset).
   bool get hasAdvancedFilter =>
       wonCompetition ||
       paidEntry ||
       receivedReward ||
       hadDispute ||
-      guiltyInDispute;
+      guiltyMinCount != null;
 
   @override
   bool operator ==(Object other) =>
@@ -157,7 +170,7 @@ class AdminUsersFilter {
       other.paidEntry == paidEntry &&
       other.receivedReward == receivedReward &&
       other.hadDispute == hadDispute &&
-      other.guiltyInDispute == guiltyInDispute;
+      other.guiltyMinCount == guiltyMinCount;
 
   @override
   int get hashCode => Object.hash(
@@ -168,7 +181,7 @@ class AdminUsersFilter {
         paidEntry,
         receivedReward,
         hadDispute,
-        guiltyInDispute,
+        guiltyMinCount,
       );
 }
 

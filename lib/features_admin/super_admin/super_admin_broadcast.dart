@@ -39,7 +39,7 @@ class _SuperAdminBroadcastState extends ConsumerState<SuperAdminBroadcast> {
   bool _paidEntry = false;
   bool _receivedReward = false;
   bool _hadDispute = false;
-  bool _guiltyInDispute = false;
+  int? _guiltyMinCount;
   String _notifType = 'system';
   bool _sending = false;
   String? _lastResult;
@@ -96,8 +96,12 @@ class _SuperAdminBroadcastState extends ConsumerState<SuperAdminBroadcast> {
         paidEntry: _paidEntry,
         receivedReward: _receivedReward,
         hadDispute: _hadDispute,
-        guiltyInDispute: _guiltyInDispute,
+        guiltyMinCount: _guiltyMinCount,
       );
+
+  void _setGuiltyMin(int value) {
+    setState(() => _guiltyMinCount = (_guiltyMinCount == value) ? null : value);
+  }
 
   bool get _canSend =>
       _titleCtrl.text.trim().isNotEmpty &&
@@ -217,8 +221,12 @@ class _SuperAdminBroadcastState extends ConsumerState<SuperAdminBroadcast> {
                     () => setState(() => _receivedReward = !_receivedReward)),
                 _toggle('⚖ Litige', _hadDispute,
                     () => setState(() => _hadDispute = !_hadDispute)),
-                _toggle('🚨 Coupable', _guiltyInDispute,
-                    () => setState(() => _guiltyInDispute = !_guiltyInDispute)),
+                _toggle('🚨 Coupable ≥ 1', _guiltyMinCount == 1,
+                    () => _setGuiltyMin(1)),
+                _toggle('🚨🚨 Coupable ≥ 2', _guiltyMinCount == 2,
+                    () => _setGuiltyMin(2)),
+                _toggle('⛔ Coupable ≥ 3 (banni à vie)',
+                    _guiltyMinCount == 3, () => _setGuiltyMin(3)),
               ],
             ),
             const SizedBox(height: ArenaSpacing.md),

@@ -17,6 +17,7 @@ _$ProfileImpl _$$ProfileImplFromJson(Map<String, dynamic> json) =>
           ? UserRole.player
           : const UserRoleConverter().fromJson(json['role'] as String?),
       isActive: json['is_active'] as bool? ?? true,
+      permanentBan: json['permanent_ban'] as bool? ?? false,
       fcmToken: json['fcm_token'] as String?,
       stats:
           json['stats'] as Map<String, dynamic>? ?? const <String, dynamic>{},
@@ -68,6 +69,7 @@ Map<String, dynamic> _$$ProfileImplToJson(_$ProfileImpl instance) =>
       if (const UserRoleConverter().toJson(instance.role) case final value?)
         'role': value,
       'is_active': instance.isActive,
+      'permanent_ban': instance.permanentBan,
       if (instance.fcmToken case final value?) 'fcm_token': value,
       'stats': instance.stats,
       'auth_provider': instance.authProvider,
