@@ -1,4 +1,5 @@
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/core/utils/supported_countries.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
@@ -7,16 +8,16 @@ import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/profile/avatar_palette.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 /// Lets the player tweak their public-ish profile bits (PHASE 9.1).
 ///
-/// Editable: `username`, `avatar_color`, `country_code`. Email + password
-/// changes live behind `SettingsPage` since they go through Supabase auth
-/// rather than a `profiles` UPDATE. The country list is the V1.0
-/// francophone-Africa rollout (cf. ARENA_MASTER_PROMPT.md), extended on
-/// subsequent rollouts.
+/// Editable: `username`, `avatar_color`, `country_code`, `whatsapp_number`.
+/// Email + password changes live behind `SettingsPage` since they go
+/// through Supabase auth rather than a `profiles` UPDATE. La liste pays
+/// + indicatifs vient du module partagé `core/utils/supported_countries`.
 class EditProfilePage extends ConsumerStatefulWidget {
   const EditProfilePage({super.key});
 
@@ -27,26 +28,26 @@ class EditProfilePage extends ConsumerStatefulWidget {
 class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _usernameCtrl;
+  late final TextEditingController _whatsappCtrl;
   late String _avatarColor;
   late String _countryCode;
   bool _saving = false;
   String? _error;
 
-  static const _v1Countries = <String, String>{
-    'CM': 'Cameroun',
-    'CI': "Côte d'Ivoire",
-    'SN': 'Sénégal',
-    'BF': 'Burkina Faso',
-    'ML': 'Mali',
-    'GA': 'Gabon',
-    'CG': 'Congo',
-    'CD': 'RD Congo',
-    'TG': 'Togo',
-    'BJ': 'Bénin',
-    'NE': 'Niger',
-    'TD': 'Tchad',
-    'MG': 'Madagascar',
-  };
+  /// Strip le préfixe `+XXX` du numéro stocké en DB pour qu'on l'édite
+  /// comme un numéro local. L'utilisateur change de pays → le dial code
+  /// change automatiquement, on n'écrase pas son input.
+  String _stripDialCode(String? e164, String countryCode) {
+    if (e164 == null || e164.isEmpty) return '';
+    final dial = dialCodeFor(countryCode);
+    if (e164.startsWith(dial)) return e164.substring(dial.length);
+    if (e164.startsWith('+')) {
+      final justDigits = e164.replaceAll(RegExp(r'\D'), '');
+      // Best-effort : strip les 3-4 premiers chiffres si on ne match pas
+      return justDigits.length > 4 ? justDigits.substring(3) : justDigits;
+    }
+    return e164;
+  }
 
   @override
   void initState() {
@@ -55,16 +56,35 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     _usernameCtrl = TextEditingController(text: profile?.username ?? '');
     _avatarColor = profile?.avatarColor ?? AvatarPalette.colors.first;
     _countryCode = profile?.countryCode ?? 'CM';
+    final inList = kSupportedCountries.any((c) => c.code == _countryCode);
+    if (!inList) _countryCode = 'CM';
+    _whatsappCtrl = TextEditingController(
+      text: _stripDialCode(profile?.whatsappNumber, _countryCode),
+    );
+    _whatsappCtrl.addListener(_onWhatsappChanged);
+  }
+
+  void _onWhatsappChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    _whatsappCtrl.removeListener(_onWhatsappChanged);
+    _whatsappCtrl.dispose();
     _usernameCtrl.dispose();
     super.dispose();
   }
 
+  bool get _isWhatsappValid =>
+      _whatsappCtrl.text.isEmpty || isLocalPhoneValid(_whatsappCtrl.text);
+
   Future<void> _save() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
+    if (!_isWhatsappValid) {
+      setState(() => _error = 'Numéro WhatsApp invalide.');
+      return;
+    }
     final profile = ref.read(currentProfileProvider).valueOrNull;
     if (profile == null) return;
 
@@ -73,11 +93,20 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       _error = null;
     });
     try {
-      await ref.read(profileRepositoryProvider).update(profile.id, {
+      final patch = <String, dynamic>{
         'username': _usernameCtrl.text.trim(),
         'avatar_color': _avatarColor,
         'country_code': _countryCode,
-      });
+      };
+      // Seuls les utilisateurs qui veulent vraiment fixer leur WhatsApp
+      // écrivent la colonne — on ne l'écrase pas avec une chaîne vide.
+      if (_whatsappCtrl.text.trim().isNotEmpty) {
+        patch['whatsapp_number'] = buildE164Phone(
+          countryCode: _countryCode,
+          local: _whatsappCtrl.text,
+        );
+      }
+      await ref.read(profileRepositoryProvider).update(profile.id, patch);
       ref.invalidate(currentProfileProvider);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -138,10 +167,10 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                     dropdownColor: ArenaColors.surface,
                     style: ArenaTypography.bodyMedium,
                     items: [
-                      for (final entry in _v1Countries.entries)
+                      for (final c in kSupportedCountries)
                         DropdownMenuItem(
-                          value: entry.key,
-                          child: Text('${entry.key} — ${entry.value}'),
+                          value: c.code,
+                          child: Text('${c.flag}  ${c.name}'),
                         ),
                     ],
                     onChanged: (v) {
@@ -149,6 +178,21 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                     },
                   ),
                 ),
+              ),
+              const SizedBox(height: ArenaSpacing.lg),
+              ArenaTextField(
+                label: 'WHATSAPP (${dialCodeFor(_countryCode)})',
+                hint: 'Ex. 07 07 07 07 07',
+                helper:
+                    'Le code pays ${dialCodeFor(_countryCode)} est ajouté'
+                    ' automatiquement.',
+                controller: _whatsappCtrl,
+                keyboardType: TextInputType.phone,
+                textInputAction: TextInputAction.done,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[\d\s]')),
+                ],
+                errorText: _isWhatsappValid ? null : 'Numéro invalide.',
               ),
               if (_error != null) ...[
                 const SizedBox(height: ArenaSpacing.md),

@@ -1,0 +1,71 @@
+name: CI
+
+# Déclenché sur push main + chaque PR. Vérifie que le code compile sans
+# erreur statique (flutter analyze) et que la suite de tests existante
+# passe. Sert de filet de sécurité avant merge — Flutter SDK n'est pas
+# fourni par les runners GitHub, on utilise subosito/flutter-action qui
+# le télécharge et le met en cache.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Annule les jobs en cours sur la même branche : utile quand on push
+# plusieurs commits d'affilée — pas besoin de tout évaluer.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze-and-test:
+    name: Analyze & Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        # Requis pour build_runner / freezed (analyzer dépend du JDK).
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          # Doit rester aligné avec pubspec.yaml -> environment.flutter.
+          flutter-version: '3.24.0'
+          channel: stable
+          cache: true
+
+      - name: Print versions
+        run: |
+          flutter --version
+          dart --version
+
+      - name: Stub .env (CI uses placeholders, no real secrets)
+        # flutter_dotenv exige que le fichier existe à `flutter pub get`
+        # time car il est listé dans pubspec assets. Les valeurs sont
+        # bidons — `bootstrap.dart` skip proprement si Supabase URL est
+        # un placeholder.
+        run: cp .env.example .env
+
+      - name: pub get
+        run: flutter pub get
+
+      - name: Code generation (freezed / json_serializable)
+        # Indispensable parce que les fichiers .freezed.dart / .g.dart
+        # sont committés, mais on les régénère pour valider que le code
+        # source et les générés sont cohérents.
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos
+
+      - name: Test
+        run: flutter test --reporter expanded
