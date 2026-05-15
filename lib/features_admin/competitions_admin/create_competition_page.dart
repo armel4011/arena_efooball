@@ -8,6 +8,7 @@ import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_stepper.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
+import 'package:arena/features_admin/competitions_admin/widgets/competition_form_widgets.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -288,7 +289,7 @@ class _CreateCompetitionPageState
         Text('Jeu', style: ArenaText.inputLabel),
         const SizedBox(height: ArenaSpacing.xs),
         _lockable(
-          _GamePicker(
+          GamePicker(
             current: _game,
             onChanged: (g) => setState(() => _game = g),
           ),
@@ -350,7 +351,7 @@ class _CreateCompetitionPageState
         Text('Format du tournoi', style: ArenaText.inputLabel),
         const SizedBox(height: ArenaSpacing.xs),
         _lockable(
-          _FormatPicker(
+          FormatPicker(
             current: _format,
             onChanged: (f) => setState(() => _format = f),
           ),
@@ -359,7 +360,7 @@ class _CreateCompetitionPageState
         Text('Nombre de joueurs max', style: ArenaText.inputLabel),
         const SizedBox(height: ArenaSpacing.xs),
         _lockable(
-          _MaxPlayersPicker(
+          MaxPlayersPicker(
             current: _maxPlayers,
             onChanged: (n) => setState(() => _maxPlayers = n),
           ),
@@ -387,14 +388,14 @@ class _CreateCompetitionPageState
       const SizedBox(height: ArenaSpacing.lg),
       Text('Nombre de récompensés', style: ArenaText.inputLabel),
       const SizedBox(height: ArenaSpacing.xs),
-      _RewardedCountPicker(
+      RewardedCountPicker(
         current: _rewardedCount,
         onChanged: _setRewardedCount,
       ),
       const SizedBox(height: ArenaSpacing.lg),
       // Places 1 à 4 : une ligne individuelle modifiable chacune.
       for (var i = 0; i < topCount; i++) ...[
-        _ShareRow(
+        ShareRow(
           position: i,
           controller: _topShareCtrls[i],
           onChanged: () => setState(() {}),
@@ -404,7 +405,7 @@ class _CreateCompetitionPageState
       // Blocs 5-8 / 9-16 / 17-32 / 33-64 : un montant par place, saisi une fois.
       for (var b = 0; b < _prizeBlocks.length; b++)
         if (_rewardedCount >= _prizeBlocks[b].lastRank) ...[
-          _BlockShareRow(
+          BlockShareRow(
             block: _prizeBlocks[b],
             controller: _blockShareCtrls[b],
             onChanged: () => setState(() {}),
@@ -412,7 +413,7 @@ class _CreateCompetitionPageState
           const SizedBox(height: ArenaSpacing.sm),
         ],
       const SizedBox(height: ArenaSpacing.md),
-      _ShareTotalCard(total: _shareTotal(), currency: _currency),
+      ShareTotalCard(total: _shareTotal(), currency: _currency),
     ];
   }
 
@@ -458,7 +459,7 @@ class _CreateCompetitionPageState
           const SizedBox(width: ArenaSpacing.xs),
           Expanded(
             child: _lockable(
-              _CurrencyPicker(
+              CurrencyPicker(
                 current: _currency,
                 onChanged: (c) => setState(() => _currency = c),
               ),
@@ -541,30 +542,30 @@ class _CreateCompetitionPageState
     return [
       Text('Récap', style: ArenaText.h3),
       const SizedBox(height: ArenaSpacing.md),
-      _ReviewRow(label: 'Nom', value: _nameCtrl.text.trim()),
-      _ReviewRow(label: 'Jeu', value: _game.label),
-      _ReviewRow(
+      ReviewRow(label: 'Nom', value: _nameCtrl.text.trim()),
+      ReviewRow(label: 'Jeu', value: _game.label),
+      ReviewRow(
         label: 'Format',
-        value: _formatLabel(_format),
+        value: formatLabel(_format),
       ),
-      _ReviewRow(label: 'Joueurs', value: '$_maxPlayers max'),
-      _ReviewRow(
+      ReviewRow(label: 'Joueurs', value: '$_maxPlayers max'),
+      ReviewRow(
         label: 'Date',
         value: _startDate == null
             ? '—'
             : DateFormat('dd/MM/yyyy HH:mm').format(_startDate!),
       ),
-      _ReviewRow(
+      ReviewRow(
         label: 'Inscription',
         value: fee == 0 ? 'Gratuit' : '${fmt.format(fee.round())} $_currency',
       ),
-      _ReviewRow(
+      ReviewRow(
         label: 'Cagnotte (somme des récompenses)',
         value: '${fmt.format(pool.round())} $_currency',
       ),
       const SizedBox(height: ArenaSpacing.lg),
       if (!_isEditing)
-        _PublishToggleCard(
+        PublishToggleCard(
           publishNow: _publishNow,
           onChanged: (v) => setState(() => _publishNow = v),
         ),
@@ -785,381 +786,5 @@ class _CreateCompetitionPageState
     }
   }
 
-  static String _formatLabel(TournamentFormat f) {
-    switch (f) {
-      case TournamentFormat.singleElimination:
-        return 'Élimination directe';
-      case TournamentFormat.groupsThenKnockout:
-        return 'Poules puis KO';
-      case TournamentFormat.roundRobin:
-        return 'Round robin';
-    }
-  }
 }
 
-class _GamePicker extends StatelessWidget {
-  const _GamePicker({required this.current, required this.onChanged});
-  final GameType current;
-  final ValueChanged<GameType> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: ArenaSpacing.xs,
-      runSpacing: ArenaSpacing.xs,
-      children: [
-        for (final g in GameType.values)
-          _OptionChip(
-            label: g.label,
-            active: g == current,
-            onTap: () => onChanged(g),
-          ),
-      ],
-    );
-  }
-}
-
-class _FormatPicker extends StatelessWidget {
-  const _FormatPicker({required this.current, required this.onChanged});
-  final TournamentFormat current;
-  final ValueChanged<TournamentFormat> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (final f in TournamentFormat.values)
-          Padding(
-            padding: const EdgeInsets.only(bottom: ArenaSpacing.xs),
-            child: ArenaButton(
-              label: _CreateCompetitionPageState._formatLabel(f).toUpperCase(),
-              variant: f == current
-                  ? ArenaButtonVariant.primary
-                  : ArenaButtonVariant.secondary,
-              fullWidth: true,
-              onPressed: () => onChanged(f),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class _MaxPlayersPicker extends StatelessWidget {
-  const _MaxPlayersPicker({required this.current, required this.onChanged});
-  final int current;
-  final ValueChanged<int> onChanged;
-
-  static const _options = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024];
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: ArenaSpacing.xs,
-      runSpacing: ArenaSpacing.xs,
-      children: [
-        for (final n in _options)
-          _OptionChip(
-            label: '$n',
-            active: n == current,
-            onTap: () => onChanged(n),
-          ),
-      ],
-    );
-  }
-}
-
-class _RewardedCountPicker extends StatelessWidget {
-  const _RewardedCountPicker({required this.current, required this.onChanged});
-  final int current;
-  final ValueChanged<int> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: ArenaSpacing.xs,
-      runSpacing: ArenaSpacing.xs,
-      children: [
-        for (final n in kRewardedRankOptions)
-          _OptionChip(
-            label: '$n',
-            active: n == current,
-            onTap: () => onChanged(n),
-          ),
-      ],
-    );
-  }
-}
-
-class _CurrencyPicker extends StatelessWidget {
-  const _CurrencyPicker({required this.current, required this.onChanged});
-  final String current;
-  final ValueChanged<String> onChanged;
-
-  static const _options = ['XAF', 'XOF', 'USD'];
-
-  @override
-  Widget build(BuildContext context) {
-    return DropdownButtonFormField<String>(
-      initialValue: current,
-      decoration: InputDecoration(
-        filled: true,
-        fillColor: ArenaColors.carbon,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(ArenaRadius.md),
-          borderSide: const BorderSide(color: ArenaColors.border),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(ArenaRadius.md),
-          borderSide: const BorderSide(color: ArenaColors.border),
-        ),
-      ),
-      dropdownColor: ArenaColors.carbon,
-      style: ArenaText.body,
-      items: [
-        for (final c in _options)
-          DropdownMenuItem(value: c, child: Text(c, style: ArenaText.body)),
-      ],
-      onChanged: (v) {
-        if (v != null) onChanged(v);
-      },
-    );
-  }
-}
-
-class _OptionChip extends StatelessWidget {
-  const _OptionChip({
-    required this.label,
-    required this.active,
-    required this.onTap,
-  });
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(ArenaRadius.round),
-      child: AnimatedContainer(
-        duration: ArenaDurations.short,
-        padding: const EdgeInsets.symmetric(
-          horizontal: ArenaSpacing.md,
-          vertical: 8,
-        ),
-        decoration: BoxDecoration(
-          color: active
-              ? ArenaColors.signalBlue.withValues(alpha: 0.15)
-              : ArenaColors.carbon,
-          borderRadius: BorderRadius.circular(ArenaRadius.round),
-          border: Border.all(
-            color: active ? ArenaColors.signalBlue : ArenaColors.border,
-          ),
-        ),
-        child: Text(
-          label,
-          style: ArenaText.body.copyWith(
-            color: active ? ArenaColors.signalBlue : ArenaColors.silver,
-            fontWeight: active ? FontWeight.w600 : FontWeight.w500,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ShareRow extends StatelessWidget {
-  const _ShareRow({
-    required this.position,
-    required this.controller,
-    required this.onChanged,
-  });
-
-  final int position;
-  final TextEditingController controller;
-  final VoidCallback onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '${prizeRankEmoji(position)} ${prizeRankLabel(position)} place',
-          style: ArenaText.inputLabel,
-        ),
-        const SizedBox(height: ArenaSpacing.xs),
-        ArenaTextField(
-          controller: controller,
-          hint: 'Montant',
-          keyboardType: TextInputType.number,
-          inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
-            LengthLimitingTextInputFormatter(9),
-          ],
-          onChanged: (_) => onChanged(),
-        ),
-      ],
-    );
-  }
-}
-
-/// Ligne de configuration d'un bloc de places (5-8, 9-16, …) : une
-/// seule saisie = le montant attribué à *chaque* place du bloc.
-class _BlockShareRow extends StatelessWidget {
-  const _BlockShareRow({
-    required this.block,
-    required this.controller,
-    required this.onChanged,
-  });
-
-  final ({String label, int size, int lastRank}) block;
-  final TextEditingController controller;
-  final VoidCallback onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('🏅 ${block.label} place', style: ArenaText.inputLabel),
-        const SizedBox(height: 2),
-        Text(
-          'Montant attribué à chacune des ${block.size} places du bloc',
-          style: ArenaText.small,
-        ),
-        const SizedBox(height: ArenaSpacing.xs),
-        ArenaTextField(
-          controller: controller,
-          hint: 'Montant par place',
-          keyboardType: TextInputType.number,
-          inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
-            LengthLimitingTextInputFormatter(9),
-          ],
-          onChanged: (_) => onChanged(),
-        ),
-      ],
-    );
-  }
-}
-
-class _ShareTotalCard extends StatelessWidget {
-  const _ShareTotalCard({
-    required this.total,
-    required this.currency,
-  });
-  final int total;
-  final String currency;
-
-  @override
-  Widget build(BuildContext context) {
-    final fmt = NumberFormat('#,###', 'fr_FR');
-    return Container(
-      padding: const EdgeInsets.all(ArenaSpacing.md),
-      decoration: arenaSuccessCardDecoration(),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              '🏆 Cagnotte totale',
-              style: ArenaText.body.copyWith(fontWeight: FontWeight.w700),
-            ),
-          ),
-          Text(
-            '${fmt.format(total)} $currency',
-            style: ArenaText.mono.copyWith(
-              color: ArenaColors.statusOk,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ReviewRow extends StatelessWidget {
-  const _ReviewRow({required this.label, required this.value});
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        children: [
-          Expanded(child: Text(label, style: ArenaText.bodyMuted)),
-          Text(value, style: ArenaText.body),
-        ],
-      ),
-    );
-  }
-}
-
-class _PublishToggleCard extends StatelessWidget {
-  const _PublishToggleCard({
-    required this.publishNow,
-    required this.onChanged,
-  });
-
-  final bool publishNow;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final accent =
-        publishNow ? ArenaColors.statusOk : ArenaColors.signalBlue;
-    return InkWell(
-      onTap: () => onChanged(!publishNow),
-      borderRadius: BorderRadius.circular(ArenaRadius.lg),
-      child: Container(
-        padding: const EdgeInsets.all(ArenaSpacing.md),
-        decoration: BoxDecoration(
-          color: accent.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(ArenaRadius.lg),
-          border: Border.all(
-            color: accent.withValues(alpha: 0.4),
-          ),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    publishNow
-                        ? '🚀 Publier maintenant'
-                        : '💾 Sauver en brouillon',
-                    style: ArenaText.h3,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    publishNow
-                        ? 'Les inscriptions s\'ouvrent immédiatement — '
-                            'la compét. apparaît côté joueur avec le bouton '
-                            'S\'INSCRIRE.'
-                        : 'La compét. reste en brouillon — invisible côté '
-                            'joueur. À publier plus tard depuis le détail '
-                            'admin.',
-                    style: ArenaText.small,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: ArenaSpacing.md),
-            Switch.adaptive(
-              value: publishNow,
-              onChanged: onChanged,
-              activeThumbColor: ArenaColors.statusOk,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
