@@ -114,6 +114,7 @@ class SignUpController extends AsyncNotifier<Profile?> {
     required String countryCode,
     required String preferredLanguage,
     required String preferredCurrency,
+    required String whatsappNumber,
     required DateTime cguAcceptedAt,
     required String cguVersionAccepted,
     required DateTime privacyPolicyAcceptedAt,
@@ -128,6 +129,7 @@ class SignUpController extends AsyncNotifier<Profile?> {
             countryCode: countryCode,
             preferredLanguage: preferredLanguage,
             preferredCurrency: preferredCurrency,
+            whatsappNumber: whatsappNumber,
             cguAcceptedAt: cguAcceptedAt,
             cguVersionAccepted: cguVersionAccepted,
             privacyPolicyAcceptedAt: privacyPolicyAcceptedAt,
@@ -150,14 +152,10 @@ final signOutProvider = Provider<Future<void> Function()>((ref) {
   };
 });
 
-/// Deep link the password-reset email should land on. Picked up by
-/// `app_links` and routed to [ResetPasswordPage] at app level.
-const String kResetPasswordRedirect = 'com.arena.app://reset-password';
-
-/// Async controller for the "forgot password" form.
+/// Async controller pour l'envoi de l'email de réinitialisation.
 ///
-/// `data == true` once the email has been sent successfully — the screen
-/// uses that to flip into a "check your inbox" success state.
+/// `data == true` une fois l'email parti — la page affiche alors un
+/// CTA "J'ai reçu mon code" qui ouvre la page de saisie du code.
 class ForgotPasswordController extends AsyncNotifier<bool> {
   @override
   Future<bool> build() async => false;
@@ -165,10 +163,9 @@ class ForgotPasswordController extends AsyncNotifier<bool> {
   Future<void> sendResetEmail(String email) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      await ref.read(authRepositoryProvider).sendPasswordResetEmail(
-            email: email,
-            redirectTo: kResetPasswordRedirect,
-          );
+      await ref
+          .read(authRepositoryProvider)
+          .sendPasswordResetEmail(email: email);
       return true;
     });
   }
@@ -179,6 +176,32 @@ class ForgotPasswordController extends AsyncNotifier<bool> {
 final forgotPasswordControllerProvider =
     AsyncNotifierProvider<ForgotPasswordController, bool>(
   ForgotPasswordController.new,
+);
+
+/// Async controller pour la vérification du code OTP à 6 chiffres.
+/// Hydrate une session recovery côté Supabase qui permettra ensuite
+/// d'appeler [ResetPasswordController.updatePassword].
+class VerifyPasswordResetCodeController extends AsyncNotifier<bool> {
+  @override
+  Future<bool> build() async => false;
+
+  Future<void> verify({required String email, required String code}) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      await ref.read(authRepositoryProvider).verifyPasswordResetCode(
+            email: email,
+            code: code,
+          );
+      return true;
+    });
+  }
+
+  void reset() => state = const AsyncData(false);
+}
+
+final verifyPasswordResetCodeControllerProvider =
+    AsyncNotifierProvider<VerifyPasswordResetCodeController, bool>(
+  VerifyPasswordResetCodeController.new,
 );
 
 /// Async controller for the "reset password" form (deep-link landing).

@@ -55,6 +55,7 @@ class AuthRepository {
     required String countryCode,
     required String preferredLanguage,
     required String preferredCurrency,
+    required String whatsappNumber,
     required DateTime cguAcceptedAt,
     required String cguVersionAccepted,
     required DateTime privacyPolicyAcceptedAt,
@@ -89,6 +90,7 @@ class AuthRepository {
       countryCode: countryCode,
       preferredLanguage: preferredLanguage,
       preferredCurrency: preferredCurrency,
+      whatsappNumber: whatsappNumber,
       cguAcceptedAt: cguAcceptedAt,
       cguVersionAccepted: cguVersionAccepted,
       privacyPolicyAcceptedAt: privacyPolicyAcceptedAt,
@@ -198,14 +200,29 @@ class AuthRepository {
 
   Future<void> signOut() => _client.auth.signOut();
 
-  Future<void> sendPasswordResetEmail({
+  /// Demande à Supabase d'envoyer un email contenant un code à 6 chiffres
+  /// (`{{ .Token }}` dans le template recovery). L'utilisateur saisit
+  /// ensuite ce code via [verifyPasswordResetCode] pour hydrater une
+  /// session recovery, puis appelle [updatePassword].
+  Future<void> sendPasswordResetEmail({required String email}) async {
+    await _runAuth<bool>(() async {
+      await _client.auth.resetPasswordForEmail(email.trim().toLowerCase());
+      return true;
+    });
+  }
+
+  /// Vérifie le code à 6 chiffres reçu par email et hydrate une session
+  /// recovery temporaire. Une fois cette méthode résolue avec succès,
+  /// [updatePassword] peut être appelée pour fixer le nouveau mot de passe.
+  Future<void> verifyPasswordResetCode({
     required String email,
-    required String redirectTo,
+    required String code,
   }) async {
     await _runAuth<bool>(() async {
-      await _client.auth.resetPasswordForEmail(
-        email.trim().toLowerCase(),
-        redirectTo: redirectTo,
+      await _client.auth.verifyOTP(
+        email: email.trim().toLowerCase(),
+        token: code.trim(),
+        type: OtpType.recovery,
       );
       return true;
     });
@@ -247,6 +264,14 @@ class AuthRepository {
   AuthFailure _mapApi(AuthApiException e) {
     final code = e.statusCode;
     final msg = e.message.toLowerCase();
+    if (msg.contains('otp') || msg.contains('token')) {
+      if (msg.contains('expired')) {
+        return ExpiredPasswordResetCodeFailure(e);
+      }
+      if (msg.contains('invalid') || msg.contains('not found')) {
+        return InvalidPasswordResetCodeFailure(e);
+      }
+    }
     if (msg.contains('invalid') &&
         (msg.contains('credentials') || msg.contains('login'))) {
       return InvalidCredentialsFailure(e);

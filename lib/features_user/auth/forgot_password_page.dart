@@ -1,4 +1,3 @@
-import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/auth_failure.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
@@ -10,11 +9,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-/// Step 1 of the password-recovery flow.
+/// Étape 1 du flow de réinitialisation par OTP.
 ///
-/// User enters their email → we ask Supabase to send a recovery email
-/// pointing to `kResetPasswordRedirect`. The deep link handler at the
-/// app level will route into [ResetPasswordPage] once the user taps it.
+/// L'utilisateur saisit son email → Supabase envoie un email contenant
+/// un code à 6 chiffres (`{{ .Token }}` dans le template recovery).
+/// Après envoi, on enchaîne sur la page de saisie du code OTP.
 class ForgotPasswordPage extends ConsumerStatefulWidget {
   const ForgotPasswordPage({super.key});
 
@@ -35,34 +34,43 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     FocusScope.of(context).unfocus();
+    final email = _emailCtrl.text.trim();
     await ref
         .read(forgotPasswordControllerProvider.notifier)
-        .sendResetEmail(_emailCtrl.text);
+        .sendResetEmail(email);
+    if (!mounted) return;
+    final state = ref.read(forgotPasswordControllerProvider);
+    if (state.hasValue && state.value == true) {
+      context.goNamed(
+        'user.resetPasswordCode',
+        queryParameters: {'email': email},
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(forgotPasswordControllerProvider);
     final isLoading = state.isLoading;
-    final emailSent = state.value == true;
     final errorMessage = state.hasError
         ? authFailureToMessage(_asFailure(state.error))
         : null;
 
     return Scaffold(
-      appBar: const ArenaAppBar(title: ''),
+      appBar: ArenaAppBar(
+        title: '',
+        onBack: isLoading ? null : () => context.goNamed('user.login'),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(ArenaSpacing.lg),
-          child: emailSent
-              ? _SuccessView(email: _emailCtrl.text.trim())
-              : _RequestForm(
-                  formKey: _formKey,
-                  emailCtrl: _emailCtrl,
-                  isLoading: isLoading,
-                  errorMessage: errorMessage,
-                  onSubmit: _submit,
-                ),
+          child: _RequestForm(
+            formKey: _formKey,
+            emailCtrl: _emailCtrl,
+            isLoading: isLoading,
+            errorMessage: errorMessage,
+            onSubmit: _submit,
+          ),
         ),
       ),
     );
@@ -94,8 +102,8 @@ class _RequestForm extends StatelessWidget {
           Text('MOT DE PASSE OUBLIÉ', style: ArenaTypography.displayMedium),
           const SizedBox(height: ArenaSpacing.sm),
           Text(
-            "Entre l'adresse e-mail liée à ton compte, on t'envoie un lien"
-            ' de réinitialisation.',
+            "Entre l'adresse e-mail liée à ton compte, on t'envoie un code"
+            ' à 6 chiffres pour réinitialiser ton mot de passe.',
             style: ArenaTypography.bodyMedium.copyWith(
               color: ArenaColors.textMuted,
             ),
@@ -116,7 +124,7 @@ class _RequestForm extends StatelessWidget {
           ],
           const SizedBox(height: ArenaSpacing.lg),
           ArenaButton(
-            label: 'ENVOYER LE LIEN',
+            label: 'ENVOYER LE CODE',
             fullWidth: true,
             size: ArenaButtonSize.large,
             isLoading: isLoading,
@@ -124,59 +132,6 @@ class _RequestForm extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _SuccessView extends StatelessWidget {
-  const _SuccessView({required this.email});
-
-  final String email;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const SizedBox(height: ArenaSpacing.xl),
-        Center(
-          child: Container(
-            width: 96,
-            height: 96,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: ArenaColors.success.withValues(alpha: 0.12),
-            ),
-            child: const Icon(
-              Icons.mark_email_read_outlined,
-              color: ArenaColors.success,
-              size: 48,
-            ),
-          ),
-        ),
-        const SizedBox(height: ArenaSpacing.lg),
-        Text(
-          'EMAIL ENVOYÉ',
-          style: ArenaTypography.displayMedium,
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: ArenaSpacing.sm),
-        Text(
-          'Un lien de réinitialisation vient de partir vers $email.\n'
-          'Vérifie aussi ton dossier "Spam".',
-          style: ArenaTypography.bodyMedium.copyWith(
-            color: ArenaColors.textMuted,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: ArenaSpacing.xl),
-        ArenaButton(
-          label: 'RETOUR À LA CONNEXION',
-          fullWidth: true,
-          size: ArenaButtonSize.large,
-          onPressed: () => context.go(UserRoutes.login),
-        ),
-      ],
     );
   }
 }

@@ -32,6 +32,7 @@ mixin _$Profile {
   Map<String, dynamic> get stats => throw _privateConstructorUsedError;
   String get authProvider => throw _privateConstructorUsedError;
   String? get authProviderId => throw _privateConstructorUsedError;
+  String? get whatsappNumber => throw _privateConstructorUsedError;
   String get preferredLanguage => throw _privateConstructorUsedError;
   String get preferredCurrency => throw _privateConstructorUsedError;
   String get timezone => throw _privateConstructorUsedError;
@@ -77,6 +78,7 @@ abstract class $ProfileCopyWith<$Res> {
       Map<String, dynamic> stats,
       String authProvider,
       String? authProviderId,
+      String? whatsappNumber,
       String preferredLanguage,
       String preferredCurrency,
       String timezone,
@@ -122,6 +124,7 @@ class _$ProfileCopyWithImpl<$Res, $Val extends Profile>
     Object? stats = null,
     Object? authProvider = null,
     Object? authProviderId = freezed,
+    Object? whatsappNumber = freezed,
     Object? preferredLanguage = null,
     Object? preferredCurrency = null,
     Object? timezone = null,
@@ -184,6 +187,10 @@ class _$ProfileCopyWithImpl<$Res, $Val extends Profile>
       authProviderId: freezed == authProviderId
           ? _value.authProviderId
           : authProviderId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      whatsappNumber: freezed == whatsappNumber
+          ? _value.whatsappNumber
+          : whatsappNumber // ignore: cast_nullable_to_non_nullable
               as String?,
       preferredLanguage: null == preferredLanguage
           ? _value.preferredLanguage
@@ -276,6 +283,7 @@ abstract class _$$ProfileImplCopyWith<$Res> implements $ProfileCopyWith<$Res> {
       Map<String, dynamic> stats,
       String authProvider,
       String? authProviderId,
+      String? whatsappNumber,
       String preferredLanguage,
       String preferredCurrency,
       String timezone,
@@ -319,6 +327,7 @@ class __$$ProfileImplCopyWithImpl<$Res>
     Object? stats = null,
     Object? authProvider = null,
     Object? authProviderId = freezed,
+    Object? whatsappNumber = freezed,
     Object? preferredLanguage = null,
     Object? preferredCurrency = null,
     Object? timezone = null,
@@ -381,6 +390,10 @@ class __$$ProfileImplCopyWithImpl<$Res>
       authProviderId: freezed == authProviderId
           ? _value.authProviderId
           : authProviderId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      whatsappNumber: freezed == whatsappNumber
+          ? _value.whatsappNumber
+          : whatsappNumber // ignore: cast_nullable_to_non_nullable
               as String?,
       preferredLanguage: null == preferredLanguage
           ? _value.preferredLanguage
@@ -469,6 +482,7 @@ class _$ProfileImpl extends _Profile {
       final Map<String, dynamic> stats = const <String, dynamic>{},
       this.authProvider = 'email',
       this.authProviderId,
+      this.whatsappNumber,
       this.preferredLanguage = 'fr',
       this.preferredCurrency = 'XAF',
       this.timezone = 'Africa/Douala',
@@ -527,6 +541,8 @@ class _$ProfileImpl extends _Profile {
   @override
   final String? authProviderId;
   @override
+  final String? whatsappNumber;
+  @override
   @JsonKey()
   final String preferredLanguage;
   @override
@@ -570,7 +586,7 @@ class _$ProfileImpl extends _Profile {
 
   @override
   String toString() {
-    return 'Profile(id: $id, username: $username, email: $email, countryCode: $countryCode, avatarColor: $avatarColor, role: $role, isActive: $isActive, fcmToken: $fcmToken, stats: $stats, authProvider: $authProvider, authProviderId: $authProviderId, preferredLanguage: $preferredLanguage, preferredCurrency: $preferredCurrency, timezone: $timezone, onboardingCompleted: $onboardingCompleted, onboardingCompletedAt: $onboardingCompletedAt, totpEnabled: $totpEnabled, cguAcceptedAt: $cguAcceptedAt, cguVersionAccepted: $cguVersionAccepted, privacyPolicyAcceptedAt: $privacyPolicyAcceptedAt, marketingConsent: $marketingConsent, accountDeletionRequestedAt: $accountDeletionRequestedAt, accountDeletionReason: $accountDeletionReason, deletedAt: $deletedAt, kycStatus: $kycStatus, kycVerifiedAt: $kycVerifiedAt, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'Profile(id: $id, username: $username, email: $email, countryCode: $countryCode, avatarColor: $avatarColor, role: $role, isActive: $isActive, fcmToken: $fcmToken, stats: $stats, authProvider: $authProvider, authProviderId: $authProviderId, whatsappNumber: $whatsappNumber, preferredLanguage: $preferredLanguage, preferredCurrency: $preferredCurrency, timezone: $timezone, onboardingCompleted: $onboardingCompleted, onboardingCompletedAt: $onboardingCompletedAt, totpEnabled: $totpEnabled, cguAcceptedAt: $cguAcceptedAt, cguVersionAccepted: $cguVersionAccepted, privacyPolicyAcceptedAt: $privacyPolicyAcceptedAt, marketingConsent: $marketingConsent, accountDeletionRequestedAt: $accountDeletionRequestedAt, accountDeletionReason: $accountDeletionReason, deletedAt: $deletedAt, kycStatus: $kycStatus, kycVerifiedAt: $kycVerifiedAt, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -596,6 +612,8 @@ class _$ProfileImpl extends _Profile {
                 other.authProvider == authProvider) &&
             (identical(other.authProviderId, authProviderId) ||
                 other.authProviderId == authProviderId) &&
+            (identical(other.whatsappNumber, whatsappNumber) ||
+                other.whatsappNumber == whatsappNumber) &&
             (identical(other.preferredLanguage, preferredLanguage) ||
                 other.preferredLanguage == preferredLanguage) &&
             (identical(other.preferredCurrency, preferredCurrency) ||
@@ -650,6 +668,7 @@ class _$ProfileImpl extends _Profile {
         const DeepCollectionEquality().hash(_stats),
         authProvider,
         authProviderId,
+        whatsappNumber,
         preferredLanguage,
         preferredCurrency,
         timezone,
@@ -698,6 +717,7 @@ abstract class _Profile extends Profile {
       final Map<String, dynamic> stats,
       final String authProvider,
       final String? authProviderId,
+      final String? whatsappNumber,
       final String preferredLanguage,
       final String preferredCurrency,
       final String timezone,
@@ -742,6 +762,8 @@ abstract class _Profile extends Profile {
   String get authProvider;
   @override
   String? get authProviderId;
+  @override
+  String? get whatsappNumber;
   @override
   String get preferredLanguage;
   @override

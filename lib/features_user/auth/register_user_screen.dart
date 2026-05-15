@@ -11,10 +11,34 @@ import 'package:arena/features_shared/widgets/google_sign_in_button.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/auth/widgets/auth_failure_message.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 const _cguVersion = '2026-05-01';
+
+/// Liste des pays supportés au signup, avec indicatif téléphonique E.164.
+/// Partagée entre `_RegisterUserScreenState` (pour construire le numéro
+/// WhatsApp E.164) et `_ProfileStep` (pour afficher le picker + le préfixe
+/// dans le label du champ WhatsApp).
+const _supportedCountries = <_Country>[
+  _Country('CM', 'Cameroun', '🇨🇲', '+237'),
+  _Country('SN', 'Sénégal', '🇸🇳', '+221'),
+  _Country('CI', "Côte d'Ivoire", '🇨🇮', '+225'),
+  _Country('GA', 'Gabon', '🇬🇦', '+241'),
+  _Country('BJ', 'Bénin', '🇧🇯', '+229'),
+  _Country('TG', 'Togo', '🇹🇬', '+228'),
+  _Country('BF', 'Burkina Faso', '🇧🇫', '+226'),
+  _Country('ML', 'Mali', '🇲🇱', '+223'),
+  _Country('NE', 'Niger', '🇳🇪', '+227'),
+  _Country('TD', 'Tchad', '🇹🇩', '+235'),
+  _Country('GN', 'Guinée', '🇬🇳', '+224'),
+  _Country('CD', 'RD Congo', '🇨🇩', '+243'),
+  _Country('MG', 'Madagascar', '🇲🇬', '+261'),
+];
+
+String _dialCodeFor(String countryCode) =>
+    _supportedCountries.firstWhere((c) => c.code == countryCode).dialCode;
 
 class RegisterUserScreen extends ConsumerStatefulWidget {
   const RegisterUserScreen({super.key});
@@ -28,6 +52,7 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
   final _passwordCtrl = TextEditingController();
   final _passwordConfirmCtrl = TextEditingController();
   final _usernameCtrl = TextEditingController();
+  final _whatsappCtrl = TextEditingController();
 
   String _countryCode = 'CM';
   ArenaAvatarColor _avatarColor = ArenaAvatarColor.blue;
@@ -41,6 +66,7 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
     _passwordCtrl,
     _passwordConfirmCtrl,
     _usernameCtrl,
+    _whatsappCtrl,
   ];
 
   @override
@@ -78,6 +104,16 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
     }
   }
 
+  /// Construit le numéro WhatsApp au format E.164 : `${dialCode}${local}`
+  /// avec le `0` de tête local stripé. L'input n'accepte que des chiffres
+  /// donc on est sûr de ne pas avoir de caractères parasites.
+  String _whatsappE164() {
+    final dial = _dialCodeFor(_countryCode);
+    var local = _whatsappCtrl.text.replaceAll(RegExp(r'\D'), '');
+    if (local.startsWith('0')) local = local.substring(1);
+    return '$dial$local';
+  }
+
   Future<void> _submit() async {
     final now = DateTime.now().toUtc();
     final locale = ref.read(currentLocaleProvider);
@@ -88,6 +124,7 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
           countryCode: _countryCode,
           preferredLanguage: locale.locale.languageCode,
           preferredCurrency: 'XAF', // can be adjusted later by feature flags
+          whatsappNumber: _whatsappE164(),
           cguAcceptedAt: now,
           cguVersionAccepted: _cguVersion,
           privacyPolicyAcceptedAt: now,
@@ -150,6 +187,7 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
                   ),
                 1 => _ProfileStep(
                     usernameCtrl: _usernameCtrl,
+                    whatsappCtrl: _whatsappCtrl,
                     countryCode: _countryCode,
                     onCountry: (c) => setState(() => _countryCode = c),
                     avatarColor: _avatarColor,
@@ -295,6 +333,7 @@ class _AccountStep extends StatelessWidget {
 class _ProfileStep extends StatelessWidget {
   const _ProfileStep({
     required this.usernameCtrl,
+    required this.whatsappCtrl,
     required this.countryCode,
     required this.onCountry,
     required this.avatarColor,
@@ -312,6 +351,7 @@ class _ProfileStep extends StatelessWidget {
   });
 
   final TextEditingController usernameCtrl;
+  final TextEditingController whatsappCtrl;
   final String countryCode;
   final ValueChanged<String> onCountry;
   final ArenaAvatarColor avatarColor;
@@ -327,27 +367,23 @@ class _ProfileStep extends StatelessWidget {
   final VoidCallback onSubmit;
   final bool isLoading;
 
-  static const _countries = <_Country>[
-    _Country('CM', 'Cameroun', '🇨🇲'),
-    _Country('SN', 'Sénégal', '🇸🇳'),
-    _Country('CI', "Côte d'Ivoire", '🇨🇮'),
-    _Country('GA', 'Gabon', '🇬🇦'),
-    _Country('BJ', 'Bénin', '🇧🇯'),
-    _Country('TG', 'Togo', '🇹🇬'),
-    _Country('BF', 'Burkina Faso', '🇧🇫'),
-    _Country('ML', 'Mali', '🇲🇱'),
-    _Country('NE', 'Niger', '🇳🇪'),
-    _Country('TD', 'Tchad', '🇹🇩'),
-    _Country('GN', 'Guinée', '🇬🇳'),
-    _Country('CD', 'RD Congo', '🇨🇩'),
-    _Country('MG', 'Madagascar', '🇲🇬'),
-  ];
+  String get _dialCode => _dialCodeFor(countryCode);
+
+  /// Le numéro WhatsApp local doit être 7+ chiffres une fois le `0`
+  /// de tête éventuel retiré. Validation permissive pour couvrir les
+  /// formats variables entre opérateurs (Orange, MTN, Moov, Wave, etc.).
+  bool get _isWhatsappValid {
+    final digits = whatsappCtrl.text.replaceAll(RegExp(r'\D'), '');
+    final stripped = digits.startsWith('0') ? digits.substring(1) : digits;
+    return stripped.length >= 7 && stripped.length <= 12;
+  }
 
   bool get _canSubmit =>
       cgu &&
       privacy &&
       usernameCtrl.text.trim().length >= 3 &&
-      usernameCtrl.text.trim().length <= 20;
+      usernameCtrl.text.trim().length <= 20 &&
+      _isWhatsappValid;
 
   @override
   Widget build(BuildContext context) {
@@ -361,7 +397,7 @@ class _ProfileStep extends StatelessWidget {
             label: 'PSEUDO',
             hint: '3 à 20 caractères',
             controller: usernameCtrl,
-            textInputAction: TextInputAction.done,
+            textInputAction: TextInputAction.next,
             prefixIcon: Icons.person_outline,
             enabled: !isLoading,
             maxLength: 20,
@@ -370,8 +406,25 @@ class _ProfileStep extends StatelessWidget {
           _CountryPicker(
             selected: countryCode,
             onSelect: onCountry,
-            options: _countries,
+            options: _supportedCountries,
             isLoading: isLoading,
+          ),
+          const SizedBox(height: ArenaSpacing.md),
+          ArenaTextField(
+            label: 'WHATSAPP ($_dialCode)',
+            hint: 'Ex. 07 07 07 07 07',
+            helper: 'Le code pays $_dialCode est ajouté automatiquement.',
+            controller: whatsappCtrl,
+            keyboardType: TextInputType.phone,
+            textInputAction: TextInputAction.done,
+            prefixIcon: Icons.chat_outlined,
+            enabled: !isLoading,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[\d\s]')),
+            ],
+            errorText: whatsappCtrl.text.isEmpty || _isWhatsappValid
+                ? null
+                : 'Numéro WhatsApp invalide.',
           ),
           const SizedBox(height: ArenaSpacing.md),
           Text("COULEUR D'AVATAR", style: ArenaText.inputLabel),
@@ -419,10 +472,11 @@ class _ProfileStep extends StatelessWidget {
 }
 
 class _Country {
-  const _Country(this.code, this.name, this.flag);
+  const _Country(this.code, this.name, this.flag, this.dialCode);
   final String code;
   final String name;
   final String flag;
+  final String dialCode;
 }
 
 class _AvatarColorPicker extends StatelessWidget {

@@ -10,11 +10,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-/// Step 2 of the password-recovery flow.
+/// Étape 3 du flow de réinitialisation par OTP.
 ///
-/// Reached via the recovery deep link (`com.arena.app://reset-password`).
-/// Supabase has already attached a recovery session — we just need a
-/// new password from the user.
+/// Atteinte après que [ResetPasswordCodePage] ait vérifié le code à 6
+/// chiffres et hydraté une session recovery côté Supabase. On collecte
+/// le nouveau mot de passe et on l'applique via `updateUser`.
 class ResetPasswordPage extends ConsumerStatefulWidget {
   const ResetPasswordPage({super.key});
 
@@ -65,8 +65,9 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
         : null;
 
     return Scaffold(
-      // No back button — this screen is reached from a deep link, the
-      // user shouldn't be able to bounce back to a recovery URL.
+      // Pas de back — l'utilisateur a déjà validé son OTP, le retour
+      // arrière ne servirait à rien et l'expose à des soucis de session
+      // recovery déjà consommée.
       appBar: const ArenaAppBar(title: '', showBack: false),
       body: SafeArea(
         child: SingleChildScrollView(

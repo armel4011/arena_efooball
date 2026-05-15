@@ -38,6 +38,10 @@ String authFailureToMessage(AuthFailure failure) {
       'Connexion sociale impossible. Vérifie ta connexion et réessaie.',
     SsoConfigMissingFailure() =>
       'Connexion sociale non configurée. Contacte le support.',
+    InvalidPasswordResetCodeFailure() =>
+      'Code incorrect. Vérifie ton email et réessaie.',
+    ExpiredPasswordResetCodeFailure() =>
+      'Code expiré. Demande un nouveau code.',
     UnknownAuthFailure() => 'Une erreur est survenue. Réessaie.',
   };
 }

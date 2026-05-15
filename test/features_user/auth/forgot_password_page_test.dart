@@ -1,6 +1,6 @@
 import 'package:arena/core/router/user_router.dart';
-import 'package:arena/data/repositories/auth_repository.dart';
 import 'package:arena/data/repositories/auth_failure.dart';
+import 'package:arena/data/repositories/auth_repository.dart';
 import 'package:arena/features_user/auth/forgot_password_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,10 +15,23 @@ GoRouter _router(Widget body) => GoRouter(
       routes: [
         GoRoute(
           path: UserRoutes.forgotPassword,
+          name: 'user.forgotPassword',
           builder: (_, __) => body,
         ),
         GoRoute(
+          path: UserRoutes.resetPasswordCode,
+          name: 'user.resetPasswordCode',
+          builder: (_, state) => Scaffold(
+            body: Center(
+              child: Text(
+                'CODE_STUB:${state.uri.queryParameters['email'] ?? ''}',
+              ),
+            ),
+          ),
+        ),
+        GoRoute(
           path: UserRoutes.login,
+          name: 'user.login',
           builder: (_, __) =>
               const Scaffold(body: Center(child: Text('LOGIN_STUB'))),
         ),
@@ -44,54 +57,43 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('MOT DE PASSE OUBLIÉ'), findsOneWidget);
-    expect(find.text('ENVOYER LE LIEN'), findsOneWidget);
+    expect(find.text('ENVOYER LE CODE'), findsOneWidget);
   });
 
-  testWidgets('submits and flips to success view when repo succeeds',
+  testWidgets('submits and navigates to the code page when repo succeeds',
       (tester) async {
     when(
-      () => repo.sendPasswordResetEmail(
-        email: any(named: 'email'),
-        redirectTo: any(named: 'redirectTo'),
-      ),
+      () => repo.sendPasswordResetEmail(email: any(named: 'email')),
     ).thenAnswer((_) async {});
 
     await tester.pumpWidget(_scoped(repo));
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField), 'joueur@arena.app');
-    await tester.tap(find.text('ENVOYER LE LIEN'));
+    await tester.tap(find.text('ENVOYER LE CODE'));
     await tester.pumpAndSettle();
 
-    expect(find.text('EMAIL ENVOYÉ'), findsOneWidget);
-    expect(find.textContaining('joueur@arena.app'), findsOneWidget);
+    expect(find.text('CODE_STUB:joueur@arena.app'), findsOneWidget);
     verify(
-      () => repo.sendPasswordResetEmail(
-        email: 'joueur@arena.app',
-        redirectTo: any(named: 'redirectTo'),
-      ),
+      () => repo.sendPasswordResetEmail(email: 'joueur@arena.app'),
     ).called(1);
   });
 
   testWidgets('shows error banner when repo throws an AuthFailure',
       (tester) async {
     when(
-      () => repo.sendPasswordResetEmail(
-        email: any(named: 'email'),
-        redirectTo: any(named: 'redirectTo'),
-      ),
+      () => repo.sendPasswordResetEmail(email: any(named: 'email')),
     ).thenThrow(const RateLimitedFailure());
 
     await tester.pumpWidget(_scoped(repo));
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField), 'joueur@arena.app');
-    await tester.tap(find.text('ENVOYER LE LIEN'));
+    await tester.tap(find.text('ENVOYER LE CODE'));
     await tester.pumpAndSettle();
 
-    // Still on the request form (success view never appears).
-    expect(find.text('EMAIL ENVOYÉ'), findsNothing);
-    // The mapped message mentions the rate-limit hint.
+    // Still on the request form (no navigation happened).
+    expect(find.text('CODE_STUB:joueur@arena.app'), findsNothing);
     expect(find.byIcon(Icons.error_outline), findsOneWidget);
   });
 }

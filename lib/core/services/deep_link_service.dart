@@ -1,19 +1,20 @@
 import 'dart:async';
 
 import 'package:app_links/app_links.dart';
-import 'package:arena/core/router/user_router.dart';
 import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 
 /// Listens to incoming deep links and routes them inside the app.
 ///
-/// Currently only handles the Supabase password-recovery deep link
-/// (`com.arena.app://reset-password`). Supabase 2.x already hydrates the
-/// recovery session on its own internal `app_links` listener — we just
-/// have to forward navigation to [UserRoutes.resetPassword].
+/// Le flow de réinitialisation par OTP (PHASE 2.4) n'utilise plus de
+/// deep link — l'utilisateur copie un code à 6 chiffres depuis l'email
+/// et le saisit dans l'app. Ce service reste en place comme stub pour
+/// les futurs deep links (Google OAuth web fallback, notifications tap,
+/// share intents, etc.).
 class DeepLinkService {
   DeepLinkService({required GoRouter router}) : _router = router;
 
+  // ignore: unused_field
   final GoRouter _router;
   final AppLinks _appLinks = AppLinks();
   StreamSubscription<Uri>? _sub;
@@ -46,9 +47,7 @@ class DeepLinkService {
 
   void _handle(Uri uri) {
     if (uri.scheme != 'com.arena.app') return;
-    if (uri.host == 'reset-password') {
-      _router.go(UserRoutes.resetPassword);
-    }
+    // Aucun handler actif pour l'instant — voir docstring de classe.
   }
 
   Future<void> dispose() async {

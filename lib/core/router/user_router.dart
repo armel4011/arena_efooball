@@ -7,6 +7,7 @@ import 'package:arena/features_user/auth/forgot_password_page.dart';
 import 'package:arena/features_user/auth/link_existing_account_page.dart';
 import 'package:arena/features_user/auth/login_user_screen.dart';
 import 'package:arena/features_user/auth/register_user_screen.dart';
+import 'package:arena/features_user/auth/reset_password_code_page.dart';
 import 'package:arena/features_user/auth/reset_password_page.dart';
 import 'package:arena/features_user/auth/splash_user_screen.dart';
 import 'package:arena/features_user/chat/chat_page.dart';
@@ -48,6 +49,7 @@ abstract final class UserRoutes {
   static const login = '/login';
   static const register = '/register';
   static const forgotPassword = '/forgot-password';
+  static const resetPasswordCode = '/reset-password/code';
   static const resetPassword = '/reset-password';
   static const linkAccount = '/link-account';
   static const cguAcceptance = '/cgu-acceptance';
@@ -99,6 +101,7 @@ abstract final class UserRoutes {
     login,
     register,
     forgotPassword,
+    resetPasswordCode,
     resetPassword,
     linkAccount,
   };
@@ -201,6 +204,14 @@ final userRouterProvider = Provider<GoRouter>((ref) {
         path: UserRoutes.forgotPassword,
         name: 'user.forgotPassword',
         builder: (context, state) => const ForgotPasswordPage(),
+      ),
+      GoRoute(
+        path: UserRoutes.resetPasswordCode,
+        name: 'user.resetPasswordCode',
+        builder: (context, state) {
+          final email = state.uri.queryParameters['email'] ?? '';
+          return ResetPasswordCodePage(email: email);
+        },
       ),
       GoRoute(
         path: UserRoutes.resetPassword,

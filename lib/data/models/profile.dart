@@ -23,6 +23,7 @@ sealed class Profile with _$Profile {
     @Default(<String, dynamic>{}) Map<String, dynamic> stats,
     @Default('email') String authProvider,
     String? authProviderId,
+    String? whatsappNumber,
     @Default('fr') String preferredLanguage,
     @Default('XAF') String preferredCurrency,
     @Default('Africa/Douala') String timezone,

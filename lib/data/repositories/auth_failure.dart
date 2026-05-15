@@ -118,3 +118,16 @@ class SsoConfigMissingFailure extends AuthFailure {
   const SsoConfigMissingFailure([Object? cause])
       : super('sso_config_missing', cause);
 }
+
+/// Code de réinitialisation à 6 chiffres incorrect (typo ou code d'une
+/// session précédente).
+class InvalidPasswordResetCodeFailure extends AuthFailure {
+  const InvalidPasswordResetCodeFailure([Object? cause])
+      : super('invalid_password_reset_code', cause);
+}
+
+/// Code de réinitialisation expiré (durée de vie : 1h côté Supabase).
+class ExpiredPasswordResetCodeFailure extends AuthFailure {
+  const ExpiredPasswordResetCodeFailure([Object? cause])
+      : super('expired_password_reset_code', cause);
+}
