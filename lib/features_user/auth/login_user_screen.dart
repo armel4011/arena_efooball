@@ -38,13 +38,23 @@ class _LoginUserScreenState extends ConsumerState<LoginUserScreen> {
         );
   }
 
+  Future<void> _submitGoogle() async {
+    FocusScope.of(context).unfocus();
+    await ref.read(googleSsoControllerProvider.notifier).signIn();
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(signInControllerProvider);
-    final isLoading = state.isLoading;
+    final googleState = ref.watch(googleSsoControllerProvider);
+    final isLoading = state.isLoading || googleState.isLoading;
+    // Affiche d'abord l'erreur du flow actif. Email > Google si les deux
+    // ont fini en erreur (cas tordu où l'utilisateur a tenté les deux).
     final errorMessage = state.hasError
         ? authFailureToMessage(_asFailure(state.error))
-        : null;
+        : googleState.hasError
+            ? authFailureToMessage(_asFailure(googleState.error))
+            : null;
 
     return Scaffold(
       appBar: const ArenaAppBar(title: ''),
@@ -122,7 +132,8 @@ class _LoginUserScreenState extends ConsumerState<LoginUserScreen> {
                   fullWidth: true,
                   size: ArenaButtonSize.large,
                   variant: ArenaButtonVariant.secondary,
-                  onPressed: isLoading ? null : () => _ssoSnack(context),
+                  isLoading: googleState.isLoading,
+                  onPressed: isLoading ? null : _submitGoogle,
                 ),
                 const SizedBox(height: ArenaSpacing.sm),
                 ArenaButton(
@@ -167,7 +178,7 @@ class _LoginUserScreenState extends ConsumerState<LoginUserScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text(
-          'Connexion sociale Google/Apple : disponible en PHASE 2.3.',
+          'Sign-in with Apple : disponible quand le compte Apple Developer sera activé.',
         ),
       ),
     );

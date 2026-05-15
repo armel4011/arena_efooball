@@ -98,3 +98,23 @@ class BackendUnavailableFailure extends AuthFailure {
   const BackendUnavailableFailure([Object? cause])
       : super('backend_unavailable', cause);
 }
+
+/// L'utilisateur a annulé le sélecteur de compte Google/Apple.
+class SsoCancelledFailure extends AuthFailure {
+  const SsoCancelledFailure([Object? cause]) : super('sso_cancelled', cause);
+}
+
+/// Le provider SSO n'a pas renvoyé d'idToken — config Google Cloud
+/// invalide (SHA-1 / package / serverClientId), ou l'utilisateur n'a
+/// pas accordé le scope `openid`.
+class SsoIdTokenMissingFailure extends AuthFailure {
+  const SsoIdTokenMissingFailure([Object? cause])
+      : super('sso_id_token_missing', cause);
+}
+
+/// La variable `GOOGLE_WEB_CLIENT_ID` (ou équivalent Apple) manque dans
+/// `.env`. Surfacé clairement pour éviter une erreur opaque côté UI.
+class SsoConfigMissingFailure extends AuthFailure {
+  const SsoConfigMissingFailure([Object? cause])
+      : super('sso_config_missing', cause);
+}

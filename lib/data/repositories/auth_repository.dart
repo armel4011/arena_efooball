@@ -4,6 +4,7 @@ import 'package:arena/data/models/profile.dart';
 import 'package:arena/data/repositories/auth_failure.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Wraps Supabase Auth + the `profiles` row that lives alongside.
@@ -105,6 +106,96 @@ class AuthRepository {
     }
   }
 
+  /// Native Google Sign-In → Supabase `signInWithIdToken`.
+  ///
+  /// Flow :
+  /// 1. Picker natif Google (`google_sign_in`) — l'utilisateur choisit
+  ///    son compte ou annule.
+  /// 2. L'idToken reçu (signé par Google, `aud == webClientId`) est
+  ///    échangé contre une session Supabase via `signInWithIdToken`.
+  /// 3. On charge le `profiles` row associé. S'il n'existe pas (premier
+  ///    Google sign-in pour cet email), on le crée avec des valeurs par
+  ///    défaut et le router redirigera vers `/cgu-acceptance` (cf.
+  ///    `user_router.dart`).
+  ///
+  /// [webClientId] doit être le **Web** OAuth Client ID (pas l'Android !),
+  /// car Supabase vérifie `aud == webClientId`. Le passer en
+  /// `serverClientId` à `GoogleSignIn` garantit que l'idToken aura la
+  /// bonne audience même sur Android natif.
+  Future<Profile> signInWithGoogle({required String webClientId}) async {
+    if (webClientId.isEmpty) {
+      throw const SsoConfigMissingFailure();
+    }
+
+    final GoogleSignInAccount? account;
+    final GoogleSignInAuthentication auth;
+    try {
+      final googleSignIn = GoogleSignIn(serverClientId: webClientId);
+      // Force le picker à chaque fois — évite qu'un compte précédent
+      // reste accroché silencieusement après un sign-out.
+      await googleSignIn.signOut();
+      account = await googleSignIn.signIn();
+      if (account == null) {
+        throw const SsoCancelledFailure();
+      }
+      auth = await account.authentication;
+    } on AuthFailure {
+      rethrow;
+    } on SocketException catch (e) {
+      throw NetworkFailure(e);
+    } catch (e) {
+      throw UnknownAuthFailure(e);
+    }
+
+    final idToken = auth.idToken;
+    if (idToken == null) {
+      throw const SsoIdTokenMissingFailure();
+    }
+
+    final user = await _runAuth(() async {
+      final res = await _client.auth.signInWithIdToken(
+        provider: OAuthProvider.google,
+        idToken: idToken,
+        accessToken: auth.accessToken,
+      );
+      return res.user;
+    });
+
+    if (user == null) {
+      throw const UnknownAuthFailure();
+    }
+
+    final existing = await _profiles.getById(user.id);
+    if (existing != null) return existing;
+
+    // Première connexion Google pour cet utilisateur — crée un profil
+    // minimal. `cgu_accepted_at` reste NULL : le router redirige vers
+    // `/cgu-acceptance` avant tout autre écran.
+    final email = user.email ?? account.email;
+    final suggested = _suggestUsername(email);
+    final profile = Profile(
+      id: user.id,
+      username: suggested,
+      email: email,
+      countryCode: 'CI',
+      authProvider: 'google',
+      authProviderId: account.id,
+    );
+    try {
+      return await _profiles.create(profile);
+    } on PostgrestException catch (e) {
+      // Race / collision sur le username auto-suggéré — réessaie avec un
+      // suffixe court basé sur l'uid Supabase (toujours stable, déjà unique).
+      if (e.code == '23505' && e.message.contains('username')) {
+        final fallback = profile.copyWith(
+          username: '${suggested}_${user.id.substring(0, 6)}',
+        );
+        return _profiles.create(fallback);
+      }
+      rethrow;
+    }
+  }
+
   Future<void> signOut() => _client.auth.signOut();
 
   Future<void> sendPasswordResetEmail({
@@ -181,6 +272,16 @@ class AuthRepository {
       return InvalidCredentialsFailure(e);
     }
     return UnknownAuthFailure(e);
+  }
+
+  /// Forme un username acceptable à partir de l'email Google : préfixe
+  /// avant `@`, minuscules, caractères non-alphanumériques retirés,
+  /// fallback `joueur` si vide.
+  String _suggestUsername(String email) {
+    final prefix = email.split('@').first;
+    final cleaned = prefix.toLowerCase().replaceAll(RegExp('[^a-z0-9_]'), '');
+    if (cleaned.isEmpty) return 'joueur';
+    return cleaned.length > 24 ? cleaned.substring(0, 24) : cleaned;
   }
 
   AuthFailure _mapGeneric(AuthException e) {

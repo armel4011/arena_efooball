@@ -4,6 +4,7 @@ import 'package:arena/data/repositories/auth_failure.dart';
 import 'package:arena/data/repositories/auth_repository.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 
@@ -72,6 +73,34 @@ class SignInController extends AsyncNotifier<Profile?> {
 
 final signInControllerProvider =
     AsyncNotifierProvider<SignInController, Profile?>(SignInController.new);
+
+/// Async controller pour le sign-in Google (native idToken flow).
+///
+/// Lit `GOOGLE_WEB_CLIENT_ID` depuis `.env`. Si la variable manque, la
+/// failure typée [SsoConfigMissingFailure] est surfacée à l'UI au lieu
+/// d'un crash opaque.
+class GoogleSsoController extends AsyncNotifier<Profile?> {
+  @override
+  Future<Profile?> build() async => null;
+
+  Future<void> signIn() async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      final webClientId = dotenv.maybeGet('GOOGLE_WEB_CLIENT_ID')?.trim() ?? '';
+      final repo = ref.read(authRepositoryProvider);
+      final profile = await repo.signInWithGoogle(webClientId: webClientId);
+      _enforceRoleForFlavor(profile);
+      return profile;
+    });
+  }
+
+  void reset() => state = const AsyncData(null);
+}
+
+final googleSsoControllerProvider =
+    AsyncNotifierProvider<GoogleSsoController, Profile?>(
+  GoogleSsoController.new,
+);
 
 /// Async controller for the multi-step sign-up form.
 class SignUpController extends AsyncNotifier<Profile?> {

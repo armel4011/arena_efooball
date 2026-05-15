@@ -33,6 +33,11 @@ String authFailureToMessage(AuthFailure failure) {
       'Cette fonctionnalité arrive en PHASE 12.5 (Edge Functions).',
     UsernameAlreadyTakenFailure() =>
       'Ce pseudo est déjà pris. Choisis-en un autre.',
+    SsoCancelledFailure() => 'Connexion annulée.',
+    SsoIdTokenMissingFailure() =>
+      'Connexion sociale impossible. Vérifie ta connexion et réessaie.',
+    SsoConfigMissingFailure() =>
+      'Connexion sociale non configurée. Contacte le support.',
     UnknownAuthFailure() => 'Une erreur est survenue. Réessaie.',
   };
 }
