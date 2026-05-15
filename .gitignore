@@ -63,6 +63,13 @@ android/key.properties
 android/app/*.keystore
 android/app/*.jks
 
+# Firebase Admin SDK / service account JSON — contient une clé RSA
+# privée qui signe les appels FCM server-side. Doit vivre uniquement
+# dans Supabase Edge Function Secrets (FIREBASE_SERVICE_ACCOUNT_JSON),
+# jamais dans le repo. À sauvegarder hors-machine.
+*-firebase-adminsdk-*.json
+firebase-service-account*.json
+
 # Sentry
 .sentryclirc
 
