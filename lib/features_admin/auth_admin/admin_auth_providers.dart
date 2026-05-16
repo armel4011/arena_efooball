@@ -8,19 +8,46 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+/// Maps an Edge Function `FunctionException` body to a typed [AuthFailure].
+/// Centralised so the four TOTP EFs share the same error language.
+AuthFailure _mapTotpEdgeError(FunctionException e) {
+  final body = e.details;
+  String? errorCode;
+  if (body is Map && body['error'] is String) {
+    errorCode = body['error'] as String;
+  }
+  switch (errorCode) {
+    case 'invalid_code':
+      return InvalidTotpCodeFailure(e);
+    case 'totp_not_configured':
+    case 'no_secret_pending':
+      return const BackendUnavailableFailure(
+        'TOTP not configured for this account',
+      );
+    case 'forbidden_role':
+      return WrongAppForRoleFailure(e);
+    case 'unauthenticated':
+      return InvalidCredentialsFailure(e);
+  }
+  if (e.status == 401) return InvalidTotpCodeFailure(e);
+  if (e.status == 403) return WrongAppForRoleFailure(e);
+  return UnknownAuthFailure(e);
+}
+
 // =============================================================================
 // AdminAuthRepository
 // =============================================================================
 //
 // Wraps the admin-specific flows on top of the existing AuthRepository:
 //   * sign-in (email + password) **with role gate** — admin/super_admin only
-//   * invitation-code redeem (PHASE 2bis backend)
-//   * TOTP setup (QR + secret) and verify (login)
+//   * invitation-code redeem (PHASE 2bis backend — still pending)
+//   * TOTP setup (QR + secret), verify-setup, verify-login, step-up
 //
-// Several methods talk to Edge Functions that don't exist yet (PHASE 12.5).
-// They throw [BackendUnavailableFailure] with a clear message so the UI
-// can stay wired and surface "feature pending" to the user instead of
-// silently no-op'ing.
+// The 4 TOTP Edge Functions ship in Phase 12.5 (`setup-totp`,
+// `verify-totp-setup`, `admin-verify-totp`, `admin-stepup-totp`). The
+// only remaining stub is `register-admin` — still throws
+// [BackendUnavailableFailure] so the invitation-redeem screen surfaces
+// "feature pending" until that EF lands.
 
 /// Outcome of [AdminAuthRepository.setupTotp] — the QR data + the manual
 /// fallback secret so the user can type it instead of scanning.
@@ -47,7 +74,6 @@ class AdminAuthRepository {
         _auth = auth,
         _profiles = profiles;
 
-  // ignore: unused_field
   final SupabaseClient _client;
   final AuthRepository _auth;
   // ignore: unused_field
@@ -99,13 +125,21 @@ class AdminAuthRepository {
 
   /// Begin TOTP setup for the currently signed-in admin.
   ///
-  /// Calls Edge Function `setup-totp` which generates the secret server
-  /// side, stores it on the profile (encrypted), and returns the otpauth
-  /// URI + base32 secret.
+  /// Calls Edge Function `setup-totp` which generates a 160-bit secret
+  /// server-side, stores it on `profiles.totp_secret`, and returns the
+  /// `otpauth://` URI + base32 fallback.
   Future<TotpSetupChallenge> setupTotp() async {
     return _runEdge<TotpSetupChallenge>(() async {
-      throw const BackendUnavailableFailure(
-        'setup-totp edge function not deployed yet',
+      final res = await _client.functions.invoke('setup-totp');
+      final data = res.data;
+      if (data is! Map ||
+          data['otpauthUri'] is! String ||
+          data['secret'] is! String) {
+        throw const UnknownAuthFailure('setup-totp:malformed_response');
+      }
+      return TotpSetupChallenge(
+        otpauthUri: data['otpauthUri'] as String,
+        secret: data['secret'] as String,
       );
     });
   }
@@ -114,32 +148,50 @@ class AdminAuthRepository {
   /// `profiles.totp_enabled` to true and returns the 10 backup codes.
   Future<List<String>> verifyTotpSetup(String code) async {
     return _runEdge<List<String>>(() async {
-      throw const BackendUnavailableFailure(
-        'verify-totp-setup edge function not deployed yet',
+      final res = await _client.functions.invoke(
+        'verify-totp-setup',
+        body: {'code': code},
       );
+      final data = res.data;
+      if (data is! Map || data['backupCodes'] is! List) {
+        throw const UnknownAuthFailure('verify-totp-setup:malformed_response');
+      }
+      return (data['backupCodes'] as List).whereType<String>().toList();
     });
   }
 
-  /// Verify the TOTP code at login (after email + password). On success,
-  /// the temporary auth token is exchanged for a real Supabase session.
+  /// Verify the TOTP code at login (after email + password). The
+  /// Supabase session is already established at this point — this EF
+  /// just confirms the 2nd factor and returns the full [Profile].
   Future<Profile> verifyTotpLogin(String code) async {
     return _runEdge<Profile>(() async {
-      throw const BackendUnavailableFailure(
-        'admin-verify-totp edge function not deployed yet',
+      final res = await _client.functions.invoke(
+        'admin-verify-totp',
+        body: {'code': code},
+      );
+      final data = res.data;
+      if (data is! Map || data['profile'] is! Map) {
+        throw const UnknownAuthFailure('admin-verify-totp:malformed_response');
+      }
+      return Profile.fromJson(
+        Map<String, dynamic>.from(data['profile'] as Map),
       );
     });
   }
 
-  /// Step-up TOTP verification for sensitive admin actions.
-  ///
-  /// Called from [TotpGate] before validating payouts, resolving disputes,
-  /// banning users, KYC override, etc. Wires to `admin-stepup-totp` Edge
-  /// Function (PHASE 12.5).
+  /// Step-up TOTP verification for sensitive admin actions. Called from
+  /// [TotpGate] before validating payouts, resolving disputes, banning
+  /// users, KYC override, etc.
   Future<void> stepUpTotp(String code) async {
     return _runEdge<void>(() async {
-      throw const BackendUnavailableFailure(
-        'admin-stepup-totp edge function not deployed yet',
+      final res = await _client.functions.invoke(
+        'admin-stepup-totp',
+        body: {'code': code},
       );
+      final data = res.data;
+      if (data is! Map || data['ok'] != true) {
+        throw const UnknownAuthFailure('admin-stepup-totp:malformed_response');
+      }
     });
   }
 
@@ -149,6 +201,8 @@ class AdminAuthRepository {
       return await body();
     } on AuthFailure {
       rethrow;
+    } on FunctionException catch (e) {
+      throw _mapTotpEdgeError(e);
     } on SocketException catch (e) {
       throw NetworkFailure(e);
     } catch (e) {
