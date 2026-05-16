@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:arena/core/router/user_router.dart';
+import 'package:arena/core/services/agora_rtm_service.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/chat_channel.dart';
 import 'package:arena/data/models/chat_message.dart';
@@ -40,11 +43,99 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   final _scrollCtrl = ScrollController();
   bool _sending = false;
 
+  /// Tracks the last time we published a typing hint to throttle the
+  /// RTM publish to ~one per 3s while the user is actively keying.
+  DateTime _lastTypingSent = DateTime.fromMillisecondsSinceEpoch(0);
+  static const _typingThrottle = Duration(seconds: 3);
+
+  StreamSubscription<TypingEvent>? _typingSub;
+  StreamSubscription<PresenceUpdate>? _presenceSub;
+  Timer? _typingClearTimer;
+
+  /// `true` while the peer's typing hint is still fresh (< 5 s old).
+  bool _peerTyping = false;
+
+  /// `true` once we've seen `remoteJoinChannel` from the opponent.
+  bool _peerOnline = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _bootstrapRtm());
+    _inputCtrl.addListener(_onInputChanged);
+  }
+
   @override
   void dispose() {
-    _inputCtrl.dispose();
+    _inputCtrl
+      ..removeListener(_onInputChanged)
+      ..dispose();
     _scrollCtrl.dispose();
+    _typingClearTimer?.cancel();
+    _typingSub?.cancel();
+    _presenceSub?.cancel();
+    // Best-effort leave — RTM est entièrement cosmétique, donc on
+    // swallow toute erreur (test sans Supabase, provider non override).
+    try {
+      final svc = ref.read(agoraRtmServiceProvider);
+      if (svc.isConnected) {
+        svc.leaveMatchChannel(widget.matchId);
+      }
+    } catch (_) {/* RTM non initialisé — rien à libérer */}
     super.dispose();
+  }
+
+  Future<void> _bootstrapRtm() async {
+    // RTM est cosmétique : si la connexion échoue (config Agora pas
+    // prête, réseau, environnement de test sans Supabase, etc.), on
+    // garde la chat fonctionnelle sans typing/presence. Pas de snackbar.
+    AgoraRtmService svc;
+    try {
+      svc = ref.read(agoraRtmServiceProvider);
+      if (!svc.isConnected) {
+        await svc.connect();
+      }
+      await svc.joinMatchChannel(widget.matchId);
+    } catch (_) {
+      return;
+    }
+    if (!mounted) return;
+    _typingSub = svc.typingEvents
+        .where((e) => e.matchId == widget.matchId)
+        .listen(_onPeerTyping);
+    _presenceSub = svc.presenceEvents
+        .where((e) => e.matchId == widget.matchId)
+        .listen(_onPeerPresence);
+  }
+
+  void _onInputChanged() {
+    final now = DateTime.now();
+    if (now.difference(_lastTypingSent) < _typingThrottle) return;
+    if (_inputCtrl.text.isEmpty) return;
+    _lastTypingSent = now;
+    try {
+      final svc = ref.read(agoraRtmServiceProvider);
+      if (svc.isConnected) {
+        svc.sendTyping(widget.matchId);
+      }
+    } catch (_) {/* RTM non initialisé — no-op */}
+  }
+
+  void _onPeerTyping(TypingEvent _) {
+    if (!mounted) return;
+    setState(() => _peerTyping = true);
+    _typingClearTimer?.cancel();
+    // Le SDK envoie 1 event par publish ; on garde l'indicator allumé
+    // 5 s puis on l'éteint si plus rien n'arrive.
+    _typingClearTimer = Timer(const Duration(seconds: 5), () {
+      if (!mounted) return;
+      setState(() => _peerTyping = false);
+    });
+  }
+
+  void _onPeerPresence(PresenceUpdate event) {
+    if (!mounted) return;
+    setState(() => _peerOnline = event.isOnline);
   }
 
   Future<void> _send(String channelId) async {
@@ -83,6 +174,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           children: [
             _ChatAppBar(
               opponent: opponentAsync.valueOrNull,
+              peerTyping: _peerTyping,
+              peerOnline: _peerOnline,
               onBack: () {
                 if (context.canPop()) {
                   context.pop();
@@ -180,15 +273,32 @@ final _opponentProvider =
 });
 
 class _ChatAppBar extends StatelessWidget {
-  const _ChatAppBar({required this.opponent, required this.onBack});
+  const _ChatAppBar({
+    required this.opponent,
+    required this.peerTyping,
+    required this.peerOnline,
+    required this.onBack,
+  });
 
   final Profile? opponent;
+  final bool peerTyping;
+  final bool peerOnline;
   final VoidCallback onBack;
 
   @override
   Widget build(BuildContext context) {
     final username = opponent?.username ?? 'Joueur';
     final initials = username.isEmpty ? '?' : username[0].toUpperCase();
+    // Hiérarchie : typing > online > offline. Le typing implique online
+    // mais on garde le label dédié pour le feedback live.
+    final subtitle = peerTyping
+        ? 'typing…'
+        : peerOnline
+            ? 'en ligne'
+            : 'hors ligne';
+    final subtitleColor = peerOnline
+        ? ArenaColors.statusOk
+        : ArenaColors.silver;
 
     return Container(
       height: 56,
@@ -201,10 +311,28 @@ class _ChatAppBar extends StatelessWidget {
         children: [
           _CircleIconButton(icon: Icons.arrow_back, onTap: onBack),
           const SizedBox(width: 10),
-          ArenaAvatar(
-            initials: initials,
-            color: inboxAvatarFor(username),
-            size: ArenaAvatarSize.sm,
+          Stack(
+            children: [
+              ArenaAvatar(
+                initials: initials,
+                color: inboxAvatarFor(username),
+                size: ArenaAvatarSize.sm,
+              ),
+              if (peerOnline)
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: ArenaColors.statusOk,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: ArenaColors.void_, width: 2),
+                    ),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -222,10 +350,12 @@ class _ChatAppBar extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  'typing...',
+                  subtitle,
                   style: ArenaText.small.copyWith(
-                    color: ArenaColors.silver,
-                    fontStyle: FontStyle.italic,
+                    color: subtitleColor,
+                    fontStyle: peerTyping
+                        ? FontStyle.italic
+                        : FontStyle.normal,
                   ),
                 ),
               ],

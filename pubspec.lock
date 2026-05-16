@@ -25,6 +25,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.6.3"
+  agora_rtm:
+    dependency: "direct main"
+    description:
+      name: agora_rtm
+      sha256: "12acd619daca443bd17644328873fab526a47a2c32870e7bfd4511f961aec8fa"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.2.6"
   analyzer:
     dependency: transitive
     description:
