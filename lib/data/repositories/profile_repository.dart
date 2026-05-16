@@ -16,6 +16,25 @@ class ProfileRepository {
     return Profile.fromJson(row);
   }
 
+  /// Récupère plusieurs profils en un round-trip. Utilisé par la home
+  /// "Prochains matchs" et l'inbox messages pour hydrater les opponents
+  /// sans N round-trips.
+  Future<Map<String, Profile>> getByIds(Iterable<String> ids) async {
+    final list = ids.toSet().toList();
+    if (list.isEmpty) return const {};
+    final rows = await _client
+        .from(_table)
+        .select()
+        .inFilter('id', list);
+    return {
+      for (final row in rows as List<dynamic>)
+        () {
+          final p = Profile.fromJson(row as Map<String, dynamic>);
+          return p.id;
+        }(): Profile.fromJson(row as Map<String, dynamic>),
+    };
+  }
+
   /// True if a profile already owns this username (case-insensitive). Used
   /// pre-signup to surface a clear error instead of letting the unique
   /// constraint blow up after `auth.signUp` already created an auth row.
@@ -96,4 +115,14 @@ final supabaseClientProvider = Provider<SupabaseClient>((ref) {
 
 final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
   return ProfileRepository(ref.watch(supabaseClientProvider));
+});
+
+/// Resolve un set d'ids profils en un map id→Profile. AutoDispose +
+/// family : la clé est l'identité du set (joined). Riverpod réutilise
+/// le résultat tant que la clé est stable.
+final profilesByIdsProvider = FutureProvider.autoDispose
+    .family<Map<String, Profile>, String>((ref, joinedIds) {
+  if (joinedIds.isEmpty) return Future.value(const {});
+  final ids = joinedIds.split(',');
+  return ref.watch(profileRepositoryProvider).getByIds(ids);
 });

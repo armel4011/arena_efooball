@@ -1,5 +1,6 @@
 import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
+import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -48,6 +49,47 @@ class MatchRepository {
     final byRound = (a.round ?? 0).compareTo(b.round ?? 0);
     if (byRound != 0) return byRound;
     return (a.matchNumber ?? 0).compareTo(b.matchNumber ?? 0);
+  }
+
+  /// Matchs à venir / en cours pour [playerId] — alimente la home
+  /// "Prochains matchs" + l'onglet DIRECT de l'inbox messages.
+  ///
+  /// Filtre out completed/cancelled/forfeited (matches déjà soldés).
+  /// Trié par `scheduled_at asc` quand renseigné, sinon par `created_at`.
+  Future<List<ArenaMatch>> listActiveForPlayer(
+    String playerId, {
+    int limit = 20,
+  }) async {
+    final rows = await _client
+        .from(_table)
+        .select()
+        .or('player1_id.eq.$playerId,player2_id.eq.$playerId')
+        .not('status', 'in', '(completed,cancelled,forfeited)')
+        .order('scheduled_at', ascending: true, nullsFirst: false)
+        .limit(limit);
+    return [
+      for (final row in rows as List<dynamic>)
+        ArenaMatch.fromJson(row as Map<String, dynamic>),
+    ];
+  }
+
+  /// Variante "récents" pour l'inbox : inclut les matchs terminés, triés
+  /// par `finished_at desc` (récents en haut), fallback `scheduled_at`.
+  Future<List<ArenaMatch>> listAnyForPlayer(
+    String playerId, {
+    int limit = 30,
+  }) async {
+    final rows = await _client
+        .from(_table)
+        .select()
+        .or('player1_id.eq.$playerId,player2_id.eq.$playerId')
+        .order('finished_at', ascending: false, nullsFirst: false)
+        .order('scheduled_at', ascending: false, nullsFirst: false)
+        .limit(limit);
+    return [
+      for (final row in rows as List<dynamic>)
+        ArenaMatch.fromJson(row as Map<String, dynamic>),
+    ];
   }
 
   /// Realtime stream of a single match. Emits `null` if the row doesn't
@@ -248,4 +290,22 @@ final matchByIdProvider =
 final matchScoreSubmissionsProvider = StreamProvider.family<
     List<Map<String, dynamic>>, String>((ref, matchId) {
   return ref.watch(matchRepositoryProvider).watchScoreSubmissions(matchId);
+});
+
+/// Matchs actifs (scheduled / ready / in_progress / awaiting…) du joueur
+/// courant — alimente la home "Prochains matchs".
+final myActiveMatchesProvider =
+    FutureProvider.autoDispose<List<ArenaMatch>>((ref) async {
+  final me = ref.watch(currentSessionProvider)?.user.id;
+  if (me == null) return const [];
+  return ref.watch(matchRepositoryProvider).listActiveForPlayer(me);
+});
+
+/// Tous les matchs du joueur courant, récents en haut. Alimente l'onglet
+/// DIRECT de l'inbox messages — un thread = un match auquel je participe.
+final myAllMatchesProvider =
+    FutureProvider.autoDispose<List<ArenaMatch>>((ref) async {
+  final me = ref.watch(currentSessionProvider)?.user.id;
+  if (me == null) return const [];
+  return ref.watch(matchRepositoryProvider).listAnyForPlayer(me);
 });

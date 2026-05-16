@@ -1,21 +1,32 @@
+import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/data/models/arena_match.dart';
+import 'package:arena/data/models/competition.dart';
+import 'package:arena/data/models/match_status.dart';
+import 'package:arena/data/models/profile.dart';
+import 'package:arena/data/repositories/competition_repository.dart';
+import 'package:arena/data/repositories/match_repository.dart';
+import 'package:arena/data/repositories/profile_repository.dart';
+import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-/// PHASE 6 + PHASE 12.5 — global messages inbox.
+/// Global messages inbox.
 ///
-/// Two tabs (DIRECT / COMPÉTITIONS) per `arena_v2.html` #15. Direct
-/// messages arrive in PHASE 12.5 with Agora RTM presence; until then
-/// the DIRECT tab renders a deterministic v2 sample feed so the layout
-/// stays in sync with the design kit. Match chats remain reachable via
-/// the match-room (`/chat/match/:id`).
+/// Two tabs :
+///   * **DIRECT** — chats 1v1 attachés à un match (réel : `myAllMatchesProvider`).
+///     L'utilisateur voit la liste de ses matchs récents avec l'opponent
+///     hydraté ; tap → `/chat/match/:id`.
+///   * **COMPÉTITIONS** — liste des compétitions où le joueur est inscrit
+///     (intersection `myRegisteredCompetitionIdsProvider` + comp list).
 ///
-/// Used both as the Chat tab inside [MainLayout] (no AppBar — host
-/// supplies it) and as a stand-alone route at `/messages` (Scaffold
-/// wrapper). The shared body lives in [MessagesInboxBody].
+/// Used both as the Chat tab inside `MainLayout` (no AppBar — host
+/// supplies it) and as a stand-alone route at `/messages`.
 ///
 /// Maps to screen #15 of `arena_v2.html`.
 class MessagesInboxPage extends StatelessWidget {
@@ -34,7 +45,7 @@ class MessagesInboxPage extends StatelessWidget {
 }
 
 /// AppBar-less inbox body, suitable for embedding inside a parent
-/// Scaffold (the user app's [MainLayout] already supplies the AppBar
+/// Scaffold (the user app's `MainLayout` already supplies the AppBar
 /// + bottom nav).
 class MessagesInboxBody extends StatelessWidget {
   const MessagesInboxBody({super.key});
@@ -66,20 +77,17 @@ class MessagesInboxBody extends StatelessWidget {
   }
 }
 
-/// Compose-button shown in the inbox AppBar / parent layout. Opens the
-/// "new conversation" UI once Agora RTM lands (PHASE 12.5).
+/// Compose-button shown in the inbox AppBar. Ouvre la recherche d'amis
+/// (point d'entrée pour démarrer une nouvelle interaction).
 class InboxComposeAction extends StatelessWidget {
   const InboxComposeAction({super.key});
 
   @override
   Widget build(BuildContext context) {
     return IconButton(
-      tooltip: 'Nouvelle conversation',
+      tooltip: 'Rechercher un joueur',
       icon: const Icon(Icons.edit_outlined, color: ArenaColors.gameEfoot),
-      onPressed: () => _showPlaceholder(
-        context,
-        'La composition de nouveaux messages directs arrive en PHASE 12.5.',
-      ),
+      onPressed: () => context.push(UserRoutes.friendsSearch),
     );
   }
 }
@@ -112,105 +120,110 @@ class _InboxTabs extends StatelessWidget {
   }
 }
 
-class _DirectTab extends StatelessWidget {
+// ──────────────────────────────────────────────────────────────────────────────
+// DIRECT — un thread par match auquel le user est inscrit
+// ──────────────────────────────────────────────────────────────────────────────
+class _DirectTab extends ConsumerWidget {
   const _DirectTab();
 
-  static const _sample = <_InboxThread>[
-    _InboxThread(
-      username: 'DianaA',
-      lastMessage: 'GG, beau match !',
-      timestamp: '14:25',
-      avatarColor: ArenaAvatarColor.green,
-      unread: 2,
-      online: true,
-    ),
-    _InboxThread(
-      username: 'SamuelK',
-      lastMessage: 'On joue le quart à quelle heure ?',
-      timestamp: '12:18',
-      avatarColor: ArenaAvatarColor.cyan,
-      online: true,
-    ),
-    _InboxThread(
-      username: 'AhmedB',
-      lastMessage: 'Tu joues pour la EA FC Night ?',
-      timestamp: 'Hier',
-      avatarColor: ArenaAvatarColor.orange,
-    ),
-    _InboxThread(
-      username: 'LindaO',
-      lastMessage: "Beau match l'autre fois !",
-      timestamp: '2j',
-      avatarColor: ArenaAvatarColor.purple,
-    ),
-  ];
-
   @override
-  Widget build(BuildContext context) {
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(
-        ArenaSpacing.lg,
-        0,
-        ArenaSpacing.lg,
-        ArenaSpacing.lg,
-      ),
-      itemCount: _sample.length,
-      separatorBuilder: (_, __) => const SizedBox(height: ArenaSpacing.sm),
-      itemBuilder: (context, i) => _InboxRow(
-        thread: _sample[i],
-        highlighted: i == 0,
+  Widget build(BuildContext context, WidgetRef ref) {
+    final me = ref.watch(currentSessionProvider)?.user.id;
+    final matchesAsync = ref.watch(myAllMatchesProvider);
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        ref.invalidate(myAllMatchesProvider);
+        await ref.read(myAllMatchesProvider.future);
+      },
+      child: matchesAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => _ErrorList(message: 'Erreur : $e'),
+        data: (matches) {
+          if (matches.isEmpty || me == null) {
+            return const EmptyState(
+              icon: Icons.chat_bubble_outline,
+              title: 'Aucun chat de match',
+              description:
+                  'Tes conversations apparaîtront ici dès que tu seras '
+                  'inscrit à un match dans un tournoi.',
+            );
+          }
+          final opponentIds = <String>{
+            for (final m in matches)
+              if (m.player1Id == me && m.player2Id != null) m.player2Id!
+              else if (m.player2Id == me && m.player1Id != null) m.player1Id!,
+          };
+          final key = (opponentIds.toList()..sort()).join(',');
+          final peersAsync = ref.watch(profilesByIdsProvider(key));
+          final peers = peersAsync.maybeWhen(
+            data: (m) => m,
+            orElse: () => const <String, Profile>{},
+          );
+          return ListView.separated(
+            padding: const EdgeInsets.fromLTRB(
+              ArenaSpacing.lg,
+              0,
+              ArenaSpacing.lg,
+              ArenaSpacing.lg,
+            ),
+            itemCount: matches.length,
+            separatorBuilder: (_, __) =>
+                const SizedBox(height: ArenaSpacing.sm),
+            itemBuilder: (ctx, i) {
+              final m = matches[i];
+              final opponentId =
+                  m.player1Id == me ? m.player2Id : m.player1Id;
+              final opponent = opponentId == null ? null : peers[opponentId];
+              return _MatchThreadRow(
+                match: m,
+                opponent: opponent,
+                highlighted: i == 0 && _isHot(m),
+              );
+            },
+          );
+        },
       ),
     );
   }
-}
 
-class _CompetitionsTab extends StatelessWidget {
-  const _CompetitionsTab();
-
-  @override
-  Widget build(BuildContext context) {
-    return const EmptyState(
-      icon: Icons.emoji_events_outlined,
-      title: 'Aucune compétition active',
-      description: 'Les fils de discussion liés à tes compétitions '
-          'apparaîtront ici dès que tu rejoindras un tournoi.',
-    );
+  static bool _isHot(ArenaMatch m) {
+    if (m.status == MatchStatus.inProgress ||
+        m.status == MatchStatus.scorePending ||
+        m.status == MatchStatus.awaitingValidation) {
+      return true;
+    }
+    final s = m.scheduledAt;
+    if (s == null) return false;
+    final diff = s.difference(DateTime.now());
+    return !diff.isNegative && diff.inHours < 4;
   }
 }
 
-class _InboxThread {
-  const _InboxThread({
-    required this.username,
-    required this.lastMessage,
-    required this.timestamp,
-    required this.avatarColor,
-    this.unread = 0,
-    this.online = false,
+class _MatchThreadRow extends StatelessWidget {
+  const _MatchThreadRow({
+    required this.match,
+    required this.opponent,
+    required this.highlighted,
   });
 
-  final String username;
-  final String lastMessage;
-  final String timestamp;
-  final ArenaAvatarColor avatarColor;
-  final int unread;
-  final bool online;
-}
-
-class _InboxRow extends StatelessWidget {
-  const _InboxRow({required this.thread, required this.highlighted});
-
-  final _InboxThread thread;
+  final ArenaMatch match;
+  final Profile? opponent;
   final bool highlighted;
 
   @override
   Widget build(BuildContext context) {
+    final opponentName = opponent?.username ?? 'En attente';
+    final initials =
+        opponentName.isEmpty ? '?' : opponentName[0].toUpperCase();
+    final color = _avatarFor(opponent?.avatarColor);
+    final subtitle = _subtitleFor(match);
+    final timeLabel = _timeLabelFor(match);
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => _showPlaceholder(
-          context,
-          'Les messages directs avec ${thread.username} arrivent en PHASE 12.5.',
-        ),
+        onTap: () => context.push(UserRoutes.matchChatPath(match.id)),
         borderRadius: BorderRadius.circular(14),
         child: Container(
           padding: const EdgeInsets.all(10),
@@ -226,13 +239,7 @@ class _InboxRow extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _AvatarWithPresence(
-                initials: thread.username.isEmpty
-                    ? '?'
-                    : thread.username[0].toUpperCase(),
-                color: thread.avatarColor,
-                online: thread.online,
-              ),
+              ArenaAvatar(initials: initials, color: color),
               const SizedBox(width: ArenaSpacing.md),
               Expanded(
                 child: Column(
@@ -242,7 +249,7 @@ class _InboxRow extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            thread.username,
+                            opponentName,
                             style: ArenaText.small.copyWith(
                               color: ArenaColors.bone,
                               fontWeight: FontWeight.w700,
@@ -251,7 +258,7 @@ class _InboxRow extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          thread.timestamp,
+                          timeLabel,
                           style: ArenaText.small.copyWith(
                             color: ArenaColors.silver,
                           ),
@@ -260,9 +267,9 @@ class _InboxRow extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      thread.lastMessage,
+                      subtitle,
                       style: ArenaText.small.copyWith(
-                        color: thread.unread > 0
+                        color: highlighted
                             ? ArenaColors.bone
                             : ArenaColors.silver,
                       ),
@@ -272,10 +279,189 @@ class _InboxRow extends StatelessWidget {
                   ],
                 ),
               ),
-              if (thread.unread > 0) ...[
-                const SizedBox(width: ArenaSpacing.sm),
-                _UnreadBadge(count: thread.unread),
-              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  static ArenaAvatarColor _avatarFor(String? hex) {
+    if (hex == null) return ArenaAvatarColor.blue;
+    final cleaned = hex.replaceAll('#', '').toUpperCase();
+    if (cleaned.startsWith('FF')) return ArenaAvatarColor.red;
+    if (cleaned.startsWith('69')) return ArenaAvatarColor.green;
+    if (cleaned.startsWith('3B') || cleaned.startsWith('15')) {
+      return ArenaAvatarColor.cyan;
+    }
+    if (cleaned.startsWith('F7')) return ArenaAvatarColor.orange;
+    if (cleaned.startsWith('97') || cleaned.startsWith('84')) {
+      return ArenaAvatarColor.purple;
+    }
+    return ArenaAvatarColor.blue;
+  }
+
+  static String _subtitleFor(ArenaMatch m) {
+    return switch (m.status) {
+      MatchStatus.pending => "En attente d'adversaire",
+      MatchStatus.scheduled => 'Match programmé',
+      MatchStatus.ready => 'Code de salon partagé',
+      MatchStatus.inProgress => 'En cours — appuie pour discuter',
+      MatchStatus.scorePending => 'En attente du score',
+      MatchStatus.awaitingValidation => 'Validation du score',
+      MatchStatus.disputed => 'Score contesté — admin en cours',
+      MatchStatus.completed => 'Match terminé',
+      MatchStatus.cancelled => 'Match annulé',
+      MatchStatus.forfeited => 'Forfait',
+    };
+  }
+
+  static String _timeLabelFor(ArenaMatch m) {
+    final t = m.finishedAt ?? m.scheduledAt ?? m.createdAt;
+    if (t == null) return '—';
+    final diff = DateTime.now().difference(t);
+    if (diff.isNegative) {
+      final upcoming = -diff.inHours;
+      if (upcoming < 1) return 'Bientôt';
+      if (upcoming < 24) return 'Dans ${upcoming}h';
+      final days = -diff.inDays;
+      return 'Dans ${days}j';
+    }
+    if (diff.inMinutes < 60) return '${diff.inMinutes}min';
+    if (diff.inHours < 24) return '${diff.inHours}h';
+    if (diff.inDays < 7) return '${diff.inDays}j';
+    return '${(diff.inDays / 7).floor()}sem';
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// COMPÉTITIONS — list des comp où le user est inscrit
+// ──────────────────────────────────────────────────────────────────────────────
+class _CompetitionsTab extends ConsumerWidget {
+  const _CompetitionsTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final registeredAsync = ref.watch(myRegisteredCompetitionIdsProvider);
+    final compsAsync = ref.watch(competitionsListProvider(null));
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        ref.invalidate(competitionsListProvider(null));
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+      },
+      child: registeredAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => _ErrorList(message: 'Erreur : $e'),
+        data: (ids) {
+          if (ids.isEmpty) {
+            return const EmptyState(
+              icon: Icons.emoji_events_outlined,
+              title: 'Aucune compétition active',
+              description:
+                  'Les fils de discussion liés à tes compétitions '
+                  'apparaîtront ici dès que tu rejoindras un tournoi.',
+            );
+          }
+          return compsAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => _ErrorList(message: 'Erreur : $e'),
+            data: (all) {
+              final mine = [
+                for (final c in all)
+                  if (ids.contains(c.id)) c,
+              ];
+              if (mine.isEmpty) {
+                return const EmptyState(
+                  icon: Icons.hourglass_empty,
+                  title: 'En attente',
+                  description:
+                      "Tu es inscrit mais les compétitions n'ont pas "
+                      'encore été chargées.',
+                );
+              }
+              return ListView.separated(
+                padding: const EdgeInsets.fromLTRB(
+                  ArenaSpacing.lg,
+                  0,
+                  ArenaSpacing.lg,
+                  ArenaSpacing.lg,
+                ),
+                itemCount: mine.length,
+                separatorBuilder: (_, __) =>
+                    const SizedBox(height: ArenaSpacing.sm),
+                itemBuilder: (ctx, i) =>
+                    _CompetitionThreadRow(competition: mine[i]),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _CompetitionThreadRow extends StatelessWidget {
+  const _CompetitionThreadRow({required this.competition});
+  final Competition competition;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = competition;
+    final emoji = switch (c.game.value) {
+      'efootball' => '⚽',
+      'fifa_mobile' => '🎮',
+      'ea_sports_fc' => '🎯',
+      _ => '🏆',
+    };
+    final statusLabel = switch (c.status.value) {
+      'registration_open' => 'Inscriptions ouvertes',
+      'registration_closed' => 'Inscriptions fermées',
+      'ongoing' => 'En cours',
+      'completed' => 'Terminée',
+      'cancelled' => 'Annulée',
+      _ => 'Brouillon',
+    };
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => context.push(UserRoutes.competitionPath(c.id)),
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: ArenaColors.carbon2,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: ArenaColors.border),
+          ),
+          child: Row(
+            children: [
+              Text(emoji, style: const TextStyle(fontSize: 22)),
+              const SizedBox(width: ArenaSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      c.name,
+                      style: ArenaText.small.copyWith(
+                        color: ArenaColors.bone,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${c.currentPlayers}/${c.maxPlayers} • $statusLabel',
+                      style: ArenaText.small.copyWith(
+                        color: ArenaColors.silver,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: ArenaColors.silver),
             ],
           ),
         ),
@@ -284,80 +470,23 @@ class _InboxRow extends StatelessWidget {
   }
 }
 
-class _AvatarWithPresence extends StatelessWidget {
-  const _AvatarWithPresence({
-    required this.initials,
-    required this.color,
-    required this.online,
-  });
-
-  final String initials;
-  final ArenaAvatarColor color;
-  final bool online;
-
+class _ErrorList extends StatelessWidget {
+  const _ErrorList({required this.message});
+  final String message;
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        ArenaAvatar(initials: initials, color: color),
-        if (online)
-          Positioned(
-            right: 0,
-            bottom: 0,
-            child: Container(
-              width: 10,
-              height: 10,
-              decoration: BoxDecoration(
-                color: ArenaColors.statusOk,
-                shape: BoxShape.circle,
-                border: Border.all(color: ArenaColors.carbon, width: 2),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class _UnreadBadge extends StatelessWidget {
-  const _UnreadBadge({required this.count});
-
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 18,
-      height: 18,
-      alignment: Alignment.center,
-      decoration: const BoxDecoration(
-        color: ArenaColors.neonRed,
-        shape: BoxShape.circle,
-      ),
+    return Padding(
+      padding: const EdgeInsets.all(ArenaSpacing.lg),
       child: Text(
-        count > 9 ? '9+' : '$count',
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 9,
-          fontWeight: FontWeight.w700,
-        ),
+        message,
+        style: const TextStyle(color: ArenaColors.danger),
       ),
     );
   }
 }
 
-void _showPlaceholder(BuildContext context, String message) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(message),
-      duration: const Duration(seconds: 2),
-    ),
-  );
-}
-
-/// Helper avatar mapping for inbox cards (used once the
-/// PHASE 12.5 backend lands). Kept here so the row component stays
-/// in sync with the v2 colour palette.
+/// Helper avatar mapping kept for backward compat with `chat_page.dart`
+/// (imports `inboxAvatarFor` to pick a deterministic colour).
 ArenaAvatarColor inboxAvatarFor(String seed) {
   if (seed.isEmpty) return ArenaAvatarColor.blue;
   final c = seed.codeUnitAt(0) % ArenaAvatarColor.values.length;
