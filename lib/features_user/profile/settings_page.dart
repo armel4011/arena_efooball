@@ -1,12 +1,14 @@
 import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/services/onboarding_service.dart';
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/data/repositories/export_user_data_repository.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_card.dart';
 import 'package:arena/features_shared/widgets/language_switcher.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -271,8 +273,39 @@ class _AccountSection extends ConsumerWidget {
   }
 }
 
-class _PrivacySection extends StatelessWidget {
+class _PrivacySection extends ConsumerStatefulWidget {
   const _PrivacySection();
+
+  @override
+  ConsumerState<_PrivacySection> createState() => _PrivacySectionState();
+}
+
+class _PrivacySectionState extends ConsumerState<_PrivacySection> {
+  bool _exporting = false;
+
+  Future<void> _runExport() async {
+    if (_exporting) return;
+    setState(() => _exporting = true);
+    try {
+      final result = await ref
+          .read(exportUserDataRepositoryProvider)
+          .exportToFile();
+      if (!mounted) return;
+      await Clipboard.setData(ClipboardData(text: result.filePath));
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (_) => _ExportSuccessDialog(result: result),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Export impossible : $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -293,27 +326,27 @@ class _PrivacySection extends StatelessWidget {
       child: Column(
         children: [
           ListTile(
-            leading: const Icon(Icons.download_outlined,
-                color: ArenaColors.textMuted),
+            leading: _exporting
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.download_outlined,
+                    color: ArenaColors.textMuted),
             title: const Text('Télécharger mes données'),
             subtitle: Text(
-              'Lien temporaire envoyé par email — bientôt disponible',
+              _exporting
+                  ? 'Export en cours…'
+                  : 'Génère un fichier JSON de toutes tes données',
               style: ArenaTypography.bodySmall.copyWith(
                 color: ArenaColors.textMuted,
               ),
             ),
-            trailing: const Icon(Icons.lock_outline,
-                size: 16, color: ArenaColors.textFaint),
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    "Cette fonctionnalité sera disponible avec le lancement V1.0 "
-                    '(Edge Function `export_user_data` — PHASE 12.5).',
-                  ),
-                ),
-              );
-            },
+            trailing: const Icon(Icons.chevron_right,
+                color: ArenaColors.textFaint),
+            enabled: !_exporting,
+            onTap: _runExport,
           ),
           const _Divider(),
           ListTile(
@@ -330,6 +363,50 @@ class _PrivacySection extends StatelessWidget {
         ],
       ),
       ),
+    );
+  }
+}
+
+class _ExportSuccessDialog extends StatelessWidget {
+  const _ExportSuccessDialog({required this.result});
+
+  final UserDataExport result;
+
+  @override
+  Widget build(BuildContext context) {
+    final sizeKb = (result.byteSize / 1024).toStringAsFixed(1);
+    return AlertDialog(
+      title: const Text('Export réussi'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Fichier ($sizeKb Ko) :', style: ArenaText.bodyMuted),
+          const SizedBox(height: 4),
+          SelectableText(result.filePath, style: ArenaText.mono),
+          const SizedBox(height: ArenaSpacing.sm),
+          Text(
+            'Chemin copié dans le presse-papier.',
+            style: ArenaText.small,
+          ),
+          if (result.recordCounts.isNotEmpty) ...[
+            const SizedBox(height: ArenaSpacing.md),
+            Text('Contenu :', style: ArenaText.bodyMuted),
+            for (final e in result.recordCounts.entries)
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text('· ${e.key}: ${e.value}',
+                    style: ArenaText.small),
+              ),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('OK'),
+        ),
+      ],
     );
   }
 }

@@ -99,6 +99,9 @@ dependencies:
   # ─── PHASE 11bis — Paiement P2P manuel (dial USSD) ─────────
   url_launcher: ^6.3.1
 
+  # ─── PHASE 12.5 — RGPD export (écrit le JSON dans Documents) ──
+  path_provider: ^2.1.5
+
   # ─── PHASE 2.3 — Social SSO (native config required) ──────
   # Google: native Sign-In → idToken → supabase.auth.signInWithIdToken().
   # Apple: deferred until Apple Developer account is active (PHASE 8b).
