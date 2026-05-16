@@ -9,14 +9,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Maps an Edge Function `FunctionException` body to a typed [AuthFailure].
-/// Centralised so the four TOTP EFs share the same error language.
-AuthFailure _mapTotpEdgeError(FunctionException e) {
+/// Centralised so all admin EFs (TOTP + register-admin) share the same
+/// error language.
+AuthFailure _mapAdminEdgeError(FunctionException e) {
   final body = e.details;
   String? errorCode;
   if (body is Map && body['error'] is String) {
     errorCode = body['error'] as String;
   }
   switch (errorCode) {
+    // ── TOTP ─────────────────────────────────────────────────────────
     case 'invalid_code':
       return InvalidTotpCodeFailure(e);
     case 'totp_not_configured':
@@ -24,6 +26,24 @@ AuthFailure _mapTotpEdgeError(FunctionException e) {
       return const BackendUnavailableFailure(
         'TOTP not configured for this account',
       );
+    // ── register-admin ───────────────────────────────────────────────
+    case 'invalid_invitation_code':
+    case 'invitation_expired':
+    case 'invitation_already_used':
+    case 'invitation_email_mismatch':
+      return InvalidInvitationCodeFailure(e);
+    case 'email_already_registered':
+      return EmailAlreadyRegisteredFailure(e);
+    case 'username_already_taken':
+      return UsernameAlreadyTakenFailure(e);
+    case 'password_too_short':
+    case 'password_no_uppercase':
+    case 'password_no_lowercase':
+    case 'password_no_digit':
+    case 'password_no_symbol':
+    case 'password_rejected':
+      return WeakPasswordFailure(e);
+    // ── Common ───────────────────────────────────────────────────────
     case 'forbidden_role':
       return WrongAppForRoleFailure(e);
     case 'unauthenticated':
@@ -102,8 +122,11 @@ class AdminAuthRepository {
 
   /// Validate an invitation code + register a new admin.
   ///
-  /// Calls the Edge Function `register-admin` (PHASE 12.5). Until then,
-  /// throws [BackendUnavailableFailure].
+  /// Calls `register-admin` Edge Function which validates the code,
+  /// creates the auth user (admin API, email auto-confirmed), inserts
+  /// the profile with the role from the invitation, and stamps the
+  /// invitation as used. Then signs in with the same credentials so
+  /// the caller lands on the TOTP setup flow with a live session.
   Future<Profile> redeemInvitation({
     required String code,
     required String email,
@@ -113,12 +136,26 @@ class AdminAuthRepository {
     required String cguVersionAccepted,
   }) async {
     return _runEdge<Profile>(() async {
-      // PHASE 12.5 — invoke `register-admin` edge function. The function
-      // verifies the code, creates the auth user, inserts the profile
-      // with the role from the invitation, marks the invitation as used,
-      // and returns the profile JSON.
-      throw const BackendUnavailableFailure(
-        'register-admin edge function not deployed yet',
+      final res = await _client.functions.invoke(
+        'register-admin',
+        body: {
+          'code': code,
+          'email': email,
+          'password': password,
+          'username': username,
+          'cguAcceptedAt': cguAcceptedAt.toUtc().toIso8601String(),
+          'cguVersionAccepted': cguVersionAccepted,
+        },
+      );
+      final data = res.data;
+      if (data is! Map || data['profile'] is! Map) {
+        throw const UnknownAuthFailure('register-admin:malformed_response');
+      }
+      // The EF doesn't grant a session — sign in to establish one so
+      // the next step (TotpSetupScreen → setup-totp) has a valid JWT.
+      await _auth.signInWithEmail(email: email, password: password);
+      return Profile.fromJson(
+        Map<String, dynamic>.from(data['profile'] as Map),
       );
     });
   }
@@ -202,7 +239,7 @@ class AdminAuthRepository {
     } on AuthFailure {
       rethrow;
     } on FunctionException catch (e) {
-      throw _mapTotpEdgeError(e);
+      throw _mapAdminEdgeError(e);
     } on SocketException catch (e) {
       throw NetworkFailure(e);
     } catch (e) {
