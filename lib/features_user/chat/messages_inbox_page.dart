@@ -4,6 +4,7 @@ import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/match_status.dart';
 import 'package:arena/data/models/profile.dart';
+import 'package:arena/data/repositories/chat_repository.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
 import 'package:arena/data/repositories/match_repository.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
@@ -121,7 +122,8 @@ class _InboxTabs extends StatelessWidget {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// DIRECT — un thread par match auquel le user est inscrit
+// DIRECT — un thread par match dont la conversation a été initiée
+// (un chat_channel existe en DB pour ce match)
 // ──────────────────────────────────────────────────────────────────────────────
 class _DirectTab extends ConsumerWidget {
   const _DirectTab();
@@ -130,11 +132,17 @@ class _DirectTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final me = ref.watch(currentSessionProvider)?.user.id;
     final matchesAsync = ref.watch(myAllMatchesProvider);
+    final openedIdsAsync = ref.watch(myOpenedMatchChannelIdsProvider);
 
     return RefreshIndicator(
       onRefresh: () async {
-        ref.invalidate(myAllMatchesProvider);
-        await ref.read(myAllMatchesProvider.future);
+        ref
+          ..invalidate(myAllMatchesProvider)
+          ..invalidate(myOpenedMatchChannelIdsProvider);
+        await Future.wait([
+          ref.read(myAllMatchesProvider.future),
+          ref.read(myOpenedMatchChannelIdsProvider.future),
+        ]);
       },
       child: matchesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -143,42 +151,64 @@ class _DirectTab extends ConsumerWidget {
           if (matches.isEmpty || me == null) {
             return const EmptyState(
               icon: Icons.chat_bubble_outline,
-              title: 'Aucun chat de match',
+              title: 'Aucune conversation',
               description:
-                  'Tes conversations apparaîtront ici dès que tu seras '
-                  'inscrit à un match dans un tournoi.',
+                  'Tes conversations apparaîtront ici dès que tu '
+                  'ouvriras la chat depuis la salle de match.',
             );
           }
-          final opponentIds = <String>{
-            for (final m in matches)
-              if (m.player1Id == me && m.player2Id != null) m.player2Id!
-              else if (m.player2Id == me && m.player1Id != null) m.player1Id!,
-          };
-          final key = (opponentIds.toList()..sort()).join(',');
-          final peersAsync = ref.watch(profilesByIdsProvider(key));
-          final peers = peersAsync.maybeWhen(
-            data: (m) => m,
-            orElse: () => const <String, Profile>{},
-          );
-          return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(
-              ArenaSpacing.lg,
-              0,
-              ArenaSpacing.lg,
-              ArenaSpacing.lg,
-            ),
-            itemCount: matches.length,
-            separatorBuilder: (_, __) =>
-                const SizedBox(height: ArenaSpacing.sm),
-            itemBuilder: (ctx, i) {
-              final m = matches[i];
-              final opponentId =
-                  m.player1Id == me ? m.player2Id : m.player1Id;
-              final opponent = opponentId == null ? null : peers[opponentId];
-              return _MatchThreadRow(
-                match: m,
-                opponent: opponent,
-                highlighted: i == 0 && _isHot(m),
+          // Filtre : ne garde que les matchs dont la chat a été initiée.
+          return openedIdsAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => _ErrorList(message: 'Erreur : $e'),
+            data: (openedIds) {
+              final conversations = [
+                for (final m in matches)
+                  if (openedIds.contains(m.id)) m,
+              ];
+              if (conversations.isEmpty) {
+                return const EmptyState(
+                  icon: Icons.chat_bubble_outline,
+                  title: 'Aucune conversation',
+                  description:
+                      'Ouvre la chat depuis une salle de match — elle '
+                      'apparaîtra ici.',
+                );
+              }
+              final opponentIds = <String>{
+                for (final m in conversations)
+                  if (m.player1Id == me && m.player2Id != null) m.player2Id!
+                  else if (m.player2Id == me && m.player1Id != null)
+                    m.player1Id!,
+              };
+              final key = (opponentIds.toList()..sort()).join(',');
+              final peersAsync = ref.watch(profilesByIdsProvider(key));
+              final peers = peersAsync.maybeWhen(
+                data: (m) => m,
+                orElse: () => const <String, Profile>{},
+              );
+              return ListView.separated(
+                padding: const EdgeInsets.fromLTRB(
+                  ArenaSpacing.lg,
+                  0,
+                  ArenaSpacing.lg,
+                  ArenaSpacing.lg,
+                ),
+                itemCount: conversations.length,
+                separatorBuilder: (_, __) =>
+                    const SizedBox(height: ArenaSpacing.sm),
+                itemBuilder: (ctx, i) {
+                  final m = conversations[i];
+                  final opponentId =
+                      m.player1Id == me ? m.player2Id : m.player1Id;
+                  final opponent =
+                      opponentId == null ? null : peers[opponentId];
+                  return _MatchThreadRow(
+                    match: m,
+                    opponent: opponent,
+                    highlighted: i == 0 && _isHot(m),
+                  );
+                },
               );
             },
           );
