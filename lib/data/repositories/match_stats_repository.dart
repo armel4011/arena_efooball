@@ -125,6 +125,15 @@ final playerRecentMatchesProvider =
       ref.watch(matchStatsRepositoryProvider).recentMatches(playerId),
 );
 
+/// Variante 10-rows utilisée par le profil public (Phase 13). On garde
+/// la version 5-rows pour l'onglet profil perso afin de ne pas allonger
+/// son scroll initial.
+final playerRecent10MatchesProvider =
+    FutureProvider.family.autoDispose<List<ArenaMatch>, String>(
+  (ref, playerId) =>
+      ref.watch(matchStatsRepositoryProvider).recentMatches(playerId, limit: 10),
+);
+
 /// Powers the full match-history page (#14) — every status, not just
 /// `completed`, so the "En cours" filter has data to render.
 final playerMatchHistoryProvider =

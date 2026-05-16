@@ -30,7 +30,10 @@ import 'package:arena/features_user/payouts/payout_kyc_page.dart';
 import 'package:arena/features_user/profile/about_page.dart';
 import 'package:arena/features_user/profile/delete_account_page.dart';
 import 'package:arena/features_user/profile/edit_profile_page.dart';
+import 'package:arena/features_user/profile/friends_page.dart';
+import 'package:arena/features_user/profile/friends_search_page.dart';
 import 'package:arena/features_user/profile/match_history_page.dart';
+import 'package:arena/features_user/profile/public_profile_page.dart';
 import 'package:arena/features_user/profile/settings_page.dart';
 import 'package:arena/features_user/recording/match_in_progress_overlay.dart';
 import 'package:arena/features_user/recording/recording_error_page.dart';
@@ -63,6 +66,9 @@ abstract final class UserRoutes {
   static const profileEdit = '/profile/edit';
   static const profileDelete = '/profile/delete';
   static const matchHistory = '/profile/match-history';
+  static const publicProfile = '/profile/u/:username';
+  static const friends = '/friends';
+  static const friendsSearch = '/friends/search';
   static const registrationConfirm = '/competitions/:id/register/confirm';
   static const settings = '/settings';
   static const messagesInbox = '/messages';
@@ -92,6 +98,12 @@ abstract final class UserRoutes {
 
   /// Builds the concrete `/chat/match/<id>` URL.
   static String matchChatPath(String matchId) => '/chat/match/$matchId';
+
+  /// Builds `/profile/u/<username>` — profil public d'un autre joueur.
+  /// Le username vient de `profiles.username` (case sensitive côté URL
+  /// mais le repo lookup est case-insensitive via ilike).
+  static String publicProfilePath(String username) =>
+      '/profile/u/${Uri.encodeComponent(username)}';
 
   /// Builds the concrete `/streams/watch/<matchId>` URL — points at
   /// the Agora viewer for a publicly streamed match (PHASE 8.7).
@@ -314,6 +326,24 @@ final userRouterProvider = Provider<GoRouter>((ref) {
         path: UserRoutes.matchHistory,
         name: 'user.matchHistory',
         builder: (context, state) => const MatchHistoryPage(),
+      ),
+      GoRoute(
+        path: UserRoutes.publicProfile,
+        name: 'user.publicProfile',
+        builder: (context, state) {
+          final raw = state.pathParameters['username'] ?? '';
+          return PublicProfilePage(username: Uri.decodeComponent(raw));
+        },
+      ),
+      GoRoute(
+        path: UserRoutes.friends,
+        name: 'user.friends',
+        builder: (context, state) => const FriendsPage(),
+      ),
+      GoRoute(
+        path: UserRoutes.friendsSearch,
+        name: 'user.friendsSearch',
+        builder: (context, state) => const FriendsSearchPage(),
       ),
       GoRoute(
         path: UserRoutes.registrationConfirm,

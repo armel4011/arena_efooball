@@ -311,54 +311,72 @@ class _ChatAppBar extends StatelessWidget {
         children: [
           _CircleIconButton(icon: Icons.arrow_back, onTap: onBack),
           const SizedBox(width: 10),
-          Stack(
-            children: [
-              ArenaAvatar(
-                initials: initials,
-                color: inboxAvatarFor(username),
-                size: ArenaAvatarSize.sm,
-              ),
-              if (peerOnline)
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: ArenaColors.statusOk,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: ArenaColors.void_, width: 2),
+          // Phase 13 — tap sur l'identité du peer ouvre son profil public.
+          Expanded(
+            child: InkWell(
+              onTap: opponent == null
+                  ? null
+                  : () => context.push(
+                        UserRoutes.publicProfilePath(opponent!.username),
+                      ),
+              borderRadius: BorderRadius.circular(8),
+              child: Row(
+                children: [
+                  Stack(
+                    children: [
+                      ArenaAvatar(
+                        initials: initials,
+                        color: inboxAvatarFor(username),
+                        size: ArenaAvatarSize.sm,
+                      ),
+                      if (peerOnline)
+                        Positioned(
+                          right: 0,
+                          bottom: 0,
+                          child: Container(
+                            width: 10,
+                            height: 10,
+                            decoration: BoxDecoration(
+                              color: ArenaColors.statusOk,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: ArenaColors.void_,
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          username,
+                          style: const TextStyle(
+                            color: ArenaColors.bone,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          subtitle,
+                          style: ArenaText.small.copyWith(
+                            color: subtitleColor,
+                            fontStyle: peerTyping
+                                ? FontStyle.italic
+                                : FontStyle.normal,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-            ],
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  username,
-                  style: const TextStyle(
-                    color: ArenaColors.bone,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  subtitle,
-                  style: ArenaText.small.copyWith(
-                    color: subtitleColor,
-                    fontStyle: peerTyping
-                        ? FontStyle.italic
-                        : FontStyle.normal,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           _CircleIconButton(

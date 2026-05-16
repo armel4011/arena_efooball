@@ -1,3 +1,4 @@
+import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
@@ -12,6 +13,7 @@ import 'package:arena/features_user/bracket/bracket_view_page.dart';
 import 'package:arena/features_user/bracket/group_standings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 /// PHASE 4 — single competition detail page with 4 tabs.
@@ -557,57 +559,65 @@ class _RankingEntryRow extends StatelessWidget {
         ? entry.username.substring(0, 1).toUpperCase()
         : '?';
 
-    return Container(
-      padding: const EdgeInsets.all(ArenaSpacing.md),
-      decoration: BoxDecoration(
-        color: ArenaColors.carbon,
-        borderRadius: BorderRadius.circular(ArenaRadius.lg),
-        border: Border.all(color: ArenaColors.border),
-      ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 30,
-            child: Text(
-              rank == null ? '—' : prizeRankEmoji(rank - 1),
-              style: ArenaText.body.copyWith(fontSize: 18),
-              textAlign: TextAlign.center,
+    return InkWell(
+      // Phase 13 — tap → /profile/u/<username> (profil public du joueur).
+      onTap: entry.username.isEmpty
+          ? null
+          : () =>
+              context.push(UserRoutes.publicProfilePath(entry.username)),
+      borderRadius: BorderRadius.circular(ArenaRadius.lg),
+      child: Container(
+        padding: const EdgeInsets.all(ArenaSpacing.md),
+        decoration: BoxDecoration(
+          color: ArenaColors.carbon,
+          borderRadius: BorderRadius.circular(ArenaRadius.lg),
+          border: Border.all(color: ArenaColors.border),
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 30,
+              child: Text(
+                rank == null ? '—' : prizeRankEmoji(rank - 1),
+                style: ArenaText.body.copyWith(fontSize: 18),
+                textAlign: TextAlign.center,
+              ),
             ),
-          ),
-          const SizedBox(width: ArenaSpacing.xs),
-          ArenaAvatar(
-            initials: initials,
-            color: _avatarColorForSeed(entry.username),
-            size: ArenaAvatarSize.sm,
-          ),
-          const SizedBox(width: ArenaSpacing.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  entry.username,
-                  style: ArenaText.body,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  rank == null
-                      ? 'Non classé'
-                      : '${prizeRankLabel(rank - 1)} place',
-                  style: ArenaText.bodyMuted,
-                ),
-              ],
+            const SizedBox(width: ArenaSpacing.xs),
+            ArenaAvatar(
+              initials: initials,
+              color: _avatarColorForSeed(entry.username),
+              size: ArenaAvatarSize.sm,
             ),
-          ),
-          if (prize != null) ...[
             const SizedBox(width: ArenaSpacing.sm),
-            Text(
-              '${_formatMoney(prize)} $currency',
-              style: ArenaText.mono.copyWith(color: ArenaColors.statusOk),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    entry.username,
+                    style: ArenaText.body,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    rank == null
+                        ? 'Non classé'
+                        : '${prizeRankLabel(rank - 1)} place',
+                    style: ArenaText.bodyMuted,
+                  ),
+                ],
+              ),
             ),
+            if (prize != null) ...[
+              const SizedBox(width: ArenaSpacing.sm),
+              Text(
+                '${_formatMoney(prize)} $currency',
+                style: ArenaText.mono.copyWith(color: ArenaColors.statusOk),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

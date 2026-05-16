@@ -354,7 +354,11 @@ class _PlayerSeat extends StatelessWidget {
         ? fallbackColor
         : _avatarColorFromHex(profile!.avatarColor) ?? fallbackColor;
 
-    return Column(
+    // Phase 13 — tap sur le seat ouvre /profile/u/:username (sauf "TOI",
+    // qui re-route déjà vers son propre profil via le bottom tab).
+    final canOpenProfile = profile != null && !isSelf;
+
+    final seat = Column(
       children: [
         ArenaAvatar(
           initials: initial,
@@ -378,6 +382,14 @@ class _PlayerSeat extends StatelessWidget {
         else if (profile != null)
           const _SeatBadge(label: 'AWAY', color: ArenaColors.statusWarn),
       ],
+    );
+
+    if (!canOpenProfile) return seat;
+    return InkWell(
+      onTap: () =>
+          context.push(UserRoutes.publicProfilePath(profile!.username)),
+      borderRadius: BorderRadius.circular(12),
+      child: seat,
     );
   }
 }

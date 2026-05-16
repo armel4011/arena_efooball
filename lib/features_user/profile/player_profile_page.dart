@@ -5,6 +5,7 @@ import 'package:arena/core/theme/arena_typography.dart';
 import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/models/player_stats.dart';
 import 'package:arena/data/models/profile.dart';
+import 'package:arena/data/repositories/friends_repository.dart';
 import 'package:arena/data/repositories/match_stats_repository.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_card.dart';
@@ -78,6 +79,8 @@ class _ProfileBody extends ConsumerWidget {
         padding: const EdgeInsets.all(ArenaSpacing.lg),
         children: [
           _Header(profile: profile),
+          const SizedBox(height: ArenaSpacing.lg),
+          const _FriendsSection(),
           const SizedBox(height: ArenaSpacing.lg),
           _StatsCard(stats: statsAsync),
           const SizedBox(height: ArenaSpacing.lg),
@@ -456,6 +459,100 @@ class _MatchRow extends StatelessWidget {
             style: ArenaTypography.labelLarge,
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Phase 13 — Section "Mes amis" dans le tab profil. Affiche un compteur
+/// total d'amis acceptés + un badge si demandes pending entrantes ;
+/// tap → /friends. Le badge utilise un stream realtime de la table
+/// `friendships` pour se mettre à jour sans navigation.
+class _FriendsSection extends ConsumerWidget {
+  const _FriendsSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final pendingAsync = ref.watch(incomingFriendRequestsCountProvider);
+    final friendsAsync = ref.watch(acceptedFriendsProvider);
+
+    final pending = pendingAsync.maybeWhen(data: (v) => v, orElse: () => 0);
+    final friendsCount =
+        friendsAsync.maybeWhen(data: (v) => v.length, orElse: () => 0);
+
+    return ArenaCard(
+      onTap: () => context.push(UserRoutes.friends),
+      padding: const EdgeInsets.symmetric(
+        vertical: ArenaSpacing.md,
+        horizontal: ArenaSpacing.md,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: ArenaColors.primary.withValues(alpha: 0.16),
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: const Icon(
+              Icons.people_outline,
+              color: ArenaColors.primary,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: ArenaSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text('Mes amis', style: ArenaTypography.bodyMedium),
+                    if (pending > 0) ...[
+                      const SizedBox(width: ArenaSpacing.sm),
+                      _PendingBadge(count: pending),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  friendsCount == 0
+                      ? 'Aucun ami pour le moment'
+                      : '$friendsCount ami${friendsCount > 1 ? 's' : ''}',
+                  style: ArenaTypography.bodySmall.copyWith(
+                    color: ArenaColors.textMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_right, color: ArenaColors.textMuted),
+        ],
+      ),
+    );
+  }
+}
+
+class _PendingBadge extends StatelessWidget {
+  const _PendingBadge({required this.count});
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: ArenaColors.danger,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        count > 99 ? '99+' : '$count',
+        style: ArenaTypography.labelSmall.copyWith(
+          color: Colors.white,
+          fontWeight: FontWeight.w800,
+        ),
       ),
     );
   }
