@@ -7,11 +7,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 /// Reads completed matches for a player and folds them into a
 /// [PlayerStats] summary (PHASE 9.1).
 ///
-/// The job belongs server-side eventually (the PHASE 12.5 Edge Function
-/// `recalculate_player_stats` will write to `profiles.stats jsonb` after
-/// every match closes), but until then we recompute client-side on each
-/// profile open. Match volume per V1.0 player stays low enough that the
-/// extra round-trip is fine.
+/// Depuis Phase 12.5, `profiles.stats jsonb` est aussi recalculé
+/// server-side par la fonction `recalculate_player_stats` (trigger
+/// AFTER UPDATE matches.status='completed'). Ce repository garde le
+/// fold client pour les écrans qui ont déjà la liste de matches en main
+/// (évite un round-trip) ; pour les leaderboards / classements,
+/// lire directement `profiles.stats`.
 class MatchStatsRepository {
   const MatchStatsRepository(this._client);
 

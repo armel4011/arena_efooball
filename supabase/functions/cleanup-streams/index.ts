@@ -4,13 +4,13 @@
 // Maintenance horaire des streams Agora + des enregistrements stockés :
 //
 //   1. **Ferme les streams "stale"** — `is_active=true AND ended_at IS
-//      NULL` mais le match est en `status='finished'` (admin a clos)
+//      NULL` mais le match est en `status='completed'` (admin a clos)
 //      OU `started_at < now() - 6h` (le broadcaster a probablement
 //      tué l'app sans ack). On flippe `is_active=false`, `is_public=false`,
 //      `ended_at=now()` pour que la LiveStreamsPage ne montre plus le
 //      flux et que le frontend n'essaye plus de réémettre un token Agora.
 //
-//   2. **Purge le storage des matchs finished > 30j** — vidéos uploadées
+//   2. **Purge le storage des matchs completed > 30j** — vidéos uploadées
 //      (`match-recordings/{matchId}/...`) + screenshots de preuve
 //      (`match-proofs/{matchId}/...`). À J+30 les disputes ont eu leur
 //      SLA + le client n'a plus besoin de visionner. On efface en bloc
@@ -110,7 +110,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     .select("id, match_id, matches!inner(status)")
     .eq("is_active", true)
     .is("ended_at", null)
-    .eq("matches.status", "finished");
+    .eq("matches.status", "completed");
 
   const staleIds: string[] = [];
   if (fmsErr) {
@@ -157,7 +157,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
 
   // ─────────────────────────────────────────────────────────────────
-  // 2) Purge storage des matchs finished depuis > 30 jours.
+  // 2) Purge storage des matchs completed depuis > 30 jours.
   //    On bat les matchs par batch — on ne supprime *pas* les rows
   //    `matches` ou `streams` (on garde l'historique pour les stats
   //    joueur), seulement les blobs.
@@ -168,7 +168,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const { data: oldMatches, error: omErr } = await sb
     .from("matches")
     .select("id")
-    .eq("status", "finished")
+    .eq("status", "completed")
     .lt("finished_at", thirtyDaysAgo)
     .limit(50); // batch ; cron tourne chaque heure → catch-up rapide
   if (omErr) {
