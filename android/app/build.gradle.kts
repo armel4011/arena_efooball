@@ -88,6 +88,20 @@ android {
             }
         }
     }
+
+    // agora_rtc_engine et agora_rtm embarquent tous les deux la lib
+    // native commune `libaosl.so` (Agora Object Shared Library). Sans
+    // déduplication, `mergeNativeLibs` plante avec
+    // "2 files found with path 'lib/arm64-v8a/libaosl.so'".
+    // pickFirsts dit à AGP de retenir la première occurrence (les deux
+    // sont des copies identiques de la même version compatible).
+    packaging {
+        jniLibs {
+            pickFirsts += setOf(
+                "**/libaosl.so",
+            )
+        }
+    }
 }
 
 flutter {
