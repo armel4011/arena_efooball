@@ -65,7 +65,7 @@ class _PaymentMethodPickerPageState extends State<PaymentMethodPickerPage> {
                 border: Border.all(color: ArenaColors.border),
               ),
               child: Text(
-                "₿ Crypto + Wave + Moov disponibles en V2 (passerelles "
+                '₿ Crypto + Wave + Moov disponibles en V2 (passerelles '
                 'automatiques CinetPay / NowPayments).',
                 style: ArenaText.small,
               ),

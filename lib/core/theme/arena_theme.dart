@@ -183,7 +183,7 @@ class ArenaText {
 
   // ─── Bebas Neue — headers, titres, scores ────────────────────────────────
   static TextStyle hero = GoogleFonts.bebasNeue(
-    fontSize: 60, letterSpacing: 8, color: ArenaColors.bone, height: 1.0,
+    fontSize: 60, letterSpacing: 8, color: ArenaColors.bone, height: 1,
   );
   static TextStyle h1 = GoogleFonts.bebasNeue(
     fontSize: 26, letterSpacing: 2, height: 1.1, color: ArenaColors.bone,

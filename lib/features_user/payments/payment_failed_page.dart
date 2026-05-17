@@ -38,15 +38,15 @@ class PaymentFailedPage extends StatelessWidget {
   String get _causeMessage {
     switch (reason) {
       case PaymentFailReason.rejected:
-        return adminReason?.trim().isNotEmpty == true
+        return adminReason?.trim().isNotEmpty ?? false
             ? 'Le super-admin a refusé ton paiement : $adminReason'
             : 'Le super-admin a refusé ton paiement (montant incorrect '
                 'ou transaction introuvable sur le compte marchand).';
       case PaymentFailReason.network:
-        return 'Problème réseau pendant l\'envoi. Aucun débit n\'a été '
+        return "Problème réseau pendant l'envoi. Aucun débit n'a été "
             'effectué côté ARENA.';
       case PaymentFailReason.unknown:
-        return 'Le paiement n\'a pas pu être confirmé. Réessaie ou '
+        return "Le paiement n'a pas pu être confirmé. Réessaie ou "
             'contacte le support.';
     }
   }
@@ -68,7 +68,7 @@ class PaymentFailedPage extends StatelessWidget {
         return [
           'Vérifie le montant exact + le code marchand',
           'Recommence depuis la page Inscription',
-          'Contacte le support si tu penses que c\'est une erreur',
+          "Contacte le support si tu penses que c'est une erreur",
         ];
       case PaymentFailReason.network:
         return [

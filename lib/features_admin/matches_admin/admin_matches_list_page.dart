@@ -266,7 +266,7 @@ String _footText(ArenaMatch m) {
       final started = m.startedAt;
       if (started == null) return 'En cours';
       final elapsed = DateTime.now().difference(started).inMinutes;
-      return "En cours · ${elapsed}'";
+      return "En cours · $elapsed'";
     case MatchStatus.completed:
       final finished = m.finishedAt;
       if (finished == null) return 'Terminé';

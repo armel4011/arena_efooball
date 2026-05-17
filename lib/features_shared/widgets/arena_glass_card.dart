@@ -1,6 +1,5 @@
 import 'dart:ui';
 
-import 'package:arena/core/theme/arena_colors.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:flutter/material.dart';
 

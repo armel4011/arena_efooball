@@ -152,7 +152,7 @@ class CompetitionRepository {
               for (final r in rows)
                 if (r['status'] == 'confirmed')
                   r['competition_id'] as String,
-            });
+            },);
   }
 }
 

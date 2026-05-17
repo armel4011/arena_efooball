@@ -64,7 +64,7 @@ class AboutPage extends StatelessWidget {
             const SizedBox(height: ArenaSpacing.lg),
             Text('LIENS', style: ArenaText.inputLabel),
             const SizedBox(height: ArenaSpacing.sm),
-            _LinksCard(links: _links)
+            const _LinksCard(links: _links)
                 .animate(delay: 250.ms)
                 .fadeIn(duration: ArenaDurations.medium),
             const SizedBox(height: ArenaSpacing.lg),

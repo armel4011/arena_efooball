@@ -1,6 +1,4 @@
-import 'package:arena/core/theme/arena_colors.dart';
 import 'package:arena/core/theme/arena_theme.dart';
-import 'package:arena/core/theme/arena_typography.dart';
 import 'package:flutter/material.dart';
 
 enum ArenaButtonVariant { primary, secondary, danger, ghost }

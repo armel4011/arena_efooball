@@ -1,6 +1,6 @@
 import 'package:arena/core/router/user_router.dart';
-import 'package:arena/data/repositories/auth_repository.dart';
 import 'package:arena/data/repositories/auth_failure.dart';
+import 'package:arena/data/repositories/auth_repository.dart';
 import 'package:arena/features_user/auth/reset_password_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

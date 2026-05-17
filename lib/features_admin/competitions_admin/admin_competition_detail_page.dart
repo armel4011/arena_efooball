@@ -470,7 +470,7 @@ class _ActionsTab extends ConsumerWidget {
         backgroundColor: ArenaColors.carbon,
         title: Text('Annuler la compétition ?', style: ArenaText.h3),
         content: Text(
-          'L\'opération est irréversible côté joueurs. Les remboursements '
+          "L'opération est irréversible côté joueurs. Les remboursements "
           'seront déclenchés en PHASE 11bis.',
           style: ArenaText.bodyMuted,
         ),

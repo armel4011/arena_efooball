@@ -87,7 +87,7 @@ class _PreferencesSection extends ConsumerWidget {
           const _Divider(),
           ListTile(
             leading: const Icon(Icons.payments_outlined,
-                color: ArenaColors.textMuted),
+                color: ArenaColors.textMuted,),
             title: const Text('Devise'),
             subtitle: Text(
               profile?.preferredCurrency ?? '—',
@@ -96,14 +96,14 @@ class _PreferencesSection extends ConsumerWidget {
               ),
             ),
             trailing: const Icon(Icons.lock_outline,
-                size: 16, color: ArenaColors.textFaint),
+                size: 16, color: ArenaColors.textFaint,),
             // The currency is auto-derived from country in V1.0 — admins
             // will own the override flow in PHASE 11.
           ),
           const _Divider(),
           SwitchListTile(
             secondary: const Icon(Icons.campaign_outlined,
-                color: ArenaColors.textMuted),
+                color: ArenaColors.textMuted,),
             title: const Text('Notifications marketing'),
             subtitle: Text(
               'Conseils, nouveaux tournois, promotions',
@@ -176,7 +176,7 @@ class _AccountSection extends ConsumerWidget {
               ),
             ),
             trailing: const Icon(Icons.lock_outline,
-                size: 16, color: ArenaColors.textFaint),
+                size: 16, color: ArenaColors.textFaint,),
           ),
         ],
       ),
@@ -189,7 +189,7 @@ class _AccountSection extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: ArenaColors.surface,
-        title: const Text("Nouvel email"),
+        title: const Text('Nouvel email'),
         content: TextField(
           controller: controller,
           keyboardType: TextInputType.emailAddress,
@@ -217,7 +217,7 @@ class _AccountSection extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content:
-                Text("Vérifie ta boîte mail pour confirmer le changement."),
+                Text('Vérifie ta boîte mail pour confirmer le changement.'),
           ),
         );
       }
@@ -235,7 +235,7 @@ class _AccountSection extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: ArenaColors.surface,
-        title: const Text("Nouveau mot de passe"),
+        title: const Text('Nouveau mot de passe'),
         content: TextField(
           controller: controller,
           obscureText: true,
@@ -333,7 +333,7 @@ class _PrivacySectionState extends ConsumerState<_PrivacySection> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.download_outlined,
-                    color: ArenaColors.textMuted),
+                    color: ArenaColors.textMuted,),
             title: const Text('Télécharger mes données'),
             subtitle: Text(
               _exporting
@@ -344,7 +344,7 @@ class _PrivacySectionState extends ConsumerState<_PrivacySection> {
               ),
             ),
             trailing: const Icon(Icons.chevron_right,
-                color: ArenaColors.textFaint),
+                color: ArenaColors.textFaint,),
             enabled: !_exporting,
             onTap: _runExport,
           ),
@@ -396,7 +396,7 @@ class _ExportSuccessDialog extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(top: 2),
                 child: Text('· ${e.key}: ${e.value}',
-                    style: ArenaText.small),
+                    style: ArenaText.small,),
               ),
           ],
         ],

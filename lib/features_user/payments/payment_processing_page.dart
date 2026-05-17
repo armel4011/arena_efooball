@@ -195,7 +195,7 @@ class _PaymentProcessingPageState
         title: const Text('Annuler le paiement ?'),
         content: const Text(
           'Si tu as déjà payé sur Mobile Money, attends la validation '
-          'plutôt que d\'annuler ici (sinon l\'admin n\'inscrira pas '
+          "plutôt que d'annuler ici (sinon l'admin n'inscrira pas "
           'ton compte).',
         ),
         actions: [

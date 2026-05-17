@@ -106,7 +106,7 @@ class _StatGrid extends StatelessWidget {
         borderRadius: BorderRadius.circular(ArenaRadius.lg),
         border: Border.all(color: ArenaColors.border),
       ),
-      child: Row(
+      child: const Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _StatCol(

@@ -3,10 +3,10 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/admin_audit_log.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_kpis_repository.dart';
+import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
-import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -384,7 +384,7 @@ class _AlertCards extends StatelessWidget {
             decoration: arenaDangerCardDecoration(),
             icon: '⚠',
             title: '$disputes ${disputes == 1 ? 'dispute ouverte' : 'disputes ouvertes'}',
-            subtitle: 'À traiter dans l\'onglet Matchs',
+            subtitle: "À traiter dans l'onglet Matchs",
             accent: ArenaColors.neonRed,
           ),
         if (disputes > 0 && pendingPayouts > 0)

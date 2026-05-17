@@ -1,5 +1,6 @@
 import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/models/match_status.dart';
+import 'package:arena/data/repositories/match_repository.dart' show MatchRepository;
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';

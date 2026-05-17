@@ -219,7 +219,7 @@ class _StepWarning extends StatelessWidget {
         Row(
           children: [
             const Icon(Icons.warning_amber_rounded,
-                color: ArenaColors.danger, size: 32),
+                color: ArenaColors.danger, size: 32,),
             const SizedBox(width: ArenaSpacing.sm),
             Expanded(
               child: Text(
@@ -328,7 +328,7 @@ class _StepPending extends StatelessWidget {
     return Column(
       children: [
         const Icon(Icons.check_circle_outline,
-            size: 48, color: ArenaColors.success),
+            size: 48, color: ArenaColors.success,),
         const SizedBox(height: ArenaSpacing.md),
         Text(
           'Aucun gain en attente',
@@ -412,7 +412,7 @@ class _StepConfirmState extends State<_StepConfirm> {
           label: 'Tape "$_confirmWord" pour confirmer',
           controller: widget.confirmCtrl,
           inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z]')),
+            FilteringTextInputFormatter.allow(RegExp('[A-Za-z]')),
           ],
           onChanged: (_) => setState(() {}),
           autofocus: false,
@@ -462,8 +462,8 @@ class _StepDone extends StatelessWidget {
         ),
         const SizedBox(height: ArenaSpacing.md),
         Text(
-          "Ton compte sera définitivement supprimé sous 30 jours. "
-          'Contacte le support si tu changes d\'avis.',
+          'Ton compte sera définitivement supprimé sous 30 jours. '
+          "Contacte le support si tu changes d'avis.",
           style: ArenaTypography.bodyMedium,
           textAlign: TextAlign.center,
         ),

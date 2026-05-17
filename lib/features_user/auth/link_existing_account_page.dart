@@ -30,8 +30,8 @@ class LinkExistingAccountPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final emailLine = email == null
         ? "L'adresse e-mail de ce compte $providerLabel est déjà"
-            " utilisée par un compte ARENA."
-        : "$email est déjà utilisé par un compte ARENA"
+            ' utilisée par un compte ARENA.'
+        : '$email est déjà utilisé par un compte ARENA'
             ' (mot de passe).';
 
     return Scaffold(

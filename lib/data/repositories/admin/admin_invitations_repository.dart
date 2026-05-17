@@ -28,7 +28,7 @@ class AdminInvitationsRepository {
         .order('created_at', ascending: false)
         .map((rows) => [
               for (final row in rows) InvitationCode.fromJson(row),
-            ]);
+            ],);
   }
 
   Future<InvitationCode> create({

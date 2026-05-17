@@ -55,7 +55,7 @@ class _AdminAuditLogPageState extends ConsumerState<AdminAuditLogPage> {
         category: _category,
         periodDays: _periodDays,
         searchQuery: _searchQuery.isEmpty ? null : _searchQuery,
-      )),
+      ),),
     );
 
     return Scaffold(
@@ -383,7 +383,7 @@ _ActionVisual _visualFor(String action) {
         actionVerb: 'a annulé',
       );
     default:
-      return _ActionVisual(
+      return const _ActionVisual(
         emoji: '•',
         label: '',
         color: ArenaColors.silver,

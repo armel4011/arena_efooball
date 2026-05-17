@@ -75,7 +75,7 @@ BracketPlan generateSingleElimination({
         matchNumber: matches.length + 1,
         player1Id: p1,
         player2Id: p2,
-      ));
+      ),);
 
       // Round R node points to round R+1's node at `pos ~/ 2`.
       int? nextNodeIndex;
@@ -96,7 +96,7 @@ BracketPlan generateSingleElimination({
         isGrandFinal: round == totalRounds,
         isBye: isAutoBye,
         byePlayerId: isAutoBye ? lonePlayer : null,
-      ));
+      ),);
     }
     nodeCursor += matchesThisRound;
   }

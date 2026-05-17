@@ -5,6 +5,7 @@ import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
+import 'package:arena/features_user/auth/reset_password_page.dart' show ResetPasswordPage;
 import 'package:arena/features_user/auth/widgets/auth_failure_message.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -58,7 +59,7 @@ class _ResetPasswordCodePageState extends ConsumerState<ResetPasswordCodePage> {
         );
     if (!mounted) return;
     final state = ref.read(verifyPasswordResetCodeControllerProvider);
-    if (state.hasValue && state.value == true) {
+    if (state.hasValue && (state.value ?? false)) {
       context.go(UserRoutes.resetPassword);
     }
   }

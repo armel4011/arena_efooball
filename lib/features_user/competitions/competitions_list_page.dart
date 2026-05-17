@@ -4,6 +4,7 @@ import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
 import 'package:arena/data/repositories/payment_repository.dart';
+import 'package:arena/features_shared/widgets/arena_banner.dart' show ArenaBanner;
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:arena/features_shared/widgets/error_state.dart';
@@ -532,7 +533,7 @@ class _FreeCompetitionCard extends StatelessWidget {
                   Row(
                     children: [
                       const Icon(Icons.people_outline,
-                          size: 13, color: ArenaColors.silver),
+                          size: 13, color: ArenaColors.silver,),
                       const SizedBox(width: 3),
                       Text(
                         '${c.currentPlayers}/${c.maxPlayers}',
@@ -607,7 +608,7 @@ class _PaidCompetitionCard extends StatelessWidget {
     final dateLabel =
         DateFormat('d MMM · HH:mm', 'fr').format(c.startDate.toLocal());
     final prize = _formatPrize(c.prizePoolLocal,
-        c.prizePoolCurrency ?? c.registrationCurrency);
+        c.prizePoolCurrency ?? c.registrationCurrency,);
 
     final body = InkWell(
       onTap: onTap,
@@ -715,7 +716,7 @@ class _PaidCompetitionCard extends StatelessWidget {
                     ],
                   ),
                   child: const Text('🏆',
-                      style: TextStyle(fontSize: 30)),
+                      style: TextStyle(fontSize: 30),),
                 ),
                 const SizedBox(width: ArenaSpacing.md),
                 Expanded(

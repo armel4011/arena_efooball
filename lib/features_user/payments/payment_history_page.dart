@@ -242,8 +242,8 @@ class _TxCard extends StatelessWidget {
       case 'succeeded':
         return (
           glyph: '↑',
-          iconColor: Color(0xFFFFA500),
-          tint: Color(0x33FFA500),
+          iconColor: const Color(0xFFFFA500),
+          tint: const Color(0x33FFA500),
           amountColor: ArenaColors.neonRed,
           badge: 'PAYÉ',
           badgeVariant: ArenaBadgeVariant.success,
@@ -255,7 +255,7 @@ class _TxCard extends StatelessWidget {
         return (
           glyph: '⏱',
           iconColor: ArenaColors.signalBlue,
-          tint: Color(0x33007BFF),
+          tint: const Color(0x33007BFF),
           amountColor: ArenaColors.silver,
           badge: 'EN ATTENTE',
           badgeVariant: ArenaBadgeVariant.warn,
@@ -267,7 +267,7 @@ class _TxCard extends StatelessWidget {
         return (
           glyph: '✗',
           iconColor: ArenaColors.neonRed,
-          tint: Color(0x33FF2D55),
+          tint: const Color(0x33FF2D55),
           amountColor: ArenaColors.silverDim,
           badge: 'ÉCHEC',
           badgeVariant: ArenaBadgeVariant.danger,

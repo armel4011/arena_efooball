@@ -40,7 +40,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
         .sendResetEmail(email);
     if (!mounted) return;
     final state = ref.read(forgotPasswordControllerProvider);
-    if (state.hasValue && state.value == true) {
+    if (state.hasValue && (state.value ?? false)) {
       context.goNamed(
         'user.resetPasswordCode',
         queryParameters: {'email': email},

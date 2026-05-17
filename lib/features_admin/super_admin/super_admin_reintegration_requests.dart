@@ -223,7 +223,7 @@ class _RequestCard extends ConsumerWidget {
     final reason = await _promptForReason(
       context,
       title: 'Refuser la requête',
-      hint: 'Motif du refus (obligatoire, visible par l\'utilisateur)…',
+      hint: "Motif du refus (obligatoire, visible par l'utilisateur)…",
       required: true,
     );
     if (reason == null || !context.mounted) return;

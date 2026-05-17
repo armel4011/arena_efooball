@@ -123,7 +123,7 @@ class _MobileMoneyDetailsPageState
                     keyboardType: TextInputType.phone,
                     onChanged: (_) => setState(() {}),
                     inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'[0-9 ]')),
+                      FilteringTextInputFormatter.allow(RegExp('[0-9 ]')),
                       LengthLimitingTextInputFormatter(13),
                     ],
                   ),
@@ -214,7 +214,7 @@ class _MobileMoneyDetailsPageState
       if (!mounted) return;
       setState(() => _submitting = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur lors de l\'envoi : $e')),
+        SnackBar(content: Text("Erreur lors de l'envoi : $e")),
       );
     }
   }
@@ -243,7 +243,7 @@ class _Hero extends StatelessWidget {
           Text('Paiement ${method.label}', style: ArenaText.h3),
           const SizedBox(height: 2),
           Text('Pour ${_formatXaf(amountXaf)} XAF',
-              style: ArenaText.bodyMuted),
+              style: ArenaText.bodyMuted,),
         ],
       ),
     );
@@ -391,7 +391,7 @@ class _Disclaimer extends StatelessWidget {
   static const _items = <String>[
     'Paie le montant EXACT — sinon le super-admin refusera',
     'Garde le SMS de confirmation Mobile Money en preuve',
-    'L\'admin valide manuellement ton paiement après réception',
+    "L'admin valide manuellement ton paiement après réception",
   ];
 
   @override
@@ -413,7 +413,7 @@ class _Disclaimer extends StatelessWidget {
                   Text('•  ',
                       style: ArenaText.bodyMuted.copyWith(
                         color: ArenaColors.statusWarn,
-                      )),
+                      ),),
                   Expanded(child: Text(i, style: ArenaText.body)),
                 ],
               ),

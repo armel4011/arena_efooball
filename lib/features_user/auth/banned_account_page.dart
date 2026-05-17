@@ -91,10 +91,10 @@ class _BannedAccountPageState extends ConsumerState<BannedAccountPage> {
                 ),
               ),
               error: (e, _) => Text(
-                'Impossible de charger l\'état de la requête : $e',
+                "Impossible de charger l'état de la requête : $e",
                 style: ArenaText.bodyMuted,
               ),
-              data: (req) => _buildRequestSection(req),
+              data: _buildRequestSection,
             ),
             const SizedBox(height: ArenaSpacing.xl),
             ArenaButton(
@@ -132,7 +132,7 @@ class _BannedAccountPageState extends ConsumerState<BannedAccountPage> {
         const SizedBox(height: ArenaSpacing.xs),
         Text(
           'Explique pourquoi tu penses que ton bannissement devrait être '
-          'reconsidéré. L\'équipe Arena Requête analyse chaque demande '
+          "reconsidéré. L'équipe Arena Requête analyse chaque demande "
           'sous 48 heures.',
           style: ArenaText.bodyMuted,
         ),
@@ -197,7 +197,7 @@ class _BanHeader extends StatelessWidget {
           ),
           const SizedBox(height: ArenaSpacing.sm),
           Text(
-            'Tu as été reconnu coupable d\'un litige à 3 reprises. '
+            "Tu as été reconnu coupable d'un litige à 3 reprises. "
             'Conformément à la règle ARENA, ton compte est désactivé.',
             style: ArenaText.body,
           ),
@@ -236,7 +236,7 @@ class _PendingCard extends StatelessWidget {
                 child: Text(
                   overdue
                       ? 'Analyse en retard (> 48h)'
-                      : 'Requête en cours d\'analyse',
+                      : "Requête en cours d'analyse",
                   style: ArenaText.h3.copyWith(color: accent),
                 ),
               ),
@@ -246,10 +246,10 @@ class _PendingCard extends StatelessWidget {
           Text(
             overdue
                 ? 'Ta requête est ouverte depuis plus de 48 heures. '
-                    'L\'équipe Arena Requête est notifiée — merci pour ta '
+                    "L'équipe Arena Requête est notifiée — merci pour ta "
                     'patience.'
-                : 'L\'équipe Arena Requête a 48 heures pour analyser ta '
-                    'demande. Tu seras notifié dès qu\'une décision est '
+                : "L'équipe Arena Requête a 48 heures pour analyser ta "
+                    "demande. Tu seras notifié dès qu'une décision est "
                     'prise.',
             style: ArenaText.bodyMuted,
           ),

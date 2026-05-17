@@ -45,7 +45,7 @@ class AdminKpisRepository {
 
     final payouts = results[3];
     final totalPending = payouts.fold<double>(0, (acc, row) {
-      final raw = (row)['amount_local'];
+      final raw = row['amount_local'];
       if (raw is num) return acc + raw.toDouble();
       return acc;
     });

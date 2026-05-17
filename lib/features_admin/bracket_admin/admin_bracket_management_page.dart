@@ -8,12 +8,12 @@ import 'package:arena/data/repositories/admin/admin_bracket_repository.dart';
 import 'package:arena/data/repositories/admin/admin_matches_repository.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
 import 'package:arena/data/repositories/match_repository.dart';
+import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
-import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -117,7 +117,7 @@ class _EmptyStateState extends ConsumerState<_EmptyState> {
           padding: const EdgeInsets.all(ArenaSpacing.md),
           decoration: arenaWarningCardDecoration(),
           child: Text(
-            'L\'opération est irréversible côté joueurs : les matchs '
+            "L'opération est irréversible côté joueurs : les matchs "
             'seront créés et chaque joueur inscrit reçoit son premier '
             'adversaire.',
             style: ArenaText.body,

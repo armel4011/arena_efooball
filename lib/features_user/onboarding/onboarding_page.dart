@@ -36,7 +36,7 @@ class OnboardingPage extends StatefulWidget {
     OnboardingSlideData(
       emoji: '📱',
       title: 'CODE DE ROOM PARTAGÉ',
-      description: "Tu partages ton code de room dans le jeu, vous vous"
+      description: 'Tu partages ton code de room dans le jeu, vous vous'
           ' affrontez, puis vous validez le score à deux dans ARENA.',
     ),
     OnboardingSlideData(

@@ -2,6 +2,7 @@ import 'package:arena/core/router/admin_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/auth_failure.dart';
 import 'package:arena/features_admin/auth_admin/admin_auth_providers.dart';
+import 'package:arena/features_admin/auth_admin/totp_setup_screen.dart' show TotpSetupScreen;
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
@@ -70,8 +71,8 @@ class _InvitationRedeemScreenState
     // Admin password rules : 12 chars + at least 1 upper + 1 lower +
     // 1 digit + 1 symbol (PHASE 2bis spec).
     if (v.length < 12) return 'Minimum 12 caractères';
-    if (!RegExp(r'[A-Z]').hasMatch(v)) return 'Au moins une majuscule';
-    if (!RegExp(r'[a-z]').hasMatch(v)) return 'Au moins une minuscule';
+    if (!RegExp('[A-Z]').hasMatch(v)) return 'Au moins une majuscule';
+    if (!RegExp('[a-z]').hasMatch(v)) return 'Au moins une minuscule';
     if (!RegExp(r'\d').hasMatch(v)) return 'Au moins un chiffre';
     if (!RegExp(r'[!@#$%^&*(),.?":{}|<>_\-]').hasMatch(v)) {
       return 'Au moins un caractère spécial';

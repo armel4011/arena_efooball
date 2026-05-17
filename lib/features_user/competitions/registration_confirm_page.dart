@@ -76,14 +76,14 @@ class _RegistrationConfirmPageState
             ).animate().fadeIn(duration: ArenaDurations.medium),
             const SizedBox(height: ArenaSpacing.lg),
             if (!_isFree) ...[
-              _SectionLabel('Paiement'),
+              const _SectionLabel('Paiement'),
               const SizedBox(height: ArenaSpacing.sm),
               _PaymentBreakdown(entryFeeXaf: widget.entryFeeXaf)
                   .animate(delay: 100.ms)
                   .fadeIn(duration: ArenaDurations.medium),
               const SizedBox(height: ArenaSpacing.lg),
             ],
-            _SectionLabel('Récompense du tournoi'),
+            const _SectionLabel('Récompense du tournoi'),
             const SizedBox(height: ArenaSpacing.sm),
             _PrizeDistribution(
               totalXaf: widget.totalPrizeXaf,
@@ -269,7 +269,7 @@ class _PaymentBreakdown extends StatelessWidget {
         children: [
           _Row(label: "Frais d'inscription", value: '${_formatXaf(entryFeeXaf)} XAF'),
           const ArenaDivider(),
-          _Row(label: 'Frais de service', value: 'Inclus'),
+          const _Row(label: 'Frais de service', value: 'Inclus'),
           const ArenaDivider(),
           _Row(
             label: 'Total à payer',

@@ -3,13 +3,13 @@ import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_competitions_repository.dart';
+import 'package:arena/features_admin/competitions_admin/widgets/competition_form_widgets.dart';
+import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/prize_ranks.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_stepper.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
-import 'package:arena/features_admin/competitions_admin/widgets/competition_form_widgets.dart';
-import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -431,14 +431,14 @@ class _CreateCompetitionPageState
           ),
         ),
         child: Text(
-          'ℹ Frais d\'inscription = 0 → compétition GRATUITE (badge sur la '
+          "ℹ Frais d'inscription = 0 → compétition GRATUITE (badge sur la "
           'carte + bypass paiement). Sinon le joueur paie en P2P sur les '
           'codes marchands ci-dessous, et le super-admin valide manuellement.',
           style: ArenaText.body,
         ),
       ),
       const SizedBox(height: ArenaSpacing.md),
-      Text('Frais d\'inscription', style: ArenaText.inputLabel),
+      Text("Frais d'inscription", style: ArenaText.inputLabel),
       const SizedBox(height: ArenaSpacing.xs),
       Row(
         children: [
@@ -450,7 +450,7 @@ class _CreateCompetitionPageState
                 hint: '0',
                 keyboardType: TextInputType.number,
                 inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                  FilteringTextInputFormatter.allow(RegExp('[0-9.]')),
                 ],
                 onChanged: (_) => setState(() {}),
               ),

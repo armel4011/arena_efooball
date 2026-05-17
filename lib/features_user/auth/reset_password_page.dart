@@ -5,6 +5,7 @@ import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
+import 'package:arena/features_user/auth/reset_password_code_page.dart' show ResetPasswordCodePage;
 import 'package:arena/features_user/auth/widgets/auth_failure_message.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -59,7 +60,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
   Widget build(BuildContext context) {
     final state = ref.watch(resetPasswordControllerProvider);
     final isLoading = state.isLoading;
-    final passwordChanged = state.value == true;
+    final passwordChanged = state.value ?? false;
     final errorMessage = state.hasError
         ? authFailureToMessage(_asFailure(state.error))
         : null;

@@ -71,7 +71,7 @@ class _CguAcceptancePageState extends ConsumerState<CguAcceptancePage> {
         );
     if (!mounted) return;
     final state = ref.read(acceptCguControllerProvider);
-    if (state.value == true) {
+    if (state.value ?? false) {
       context.go(UserRoutes.home);
     }
   }
@@ -122,7 +122,7 @@ class _CguAcceptancePageState extends ConsumerState<CguAcceptancePage> {
                 label: 'WHATSAPP (${dialCodeFor(_countryCode)})',
                 hint: 'Ex. 07 07 07 07 07',
                 helper:
-                    "Le code pays ${dialCodeFor(_countryCode)} est ajouté"
+                    'Le code pays ${dialCodeFor(_countryCode)} est ajouté'
                     ' automatiquement.',
                 controller: _whatsappCtrl,
                 keyboardType: TextInputType.phone,

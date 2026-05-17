@@ -149,7 +149,7 @@ class _GatedDetailView extends ConsumerWidget {
                         else
                           Text(
                             _prizeFmt(c.prizePoolLocal,
-                                c.prizePoolCurrency ?? c.registrationCurrency),
+                                c.prizePoolCurrency ?? c.registrationCurrency,),
                             style: ArenaText.bigNumber.copyWith(
                               color: accent,
                               fontSize: 32,

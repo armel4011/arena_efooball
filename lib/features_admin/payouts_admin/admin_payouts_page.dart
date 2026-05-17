@@ -3,11 +3,11 @@ import 'package:arena/data/models/payout.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_payouts_repository.dart';
 import 'package:arena/features_admin/auth_admin/widgets/totp_gate.dart';
+import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
-import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -562,7 +562,7 @@ class _BatchCard extends ConsumerWidget {
             hint: 'Tape le montant…',
             keyboardType: TextInputType.number,
             inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[0-9 ]')),
+              FilteringTextInputFormatter.allow(RegExp('[0-9 ]')),
               LengthLimitingTextInputFormatter(10),
             ],
           ),

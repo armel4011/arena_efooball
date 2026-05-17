@@ -339,7 +339,7 @@ class _CompCard extends ConsumerWidget {
         backgroundColor: ArenaColors.carbon,
         title: Text('Annuler la compétition ?', style: ArenaText.h3),
         content: Text(
-          'L\'opération est irréversible côté joueurs : la compétition '
+          "L'opération est irréversible côté joueurs : la compétition "
           'passe en cancelled. Les remboursements seront déclenchés en '
           'PHASE 11bis.',
           style: ArenaText.bodyMuted,
@@ -485,7 +485,7 @@ List<(String, String)> _kvsFor(Competition c) {
   }
   if (c.status == CompetitionStatus.registrationOpen ||
       c.status == CompetitionStatus.draft) {
-    out.add(('Démarre', DateFormat('dd/MM HH\'h\'').format(c.startDate)));
+    out.add(('Démarre', DateFormat("dd/MM HH'h'").format(c.startDate)));
   }
   return out;
 }

@@ -1,9 +1,7 @@
 import 'package:arena/core/i18n/feature_flags_service.dart';
 import 'package:arena/core/i18n/i18n_service.dart';
 import 'package:arena/core/i18n/supported_locale.dart';
-import 'package:arena/core/theme/arena_colors.dart';
 import 'package:arena/core/theme/arena_theme.dart';
-import 'package:arena/core/theme/arena_typography.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

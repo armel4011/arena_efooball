@@ -1,4 +1,5 @@
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/features_user/onboarding/onboarding_page.dart' show OnboardingPage;
 import 'package:flutter/material.dart';
 
 /// Data for a single onboarding slide. Owned by [OnboardingPage]; the slide

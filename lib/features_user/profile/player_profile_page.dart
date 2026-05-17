@@ -1,7 +1,5 @@
 import 'package:arena/core/router/user_router.dart';
-import 'package:arena/core/theme/arena_colors.dart';
 import 'package:arena/core/theme/arena_theme.dart';
-import 'package:arena/core/theme/arena_typography.dart';
 import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/models/player_stats.dart';
 import 'package:arena/data/models/profile.dart';

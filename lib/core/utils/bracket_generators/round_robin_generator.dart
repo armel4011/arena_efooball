@@ -46,7 +46,7 @@ BracketPlan generateRoundRobin({
         matchNumber: matches.length + 1,
         player1Id: a,
         player2Id: b,
-      ));
+      ),);
     }
     // Rotate everyone except index 0.
     final last = rotation.removeAt(n - 1);

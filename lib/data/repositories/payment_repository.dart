@@ -26,25 +26,6 @@ class PaymentRecord {
     this.rejectionReason,
   });
 
-  final String id;
-  final String userId;
-  final String competitionId;
-  final double amountLocal;
-  final String currency;
-
-  /// `pending` · `awaiting_admin` · `succeeded` · `rejected`.
-  final String status;
-
-  /// `MTN_MOMO` ou `ORANGE_MONEY`.
-  final String? payerMethod;
-
-  /// Numéro Mobile Money utilisé par le joueur pour payer.
-  final String? payerPhone;
-  final DateTime createdAt;
-  final DateTime? validatedAt;
-  final String? validatedByAdminId;
-  final String? rejectionReason;
-
   factory PaymentRecord.fromJson(Map<String, dynamic> row) {
     return PaymentRecord(
       id: row['id'] as String,
@@ -63,6 +44,25 @@ class PaymentRecord {
       rejectionReason: row['rejection_reason'] as String?,
     );
   }
+
+  final String id;
+  final String userId;
+  final String competitionId;
+  final double amountLocal;
+  final String currency;
+
+  /// `pending` · `awaiting_admin` · `succeeded` · `rejected`.
+  final String status;
+
+  /// `MTN_MOMO` ou `ORANGE_MONEY`.
+  final String? payerMethod;
+
+  /// Numéro Mobile Money utilisé par le joueur pour payer.
+  final String? payerPhone;
+  final DateTime createdAt;
+  final DateTime? validatedAt;
+  final String? validatedByAdminId;
+  final String? rejectionReason;
 }
 
 class PaymentRepository {
@@ -137,7 +137,7 @@ class PaymentRepository {
         .order('created_at')
         .map((rows) => [
               for (final row in rows.reversed) PaymentRecord.fromJson(row),
-            ]);
+            ],);
   }
 }
 

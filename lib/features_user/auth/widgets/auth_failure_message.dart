@@ -26,7 +26,7 @@ String authFailureToMessage(AuthFailure failure) {
     InvalidTotpCodeFailure() =>
       'Code à 6 chiffres incorrect. Réessaie.',
     TotpReplayFailure() =>
-      'Ce code vient d\'être utilisé. Attends le prochain.',
+      "Ce code vient d'être utilisé. Attends le prochain.",
     AdminLockedFailure() =>
       'Compte verrouillé après 3 tentatives. Réessaie dans 30 min.',
     BackendUnavailableFailure() =>

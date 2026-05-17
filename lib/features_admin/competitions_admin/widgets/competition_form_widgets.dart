@@ -241,7 +241,7 @@ class ShareRow extends StatelessWidget {
           hint: 'Montant',
           keyboardType: TextInputType.number,
           inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
+            FilteringTextInputFormatter.allow(RegExp('[0-9]')),
             LengthLimitingTextInputFormatter(9),
           ],
           onChanged: (_) => onChanged(),
@@ -282,7 +282,7 @@ class BlockShareRow extends StatelessWidget {
           hint: 'Montant par place',
           keyboardType: TextInputType.number,
           inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
+            FilteringTextInputFormatter.allow(RegExp('[0-9]')),
             LengthLimitingTextInputFormatter(9),
           ],
           onChanged: (_) => onChanged(),
@@ -388,9 +388,9 @@ class PublishToggleCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     publishNow
-                        ? 'Les inscriptions s\'ouvrent immédiatement — '
+                        ? "Les inscriptions s'ouvrent immédiatement — "
                             'la compét. apparaît côté joueur avec le bouton '
-                            'S\'INSCRIRE.'
+                            "S'INSCRIRE."
                         : 'La compét. reste en brouillon — invisible côté '
                             'joueur. À publier plus tard depuis le détail '
                             'admin.',

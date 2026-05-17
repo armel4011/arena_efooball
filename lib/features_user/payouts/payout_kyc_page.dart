@@ -117,7 +117,7 @@ class _PendingAmountCard extends StatelessWidget {
           ),
           const SizedBox(height: ArenaSpacing.sm),
           Text(
-            "Pour ce montant, on doit vérifier ton identité avant le payout. "
+            'Pour ce montant, on doit vérifier ton identité avant le payout. '
             "C'est rapide (sous 24h).",
             style: ArenaText.body,
           ),
@@ -155,7 +155,7 @@ class _AcceptedDocs extends StatelessWidget {
               child: Row(
                 children: [
                   Text(_docs[i].$1,
-                      style: const TextStyle(fontSize: 18)),
+                      style: const TextStyle(fontSize: 18),),
                   const SizedBox(width: ArenaSpacing.sm),
                   Expanded(
                     child: Text(_docs[i].$2, style: ArenaText.body),
@@ -189,7 +189,7 @@ class _CaptureCard extends StatelessWidget {
         child: Column(
           children: [
             const Icon(Icons.check_circle,
-                size: 48, color: ArenaColors.statusOk),
+                size: 48, color: ArenaColors.statusOk,),
             const SizedBox(height: ArenaSpacing.sm),
             Text('Photo capturée', style: ArenaText.h3),
             const SizedBox(height: ArenaSpacing.sm),

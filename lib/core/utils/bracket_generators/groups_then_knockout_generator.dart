@@ -146,7 +146,7 @@ List<PlannedMatch> _roundRobinMatches(List<String> players) {
         matchNumber: out.length + 1,
         player1Id: a,
         player2Id: b,
-      ));
+      ),);
     }
     final last = rotation.removeAt(n - 1);
     rotation.insert(1, last);
