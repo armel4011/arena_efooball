@@ -74,6 +74,15 @@ class AdminInvitationsRepository {
         .eq('id', codeId);
   }
 
+  /// Supprime définitivement un code invitation. Réservé aux codes
+  /// désactivés (UTILISÉ ou EXPIRÉ) côté UI — utile pour faire le
+  /// ménage de l'écran SA2. Aucune FK ne pointe sur `invitation_codes`
+  /// donc le DELETE est sûr même pour un code utilisé. RLS
+  /// `invitation_codes_delete_su` restreint à super_admin.
+  Future<void> delete(String codeId) async {
+    await _client.from(_table).delete().eq('id', codeId);
+  }
+
   /// Generates a 12-character base32 code (no ambiguous chars: 0/O/1/I/L).
   String _generateCode() {
     final rng = Random.secure();

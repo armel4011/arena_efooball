@@ -239,6 +239,7 @@ class _CodeCard extends ConsumerWidget {
                 ),
               ],
             ),
+            // Bouton inférieur : actions selon état (active vs désactivé).
             if (isActive) ...[
               const SizedBox(height: ArenaSpacing.sm),
               Row(
@@ -287,11 +288,63 @@ class _CodeCard extends ConsumerWidget {
                   ),
                 ],
               ),
+            ] else ...[
+              const SizedBox(height: ArenaSpacing.sm),
+              ArenaButton(
+                label: '🗑 SUPPRIMER',
+                variant: ArenaButtonVariant.danger,
+                fullWidth: true,
+                onPressed: () => _confirmDelete(context, ref, code),
+              ),
             ],
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _confirmDelete(
+    BuildContext context,
+    WidgetRef ref,
+    InvitationCode code,
+  ) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        backgroundColor: ArenaColors.carbon,
+        title: Text('Supprimer ce code ?', style: ArenaText.h3),
+        content: Text(
+          'Le code `ARENA-${code.code}` sera définitivement effacé de '
+          'la base. Cette action est irréversible. Les éventuelles '
+          'mentions historiques (audit log) ne sont pas affectées.',
+          style: ArenaText.bodyMuted,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(c).pop(false),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(c).pop(true),
+            style: TextButton.styleFrom(foregroundColor: ArenaColors.neonRed),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ref.read(adminInvitationsRepositoryProvider).delete(code.id);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Code supprimé.')),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Échec : $e')),
+      );
+    }
   }
 }
 
