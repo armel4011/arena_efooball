@@ -80,8 +80,8 @@ Détail des 25 conservés (18 defensive, 6 V2-deferred, 1 historique trace) :
 - **Audit trail** : `invitation_codes_code_active_idx` (Phase 12.5, conservé).
 
 ### FK non indexées (2 — advisor performance INFO)
-- [ ] `friendships.blocked_by_fkey` → `CREATE INDEX ON public.friendships(blocked_by);`
-- [ ] `reintegration_requests.resolved_by_fkey` → `CREATE INDEX ON public.reintegration_requests(resolved_by);`
+- [x] `friendships.blocked_by_fkey` → `idx_friendships_blocked_by` partiel (WHERE blocked_by IS NOT NULL) — migration `20260517110006`.
+- [x] `reintegration_requests.resolved_by_fkey` → `idx_reintegration_resolved_by` partiel (WHERE resolved_by IS NOT NULL) — migration `20260517110006`.
 
 ## CI & qualité
 
