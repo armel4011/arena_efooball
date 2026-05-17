@@ -2,7 +2,6 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 /// PHASE 9.5 — static "About" screen with version + legal links.
 ///
@@ -156,7 +155,7 @@ class _LinksCard extends StatelessWidget {
                   children: [
                     Text(
                       links[i].emoji,
-                      style: GoogleFonts.spaceGrotesk(fontSize: 14),
+                      style: ArenaText.body.copyWith(fontSize: 14),
                     ),
                     const SizedBox(width: ArenaSpacing.sm),
                     Expanded(

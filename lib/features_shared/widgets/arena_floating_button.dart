@@ -1,6 +1,5 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 /// THE iconic 72 dp anti-cheat overlay button (#17 MatchInProgressOverlay).
 ///
@@ -92,9 +91,8 @@ class _ArenaFloatingButtonState extends State<ArenaFloatingButton>
                     children: [
                       Text(
                         'ARENA',
-                        style: GoogleFonts.bebasNeue(
-                          color: Colors.white,
-                          fontSize: 14,
+                        style: ArenaText.appBarTitle.copyWith(
+                          color: ArenaColors.bone,
                           letterSpacing: 1.5,
                           fontWeight: FontWeight.w700,
                         ),
@@ -102,8 +100,8 @@ class _ArenaFloatingButtonState extends State<ArenaFloatingButton>
                       if (widget.timer != null)
                         Text(
                           widget.timer!,
-                          style: GoogleFonts.jetBrainsMono(
-                            color: Colors.white,
+                          style: ArenaText.mono.copyWith(
+                            color: ArenaColors.bone,
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
                           ),

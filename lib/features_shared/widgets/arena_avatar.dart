@@ -1,6 +1,5 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 /// Circle avatar with gradient fill and centered initials.
 ///
@@ -68,7 +67,7 @@ class ArenaAvatar extends StatelessWidget {
       alignment: Alignment.center,
       child: Text(
         initials.toUpperCase(),
-        style: GoogleFonts.bebasNeue(
+        style: ArenaText.h1.copyWith(
           fontSize: _fontSize,
           fontWeight: FontWeight.w700,
           color: _textColor,

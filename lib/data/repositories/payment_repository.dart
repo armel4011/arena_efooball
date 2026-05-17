@@ -124,6 +124,19 @@ class PaymentRepository {
         .eq('id', paymentId);
   }
 
+  /// Retourne `true` si le joueur a au moins un paiement en attente
+  /// (`status = 'pending'`). Utilisé par le flux de suppression de compte
+  /// pour bloquer la suppression tant qu'un paiement n'est pas réglé.
+  Future<bool> hasPendingPayments(String userId) async {
+    final rows = await _client
+        .from(_table)
+        .select('id')
+        .eq('user_id', userId)
+        .eq('status', 'pending')
+        .limit(1);
+    return (rows as List).isNotEmpty;
+  }
+
   /// Stream de l'historique paiements du joueur courant (P6).
   Stream<List<PaymentRecord>> watchMine() {
     final userId = _client.auth.currentUser?.id;

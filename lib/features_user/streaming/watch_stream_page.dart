@@ -58,7 +58,7 @@ class _WatchStreamPageState extends ConsumerState<WatchStreamPage> {
     final state = ref.watch(agoraStreamingServiceProvider).stateStream;
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: ArenaColors.void_,
       appBar: ArenaAppBar(
         title: 'Match #${widget.matchId.substring(0, 8)}',
         actions: [
@@ -79,7 +79,7 @@ class _WatchStreamPageState extends ConsumerState<WatchStreamPage> {
             )
           : !_hasJoined
               ? const Center(
-                  child: CircularProgressIndicator(color: Colors.white),
+                  child: CircularProgressIndicator(color: ArenaColors.bone),
                 )
               : StreamBuilder<AgoraSessionState>(
                   stream: state,
@@ -123,7 +123,7 @@ class _PlaceholderText extends StatelessWidget {
     return Center(
       child: Text(
         text,
-        style: const TextStyle(color: Colors.white70),
+        style: TextStyle(color: ArenaColors.bone.withValues(alpha: 0.7)),
       ),
     );
   }
@@ -143,7 +143,7 @@ class _ViewerCountBadge extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
-          color: Colors.black45,
+          color: ArenaColors.void_.withValues(alpha: 0.45),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -152,13 +152,13 @@ class _ViewerCountBadge extends ConsumerWidget {
             const Icon(
               Icons.remove_red_eye_outlined,
               size: 14,
-              color: Colors.white,
+              color: ArenaColors.bone,
             ),
             const SizedBox(width: 6),
             Text(
               '$count',
               style: const TextStyle(
-                color: Colors.white,
+                color: ArenaColors.bone,
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
               ),

@@ -1,5 +1,6 @@
 import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/data/repositories/payment_repository.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
@@ -65,14 +66,11 @@ class _DeleteAccountPageState extends ConsumerState<DeleteAccountPage> {
       return;
     }
     try {
-      final rows = await Supabase.instance.client
-          .from('payments')
-          .select('id')
-          .eq('user_id', profile.id)
-          .eq('status', 'pending')
-          .limit(1);
+      final hasPending = await ref
+          .read(paymentRepositoryProvider)
+          .hasPendingPayments(profile.id);
       setState(() {
-        _hasPendingPayments = rows.isNotEmpty;
+        _hasPendingPayments = hasPending;
         _checkingPayments = false;
       });
     } catch (e) {

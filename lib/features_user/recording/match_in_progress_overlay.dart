@@ -4,7 +4,6 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 /// PHASE 7 — visual stand-in for the in-game floating ARENA chip.
 ///
@@ -175,18 +174,16 @@ class _ArenaFloatingChip extends StatelessWidget {
         children: [
           Text(
             'ARENA',
-            style: GoogleFonts.spaceGrotesk(
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
-              fontSize: 9,
+            style: ArenaText.badge.copyWith(
+              color: ArenaColors.bone,
               letterSpacing: 1,
             ),
           ),
           const SizedBox(height: 2),
           Text(
             _formatted,
-            style: GoogleFonts.jetBrainsMono(
-              color: Colors.white,
+            style: ArenaText.mono.copyWith(
+              color: ArenaColors.bone,
               fontSize: 11,
               fontWeight: FontWeight.w700,
             ),

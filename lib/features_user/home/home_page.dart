@@ -271,7 +271,7 @@ class _Header extends ConsumerWidget {
                     child: Text(
                       unread > 9 ? '9+' : '$unread',
                       style: ArenaText.badge.copyWith(
-                        color: Colors.white,
+                        color: ArenaColors.bone,
                         fontSize: 9,
                       ),
                     ),
@@ -603,7 +603,7 @@ class _LiveStreamCard extends StatelessWidget {
                     end: Alignment.bottomCenter,
                     colors: [
                       Colors.transparent,
-                      Colors.black.withValues(alpha: 0.55),
+                      ArenaColors.void_.withValues(alpha: 0.55),
                     ],
                   ),
                 ),
@@ -626,13 +626,13 @@ class _LiveStreamCard extends StatelessWidget {
                         vertical: 3,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.6),
+                        color: ArenaColors.void_.withValues(alpha: 0.6),
                         borderRadius: BorderRadius.circular(ArenaRadius.round),
                       ),
                       child: Text(
                         '+${allCount - 1} autres',
                         style:
-                            ArenaText.badge.copyWith(color: Colors.white),
+                            ArenaText.badge.copyWith(color: ArenaColors.bone),
                       ),
                     ),
                   ],
@@ -646,7 +646,7 @@ class _LiveStreamCard extends StatelessWidget {
               child: Text(
                 'Match #${stream.matchId.substring(0, 8)} • Tape pour regarder',
                 style: ArenaText.body.copyWith(
-                  color: Colors.white,
+                  color: ArenaColors.bone,
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                 ),

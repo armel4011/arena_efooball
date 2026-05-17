@@ -740,7 +740,7 @@ class _PaidCompetitionCard extends StatelessWidget {
                           prize,
                           style: ArenaText.bigNumber.copyWith(
                             fontSize: 30,
-                            color: Colors.white,
+                            color: ArenaColors.bone,
                             height: 1.1,
                           ),
                         ),

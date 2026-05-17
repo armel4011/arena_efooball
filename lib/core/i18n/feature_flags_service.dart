@@ -1,4 +1,5 @@
 import 'package:arena/core/i18n/feature_flags.dart';
+import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -10,14 +11,15 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 /// Supabase is reachable, [FeatureFlags.defaultsV1_0] is used so the app
 /// stays functional offline / on cold start.
 class FeatureFlagsService {
-  const FeatureFlagsService();
+  const FeatureFlagsService(this._client);
 
   static const _table = 'app_config';
 
+  final SupabaseClient _client;
+
   Future<FeatureFlags> fetch() async {
     try {
-      final client = Supabase.instance.client;
-      final row = await client
+      final row = await _client
           .from(_table)
           .select()
           .limit(1)
@@ -37,7 +39,7 @@ class FeatureFlagsService {
 }
 
 final featureFlagsServiceProvider = Provider<FeatureFlagsService>((ref) {
-  return const FeatureFlagsService();
+  return FeatureFlagsService(ref.watch(supabaseClientProvider));
 });
 
 /// Active feature flags. Refresh by invalidating the provider.

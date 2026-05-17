@@ -186,7 +186,7 @@ class _StreamTile extends ConsumerWidget {
                 child: Text(
                   'M-${stream.matchId.substring(0, 6)}',
                   style: ArenaText.body.copyWith(
-                    color: Colors.white,
+                    color: ArenaColors.bone,
                     fontSize: 9,
                     fontWeight: FontWeight.w700,
                   ),
@@ -338,7 +338,7 @@ class _MiniButton extends StatelessWidget {
           label,
           textAlign: TextAlign.center,
           style: ArenaText.badge.copyWith(
-            color: Colors.white,
+            color: ArenaColors.bone,
             fontSize: 9,
           ),
         ),
