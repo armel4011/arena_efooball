@@ -5,11 +5,7 @@ Cocher au fil de l'avancement.
 
 ## P0 — action manuelle bloquante
 
-- [ ] **Activer Leaked Password Protection** (Supabase Auth)
-  - Dashboard : https://supabase.com/dashboard/project/mamfuexzadeejtjrtzrq/auth/policies
-  - Section *Password Strength* → cocher *Prevent use of leaked passwords*
-  - Pas exposé via MCP, ~30 s manuel.
-  - Doc : https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection
+- [x] **Activer Leaked Password Protection** (Supabase Auth) — activé manuellement par le user le 2026-05-17. Advisor `auth_leaked_password_protection` ne flagge plus le projet ; tous les nouveaux mots de passe sont désormais vérifiés contre HaveIBeenPwned côté Auth.
 
 ## P1 — chantiers > 1 session
 
