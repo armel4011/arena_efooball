@@ -128,9 +128,28 @@ function templatePayoutValidated(data: Record<string, unknown>): EmailPayload {
   };
 }
 
+/// Template de diagnostic : envoi minimaliste plain-text, sans HTML
+/// ni boutons / liens — moins susceptible d'être classé "Promotions"
+/// ou "Spam" par Gmail/Outlook. Utilisé pour valider la propagation
+/// DNS du domaine d'envoi quand un envoi richement formaté n'arrive
+/// pas. `data.note` est optionnel et inclus dans le texte.
+function templateTestPlain(data: Record<string, unknown>): EmailPayload {
+  const note = data.note ? `\n\nNote : ${String(data.note)}` : "";
+  return {
+    subject: "Arena - test de connexion email",
+    html: `<p>Ceci est un email de test envoye depuis l'infrastructure Arena.${
+      data.note ? ` Note : ${escape(data.note)}.` : ""
+    } Si tu le recois, le pipeline Resend fonctionne.</p>`,
+    text:
+      `Ceci est un email de test envoye depuis l'infrastructure Arena.\n` +
+      `Si tu le recois, le pipeline Resend fonctionne correctement.${note}\n`,
+  };
+}
+
 const TEMPLATES: Record<string, (d: Record<string, unknown>) => EmailPayload> = {
   admin_invitation: templateAdminInvitation,
   payout_validated: templatePayoutValidated,
+  test_plain: templateTestPlain,
 };
 
 // ─────────────────────────────────────────────────────────────────────
