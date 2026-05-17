@@ -15,7 +15,7 @@ import 'package:flutter/material.dart';
 class SuperAdminDashboard extends StatelessWidget {
   const SuperAdminDashboard({super.key});
 
-  static const _gold = Color(0xFFFFD700);
+  static const _gold = ArenaColors.tierGold;
 
   @override
   Widget build(BuildContext context) {

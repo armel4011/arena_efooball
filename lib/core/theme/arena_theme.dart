@@ -42,7 +42,9 @@ class ArenaColors {
 
   // ─── Status ───────────────────────────────────────────────────────────────
   static const Color statusOk = Color(0xFF00C896);
+  static const Color statusOkDeep = Color(0xFF00A878);   // gradient compagnon (success badges)
   static const Color statusWarn = Color(0xFFFFB020);
+  static const Color statusDangerDeep = Color(0xFF8B0020); // gradient compagnon de neonRed (failure badges)
 
   // ─── Game colors (par jeu) ────────────────────────────────────────────────
   static const Color gameEfoot = Color(0xFF00B4D8);      // eFootball
@@ -103,6 +105,31 @@ class ArenaColors {
 
   // ─── Tier badges ──────────────────────────────────────────────────────────
   static const Color tierBronze = Color(0xFFCD7F32);
+  static const Color tierGold = Color(0xFFFFD700);       // or pur (super admin, role highlights)
+  static const Color tierGoldWarm = Color(0xFFFFC93C);   // or chaud (competition premium card)
+  static const Color tierGoldDeep = Color(0xFFCB9A1F);   // or sombre (gradient compagnon de tierGoldWarm)
+
+  // ─── Brand mobile money (paiement P2P) ───────────────────────────────────
+  static const Color brandMtnMomo = Color(0xFFFFA500);     // jaune-orange MTN MoMo
+  static const Color brandOrangeMoney = Color(0xFFFF6B00); // orange vif Orange Money
+
+  // ─── Stream moderation gradients (admin grille 6 slots) ─────────────────
+  static const LinearGradient streamSlot1Gradient = LinearGradient(
+    begin: Alignment.topLeft, end: Alignment.bottomRight,
+    colors: [Color(0xFF1A3A6C), Color(0xFF2C0A1F)], // blue → deep magenta
+  );
+  static const LinearGradient streamSlot2Gradient = LinearGradient(
+    begin: Alignment.topLeft, end: Alignment.bottomRight,
+    colors: [Color(0xFF1A3A1A), Color(0xFF0A1A0A)], // forest green dark
+  );
+  static const LinearGradient streamSlot3Gradient = LinearGradient(
+    begin: Alignment.topLeft, end: Alignment.bottomRight,
+    colors: [Color(0xFF3A2200), Color(0xFF1A0A00)], // burnt orange
+  );
+  static const LinearGradient streamSlot4Gradient = LinearGradient(
+    begin: Alignment.topLeft, end: Alignment.bottomRight,
+    colors: [Color(0xFF3A0A6C), Color(0xFF1A0A30)], // royal purple
+  );
 
   // ─── Brand text gradient (ARENA logo) ─────────────────────────────────────
   static const LinearGradient brandTextGradient = LinearGradient(

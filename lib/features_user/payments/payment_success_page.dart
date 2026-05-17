@@ -135,7 +135,7 @@ class _SuccessHero extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: const LinearGradient(
-            colors: [ArenaColors.statusOk, Color(0xFF00A878)],
+            colors: [ArenaColors.statusOk, ArenaColors.statusOkDeep],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),

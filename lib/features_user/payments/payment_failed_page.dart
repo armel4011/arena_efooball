@@ -187,7 +187,7 @@ class _FailureHero extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: const LinearGradient(
-            colors: [ArenaColors.neonRed, Color(0xFF8B0020)],
+            colors: [ArenaColors.neonRed, ArenaColors.statusDangerDeep],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),

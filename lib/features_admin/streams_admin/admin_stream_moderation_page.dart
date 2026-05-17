@@ -22,26 +22,10 @@ class AdminStreamModerationPage extends ConsumerWidget {
 
   static const _capacity = 6;
   static const _gradients = <LinearGradient>[
-    LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [Color(0xFF1A3A6C), Color(0xFF2C0A1F)],
-    ),
-    LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [Color(0xFF1A3A1A), Color(0xFF0A1A0A)],
-    ),
-    LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [Color(0xFF3A2200), Color(0xFF1A0A00)],
-    ),
-    LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [Color(0xFF3A0A6C), Color(0xFF1A0A30)],
-    ),
+    ArenaColors.streamSlot1Gradient,
+    ArenaColors.streamSlot2Gradient,
+    ArenaColors.streamSlot3Gradient,
+    ArenaColors.streamSlot4Gradient,
   ];
 
   @override

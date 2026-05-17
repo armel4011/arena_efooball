@@ -43,11 +43,11 @@ Audit ciblé après commit `482ea83` : la majorité des `Colors.white|black` res
 - [x] `lib/features_shared/widgets/arena_phone_frame.dart:22` — `Color(0xFF1A1A22)` → `ArenaColors.carbon2` (commit `69011db`).
 - [x] `lib/features_user/profile/avatar_palette.dart:33,35` — `Color(0xFF4C7AFF)` → `ArenaColors.signalBlue` (commit `69011db`).
 
-**EXTEND `ArenaColors` (puis remplacer les usages) :**
-- [ ] **Gold premium** (`tierGold` + `tierGoldDeep`) — `competitions_list_page.dart:602-603` (`0xFFFFC93C` / `0xFFCB9A1F`), `super_admin_dashboard.dart`, `super_admin_invitations.dart` (`0xFFFFD700`).
-- [ ] **Brand mobile money** (`brandOrangeMoney` + `brandMtnMomo` ou un map dans `payment_method.dart` — décider du nommage côté design) — `payment_history_page.dart:245`, `payment_method.dart:16,24` (oranges custom).
-- [ ] **Status variants** (`statusOkDeep`, `statusDangerDeep` ou les exposer comme gradients) — `payment_success_page.dart:138` (`0xFF00A878`), `payment_failed_page.dart:190` (`0xFF8B0020`).
-- [ ] **Stream moderation gradients** (`streamModerationGradients` ou 4 gradients dédiés) — `admin_stream_moderation_page.dart:28-43` (4 gradients custom blue/red/green/purple).
+**EXTEND `ArenaColors` (tokens ajoutés + usages remplacés) :**
+- [x] **Gold premium** — tokens `tierGold` (#FFD700, super-admin), `tierGoldWarm` (#FFC93C, competition card), `tierGoldDeep` (#CB9A1F, gradient compagnon). Appliqué à `competitions_list_page.dart:602-603`, `super_admin_dashboard.dart:18`, `super_admin_invitations.dart:33,217`.
+- [x] **Brand mobile money** — tokens `brandMtnMomo` (#FFA500), `brandOrangeMoney` (#FF6B00). Appliqué à `payment_method.dart:16,24` et `payment_history_page.dart:245`.
+- [x] **Status variants** — tokens `statusOkDeep` (#00A878), `statusDangerDeep` (#8B0020). Appliqué aux gradients de `payment_success_page.dart:138` et `payment_failed_page.dart:190`.
+- [x] **Stream moderation gradients** — tokens `streamSlot1..4Gradient` (blue/green/orange/purple). Appliqué à `admin_stream_moderation_page.dart:24-29`.
 
 **KEEP (pas un TODO)** — `arena_avatar.dart`, `arena_badge.dart`, `arena_banner.dart`, `arena_button.dart`, `arena_dialog.dart`, `arena_glass_card.dart`, `admin_bracket_management_page.dart`, `admin_competition_detail_page.dart`, `totp_setup_screen.dart`, `chat_page.dart`, `competition_detail_page.dart`, `edit_profile_page.dart`, `friends_page.dart`, `friends_search_page.dart`, `main_layout.dart`, `payment_method_picker_page.dart`, `player_profile_page.dart`, `public_profile_page.dart`, `recording_overlay.dart`, `google_sign_in_button.dart` (brand Google).
 Raisons : `Colors.white` sur gradient pour contraste, `Colors.black.withValues(alpha:…)` overlay scrim, hairlines `Colors.white.withValues(alpha: 0.06)`, ou brand externe protégé.

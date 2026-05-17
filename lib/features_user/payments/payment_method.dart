@@ -13,16 +13,16 @@ enum PaymentMethod {
     label: 'MTN Mobile Money',
     badge: 'MTN',
     countriesLine: "Cameroun, Côte d'Ivoire, Bénin",
-    brandColor: Color(0xFFFFA500),
-    foreground: Colors.white,
+    brandColor: ArenaColors.brandMtnMomo,
+    foreground: ArenaColors.bone,
   ),
   orangeMoney(
     code: 'ORANGE_MONEY',
     label: 'Orange Money',
     badge: 'OM',
     countriesLine: 'Cameroun, Sénégal, Mali',
-    brandColor: Color(0xFFFF6B00),
-    foreground: Colors.white,
+    brandColor: ArenaColors.brandOrangeMoney,
+    foreground: ArenaColors.bone,
   );
 
   const PaymentMethod({

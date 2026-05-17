@@ -242,8 +242,8 @@ class _TxCard extends StatelessWidget {
       case 'succeeded':
         return (
           glyph: '↑',
-          iconColor: const Color(0xFFFFA500),
-          tint: const Color(0x33FFA500),
+          iconColor: ArenaColors.brandMtnMomo,
+          tint: const Color(0x33FFA500), // brandMtnMomo @ 20% alpha
           amountColor: ArenaColors.neonRed,
           badge: 'PAYÉ',
           badgeVariant: ArenaBadgeVariant.success,

@@ -30,7 +30,7 @@ class SuperAdminInvitations extends ConsumerStatefulWidget {
 
 class _SuperAdminInvitationsState
     extends ConsumerState<SuperAdminInvitations> {
-  static const _gold = Color(0xFFFFD700);
+  static const _gold = ArenaColors.tierGold;
   UserRole _role = UserRole.admin;
   _Expiration _expiration = _Expiration.thirtyDays;
   final _emailCtrl = TextEditingController();
@@ -214,7 +214,7 @@ class _CodeCard extends ConsumerWidget {
                   code.role == UserRole.superAdmin ? 'Super-admin' : 'Admin',
                   style: ArenaText.body.copyWith(
                     color: code.role == UserRole.superAdmin
-                        ? const Color(0xFFFFD700)
+                        ? ArenaColors.tierGold
                         : ArenaColors.bone,
                   ),
                 ),

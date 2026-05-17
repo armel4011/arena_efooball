@@ -599,8 +599,8 @@ class _PaidCompetitionCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback? onRegister;
 
-  static const _gold = Color(0xFFFFC93C);
-  static const _goldDeep = Color(0xFFCB9A1F);
+  static const _gold = ArenaColors.tierGoldWarm;
+  static const _goldDeep = ArenaColors.tierGoldDeep;
 
   @override
   Widget build(BuildContext context) {
@@ -625,7 +625,7 @@ class _PaidCompetitionCard extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0x1AFFC93C), // gold tint top
+              Color(0x1AFFC93C), // gold tint top (10% alpha sur tierGoldWarm)
               ArenaColors.carbon, // fades to carbon
             ],
           ),
