@@ -62,8 +62,9 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
   @override
   void dispose() {
     for (final c in _ctrls) {
-      c.removeListener(_onFieldChanged);
-      c.dispose();
+      c
+        ..removeListener(_onFieldChanged)
+        ..dispose();
     }
     super.dispose();
   }

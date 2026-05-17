@@ -87,8 +87,7 @@ class _PaymentProcessingPageState
   @override
   Widget build(BuildContext context) {
     final accent = widget.method.brandColor;
-    final stream = ref.watch(paymentByIdProvider(widget.paymentId));
-    stream.whenData((rec) {
+    ref.watch(paymentByIdProvider(widget.paymentId)).whenData((rec) {
       if (rec != null) _handleStatus(context, rec);
     });
     return Scaffold(
@@ -213,7 +212,7 @@ class _PaymentProcessingPageState
     );
     if (ok != true || !mounted) return;
     await ref.read(paymentRepositoryProvider).cancel(widget.paymentId);
-    if (!mounted) return;
+    if (!context.mounted) return;
     context.go(UserRoutes.home);
   }
 }

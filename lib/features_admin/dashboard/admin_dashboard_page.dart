@@ -96,8 +96,9 @@ class AdminDashboardPage extends ConsumerWidget {
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
-            ref.invalidate(adminKpisProvider);
-            ref.invalidate(adminAuditLogProvider);
+            ref
+              ..invalidate(adminKpisProvider)
+              ..invalidate(adminAuditLogProvider);
           },
           child: ListView(
             padding: const EdgeInsets.all(ArenaSpacing.lg),

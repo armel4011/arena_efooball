@@ -623,7 +623,10 @@ String _statusLabel(MatchStatus s) {
       return 'ANNULÉ';
     case MatchStatus.forfeited:
       return 'FORFAIT';
-    default:
+    case MatchStatus.pending:
+    case MatchStatus.scheduled:
+    case MatchStatus.ready:
+    case MatchStatus.awaitingValidation:
       return 'EN ATTENTE';
   }
 }
@@ -640,7 +643,10 @@ ArenaBadgeVariant _statusBadgeVariant(MatchStatus s) {
     case MatchStatus.cancelled:
     case MatchStatus.forfeited:
       return ArenaBadgeVariant.neutral;
-    default:
+    case MatchStatus.pending:
+    case MatchStatus.scheduled:
+    case MatchStatus.ready:
+    case MatchStatus.awaitingValidation:
       return ArenaBadgeVariant.info;
   }
 }

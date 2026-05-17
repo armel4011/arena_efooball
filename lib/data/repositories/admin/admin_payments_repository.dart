@@ -89,20 +89,22 @@ class AdminPaymentsRepository {
     if (rows.isEmpty) return rows;
     final userIds = {for (final r in rows) r.payment.userId}.toList();
     final compIds = {for (final r in rows) r.payment.competitionId}.toList();
-    final users = await _client
-        .from('profiles')
-        .select('id, username')
-        .inFilter('id', userIds);
-    final comps = await _client
-        .from('competitions')
-        .select('id, name')
-        .inFilter('id', compIds);
+    final users = (await _client
+            .from('profiles')
+            .select('id, username')
+            .inFilter('id', userIds) as List<dynamic>)
+        .cast<Map<String, dynamic>>();
+    final comps = (await _client
+            .from('competitions')
+            .select('id, name')
+            .inFilter('id', compIds) as List<dynamic>)
+        .cast<Map<String, dynamic>>();
     final usernameById = {
-      for (final u in users as List<dynamic>)
+      for (final u in users)
         u['id'] as String: u['username'] as String? ?? '—',
     };
     final compNameById = {
-      for (final c in comps as List<dynamic>)
+      for (final c in comps)
         c['id'] as String: c['name'] as String? ?? '—',
     };
     return [

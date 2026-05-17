@@ -229,6 +229,7 @@ final adminCompetitionsRepositoryProvider =
   return AdminCompetitionsRepository(ref.watch(supabaseClientProvider));
 });
 
+@immutable
 class AdminCompetitionsFilter {
   const AdminCompetitionsFilter({this.status, this.game});
   final CompetitionStatus? status;

@@ -70,8 +70,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
 
   @override
   void dispose() {
-    _whatsappCtrl.removeListener(_onWhatsappChanged);
-    _whatsappCtrl.dispose();
+    _whatsappCtrl
+      ..removeListener(_onWhatsappChanged)
+      ..dispose();
     _usernameCtrl.dispose();
     super.dispose();
   }

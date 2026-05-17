@@ -336,7 +336,9 @@ _StatusVisual _visualFor(MatchStatus status) {
         variant: ArenaBadgeVariant.warn,
         color: ArenaColors.statusWarn,
       );
-    default:
+    case MatchStatus.pending:
+    case MatchStatus.scheduled:
+    case MatchStatus.ready:
       return const _StatusVisual(
         label: 'PENDING',
         variant: ArenaBadgeVariant.info,

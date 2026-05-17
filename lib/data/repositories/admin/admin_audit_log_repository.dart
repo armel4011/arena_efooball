@@ -1,5 +1,6 @@
 import 'package:arena/data/models/admin_audit_log.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -101,6 +102,7 @@ final adminAuditLogRepositoryProvider =
   return AdminAuditLogRepository(ref.watch(supabaseClientProvider));
 });
 
+@immutable
 class AdminAuditLogFilter {
   const AdminAuditLogFilter({
     this.category,

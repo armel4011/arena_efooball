@@ -39,11 +39,10 @@ BracketPlan generateSingleElimination({
   final byes = size - players.length;
 
   // Slots in round 1 — last `byes` slots are nulls (auto-advance).
-  final round1Players = <String?>[];
-  round1Players.addAll(players);
-  for (var i = 0; i < byes; i++) {
-    round1Players.add(null);
-  }
+  final round1Players = <String?>[
+    ...players,
+    for (var i = 0; i < byes; i++) null,
+  ];
 
   final matches = <PlannedMatch>[];
   final nodes = <PlannedBracketNode>[];

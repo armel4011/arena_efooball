@@ -196,41 +196,41 @@ class _MatchRecordingLifecycleState
 
     // Open the actions sheet when the overlay sends a focusMain (tap on
     // the floating button).
-    ref.listen(coordinatorFocusRequestsProvider, (_, __) {
-      if (!mounted) return;
-      MatchRecordingActionsSheet.show(context);
-    });
-
     // Mini-button "Enregistrer et arrêter" — export MP4 + snackbar. The
     // coordinator already called stopCleanly() before publishing on the
     // stream, so we just hand the file path to the gallery exporter.
-    ref.listen(coordinatorSaveStopRequestsProvider, (_, next) async {
-      if (!mounted) return;
-      final localPath = next.value;
-      final messenger = ScaffoldMessenger.of(context);
-      if (localPath == null || localPath.isEmpty) {
+    ref
+      ..listen(coordinatorFocusRequestsProvider, (_, __) {
+        if (!mounted) return;
+        MatchRecordingActionsSheet.show(context);
+      })
+      ..listen(coordinatorSaveStopRequestsProvider, (_, next) async {
+        if (!mounted) return;
+        final localPath = next.value;
+        final messenger = ScaffoldMessenger.of(context);
+        if (localPath == null || localPath.isEmpty) {
+          messenger.showSnackBar(
+            const SnackBar(
+              content: Text('Arrêt OK — aucun fichier à exporter'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+          return;
+        }
+        final uri = await ref
+            .read(galleryExporterProvider)
+            .saveVideoToGallery(localPath);
         messenger.showSnackBar(
-          const SnackBar(
-            content: Text('Arrêt OK — aucun fichier à exporter'),
-            duration: Duration(seconds: 3),
+          SnackBar(
+            content: Text(
+              uri != null
+                  ? 'Replay enregistré dans Téléchargements › ARENA'
+                  : "Replay disponible dans le cache de l'app",
+            ),
+            duration: const Duration(seconds: 4),
           ),
         );
-        return;
-      }
-      final uri = await ref
-          .read(galleryExporterProvider)
-          .saveVideoToGallery(localPath);
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            uri != null
-                ? 'Replay enregistré dans Téléchargements › ARENA'
-                : "Replay disponible dans le cache de l'app",
-          ),
-          duration: const Duration(seconds: 4),
-        ),
-      );
-    });
+      });
 
     if (_startError != null) {
       return _LifecycleBanner(

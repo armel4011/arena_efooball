@@ -56,8 +56,7 @@ class CreateCompetitionPage extends ConsumerStatefulWidget {
       _CreateCompetitionPageState();
 }
 
-class _CreateCompetitionPageState
-    extends ConsumerState<CreateCompetitionPage> {
+class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
   static const _stepCount = 5;
   int _step = 0;
   bool _submitting = false;
@@ -234,9 +233,8 @@ class _CreateCompetitionPageState
                       label: '← RETOUR',
                       variant: ArenaButtonVariant.secondary,
                       fullWidth: true,
-                      onPressed: _step > 0
-                          ? () => setState(() => _step--)
-                          : null,
+                      onPressed:
+                          _step > 0 ? () => setState(() => _step--) : null,
                     ),
                   ),
                   const SizedBox(width: ArenaSpacing.xs),
@@ -570,8 +568,7 @@ class _CreateCompetitionPageState
           onChanged: (v) => setState(() => _publishNow = v),
         ),
       const SizedBox(height: ArenaSpacing.md),
-      if (_submitting)
-        const Center(child: CircularProgressIndicator()),
+      if (_submitting) const Center(child: CircularProgressIndicator()),
     ];
   }
 
@@ -595,16 +592,14 @@ class _CreateCompetitionPageState
     }
 
     try {
-      final created = await ref
-          .read(adminCompetitionsRepositoryProvider)
-          .create({
+      final created =
+          await ref.read(adminCompetitionsRepositoryProvider).create({
         'name': _nameCtrl.text.trim(),
         'game': _game.value,
         'format': _format.value,
         'status': _publishNow ? 'registration_open' : 'draft',
-        'description': _descCtrl.text.trim().isEmpty
-            ? null
-            : _descCtrl.text.trim(),
+        'description':
+            _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
         'start_date': _startDate!.toUtc().toIso8601String(),
         'max_players': _maxPlayers,
         'registration_fee': fee,
@@ -657,9 +652,8 @@ class _CreateCompetitionPageState
     try {
       await ref.read(adminCompetitionsRepositoryProvider).update(id, {
         'name': _nameCtrl.text.trim(),
-        'description': _descCtrl.text.trim().isEmpty
-            ? null
-            : _descCtrl.text.trim(),
+        'description':
+            _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
         'start_date': _startDate!.toUtc().toIso8601String(),
         'commission_pct': _commissionPct,
         'prize_pool_local': pool,
@@ -742,9 +736,8 @@ class _CreateCompetitionPageState
     final now = DateTime.now();
     // En édition, la date d'origine peut être passée : on autorise alors
     // de remonter jusqu'à elle plutôt que de planter le date picker.
-    final earliest = _startDate != null && _startDate!.isBefore(now)
-        ? _startDate!
-        : now;
+    final earliest =
+        _startDate != null && _startDate!.isBefore(now) ? _startDate! : now;
     final date = await showDatePicker(
       context: context,
       initialDate: _startDate ?? now.add(const Duration(days: 1)),
@@ -785,6 +778,4 @@ class _CreateCompetitionPageState
         return '';
     }
   }
-
 }
-
