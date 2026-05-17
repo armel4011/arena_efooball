@@ -33,16 +33,24 @@ Toutes manuelles (non couvertes par `dart fix`). Listées par règle :
 ## P2 — hygiène diffuse
 
 ### Couleurs hardcodées résiduelles
-La session a traité 5 hotspots (watch_stream_page, home_page, admin_stream_moderation_page, competitions_list_page, google_sign_in_button hors-scope). Le grep complet remonte **~28 fichiers** encore concernés. Décision globale à prendre :
+Audit ciblé après commit `482ea83` : la majorité des `Colors.white|black` restants sont justifiés (contraste sur gradient, overlay scrim semi-transparent, brand externe). Seuls **2 FIX directs** et **~5 EXTEND** (palette à enrichir) sont de vrais TODO.
 
-- [ ] **Option A** : ajouter un lint custom qui interdit `Color(0xFF…)` / `Colors.xxx` hors `lib/core/theme/` (réactivation `custom_lint` / `riverpod_lint` quand analyzer 7.7+ sera disponible).
-- [ ] **Option B** : passe systématique fichier par fichier (semi-automatisable par sed/regex pour `Colors.white|black|transparent`).
-- [ ] **Option C** : étendre `ArenaColors` avec les golds/gradients premium qui reviennent (compétitions, admin streams) au lieu de les forcer dans la palette existante.
+**Décision préalable à prendre :**
+- [ ] **Option A** — lint custom qui interdit `Color(0xFF…)` / `Colors.xxx` hors `lib/core/theme/` (réactivation `custom_lint` quand analyzer 7.7+ disponible).
+- [ ] **Option B** — passe manuelle fichier par fichier après enrichissement palette.
 
-Fichiers à traiter quand la décision est prise :
-`arena_avatar.dart`, `arena_badge.dart`, `arena_banner.dart`, `arena_button.dart`, `arena_dialog.dart`, `arena_glass_card.dart`, `arena_phone_frame.dart`, `avatar_palette.dart` (palette de définition, KEEP),
-`admin_bracket_management_page.dart`, `admin_competition_detail_page.dart`, `super_admin_dashboard.dart`, `super_admin_invitations.dart`, `totp_setup_screen.dart`,
-`chat_page.dart`, `competition_detail_page.dart`, `competitions_list_page.dart` (golds premium restants), `edit_profile_page.dart`, `friends_page.dart`, `friends_search_page.dart`, `main_layout.dart`, `payment_failed_page.dart`, `payment_history_page.dart`, `payment_method_picker_page.dart`, `payment_method.dart`, `payment_success_page.dart`, `player_profile_page.dart`, `public_profile_page.dart`, `recording_overlay.dart`.
+**FIX immédiat (tokens déjà disponibles) :**
+- [ ] `lib/features_shared/widgets/arena_phone_frame.dart:22` — `Color(0xFF1A1A22)` → `ArenaColors.carbon2` (#1C1C26, écart imperceptible).
+- [ ] `lib/features_user/profile/avatar_palette.dart:33,35` — `Color(0xFF4C7AFF)` → `ArenaColors.signalBlue`.
+
+**EXTEND `ArenaColors` (puis remplacer les usages) :**
+- [ ] **Gold premium** (`tierGold` + `tierGoldDeep`) — `competitions_list_page.dart:602-603` (`0xFFFFC93C` / `0xFFCB9A1F`), `super_admin_dashboard.dart`, `super_admin_invitations.dart` (`0xFFFFD700`).
+- [ ] **Brand mobile money** (`brandOrangeMoney` + `brandMtnMomo` ou un map dans `payment_method.dart` — décider du nommage côté design) — `payment_history_page.dart:245`, `payment_method.dart:16,24` (oranges custom).
+- [ ] **Status variants** (`statusOkDeep`, `statusDangerDeep` ou les exposer comme gradients) — `payment_success_page.dart:138` (`0xFF00A878`), `payment_failed_page.dart:190` (`0xFF8B0020`).
+- [ ] **Stream moderation gradients** (`streamModerationGradients` ou 4 gradients dédiés) — `admin_stream_moderation_page.dart:28-43` (4 gradients custom blue/red/green/purple).
+
+**KEEP (pas un TODO)** — `arena_avatar.dart`, `arena_badge.dart`, `arena_banner.dart`, `arena_button.dart`, `arena_dialog.dart`, `arena_glass_card.dart`, `admin_bracket_management_page.dart`, `admin_competition_detail_page.dart`, `totp_setup_screen.dart`, `chat_page.dart`, `competition_detail_page.dart`, `edit_profile_page.dart`, `friends_page.dart`, `friends_search_page.dart`, `main_layout.dart`, `payment_method_picker_page.dart`, `player_profile_page.dart`, `public_profile_page.dart`, `recording_overlay.dart`, `google_sign_in_button.dart` (brand Google).
+Raisons : `Colors.white` sur gradient pour contraste, `Colors.black.withValues(alpha:…)` overlay scrim, hairlines `Colors.white.withValues(alpha: 0.06)`, ou brand externe protégé.
 
 ### TextStyle inline (51 occurrences)
 - [ ] Inventaire complet avec `Grep "TextStyle("` hors `lib/core/theme/`
