@@ -47,6 +47,10 @@ class _FakeChatRepository implements ChatRepository {
   final List<({String channelId, String senderId, String content})> sent = [];
 
   @override
+  Future<Set<String>> openedMatchChannelIds(List<String> matchIds) async =>
+      const <String>{};
+
+  @override
   Future<ChatChannel> ensureMatchChannel(String matchId) async {
     return ChatChannel(id: _channelId, type: 'match', matchId: matchId);
   }
