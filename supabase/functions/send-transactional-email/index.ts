@@ -12,8 +12,8 @@
 // Config requise (secrets EF Dashboard) :
 //   - `RESEND_API_KEY`     : clé Resend (re_xxx)
 //   - `ARENA_EMAIL_FROM`   : adresse expéditeur vérifiée chez Resend
-//     (par défaut "Arena <noreply@arena.app>" si non set — à update en
-//     prod avec le domaine vraiment vérifié).
+//     (par défaut "Arena <noreply@arena-skill.com>" si non set —
+//     `arena-skill.com` est le domaine vérifié côté Resend pour V1).
 //
 // Inputs (POST JSON) :
 //   {
@@ -180,7 +180,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
 
   const apiKey = Deno.env.get("RESEND_API_KEY");
-  const from = Deno.env.get("ARENA_EMAIL_FROM") ?? "Arena <noreply@arena.app>";
+  const from = Deno.env.get("ARENA_EMAIL_FROM") ??
+    "Arena <noreply@arena-skill.com>";
   if (!apiKey) {
     return jsonResponse({ error: "resend_not_configured" }, 500);
   }
