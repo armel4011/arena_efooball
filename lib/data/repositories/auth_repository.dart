@@ -249,9 +249,25 @@ class AuthRepository {
   }
 
   /// Wraps a Supabase auth call in our typed-failure mapper.
+  ///
+  /// Hiérarchie gotrue (v2.20.0) :
+  ///   AuthException
+  ///   ├── AuthApiException                 (réponses HTTP 4xx/5xx du serveur)
+  ///   ├── AuthWeakPasswordException        (extends AuthException directement)
+  ///   ├── AuthSessionMissingException
+  ///   ├── AuthPKCEGrantCodeExchangeError
+  ///   ├── AuthRetryableFetchException
+  ///   └── AuthUnknownException
+  ///
+  /// `AuthWeakPasswordException` n'hérite pas d'`AuthApiException` —
+  /// elle DOIT être catchée explicitement avant le bloc générique
+  /// `AuthException`, sinon elle tombe sur `_mapGeneric` qui ne sait
+  /// pas mapper le password Pwned/HIBP → `UnknownAuthFailure` opaque.
   Future<T> _runAuth<T>(Future<T> Function() body) async {
     try {
       return await body();
+    } on AuthWeakPasswordException catch (e) {
+      throw WeakPasswordFailure(e);
     } on AuthApiException catch (e) {
       throw _mapApi(e);
     } on AuthException catch (e) {
@@ -262,8 +278,30 @@ class AuthRepository {
   }
 
   AuthFailure _mapApi(AuthApiException e) {
-    final code = e.statusCode;
+    final statusCode = e.statusCode;
+    final errorCode = e.code; // Supabase ErrorCode officiel (plus stable que le msg)
     final msg = e.message.toLowerCase();
+
+    // ── Priorité 1 : code Supabase officiel (case-insensitive, locale-stable).
+    switch (errorCode) {
+      case 'weak_password':
+      case 'same_password':
+        return WeakPasswordFailure(e);
+      case 'email_exists':
+        return EmailAlreadyRegisteredFailure(e);
+      case 'user_banned':
+        return UserBannedFailure(e);
+      case 'email_not_confirmed':
+      case 'phone_not_confirmed':
+        return EmailNotConfirmedFailure(e);
+      case 'invalid_credentials':
+        return InvalidCredentialsFailure(e);
+      case 'over_email_send_rate_limit':
+      case 'over_request_rate_limit':
+        return RateLimitedFailure(e);
+    }
+
+    // ── Priorité 2 : heuristiques message-based (fallback si code absent).
     if (msg.contains('otp') || msg.contains('token')) {
       if (msg.contains('expired')) {
         return ExpiredPasswordResetCodeFailure(e);
@@ -282,18 +320,21 @@ class AuthRepository {
     if (msg.contains('weak') && msg.contains('password')) {
       return WeakPasswordFailure(e);
     }
+    if (msg.contains('pwned') || msg.contains('compromised')) {
+      return WeakPasswordFailure(e);
+    }
     if (msg.contains('not confirmed') || msg.contains('email_not_confirmed')) {
       return EmailNotConfirmedFailure(e);
     }
     if (msg.contains('banned') || msg.contains('blocked')) {
       return UserBannedFailure(e);
     }
-    if (code == '429' ||
+    if (statusCode == '429' ||
         msg.contains('rate limit') ||
         msg.contains('over_email_send_rate_limit')) {
       return RateLimitedFailure(e);
     }
-    if (code == '422' || code == '400') {
+    if (statusCode == '422' || statusCode == '400') {
       return InvalidCredentialsFailure(e);
     }
     return UnknownAuthFailure(e);
