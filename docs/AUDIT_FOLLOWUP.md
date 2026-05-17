@@ -19,7 +19,7 @@ Découpage en widgets / sous-pages, pas un refactor mécanique.
 - [ ] `lib/features_user/match_room/match_room_page.dart` — **1602 lignes** (déjà 2038→1602, cf. memory `refactor_progress`)
 - [x] `lib/features_user/home/home_page.dart` — 961 → **96** lignes (2026-05-17, commit `<pending>`). Découpé en 7 widgets sous `home/widgets/` : `home_header`, `pending_payment_banner`, `upcoming_matches_section`, `live_streams_section`, `active_competitions_section`, `stat_grid`, `home_error_row` (partagé). Aucun fichier extrait > 230 lignes.
 - [ ] `lib/features_admin/competitions_admin/admin_competition_detail_page.dart` — 907 lignes
-- [ ] `lib/features_user/competitions/competitions_list_page.dart` — 842 lignes
+- [x] `lib/features_user/competitions/competitions_list_page.dart` — 842 → **226** lignes (2026-05-17, commit `<pending>`). Découpé en 4 widgets sous `competitions/widgets/` : `competition_filter_chips` (enums + 3 chip rows), `free_competition_card`, `paid_competition_card`, `competition_list_card` (dispatcher).
 
 ### 21 issues `flutter analyze` restantes
 Toutes manuelles (non couvertes par `dart fix`). Listées par règle :
