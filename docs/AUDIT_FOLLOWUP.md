@@ -63,24 +63,21 @@ Raisons : `Colors.white` sur gradient pour contraste, `Colors.black.withValues(a
 
 ## INFO — quick wins SQL
 
-### Indexes inutilisés (26 — advisor performance INFO)
-À auditer avant suppression : un index peut être utilisé en pic seulement, ou nécessaire à une migration future. Faire `SELECT … FROM pg_stat_user_indexes` sur un cycle d'utilisation représentatif avant DROP.
+### Indexes inutilisés (advisor performance INFO)
 
-- [ ] `idx_profiles_country`, `idx_profiles_deleted`, `idx_profiles_permanent_ban`
-- [ ] `idx_competitions_dates`, `idx_competitions_game`
-- [ ] `idx_memberships_group`
-- [ ] `idx_matches_status`, `idx_matches_streamed_live`, `idx_matches_group`, `idx_matches_home_player`, `idx_matches_winner`, `idx_matches_streaming_admin`
-- [ ] `idx_bracket_nodes_parent`, `idx_bracket_nodes_next_node`
-- [ ] `idx_payments_provider_tx`, `idx_payments_validated_at`
-- [ ] `idx_payouts_admin_validation`
-- [ ] `idx_webhook_log_provider`
-- [ ] `idx_auto_actions_function`
-- [ ] `idx_invitation_codes_unused`, `invitation_codes_code_active_idx`
-- [ ] `idx_banned_words_language`
-- [ ] `idx_exchange_rates_pair`
-- [ ] `idx_match_events_created_by`
-- [ ] `idx_streams_active_public`
-- [ ] `idx_reintegration_status_created`
+**Audit du 2026-05-17** : les 26 indexes flaggés ne sont pas du débris. L'app est en V1 fraîche (4-6 rows par table), donc le planner Postgres préfère `seq_scan` — les indexes ne sont pas sollicités mais leur design est sain. Le seul **vrai débris** trouvé est l'index obsolète remplacé par la migration Phase 12.5.
+
+- [x] **`idx_invitation_codes_unused`** — drop le 2026-05-17, migration `20260517110005`. Indexait `(code) WHERE used_at IS NULL` ; la sémantique a été refactorée vers `uses_count`/`max_uses` dans `20260516100001`, le successeur `invitation_codes_code_active_idx` reste.
+
+**À conserver pour l'instant (defensive / V2-deferred) :** les 25 indexes restants. Coût total ~290 KB. Revoir après ~1 mois de traction réelle :
+- Reset les stats : `SELECT pg_stat_reset();`
+- Attendre une fenêtre représentative (4 semaines + données réelles)
+- Re-mesurer via `pg_stat_user_indexes` et l'advisor MCP
+
+Détail des 25 conservés (18 defensive, 6 V2-deferred, 1 historique trace) :
+- **Defensive (deviendront utiles à la traction)** : `idx_profiles_country`, `idx_profiles_deleted`, `idx_profiles_permanent_ban`, `idx_competitions_dates`, `idx_competitions_game`, `idx_matches_status`, `idx_matches_streamed_live`, `idx_matches_group`, `idx_matches_home_player`, `idx_matches_winner`, `idx_matches_streaming_admin`, `idx_bracket_nodes_parent`, `idx_bracket_nodes_next_node`, `idx_streams_active_public`, `idx_match_events_created_by`, `idx_banned_words_language`, `idx_reintegration_status_created`, `idx_auto_actions_function`.
+- **V2-deferred (feature pas encore active)** : `idx_payouts_admin_validation`, `idx_exchange_rates_pair`, `idx_payments_provider_tx`, `idx_payments_validated_at`, `idx_webhook_log_provider`, `idx_memberships_group`.
+- **Audit trail** : `invitation_codes_code_active_idx` (Phase 12.5, conservé).
 
 ### FK non indexées (2 — advisor performance INFO)
 - [ ] `friendships.blocked_by_fkey` → `CREATE INDEX ON public.friendships(blocked_by);`
