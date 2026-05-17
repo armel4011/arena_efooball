@@ -106,6 +106,7 @@ class _SuperAdminInvitationsState
             targetEmail: email.isEmpty ? null : email,
             expiresAt: _expiration.deadline,
           );
+      ref.invalidate(adminInvitationsProvider);
       _emailCtrl.clear();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -271,6 +272,7 @@ class _CodeCard extends ConsumerWidget {
                           await ref
                               .read(adminInvitationsRepositoryProvider)
                               .revoke(code.id);
+                          ref.invalidate(adminInvitationsProvider);
                           if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -335,6 +337,7 @@ class _CodeCard extends ConsumerWidget {
     if (ok != true) return;
     try {
       await ref.read(adminInvitationsRepositoryProvider).delete(code.id);
+      ref.invalidate(adminInvitationsProvider);
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Code supprimé.')),
