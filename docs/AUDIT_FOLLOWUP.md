@@ -40,8 +40,8 @@ Audit ciblé après commit `482ea83` : la majorité des `Colors.white|black` res
 - [ ] **Option B** — passe manuelle fichier par fichier après enrichissement palette.
 
 **FIX immédiat (tokens déjà disponibles) :**
-- [ ] `lib/features_shared/widgets/arena_phone_frame.dart:22` — `Color(0xFF1A1A22)` → `ArenaColors.carbon2` (#1C1C26, écart imperceptible).
-- [ ] `lib/features_user/profile/avatar_palette.dart:33,35` — `Color(0xFF4C7AFF)` → `ArenaColors.signalBlue`.
+- [x] `lib/features_shared/widgets/arena_phone_frame.dart:22` — `Color(0xFF1A1A22)` → `ArenaColors.carbon2` (commit `69011db`).
+- [x] `lib/features_user/profile/avatar_palette.dart:33,35` — `Color(0xFF4C7AFF)` → `ArenaColors.signalBlue` (commit `69011db`).
 
 **EXTEND `ArenaColors` (puis remplacer les usages) :**
 - [ ] **Gold premium** (`tierGold` + `tierGoldDeep`) — `competitions_list_page.dart:602-603` (`0xFFFFC93C` / `0xFFCB9A1F`), `super_admin_dashboard.dart`, `super_admin_invitations.dart` (`0xFFFFD700`).

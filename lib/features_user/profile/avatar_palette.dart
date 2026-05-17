@@ -1,3 +1,4 @@
+import 'package:arena/core/theme/arena_theme.dart';
 import 'package:flutter/material.dart';
 
 /// Palette of 12 hex colors offered for the avatar background on the
@@ -30,9 +31,9 @@ class AvatarPalette {
   /// on a corrupted profile row.
   static Color colorFromHex(String hex) {
     final cleaned = hex.replaceAll('#', '').trim();
-    if (cleaned.length != 6) return const Color(0xFF4C7AFF);
+    if (cleaned.length != 6) return ArenaColors.signalBlue;
     final v = int.tryParse(cleaned, radix: 16);
-    if (v == null) return const Color(0xFF4C7AFF);
+    if (v == null) return ArenaColors.signalBlue;
     return Color(0xFF000000 | v);
   }
 }

@@ -19,7 +19,7 @@ class ArenaPhoneFrame extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.black,
         borderRadius: BorderRadius.circular(38),
-        border: Border.all(color: const Color(0xFF1A1A22), width: 6),
+        border: Border.all(color: ArenaColors.carbon2, width: 6),
         boxShadow: const [
           BoxShadow(
             color: Color(0x99000000),
