@@ -44,6 +44,15 @@ class AdminDashboardPage extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(
+              Icons.account_circle_outlined,
+              color: ArenaColors.bone,
+              size: 22,
+            ),
+            tooltip: 'Mon profil',
+            onPressed: () => context.push(AdminRoutes.profile),
+          ),
+          IconButton(
+            icon: const Icon(
               Icons.logout,
               color: ArenaColors.bone,
               size: 20,
