@@ -88,7 +88,7 @@ Détail des 25 conservés (18 defensive, 6 V2-deferred, 1 historique trace) :
 - [ ] **0 test d'intégration** — créer `integration_test/` avec au moins le golden path (login → home → join competition → match flow). Cible de couverture : 50 %.
 - [ ] **Pas de codecov dans CI** — ajouter step `flutter test --coverage` + upload codecov dans `.github/workflows/ci.yml`.
 - [ ] **`custom_lint` / `riverpod_lint` désactivés** — surveiller la sortie d'analyzer 7.7+ pour réactiver (cf. `analysis_options.yaml`).
-- [ ] **17 `authenticated_security_definer_function_executable` (WARN)** — par design (RPC user-actionnable, checks internes en place). À documenter dans un commentaire SQL pour faire taire l'advisor sans masquer un vrai trou.
+- [x] **15 `authenticated_security_definer_function_executable` (WARN)** — par design (RPC user-actionnable, checks internes en place). `COMMENT ON FUNCTION` ajouté à chacune avec intent + autorisation interne (migration `20260517110007`). L'advisor restera WARN ; les commentaires servent à un futur reviewer humain. (Le compte est passé de 17 à 15 entre-temps : `delete_competition_cascade` n'était plus comptée 2× par l'advisor après le REVOKE anon de `20260517110003`.)
 
 ## Notes pour la prochaine session
 
