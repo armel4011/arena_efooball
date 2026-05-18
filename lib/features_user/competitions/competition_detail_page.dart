@@ -83,11 +83,13 @@ class _GatedDetailView extends ConsumerWidget {
         .format(c.startDate.toLocal());
 
     return SafeArea(
-      child: Padding(
+      child: ListView(
+        // Lot D — la _GatedDetailView contient maintenant un bloc
+        // parrainage potentiellement long ; on passe en ListView pour
+        // permettre le scroll si le contenu déborde (avant : Column +
+        // Spacer non-scrollable qui clippait le bloc parrainage).
         padding: const EdgeInsets.all(ArenaSpacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+        children: [
             Container(
               padding: const EdgeInsets.all(ArenaSpacing.lg),
               decoration: BoxDecoration(
@@ -174,7 +176,7 @@ class _GatedDetailView extends ConsumerWidget {
               const SizedBox(height: ArenaSpacing.md),
               _ReferralProgressCard(competition: competition),
             ],
-            const Spacer(),
+            const SizedBox(height: ArenaSpacing.lg),
             Container(
               padding: const EdgeInsets.all(ArenaSpacing.md),
               decoration: BoxDecoration(
@@ -188,8 +190,7 @@ class _GatedDetailView extends ConsumerWidget {
                 style: ArenaText.small,
               ),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
