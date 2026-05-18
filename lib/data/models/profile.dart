@@ -40,6 +40,9 @@ sealed class Profile with _$Profile {
     DateTime? deletedAt,
     @Default('none') String kycStatus,
     DateTime? kycVerifiedAt,
+    // Lot D — Système de parrainage (item 8).
+    @Default('') String referralCode,
+    String? referredBy,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) = _Profile;

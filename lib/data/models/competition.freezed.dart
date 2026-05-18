@@ -70,6 +70,13 @@ mixin _$Competition {
   /// `trigger_auto_generate_bracket` consume ce flag.
   bool get autoGenerateBracket => throw _privateConstructorUsedError;
 
+  /// Lot D — quota de parrainages requis avant qu'un joueur puisse
+  /// s'inscrire. 0 = pas de gating (la majorité des comp.). Utilisé
+  /// uniquement pour les comp. gratuites avec récompense (variante
+  /// « invite N amis pour t'inscrire »). Trigger DB
+  /// `enforce_referral_quota_on_registration` consume cette colonne.
+  int get referralQuota => throw _privateConstructorUsedError;
+
   /// Serializes this Competition to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
 
@@ -114,7 +121,8 @@ abstract class $CompetitionCopyWith<$Res> {
       String? mtnMomoCode,
       List<int> prizeDistribution,
       int matchIntervalMinutes,
-      bool autoGenerateBracket});
+      bool autoGenerateBracket,
+      int referralQuota});
 }
 
 /// @nodoc
@@ -160,6 +168,7 @@ class _$CompetitionCopyWithImpl<$Res, $Val extends Competition>
     Object? prizeDistribution = null,
     Object? matchIntervalMinutes = null,
     Object? autoGenerateBracket = null,
+    Object? referralQuota = null,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -274,6 +283,10 @@ class _$CompetitionCopyWithImpl<$Res, $Val extends Competition>
           ? _value.autoGenerateBracket
           : autoGenerateBracket // ignore: cast_nullable_to_non_nullable
               as bool,
+      referralQuota: null == referralQuota
+          ? _value.referralQuota
+          : referralQuota // ignore: cast_nullable_to_non_nullable
+              as int,
     ) as $Val);
   }
 }
@@ -314,7 +327,8 @@ abstract class _$$CompetitionImplCopyWith<$Res>
       String? mtnMomoCode,
       List<int> prizeDistribution,
       int matchIntervalMinutes,
-      bool autoGenerateBracket});
+      bool autoGenerateBracket,
+      int referralQuota});
 }
 
 /// @nodoc
@@ -358,6 +372,7 @@ class __$$CompetitionImplCopyWithImpl<$Res>
     Object? prizeDistribution = null,
     Object? matchIntervalMinutes = null,
     Object? autoGenerateBracket = null,
+    Object? referralQuota = null,
   }) {
     return _then(_$CompetitionImpl(
       id: null == id
@@ -472,6 +487,10 @@ class __$$CompetitionImplCopyWithImpl<$Res>
           ? _value.autoGenerateBracket
           : autoGenerateBracket // ignore: cast_nullable_to_non_nullable
               as bool,
+      referralQuota: null == referralQuota
+          ? _value.referralQuota
+          : referralQuota // ignore: cast_nullable_to_non_nullable
+              as int,
     ));
   }
 }
@@ -507,7 +526,8 @@ class _$CompetitionImpl extends _Competition {
       this.mtnMomoCode,
       final List<int> prizeDistribution = const <int>[0, 0, 0, 0],
       this.matchIntervalMinutes = 60,
-      this.autoGenerateBracket = true})
+      this.autoGenerateBracket = true,
+      this.referralQuota = 0})
       : _prizeDistribution = prizeDistribution,
         super._();
 
@@ -614,9 +634,18 @@ class _$CompetitionImpl extends _Competition {
   @JsonKey()
   final bool autoGenerateBracket;
 
+  /// Lot D — quota de parrainages requis avant qu'un joueur puisse
+  /// s'inscrire. 0 = pas de gating (la majorité des comp.). Utilisé
+  /// uniquement pour les comp. gratuites avec récompense (variante
+  /// « invite N amis pour t'inscrire »). Trigger DB
+  /// `enforce_referral_quota_on_registration` consume cette colonne.
+  @override
+  @JsonKey()
+  final int referralQuota;
+
   @override
   String toString() {
-    return 'Competition(id: $id, name: $name, game: $game, format: $format, startDate: $startDate, status: $status, maxPlayers: $maxPlayers, currentPlayers: $currentPlayers, registrationFee: $registrationFee, registrationCurrency: $registrationCurrency, commissionPct: $commissionPct, prizePoolLocal: $prizePoolLocal, commissionXaf: $commissionXaf, sponsorBonusLocal: $sponsorBonusLocal, description: $description, bannerUrl: $bannerUrl, registrationOpensAt: $registrationOpensAt, registrationClosesAt: $registrationClosesAt, endDate: $endDate, prizePoolCurrency: $prizePoolCurrency, createdBy: $createdBy, createdAt: $createdAt, updatedAt: $updatedAt, orangeMoneyCode: $orangeMoneyCode, mtnMomoCode: $mtnMomoCode, prizeDistribution: $prizeDistribution, matchIntervalMinutes: $matchIntervalMinutes, autoGenerateBracket: $autoGenerateBracket)';
+    return 'Competition(id: $id, name: $name, game: $game, format: $format, startDate: $startDate, status: $status, maxPlayers: $maxPlayers, currentPlayers: $currentPlayers, registrationFee: $registrationFee, registrationCurrency: $registrationCurrency, commissionPct: $commissionPct, prizePoolLocal: $prizePoolLocal, commissionXaf: $commissionXaf, sponsorBonusLocal: $sponsorBonusLocal, description: $description, bannerUrl: $bannerUrl, registrationOpensAt: $registrationOpensAt, registrationClosesAt: $registrationClosesAt, endDate: $endDate, prizePoolCurrency: $prizePoolCurrency, createdBy: $createdBy, createdAt: $createdAt, updatedAt: $updatedAt, orangeMoneyCode: $orangeMoneyCode, mtnMomoCode: $mtnMomoCode, prizeDistribution: $prizeDistribution, matchIntervalMinutes: $matchIntervalMinutes, autoGenerateBracket: $autoGenerateBracket, referralQuota: $referralQuota)';
   }
 
   @override
@@ -673,7 +702,9 @@ class _$CompetitionImpl extends _Competition {
             (identical(other.matchIntervalMinutes, matchIntervalMinutes) ||
                 other.matchIntervalMinutes == matchIntervalMinutes) &&
             (identical(other.autoGenerateBracket, autoGenerateBracket) ||
-                other.autoGenerateBracket == autoGenerateBracket));
+                other.autoGenerateBracket == autoGenerateBracket) &&
+            (identical(other.referralQuota, referralQuota) ||
+                other.referralQuota == referralQuota));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -707,7 +738,8 @@ class _$CompetitionImpl extends _Competition {
         mtnMomoCode,
         const DeepCollectionEquality().hash(_prizeDistribution),
         matchIntervalMinutes,
-        autoGenerateBracket
+        autoGenerateBracket,
+        referralQuota
       ]);
 
   /// Create a copy of Competition
@@ -755,7 +787,8 @@ abstract class _Competition extends Competition {
       final String? mtnMomoCode,
       final List<int> prizeDistribution,
       final int matchIntervalMinutes,
-      final bool autoGenerateBracket}) = _$CompetitionImpl;
+      final bool autoGenerateBracket,
+      final int referralQuota}) = _$CompetitionImpl;
   const _Competition._() : super._();
 
   factory _Competition.fromJson(Map<String, dynamic> json) =
@@ -838,6 +871,14 @@ abstract class _Competition extends Competition {
   /// `trigger_auto_generate_bracket` consume ce flag.
   @override
   bool get autoGenerateBracket;
+
+  /// Lot D — quota de parrainages requis avant qu'un joueur puisse
+  /// s'inscrire. 0 = pas de gating (la majorité des comp.). Utilisé
+  /// uniquement pour les comp. gratuites avec récompense (variante
+  /// « invite N amis pour t'inscrire »). Trigger DB
+  /// `enforce_referral_quota_on_registration` consume cette colonne.
+  @override
+  int get referralQuota;
 
   /// Create a copy of Competition
   /// with the given fields replaced by the non-null parameter values.

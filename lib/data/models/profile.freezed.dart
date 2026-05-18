@@ -49,7 +49,10 @@ mixin _$Profile {
   String? get accountDeletionReason => throw _privateConstructorUsedError;
   DateTime? get deletedAt => throw _privateConstructorUsedError;
   String get kycStatus => throw _privateConstructorUsedError;
-  DateTime? get kycVerifiedAt => throw _privateConstructorUsedError;
+  DateTime? get kycVerifiedAt =>
+      throw _privateConstructorUsedError; // Lot D — Système de parrainage (item 8).
+  String get referralCode => throw _privateConstructorUsedError;
+  String? get referredBy => throw _privateConstructorUsedError;
   DateTime? get createdAt => throw _privateConstructorUsedError;
   DateTime? get updatedAt => throw _privateConstructorUsedError;
 
@@ -96,6 +99,8 @@ abstract class $ProfileCopyWith<$Res> {
       DateTime? deletedAt,
       String kycStatus,
       DateTime? kycVerifiedAt,
+      String referralCode,
+      String? referredBy,
       DateTime? createdAt,
       DateTime? updatedAt});
 }
@@ -143,6 +148,8 @@ class _$ProfileCopyWithImpl<$Res, $Val extends Profile>
     Object? deletedAt = freezed,
     Object? kycStatus = null,
     Object? kycVerifiedAt = freezed,
+    Object? referralCode = null,
+    Object? referredBy = freezed,
     Object? createdAt = freezed,
     Object? updatedAt = freezed,
   }) {
@@ -259,6 +266,14 @@ class _$ProfileCopyWithImpl<$Res, $Val extends Profile>
           ? _value.kycVerifiedAt
           : kycVerifiedAt // ignore: cast_nullable_to_non_nullable
               as DateTime?,
+      referralCode: null == referralCode
+          ? _value.referralCode
+          : referralCode // ignore: cast_nullable_to_non_nullable
+              as String,
+      referredBy: freezed == referredBy
+          ? _value.referredBy
+          : referredBy // ignore: cast_nullable_to_non_nullable
+              as String?,
       createdAt: freezed == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -307,6 +322,8 @@ abstract class _$$ProfileImplCopyWith<$Res> implements $ProfileCopyWith<$Res> {
       DateTime? deletedAt,
       String kycStatus,
       DateTime? kycVerifiedAt,
+      String referralCode,
+      String? referredBy,
       DateTime? createdAt,
       DateTime? updatedAt});
 }
@@ -352,6 +369,8 @@ class __$$ProfileImplCopyWithImpl<$Res>
     Object? deletedAt = freezed,
     Object? kycStatus = null,
     Object? kycVerifiedAt = freezed,
+    Object? referralCode = null,
+    Object? referredBy = freezed,
     Object? createdAt = freezed,
     Object? updatedAt = freezed,
   }) {
@@ -468,6 +487,14 @@ class __$$ProfileImplCopyWithImpl<$Res>
           ? _value.kycVerifiedAt
           : kycVerifiedAt // ignore: cast_nullable_to_non_nullable
               as DateTime?,
+      referralCode: null == referralCode
+          ? _value.referralCode
+          : referralCode // ignore: cast_nullable_to_non_nullable
+              as String,
+      referredBy: freezed == referredBy
+          ? _value.referredBy
+          : referredBy // ignore: cast_nullable_to_non_nullable
+              as String?,
       createdAt: freezed == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -512,6 +539,8 @@ class _$ProfileImpl extends _Profile {
       this.deletedAt,
       this.kycStatus = 'none',
       this.kycVerifiedAt,
+      this.referralCode = '',
+      this.referredBy,
       this.createdAt,
       this.updatedAt})
       : _stats = stats,
@@ -596,6 +625,12 @@ class _$ProfileImpl extends _Profile {
   final String kycStatus;
   @override
   final DateTime? kycVerifiedAt;
+// Lot D — Système de parrainage (item 8).
+  @override
+  @JsonKey()
+  final String referralCode;
+  @override
+  final String? referredBy;
   @override
   final DateTime? createdAt;
   @override
@@ -603,7 +638,7 @@ class _$ProfileImpl extends _Profile {
 
   @override
   String toString() {
-    return 'Profile(id: $id, username: $username, email: $email, countryCode: $countryCode, avatarColor: $avatarColor, role: $role, isActive: $isActive, permanentBan: $permanentBan, fcmToken: $fcmToken, stats: $stats, authProvider: $authProvider, authProviderId: $authProviderId, whatsappNumber: $whatsappNumber, preferredLanguage: $preferredLanguage, preferredCurrency: $preferredCurrency, timezone: $timezone, onboardingCompleted: $onboardingCompleted, onboardingCompletedAt: $onboardingCompletedAt, totpEnabled: $totpEnabled, cguAcceptedAt: $cguAcceptedAt, cguVersionAccepted: $cguVersionAccepted, privacyPolicyAcceptedAt: $privacyPolicyAcceptedAt, marketingConsent: $marketingConsent, accountDeletionRequestedAt: $accountDeletionRequestedAt, accountDeletionReason: $accountDeletionReason, deletedAt: $deletedAt, kycStatus: $kycStatus, kycVerifiedAt: $kycVerifiedAt, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'Profile(id: $id, username: $username, email: $email, countryCode: $countryCode, avatarColor: $avatarColor, role: $role, isActive: $isActive, permanentBan: $permanentBan, fcmToken: $fcmToken, stats: $stats, authProvider: $authProvider, authProviderId: $authProviderId, whatsappNumber: $whatsappNumber, preferredLanguage: $preferredLanguage, preferredCurrency: $preferredCurrency, timezone: $timezone, onboardingCompleted: $onboardingCompleted, onboardingCompletedAt: $onboardingCompletedAt, totpEnabled: $totpEnabled, cguAcceptedAt: $cguAcceptedAt, cguVersionAccepted: $cguVersionAccepted, privacyPolicyAcceptedAt: $privacyPolicyAcceptedAt, marketingConsent: $marketingConsent, accountDeletionRequestedAt: $accountDeletionRequestedAt, accountDeletionReason: $accountDeletionReason, deletedAt: $deletedAt, kycStatus: $kycStatus, kycVerifiedAt: $kycVerifiedAt, referralCode: $referralCode, referredBy: $referredBy, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -666,6 +701,10 @@ class _$ProfileImpl extends _Profile {
                 other.kycStatus == kycStatus) &&
             (identical(other.kycVerifiedAt, kycVerifiedAt) ||
                 other.kycVerifiedAt == kycVerifiedAt) &&
+            (identical(other.referralCode, referralCode) ||
+                other.referralCode == referralCode) &&
+            (identical(other.referredBy, referredBy) ||
+                other.referredBy == referredBy) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
             (identical(other.updatedAt, updatedAt) ||
@@ -704,6 +743,8 @@ class _$ProfileImpl extends _Profile {
         deletedAt,
         kycStatus,
         kycVerifiedAt,
+        referralCode,
+        referredBy,
         createdAt,
         updatedAt
       ]);
@@ -754,6 +795,8 @@ abstract class _Profile extends Profile {
       final DateTime? deletedAt,
       final String kycStatus,
       final DateTime? kycVerifiedAt,
+      final String referralCode,
+      final String? referredBy,
       final DateTime? createdAt,
       final DateTime? updatedAt}) = _$ProfileImpl;
   const _Profile._() : super._();
@@ -816,7 +859,11 @@ abstract class _Profile extends Profile {
   @override
   String get kycStatus;
   @override
-  DateTime? get kycVerifiedAt;
+  DateTime? get kycVerifiedAt; // Lot D — Système de parrainage (item 8).
+  @override
+  String get referralCode;
+  @override
+  String? get referredBy;
   @override
   DateTime? get createdAt;
   @override

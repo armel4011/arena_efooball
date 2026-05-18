@@ -98,6 +98,10 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
   bool _autoGenerateBracket = true;
   int _matchIntervalMinutes = 60;
 
+  // Lot D — Quota parrainages requis pour s'inscrire (item 8).
+  // 0 = pas de gating. Activable seulement pour comp. gratuites.
+  final _referralQuotaCtrl = TextEditingController(text: '0');
+
   bool get _isEditing => widget.editing != null;
 
   @override
@@ -124,6 +128,7 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
         : commissionXaf.toString();
     _autoGenerateBracket = c.autoGenerateBracket;
     _matchIntervalMinutes = c.matchIntervalMinutes;
+    _referralQuotaCtrl.text = c.referralQuota.toString();
     // Reconstruit places individuelles + blocs depuis la liste plate
     // stockée (best-effort : un bloc relit le % de sa 1ère place).
     final dist = c.prizeDistribution;
@@ -160,6 +165,7 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
     _orangeMomoCtrl.dispose();
     _mtnMomoCtrl.dispose();
     _commissionXafCtrl.dispose();
+    _referralQuotaCtrl.dispose();
     for (final c in _topShareCtrls) {
       c.dispose();
     }
@@ -560,6 +566,66 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
           ),
         ],
       ),
+      if (!isPaid) ...[
+        const SizedBox(height: ArenaSpacing.lg),
+        Container(
+          padding: const EdgeInsets.all(ArenaSpacing.md),
+          decoration: BoxDecoration(
+            color: ArenaColors.tierGoldWarm.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(ArenaRadius.md),
+            border: Border.all(
+              color: ArenaColors.tierGoldWarm.withValues(alpha: 0.4),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '👥 Parrainage requis (optionnel — Lot D)',
+                style: ArenaText.h3,
+              ),
+              const SizedBox(height: ArenaSpacing.xs),
+              Text(
+                'Force le joueur à parrainer N personnes via son code '
+                "(ARN-XXXX) avant de pouvoir s'inscrire. Pertinent pour "
+                'les compétitions gratuites avec récompense. 0 = pas de '
+                'gating.',
+                style: ArenaText.small,
+              ),
+              const SizedBox(height: ArenaSpacing.sm),
+              Row(
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: ArenaTextField(
+                      controller: _referralQuotaCtrl,
+                      hint: '0',
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                      ],
+                      onChanged: (_) => setState(() {}),
+                    ),
+                  ),
+                  const SizedBox(width: ArenaSpacing.xs),
+                  Expanded(
+                    child: Container(
+                      alignment: Alignment.center,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: ArenaColors.carbon,
+                        borderRadius: BorderRadius.circular(ArenaRadius.md),
+                        border: Border.all(color: ArenaColors.border),
+                      ),
+                      child: Text('amis', style: ArenaText.body),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
       if (isPaid) ...[
         const SizedBox(height: ArenaSpacing.lg),
         Container(
@@ -642,6 +708,11 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
         label: 'Intervalle entre rounds',
         value: _matchIntervalLabel(_matchIntervalMinutes),
       ),
+      if (_referralQuota() > 0)
+        ReviewRow(
+          label: 'Parrainages requis',
+          value: '${_referralQuota()} ami(s) via code ARN-XXXX',
+        ),
       const SizedBox(height: ArenaSpacing.lg),
       if (!_isEditing)
         PublishToggleCard(
@@ -697,6 +768,7 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
         'created_by': adminId,
         'auto_generate_bracket': _autoGenerateBracket,
         'match_interval_minutes': _matchIntervalMinutes,
+        'referral_quota': _referralQuota(),
         if (fee > 0) 'orange_money_code': _orangeMomoCtrl.text.trim(),
         if (fee > 0) 'mtn_momo_code': _mtnMomoCtrl.text.trim(),
       });
@@ -754,6 +826,7 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
         'prize_distribution': _prizeDistribution(),
         'auto_generate_bracket': _autoGenerateBracket,
         'match_interval_minutes': _matchIntervalMinutes,
+        'referral_quota': _referralQuota(),
         if (fee > 0) 'orange_money_code': _orangeMomoCtrl.text.trim(),
         if (fee > 0) 'mtn_momo_code': _mtnMomoCtrl.text.trim(),
       });
@@ -831,6 +904,9 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
   /// Commission ARENA en montant XAF (Lot B). Parse l'input numérique.
   double _commissionXaf() =>
       double.tryParse(_commissionXafCtrl.text.trim()) ?? 0;
+
+  /// Quota parrainages requis (Lot D). 0 = pas de gating.
+  int _referralQuota() => int.tryParse(_referralQuotaCtrl.text.trim()) ?? 0;
 
   Future<void> _pickStartDate() async {
     final now = DateTime.now();

@@ -51,6 +51,8 @@ _$ProfileImpl _$$ProfileImplFromJson(Map<String, dynamic> json) =>
       kycVerifiedAt: json['kyc_verified_at'] == null
           ? null
           : DateTime.parse(json['kyc_verified_at'] as String),
+      referralCode: json['referral_code'] as String? ?? '',
+      referredBy: json['referred_by'] as String?,
       createdAt: json['created_at'] == null
           ? null
           : DateTime.parse(json['created_at'] as String),
@@ -99,6 +101,8 @@ Map<String, dynamic> _$$ProfileImplToJson(_$ProfileImpl instance) =>
       'kyc_status': instance.kycStatus,
       if (instance.kycVerifiedAt?.toIso8601String() case final value?)
         'kyc_verified_at': value,
+      'referral_code': instance.referralCode,
+      if (instance.referredBy case final value?) 'referred_by': value,
       if (instance.createdAt?.toIso8601String() case final value?)
         'created_at': value,
       if (instance.updatedAt?.toIso8601String() case final value?)

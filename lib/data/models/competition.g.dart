@@ -54,6 +54,7 @@ _$CompetitionImpl _$$CompetitionImplFromJson(Map<String, dynamic> json) =>
       matchIntervalMinutes:
           (json['match_interval_minutes'] as num?)?.toInt() ?? 60,
       autoGenerateBracket: json['auto_generate_bracket'] as bool? ?? true,
+      referralQuota: (json['referral_quota'] as num?)?.toInt() ?? 0,
     );
 
 Map<String, dynamic> _$$CompetitionImplToJson(_$CompetitionImpl instance) =>
@@ -98,4 +99,5 @@ Map<String, dynamic> _$$CompetitionImplToJson(_$CompetitionImpl instance) =>
       'prize_distribution': instance.prizeDistribution,
       'match_interval_minutes': instance.matchIntervalMinutes,
       'auto_generate_bracket': instance.autoGenerateBracket,
+      'referral_quota': instance.referralQuota,
     };

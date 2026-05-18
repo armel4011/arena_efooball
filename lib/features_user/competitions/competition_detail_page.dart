@@ -3,6 +3,7 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
+import 'package:arena/data/repositories/referral_repository.dart';
 import 'package:arena/features_shared/prize_ranks.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
@@ -12,6 +13,7 @@ import 'package:arena/features_shared/widgets/error_state.dart';
 import 'package:arena/features_user/bracket/bracket_view_page.dart';
 import 'package:arena/features_user/bracket/group_standings_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -166,6 +168,11 @@ class _GatedDetailView extends ConsumerWidget {
                 ],
               ),
             ),
+            // Lot D — gating parrainage : progression + code à partager
+            if (competition.referralQuota > 0) ...[
+              const SizedBox(height: ArenaSpacing.md),
+              _ReferralProgressCard(competition: competition),
+            ],
             const Spacer(),
             Container(
               padding: const EdgeInsets.all(ArenaSpacing.md),
@@ -191,6 +198,197 @@ class _GatedDetailView extends ConsumerWidget {
         .format(pool.round())
         .replaceAll(',', ' ');
     return '$formatted $currency';
+  }
+}
+
+/// Lot D — Carte de progression parrainage affichée sur la page détail
+/// quand `competition.referral_quota > 0`. Combine 3 infos :
+///   1. L'éligibilité du joueur (via RPC `can_register_via_referral`).
+///   2. Sa progression visuelle (X/Y amis parrainés).
+///   3. Son code parrainage à partager (copy-to-clipboard).
+class _ReferralProgressCard extends ConsumerWidget {
+  const _ReferralProgressCard({required this.competition});
+  final Competition competition;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final eligibilityAsync =
+        ref.watch(referralEligibilityProvider(competition.id));
+    final codeAsync = ref.watch(myReferralCodeProvider);
+
+    return Container(
+      padding: const EdgeInsets.all(ArenaSpacing.lg),
+      decoration: BoxDecoration(
+        color: ArenaColors.signalBlue.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(ArenaRadius.lg),
+        border: Border.all(
+          color: ArenaColors.signalBlue.withValues(alpha: 0.35),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.group_outlined,
+                size: 18,
+                color: ArenaColors.signalBlue,
+              ),
+              const SizedBox(width: ArenaSpacing.xs),
+              Expanded(
+                child: Text(
+                  'Parrainage requis',
+                  style: ArenaText.h3.copyWith(
+                    color: ArenaColors.signalBlue,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: ArenaSpacing.xs),
+          Text(
+            'Tu dois parrainer ${competition.referralQuota} ami(s) pour '
+            "t'inscrire à cette compétition gratuite. Partage ton code "
+            "avec eux pour qu'ils créent leur compte ARENA.",
+            style: ArenaText.small,
+          ),
+          const SizedBox(height: ArenaSpacing.md),
+          eligibilityAsync.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: ArenaSpacing.sm),
+              child: LinearProgressIndicator(
+                color: ArenaColors.signalBlue,
+                backgroundColor: ArenaColors.carbon2,
+                minHeight: 6,
+              ),
+            ),
+            error: (e, _) => Text(
+              'Impossible de vérifier ta progression : $e',
+              style: ArenaText.small
+                  .copyWith(color: ArenaColors.neonRed),
+            ),
+            data: (eg) => _ProgressBlock(eligibility: eg),
+          ),
+          const SizedBox(height: ArenaSpacing.md),
+          codeAsync.when(
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+            data: (code) => code == null
+                ? const SizedBox.shrink()
+                : _ReferralCodeCopy(code: code),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProgressBlock extends StatelessWidget {
+  const _ProgressBlock({required this.eligibility});
+  final ReferralEligibility eligibility;
+
+  @override
+  Widget build(BuildContext context) {
+    final eg = eligibility;
+    final ratio = eg.target == 0 ? 1.0 : (eg.current / eg.target).clamp(0.0, 1.0);
+    final color = eg.eligible ? ArenaColors.statusOk : ArenaColors.signalBlue;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Text(
+              '${eg.current} / ${eg.target}',
+              style: ArenaText.bigNumber.copyWith(
+                color: color,
+                fontSize: 22,
+              ),
+            ),
+            const SizedBox(width: ArenaSpacing.sm),
+            Expanded(
+              child: Text(
+                eg.eligible
+                    ? "✓ Quota atteint — tu peux t'inscrire !"
+                    : 'Encore ${eg.target - eg.current} ami(s) à parrainer',
+                style: ArenaText.body.copyWith(color: color),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: ArenaSpacing.xs),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: ratio,
+            minHeight: 6,
+            backgroundColor: ArenaColors.carbon2,
+            valueColor: AlwaysStoppedAnimation(color),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ReferralCodeCopy extends StatelessWidget {
+  const _ReferralCodeCopy({required this.code});
+  final String code;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () async {
+        await Clipboard.setData(ClipboardData(text: code));
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Code $code copié dans le presse-papier'),
+            backgroundColor: ArenaColors.statusOk,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      },
+      borderRadius: BorderRadius.circular(ArenaRadius.md),
+      child: Container(
+        padding: const EdgeInsets.all(ArenaSpacing.md),
+        decoration: BoxDecoration(
+          color: ArenaColors.carbon,
+          borderRadius: BorderRadius.circular(ArenaRadius.md),
+          border: Border.all(color: ArenaColors.border),
+        ),
+        child: Row(
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'TON CODE',
+                  style: ArenaText.small.copyWith(
+                    color: ArenaColors.silver,
+                    letterSpacing: 1,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  code,
+                  style: ArenaText.invitCode.copyWith(
+                    color: ArenaColors.bone,
+                  ),
+                ),
+              ],
+            ),
+            const Spacer(),
+            const Icon(
+              Icons.content_copy_rounded,
+              size: 18,
+              color: ArenaColors.signalBlue,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

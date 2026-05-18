@@ -62,6 +62,13 @@ sealed class Competition with _$Competition {
     /// est atteint. V1 : single_elimination uniquement. Le trigger DB
     /// `trigger_auto_generate_bracket` consume ce flag.
     @Default(true) bool autoGenerateBracket,
+
+    /// Lot D — quota de parrainages requis avant qu'un joueur puisse
+    /// s'inscrire. 0 = pas de gating (la majorité des comp.). Utilisé
+    /// uniquement pour les comp. gratuites avec récompense (variante
+    /// « invite N amis pour t'inscrire »). Trigger DB
+    /// `enforce_referral_quota_on_registration` consume cette colonne.
+    @Default(0) int referralQuota,
   }) = _Competition;
 
   const Competition._();
