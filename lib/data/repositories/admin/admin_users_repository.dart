@@ -34,6 +34,7 @@ class AdminUsersRepository {
         'p_rewarded': f.receivedReward ? true : null,
         'p_disputed': f.hadDispute ? true : null,
         'p_guilty_min': f.guiltyMinCount,
+        'p_competition_id': f.competitionId,
         'p_limit': limit,
       },
     );
@@ -90,6 +91,7 @@ class AdminUsersFilter {
     this.receivedReward = false,
     this.hadDispute = false,
     this.guiltyMinCount,
+    this.competitionId,
   }) : assert(
           guiltyMinCount == null ||
               guiltyMinCount == 1 ||
@@ -123,6 +125,10 @@ class AdminUsersFilter {
   /// correspond aux utilisateurs bannis à vie par la règle 3-strikes.
   final int? guiltyMinCount;
 
+  /// Filtre par compétition (Lot C — item 2) : ne renvoie que les
+  /// utilisateurs inscrits à cette compétition. null = pas de filtre.
+  final String? competitionId;
+
   AdminUsersFilter copyWith({
     String? countryCode,
     String? filter,
@@ -132,10 +138,12 @@ class AdminUsersFilter {
     bool? receivedReward,
     bool? hadDispute,
     int? guiltyMinCount,
+    String? competitionId,
     bool resetCountryCode = false,
     bool resetFilter = false,
     bool resetSearch = false,
     bool resetGuiltyMin = false,
+    bool resetCompetitionId = false,
   }) {
     return AdminUsersFilter(
       countryCode:
@@ -148,6 +156,9 @@ class AdminUsersFilter {
       hadDispute: hadDispute ?? this.hadDispute,
       guiltyMinCount:
           resetGuiltyMin ? null : (guiltyMinCount ?? this.guiltyMinCount),
+      competitionId: resetCompetitionId
+          ? null
+          : (competitionId ?? this.competitionId),
     );
   }
 
@@ -158,7 +169,8 @@ class AdminUsersFilter {
       paidEntry ||
       receivedReward ||
       hadDispute ||
-      guiltyMinCount != null;
+      guiltyMinCount != null ||
+      competitionId != null;
 
   @override
   bool operator ==(Object other) =>
@@ -170,7 +182,8 @@ class AdminUsersFilter {
       other.paidEntry == paidEntry &&
       other.receivedReward == receivedReward &&
       other.hadDispute == hadDispute &&
-      other.guiltyMinCount == guiltyMinCount;
+      other.guiltyMinCount == guiltyMinCount &&
+      other.competitionId == competitionId;
 
   @override
   int get hashCode => Object.hash(
@@ -182,8 +195,54 @@ class AdminUsersFilter {
         receivedReward,
         hadDispute,
         guiltyMinCount,
+        competitionId,
       );
 }
+
+/// Lot C — légère liste de compétitions pour le dropdown de filtre.
+class FilterableCompetition {
+  const FilterableCompetition({
+    required this.id,
+    required this.name,
+    required this.status,
+    required this.game,
+    required this.currentPlayers,
+    required this.maxPlayers,
+    required this.startDate,
+  });
+
+  factory FilterableCompetition.fromJson(Map<String, dynamic> json) =>
+      FilterableCompetition(
+        id: json['id'] as String,
+        name: json['name'] as String,
+        status: (json['status'] as String?) ?? '',
+        game: (json['game'] as String?) ?? '',
+        currentPlayers: (json['current_players'] as num?)?.toInt() ?? 0,
+        maxPlayers: (json['max_players'] as num?)?.toInt() ?? 0,
+        startDate: DateTime.parse(json['start_date'] as String),
+      );
+
+  final String id;
+  final String name;
+  final String status;
+  final String game;
+  final int currentPlayers;
+  final int maxPlayers;
+  final DateTime startDate;
+}
+
+final filterableCompetitionsProvider =
+    FutureProvider<List<FilterableCompetition>>((ref) async {
+  final client = ref.watch(supabaseClientProvider);
+  final rows = await client.rpc<List<dynamic>>(
+    'list_filterable_competitions',
+    params: {'p_limit': 50},
+  );
+  return [
+    for (final row in rows)
+      FilterableCompetition.fromJson(row as Map<String, dynamic>),
+  ];
+});
 
 final adminUsersProvider =
     FutureProvider.family<List<Profile>, AdminUsersFilter>((ref, filter) {
