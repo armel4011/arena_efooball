@@ -36,7 +36,10 @@ Future<Widget> _routerHost({
   required Flavor flavor,
   Map<String, Object> initial = const {},
 }) async {
-  SharedPreferences.setMockInitialValues(initial);
+  // `has_seen_splash_v1: true` court-circuite le splash cinématique 6.3s ;
+  // on tombe sur le short splash 3.5s qu'on draine via `_pumpPastSplash`.
+  final merged = <String, Object>{'has_seen_splash_v1': true, ...initial};
+  SharedPreferences.setMockInitialValues(merged);
   final prefs = await SharedPreferences.getInstance();
   return ProviderScope(
     overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
@@ -54,6 +57,13 @@ Future<Widget> _routerHost({
   );
 }
 
+/// Le route `/intro` affiche 3500ms le short splash avant de naviguer
+/// vers la cible. On avance le temps pour franchir le `Future.delayed`.
+Future<void> _pumpPastSplash(WidgetTester tester) async {
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 3600));
+}
+
 void main() {
   group('ArenaUserApp router redirect', () {
     setUp(() {
@@ -67,6 +77,7 @@ void main() {
     testWidgets('first launch → onboarding (slide 1 visible)', (tester) async {
       final app = await _routerHost(flavor: Flavor.user);
       await tester.pumpWidget(app);
+      await _pumpPastSplash(tester);
       await tester.pumpAndSettle();
 
       expect(find.byType(OnboardingPage), findsOneWidget);
@@ -81,6 +92,7 @@ void main() {
         initial: <String, Object>{'onboarding_completed': true},
       );
       await tester.pumpWidget(app);
+      await _pumpPastSplash(tester);
       await tester.pumpAndSettle();
 
       expect(find.byType(SplashUserScreen), findsOneWidget);
@@ -98,6 +110,7 @@ void main() {
     );
     final app = await _routerHost(flavor: Flavor.admin);
     await tester.pumpWidget(app);
+    await _pumpPastSplash(tester);
     await tester.pumpAndSettle();
 
     expect(find.byType(SplashAdminScreen), findsOneWidget);

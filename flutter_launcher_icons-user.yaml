@@ -1,0 +1,15 @@
+# ─────────────────────────────────────────────────────────────────
+# Branding pack v2 — App icons USER (flavor explicite)
+# ─────────────────────────────────────────────────────────────────
+# Pourquoi ce fichier ? flutter_launcher_icons v0.13 détecte
+# `*-admin.yaml` à la racine et ignore alors la section
+# `flutter_launcher_icons:` du pubspec. On force USER avec son propre
+# fichier flavor pour avoir une génération équilibrée.
+flutter_launcher_icons:
+  android: "ic_launcher"
+  ios: true
+  image_path: "assets/icons/arena_user_1024.png"
+  adaptive_icon_background: "assets/icons/adaptive/user/ic_launcher_background.png"
+  adaptive_icon_foreground: "assets/icons/adaptive/user/ic_launcher_foreground.png"
+  adaptive_icon_monochrome: "assets/icons/adaptive/user/ic_launcher_monochrome.png"
+  remove_alpha_ios: true

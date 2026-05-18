@@ -1,5 +1,6 @@
 import 'package:arena/core/router/router_refresh.dart';
 import 'package:arena/core/services/onboarding_service.dart';
+import 'package:arena/features/splash/splash_router.dart';
 import 'package:arena/features_shared/presentation/dev_preview_page.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/auth/banned_account_page.dart';
@@ -84,6 +85,7 @@ abstract final class UserRoutes {
   static const paymentHistory = '/payments/history';
   static const payoutKyc = '/payouts/kyc';
   static const devPreview = '/_dev/widgets';
+  static const intro = '/intro';
 
   /// Builds the concrete `/competitions/<id>/register/confirm` URL.
   static String registrationConfirmPath(String id) =>
@@ -133,12 +135,18 @@ final userRouterProvider = Provider<GoRouter>((ref) {
   ref.onDispose(refresh.dispose);
 
   return GoRouter(
+    initialLocation: UserRoutes.intro,
     debugLogDiagnostics: true,
     refreshListenable: refresh,
     redirect: (context, state) {
       final loc = state.matchedLocation;
       final onboardingDone = ref.read(onboardingCompletedProvider);
       final session = ref.read(currentSessionProvider);
+
+      // Cold-start splash (branding pack v2) — exempt du redirect, le
+      // callback du SplashPage repart sur `/` qui déclenche la chaîne
+      // onboarding/auth/CGU.
+      if (loc == UserRoutes.intro) return null;
 
       // Always allow the dev preview during phases 1 → 11.
       if (loc == UserRoutes.devPreview) return null;
@@ -206,6 +214,13 @@ final userRouterProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      GoRoute(
+        path: UserRoutes.intro,
+        name: 'user.intro',
+        builder: (context, state) => const SplashPage(
+          nextRoute: UserRoutes.home,
+        ),
+      ),
       GoRoute(
         path: UserRoutes.home,
         name: 'user.home',

@@ -103,9 +103,12 @@ Future<Widget> _buildApp({
   Profile? profile,
   bool useSession = true,
 }) async {
-  SharedPreferences.setMockInitialValues(
-    onboardingCompleted ? <String, Object>{'onboarding_completed': true} : const {},
-  );
+  // `has_seen_splash_v1: true` court-circuite le splash cinématique 6.3s,
+  // on tombe sur le _ShortSplashScreen 3.5s qu'on draine via
+  // `_pumpPastSplash` après `pumpWidget`.
+  final initial = <String, Object>{'has_seen_splash_v1': true};
+  if (onboardingCompleted) initial['onboarding_completed'] = true;
+  SharedPreferences.setMockInitialValues(initial);
   final prefs = await SharedPreferences.getInstance();
 
   final overrides = <Override>[
@@ -148,12 +151,22 @@ Future<Widget> _buildApp({
   );
 }
 
+/// Le route `/intro` (cold-start splash) affiche d'abord
+/// `_SplashLoadingState` (FutureProvider lit SharedPreferences), puis
+/// `_ShortSplashScreen` qui attend 3500ms avant `widget.onComplete()`.
+/// On avance le temps de 3600ms pour franchir le `Future.delayed` puis
+/// laisser le redirect GoRouter aiguiller vers la route cible.
+Future<void> _pumpPastSplash(WidgetTester tester) async {
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 3600));
+}
+
 /// MainLayout embarks a continuously-pulsing LIVE card, so
 /// `pumpAndSettle` would loop forever. Two short pumps drain the
 /// initial frame + the first animation tick, which is enough for
 /// our text-based assertions.
 Future<void> _pumpAuthed(WidgetTester tester) async {
-  await tester.pump();
+  await _pumpPastSplash(tester);
   await tester.pump(const Duration(milliseconds: 200));
 }
 
@@ -175,6 +188,7 @@ void main() {
     testWidgets('first launch routes to /onboarding', (tester) async {
       await _bumpViewport(tester);
       await tester.pumpWidget(await _buildApp(onboardingCompleted: false));
+      await _pumpPastSplash(tester);
       await tester.pumpAndSettle();
 
       expect(find.byType(OnboardingPage), findsOneWidget);
@@ -184,6 +198,7 @@ void main() {
     testWidgets('onboarding done + no session lands on /splash', (tester) async {
       await _bumpViewport(tester);
       await tester.pumpWidget(await _buildApp());
+      await _pumpPastSplash(tester);
       await tester.pumpAndSettle();
 
       expect(find.byType(SplashUserScreen), findsOneWidget);
@@ -218,6 +233,7 @@ void main() {
         countryCode: 'CM',
       );
       await tester.pumpWidget(await _buildApp(profile: noCguProfile));
+      await _pumpPastSplash(tester);
       await tester.pumpAndSettle();
 
       expect(find.byType(CguAcceptancePage), findsOneWidget);
@@ -229,6 +245,7 @@ void main() {
       await tester.pumpWidget(
         await _buildApp(profile: _player(permanentBan: true)),
       );
+      await _pumpPastSplash(tester);
       await tester.pumpAndSettle();
 
       expect(find.byType(BannedAccountPage), findsOneWidget);
@@ -239,6 +256,7 @@ void main() {
     testWidgets('splash → tap SE CONNECTER → /login', (tester) async {
       await _bumpViewport(tester);
       await tester.pumpWidget(await _buildApp());
+      await _pumpPastSplash(tester);
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('SE CONNECTER'));
@@ -252,6 +270,7 @@ void main() {
         (tester) async {
       await _bumpViewport(tester);
       await tester.pumpWidget(await _buildApp());
+      await _pumpPastSplash(tester);
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('SE CONNECTER'));
