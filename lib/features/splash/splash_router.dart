@@ -2,8 +2,9 @@
 // ARENA — Splash Router Wrapper
 // ════════════════════════════════════════════════════════════════════
 // Gère la navigation post-splash :
-//   - Si premier lancement → SplashScreen cinématique 6.3s
-//   - Sinon → Splash court 3.5s
+//   - Si premier lancement → SplashScreen cinématique 5.3s
+//     (5 phases, matche splash_preview.html)
+//   - Sinon → Splash court 3.5s (fade-in + scale chevrons)
 //
 // Détecte le premier lancement via SharedPreferences (clé
 // `has_seen_splash_v1`). Utilise GoRouter via `context.go(nextRoute)`.
@@ -61,7 +62,7 @@ class SplashPage extends ConsumerWidget {
       // Cas normal : on sait si c'est le 1er lancement
       data: (isFirstLaunch) {
         if (isFirstLaunch) {
-          // Splash D cinématique 6.3s (1er lancement uniquement).
+          // Splash D cinématique 5.3s (1er lancement uniquement).
           return SplashScreen(
             isAdmin: isAdmin,
             onComplete: () => _navigate(context),
