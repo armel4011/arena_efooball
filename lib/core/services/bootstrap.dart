@@ -8,6 +8,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -25,7 +26,10 @@ Future<void> bootstrap({
   // sees the same zone everywhere — avoids the "Zone mismatch" warning that
   // appears when SentryFlutter.init's appRunner spins up a child zone.
   await runZonedGuarded<Future<void>>(() async {
-    WidgetsFlutterBinding.ensureInitialized();
+    final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+    // Preserve the native cold-start splash while we init env/Supabase/Firebase ;
+    // libéré juste après `runApp` pour passer le relais à BrandingSplashPage.
+    FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
     FlavorConfig.init(
       flavor: flavor,
@@ -65,6 +69,10 @@ Future<void> bootstrap({
     }
 
     runApp(ProviderScope(overrides: overrides, child: builder()));
+    // Le widget tree est prêt — on libère le splash natif. BrandingSplashPage
+    // (route /intro) prend immédiatement le relais sans flash blanc grâce
+    // au même dégradé F2.
+    FlutterNativeSplash.remove();
   }, (error, stack) {
     Sentry.captureException(error, stackTrace: stack);
   });

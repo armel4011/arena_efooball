@@ -1,0 +1,20 @@
+# ════════════════════════════════════════════════════════════════════
+# ARENA ADMIN — Configuration des icônes (branding pack 2026-05-18)
+# ════════════════════════════════════════════════════════════════════
+# Génération :
+#   flutter pub run flutter_launcher_icons -f flutter_launcher_icons-admin.yaml
+#
+# Workflow flavor-aware : la commande écrit dans `android/app/src/main/res/`.
+# Après génération, on déplace `mipmap-*` vers `android/app/src/admin/res/`
+# pour que la variante ADMIN (--flavor admin) prenne ces icons sans
+# écraser les USER.
+# ════════════════════════════════════════════════════════════════════
+
+flutter_launcher_icons:
+  android: "ic_launcher"
+  ios: true
+  image_path: "assets/icons/arena_admin_1024.png"
+  adaptive_icon_background: "assets/icons/adaptive_admin/ic_launcher_background.png"
+  adaptive_icon_foreground: "assets/icons/adaptive_admin/ic_launcher_foreground.png"
+  adaptive_icon_monochrome: "assets/icons/adaptive_admin/ic_launcher_monochrome.png"
+  remove_alpha_ios: true

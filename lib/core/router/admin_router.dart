@@ -24,6 +24,7 @@ import 'package:arena/features_admin/super_admin/super_admin_reintegration_reque
 import 'package:arena/features_admin/super_admin/super_admin_revenue.dart';
 import 'package:arena/features_admin/super_admin/super_admin_users.dart';
 import 'package:arena/features_shared/presentation/dev_preview_page.dart';
+import 'package:arena/features_shared/splash/branding_splash_page.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -67,6 +68,7 @@ abstract final class AdminRoutes {
   static const superReintegration = '/super/reintegration';
 
   static const devPreview = '/_dev/widgets';
+  static const intro = '/intro';
 
   /// Routes reachable while not yet fully authenticated (no session OR
   /// session without TOTP confirmation).
@@ -99,12 +101,16 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
   ref.onDispose(refresh.dispose);
 
   return GoRouter(
-    initialLocation: AdminRoutes.splash,
+    initialLocation: AdminRoutes.intro,
     debugLogDiagnostics: true,
     refreshListenable: refresh,
     redirect: (context, state) {
       final loc = state.matchedLocation;
       final session = ref.read(currentSessionProvider);
+
+      // Cold-start splash (branding) — exempt du redirect, le callback
+      // route ensuite vers AdminRoutes.splash.
+      if (loc == AdminRoutes.intro) return null;
 
       if (loc == AdminRoutes.devPreview) return null;
 
@@ -136,6 +142,14 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      GoRoute(
+        path: AdminRoutes.intro,
+        name: 'admin.intro',
+        builder: (context, state) => const BrandingSplashPage(
+          isAdmin: true,
+          nextRoute: AdminRoutes.splash,
+        ),
+      ),
       GoRoute(
         path: AdminRoutes.splash,
         name: 'admin.splash',
