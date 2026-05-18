@@ -7,7 +7,6 @@ flutter_launcher_icons:
   android: "ic_launcher"
   ios: true
   image_path: "assets/icons/arena_admin_1024.png"
-  adaptive_icon_background: "assets/icons/adaptive/admin/ic_launcher_background.png"
-  adaptive_icon_foreground: "assets/icons/adaptive/admin/ic_launcher_foreground.png"
-  adaptive_icon_monochrome: "assets/icons/adaptive/admin/ic_launcher_monochrome.png"
+  # Adaptive icons désactivés : master 1024 monolithique (dégradé +
+  # chevrons + texte « ADMIN »). Cf. flutter_launcher_icons-user.yaml.
   remove_alpha_ios: true

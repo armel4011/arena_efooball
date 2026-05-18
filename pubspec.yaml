@@ -195,9 +195,9 @@ flutter_launcher_icons:
   android: "ic_launcher"
   ios: true
   image_path: "assets/icons/arena_user_1024.png"
-  adaptive_icon_background: "assets/icons/adaptive/user/ic_launcher_background.png"
-  adaptive_icon_foreground: "assets/icons/adaptive/user/ic_launcher_foreground.png"
-  adaptive_icon_monochrome: "assets/icons/adaptive/user/ic_launcher_monochrome.png"
+  # Adaptive icons désactivés : le master 1024 USER est monolithique (dégradé
+  # + chevrons + texte « ARENA »). Le séparer en foreground/background ferait
+  # sortir le texte de la safe zone 66% (cropped par les masks Android 8+).
   remove_alpha_ios: true
   web:
     generate: true
