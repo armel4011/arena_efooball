@@ -6,7 +6,7 @@ import 'package:arena/data/repositories/admin/super_admin_dashboard_repository.d
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:csv/csv.dart';
-import 'package:file_saver/file_saver.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -139,12 +139,23 @@ class SuperAdminRevenue extends ConsumerWidget {
       // BOM UTF-8 pour qu'Excel ouvre les caractères accentués correctement
       final bytes = Uint8List.fromList([0xEF, 0xBB, 0xBF, ...utf8.encode(csv)]);
 
-      final savedPath = await FileSaver.instance.saveFile(
-        name: 'arena-revenue-$periodLabel',
+      // file_picker.saveFile() ouvre le SAF picker natif Android :
+      // l'utilisateur choisit le dossier de destination (Downloads,
+      // Documents, Google Drive…). Sur iOS, ouvre la fenêtre Files.
+      final savedPath = await FilePicker.platform.saveFile(
+        dialogTitle: 'Enregistrer le CSV ARENA',
+        fileName: 'arena-revenue-$periodLabel.csv',
         bytes: bytes,
-        ext: 'csv',
-        mimeType: MimeType.csv,
+        type: FileType.custom,
+        allowedExtensions: const ['csv'],
       );
+
+      if (savedPath == null) {
+        scaffold.showSnackBar(
+          const SnackBar(content: Text('Export CSV annulé.')),
+        );
+        return;
+      }
 
       scaffold.showSnackBar(
         SnackBar(
