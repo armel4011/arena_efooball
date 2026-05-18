@@ -92,6 +92,10 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
   int _rewardedCount = 4;
   bool _publishNow = true;
 
+  // Lot A — auto-management.
+  bool _autoGenerateBracket = true;
+  int _matchIntervalMinutes = 60;
+
   bool get _isEditing => widget.editing != null;
 
   @override
@@ -113,6 +117,8 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
     _mtnMomoCtrl.text = c.mtnMomoCode ?? '';
     _currency = c.registrationCurrency;
     _commissionPct = c.commissionPct.clamp(10, 100).toDouble();
+    _autoGenerateBracket = c.autoGenerateBracket;
+    _matchIntervalMinutes = c.matchIntervalMinutes;
     // Reconstruit places individuelles + blocs depuis la liste plate
     // stockée (best-effort : un bloc relit le % de sa 1ère place).
     final dist = c.prizeDistribution;
@@ -363,6 +369,48 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
             onChanged: (n) => setState(() => _maxPlayers = n),
           ),
         ),
+        const SizedBox(height: ArenaSpacing.lg),
+        // ─── Auto-management (Lot A) ────────────────────────────────
+        Text(
+          'Gestion automatique',
+          style: ArenaText.h3,
+        ),
+        const SizedBox(height: ArenaSpacing.xs),
+        Text(
+          'Le bracket est généré + le scheduling des rounds se fait sans '
+          'intervention quand toutes les places sont prises.',
+          style: ArenaText.small,
+        ),
+        const SizedBox(height: ArenaSpacing.sm),
+        Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: ArenaSpacing.md,
+            vertical: ArenaSpacing.sm,
+          ),
+          decoration: BoxDecoration(
+            color: ArenaColors.carbon,
+            borderRadius: BorderRadius.circular(ArenaRadius.md),
+            border: Border.all(color: ArenaColors.border),
+          ),
+          child: SwitchListTile.adaptive(
+            value: _autoGenerateBracket,
+            onChanged: (v) => setState(() => _autoGenerateBracket = v),
+            title: Text('Bracket auto', style: ArenaText.body),
+            subtitle: Text(
+              'Génère le bracket dès que les inscriptions atteignent le quota.',
+              style: ArenaText.small,
+            ),
+            contentPadding: EdgeInsets.zero,
+            activeThumbColor: ArenaColors.signalBlue,
+          ),
+        ),
+        const SizedBox(height: ArenaSpacing.md),
+        Text('Intervalle entre rounds', style: ArenaText.inputLabel),
+        const SizedBox(height: ArenaSpacing.xs),
+        _MatchIntervalPicker(
+          current: _matchIntervalMinutes,
+          onChanged: (m) => setState(() => _matchIntervalMinutes = m),
+        ),
       ];
 
   List<Widget> _buildPrizesStep() {
@@ -561,6 +609,14 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
         label: 'Cagnotte (somme des récompenses)',
         value: '${fmt.format(pool.round())} $_currency',
       ),
+      ReviewRow(
+        label: 'Bracket auto',
+        value: _autoGenerateBracket ? 'Oui — au quota atteint' : 'Non — manuel',
+      ),
+      ReviewRow(
+        label: 'Intervalle entre rounds',
+        value: _matchIntervalLabel(_matchIntervalMinutes),
+      ),
       const SizedBox(height: ArenaSpacing.lg),
       if (!_isEditing)
         PublishToggleCard(
@@ -609,6 +665,8 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
         'prize_pool_currency': _currency,
         'prize_distribution': _prizeDistribution(),
         'created_by': adminId,
+        'auto_generate_bracket': _autoGenerateBracket,
+        'match_interval_minutes': _matchIntervalMinutes,
         if (fee > 0) 'orange_money_code': _orangeMomoCtrl.text.trim(),
         if (fee > 0) 'mtn_momo_code': _mtnMomoCtrl.text.trim(),
       });
@@ -658,6 +716,8 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
         'commission_pct': _commissionPct,
         'prize_pool_local': pool,
         'prize_distribution': _prizeDistribution(),
+        'auto_generate_bracket': _autoGenerateBracket,
+        'match_interval_minutes': _matchIntervalMinutes,
         if (fee > 0) 'orange_money_code': _orangeMomoCtrl.text.trim(),
         if (fee > 0) 'mtn_momo_code': _mtnMomoCtrl.text.trim(),
       });
@@ -762,6 +822,17 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
     });
   }
 
+  /// Format humain pour l'intervalle entre rounds (Lot A).
+  static String _matchIntervalLabel(int minutes) {
+    if (minutes < 60) return '$minutes min';
+    if (minutes < 1440) {
+      final h = minutes ~/ 60;
+      return '${h}h';
+    }
+    final d = minutes ~/ 1440;
+    return d == 1 ? '1 jour' : '$d jours';
+  }
+
   static String _stepTitle(int step) {
     switch (step) {
       case 0:
@@ -777,5 +848,85 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
       default:
         return '';
     }
+  }
+}
+
+/// Picker d'intervalle entre rounds (Lot A — auto-management). Valeurs
+/// en minutes : 30 / 60 / 120 / 240 / 1440. Stocké tel quel dans la
+/// colonne `competitions.match_interval_minutes`.
+class _MatchIntervalPicker extends StatelessWidget {
+  const _MatchIntervalPicker({
+    required this.current,
+    required this.onChanged,
+  });
+
+  final int current;
+  final ValueChanged<int> onChanged;
+
+  static const _options = <({int minutes, String label})>[
+    (minutes: 30, label: '30 min'),
+    (minutes: 60, label: '1 h'),
+    (minutes: 120, label: '2 h'),
+    (minutes: 240, label: '4 h'),
+    (minutes: 1440, label: '1 jour'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: ArenaSpacing.xs,
+      runSpacing: ArenaSpacing.xs,
+      children: [
+        for (final opt in _options)
+          _IntervalChip(
+            label: opt.label,
+            active: opt.minutes == current,
+            onTap: () => onChanged(opt.minutes),
+          ),
+      ],
+    );
+  }
+}
+
+class _IntervalChip extends StatelessWidget {
+  const _IntervalChip({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(ArenaRadius.round),
+      child: AnimatedContainer(
+        duration: ArenaDurations.short,
+        padding: const EdgeInsets.symmetric(
+          horizontal: ArenaSpacing.md,
+          vertical: 8,
+        ),
+        decoration: BoxDecoration(
+          color: active
+              ? ArenaColors.signalBlue.withValues(alpha: 0.15)
+              : ArenaColors.carbon,
+          borderRadius: BorderRadius.circular(ArenaRadius.round),
+          border: Border.all(
+            color: active ? ArenaColors.signalBlue : ArenaColors.border,
+          ),
+        ),
+        child: Text(
+          label,
+          style: ArenaText.body.copyWith(
+            color: active ? ArenaColors.signalBlue : ArenaColors.silver,
+            fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+          ),
+        ),
+      ),
+    );
   }
 }

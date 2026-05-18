@@ -35,6 +35,25 @@ class AdminCompetitionInfosTab extends StatelessWidget {
           label: 'Commission',
           value: '${competition.commissionPct.round()}%',
         ),
+        const SizedBox(height: ArenaSpacing.md),
+        Text('Gestion auto', style: ArenaText.inputLabel),
+        const SizedBox(height: ArenaSpacing.xs),
+        _InfoRow(
+          label: 'Bracket auto',
+          value: competition.autoGenerateBracket
+              ? 'Activé — bracket généré au quota atteint'
+              : 'Désactivé — bracket manuel',
+        ),
+        _InfoRow(
+          label: 'Intervalle rounds',
+          value: _intervalLabel(competition.matchIntervalMinutes),
+        ),
+        _InfoRow(
+          label: 'Inscriptions restantes',
+          value: competition.spotsLeft == 0
+              ? '✓ quota atteint'
+              : '${competition.spotsLeft} places à pourvoir',
+        ),
         if (competition.description != null) ...[
           const SizedBox(height: ArenaSpacing.md),
           Text('Description', style: ArenaText.inputLabel),
@@ -54,6 +73,13 @@ class AdminCompetitionInfosTab extends StatelessWidget {
       case TournamentFormat.roundRobin:
         return 'Round robin';
     }
+  }
+
+  static String _intervalLabel(int minutes) {
+    if (minutes < 60) return '$minutes min';
+    if (minutes < 1440) return '${minutes ~/ 60} h';
+    final d = minutes ~/ 1440;
+    return d == 1 ? '1 jour' : '$d jours';
   }
 }
 

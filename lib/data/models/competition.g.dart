@@ -50,6 +50,9 @@ _$CompetitionImpl _$$CompetitionImplFromJson(Map<String, dynamic> json) =>
               ?.map((e) => (e as num).toInt())
               .toList() ??
           const <int>[0, 0, 0, 0],
+      matchIntervalMinutes:
+          (json['match_interval_minutes'] as num?)?.toInt() ?? 60,
+      autoGenerateBracket: json['auto_generate_bracket'] as bool? ?? true,
     );
 
 Map<String, dynamic> _$$CompetitionImplToJson(_$CompetitionImpl instance) =>
@@ -91,4 +94,6 @@ Map<String, dynamic> _$$CompetitionImplToJson(_$CompetitionImpl instance) =>
         'orange_money_code': value,
       if (instance.mtnMomoCode case final value?) 'mtn_momo_code': value,
       'prize_distribution': instance.prizeDistribution,
+      'match_interval_minutes': instance.matchIntervalMinutes,
+      'auto_generate_bracket': instance.autoGenerateBracket,
     };

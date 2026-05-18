@@ -59,6 +59,16 @@ mixin _$Competition {
   /// wizard admin ; `prizePoolLocal` en est la somme.
   List<int> get prizeDistribution => throw _privateConstructorUsedError;
 
+  /// Minutes entre la fin d'un round et le scheduled_at du round suivant
+  /// (Lot A — auto-management). Typiquement 30/60/120/240/1440.
+  /// Le trigger DB `try_schedule_next_round` lit cette valeur.
+  int get matchIntervalMinutes => throw _privateConstructorUsedError;
+
+  /// Si vrai, le bracket est généré automatiquement dès que max_players
+  /// est atteint. V1 : single_elimination uniquement. Le trigger DB
+  /// `trigger_auto_generate_bracket` consume ce flag.
+  bool get autoGenerateBracket => throw _privateConstructorUsedError;
+
   /// Serializes this Competition to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
 
@@ -100,7 +110,9 @@ abstract class $CompetitionCopyWith<$Res> {
       DateTime? updatedAt,
       String? orangeMoneyCode,
       String? mtnMomoCode,
-      List<int> prizeDistribution});
+      List<int> prizeDistribution,
+      int matchIntervalMinutes,
+      bool autoGenerateBracket});
 }
 
 /// @nodoc
@@ -143,6 +155,8 @@ class _$CompetitionCopyWithImpl<$Res, $Val extends Competition>
     Object? orangeMoneyCode = freezed,
     Object? mtnMomoCode = freezed,
     Object? prizeDistribution = null,
+    Object? matchIntervalMinutes = null,
+    Object? autoGenerateBracket = null,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -245,6 +259,14 @@ class _$CompetitionCopyWithImpl<$Res, $Val extends Competition>
           ? _value.prizeDistribution
           : prizeDistribution // ignore: cast_nullable_to_non_nullable
               as List<int>,
+      matchIntervalMinutes: null == matchIntervalMinutes
+          ? _value.matchIntervalMinutes
+          : matchIntervalMinutes // ignore: cast_nullable_to_non_nullable
+              as int,
+      autoGenerateBracket: null == autoGenerateBracket
+          ? _value.autoGenerateBracket
+          : autoGenerateBracket // ignore: cast_nullable_to_non_nullable
+              as bool,
     ) as $Val);
   }
 }
@@ -282,7 +304,9 @@ abstract class _$$CompetitionImplCopyWith<$Res>
       DateTime? updatedAt,
       String? orangeMoneyCode,
       String? mtnMomoCode,
-      List<int> prizeDistribution});
+      List<int> prizeDistribution,
+      int matchIntervalMinutes,
+      bool autoGenerateBracket});
 }
 
 /// @nodoc
@@ -323,6 +347,8 @@ class __$$CompetitionImplCopyWithImpl<$Res>
     Object? orangeMoneyCode = freezed,
     Object? mtnMomoCode = freezed,
     Object? prizeDistribution = null,
+    Object? matchIntervalMinutes = null,
+    Object? autoGenerateBracket = null,
   }) {
     return _then(_$CompetitionImpl(
       id: null == id
@@ -425,6 +451,14 @@ class __$$CompetitionImplCopyWithImpl<$Res>
           ? _value._prizeDistribution
           : prizeDistribution // ignore: cast_nullable_to_non_nullable
               as List<int>,
+      matchIntervalMinutes: null == matchIntervalMinutes
+          ? _value.matchIntervalMinutes
+          : matchIntervalMinutes // ignore: cast_nullable_to_non_nullable
+              as int,
+      autoGenerateBracket: null == autoGenerateBracket
+          ? _value.autoGenerateBracket
+          : autoGenerateBracket // ignore: cast_nullable_to_non_nullable
+              as bool,
     ));
   }
 }
@@ -457,7 +491,9 @@ class _$CompetitionImpl extends _Competition {
       this.updatedAt,
       this.orangeMoneyCode,
       this.mtnMomoCode,
-      final List<int> prizeDistribution = const <int>[0, 0, 0, 0]})
+      final List<int> prizeDistribution = const <int>[0, 0, 0, 0],
+      this.matchIntervalMinutes = 60,
+      this.autoGenerateBracket = true})
       : _prizeDistribution = prizeDistribution,
         super._();
 
@@ -547,9 +583,23 @@ class _$CompetitionImpl extends _Competition {
     return EqualUnmodifiableListView(_prizeDistribution);
   }
 
+  /// Minutes entre la fin d'un round et le scheduled_at du round suivant
+  /// (Lot A — auto-management). Typiquement 30/60/120/240/1440.
+  /// Le trigger DB `try_schedule_next_round` lit cette valeur.
+  @override
+  @JsonKey()
+  final int matchIntervalMinutes;
+
+  /// Si vrai, le bracket est généré automatiquement dès que max_players
+  /// est atteint. V1 : single_elimination uniquement. Le trigger DB
+  /// `trigger_auto_generate_bracket` consume ce flag.
+  @override
+  @JsonKey()
+  final bool autoGenerateBracket;
+
   @override
   String toString() {
-    return 'Competition(id: $id, name: $name, game: $game, format: $format, startDate: $startDate, status: $status, maxPlayers: $maxPlayers, currentPlayers: $currentPlayers, registrationFee: $registrationFee, registrationCurrency: $registrationCurrency, commissionPct: $commissionPct, prizePoolLocal: $prizePoolLocal, sponsorBonusLocal: $sponsorBonusLocal, description: $description, bannerUrl: $bannerUrl, registrationOpensAt: $registrationOpensAt, registrationClosesAt: $registrationClosesAt, endDate: $endDate, prizePoolCurrency: $prizePoolCurrency, createdBy: $createdBy, createdAt: $createdAt, updatedAt: $updatedAt, orangeMoneyCode: $orangeMoneyCode, mtnMomoCode: $mtnMomoCode, prizeDistribution: $prizeDistribution)';
+    return 'Competition(id: $id, name: $name, game: $game, format: $format, startDate: $startDate, status: $status, maxPlayers: $maxPlayers, currentPlayers: $currentPlayers, registrationFee: $registrationFee, registrationCurrency: $registrationCurrency, commissionPct: $commissionPct, prizePoolLocal: $prizePoolLocal, sponsorBonusLocal: $sponsorBonusLocal, description: $description, bannerUrl: $bannerUrl, registrationOpensAt: $registrationOpensAt, registrationClosesAt: $registrationClosesAt, endDate: $endDate, prizePoolCurrency: $prizePoolCurrency, createdBy: $createdBy, createdAt: $createdAt, updatedAt: $updatedAt, orangeMoneyCode: $orangeMoneyCode, mtnMomoCode: $mtnMomoCode, prizeDistribution: $prizeDistribution, matchIntervalMinutes: $matchIntervalMinutes, autoGenerateBracket: $autoGenerateBracket)';
   }
 
   @override
@@ -600,7 +650,11 @@ class _$CompetitionImpl extends _Competition {
             (identical(other.mtnMomoCode, mtnMomoCode) ||
                 other.mtnMomoCode == mtnMomoCode) &&
             const DeepCollectionEquality()
-                .equals(other._prizeDistribution, _prizeDistribution));
+                .equals(other._prizeDistribution, _prizeDistribution) &&
+            (identical(other.matchIntervalMinutes, matchIntervalMinutes) ||
+                other.matchIntervalMinutes == matchIntervalMinutes) &&
+            (identical(other.autoGenerateBracket, autoGenerateBracket) ||
+                other.autoGenerateBracket == autoGenerateBracket));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -631,7 +685,9 @@ class _$CompetitionImpl extends _Competition {
         updatedAt,
         orangeMoneyCode,
         mtnMomoCode,
-        const DeepCollectionEquality().hash(_prizeDistribution)
+        const DeepCollectionEquality().hash(_prizeDistribution),
+        matchIntervalMinutes,
+        autoGenerateBracket
       ]);
 
   /// Create a copy of Competition
@@ -676,7 +732,9 @@ abstract class _Competition extends Competition {
       final DateTime? updatedAt,
       final String? orangeMoneyCode,
       final String? mtnMomoCode,
-      final List<int> prizeDistribution}) = _$CompetitionImpl;
+      final List<int> prizeDistribution,
+      final int matchIntervalMinutes,
+      final bool autoGenerateBracket}) = _$CompetitionImpl;
   const _Competition._() : super._();
 
   factory _Competition.fromJson(Map<String, dynamic> json) =
@@ -745,6 +803,18 @@ abstract class _Competition extends Competition {
   /// wizard admin ; `prizePoolLocal` en est la somme.
   @override
   List<int> get prizeDistribution;
+
+  /// Minutes entre la fin d'un round et le scheduled_at du round suivant
+  /// (Lot A — auto-management). Typiquement 30/60/120/240/1440.
+  /// Le trigger DB `try_schedule_next_round` lit cette valeur.
+  @override
+  int get matchIntervalMinutes;
+
+  /// Si vrai, le bracket est généré automatiquement dès que max_players
+  /// est atteint. V1 : single_elimination uniquement. Le trigger DB
+  /// `trigger_auto_generate_bracket` consume ce flag.
+  @override
+  bool get autoGenerateBracket;
 
   /// Create a copy of Competition
   /// with the given fields replaced by the non-null parameter values.

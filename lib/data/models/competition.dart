@@ -51,6 +51,16 @@ sealed class Competition with _$Competition {
     /// locale, ex. `[100000, 50000, 25000, 10000]`). Saisie dans le
     /// wizard admin ; `prizePoolLocal` en est la somme.
     @Default(<int>[0, 0, 0, 0]) List<int> prizeDistribution,
+
+    /// Minutes entre la fin d'un round et le scheduled_at du round suivant
+    /// (Lot A — auto-management). Typiquement 30/60/120/240/1440.
+    /// Le trigger DB `try_schedule_next_round` lit cette valeur.
+    @Default(60) int matchIntervalMinutes,
+
+    /// Si vrai, le bracket est généré automatiquement dès que max_players
+    /// est atteint. V1 : single_elimination uniquement. Le trigger DB
+    /// `trigger_auto_generate_bracket` consume ce flag.
+    @Default(true) bool autoGenerateBracket,
   }) = _Competition;
 
   const Competition._();
