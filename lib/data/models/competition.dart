@@ -29,6 +29,7 @@ sealed class Competition with _$Competition {
     @Default('XAF') String registrationCurrency,
     @Default(10) double commissionPct,
     @Default(0) double prizePoolLocal,
+    @Default(0) double commissionXaf,
     @Default(0) double sponsorBonusLocal,
 
     // ─── optional / nullable ───────────────────────────────────────────────

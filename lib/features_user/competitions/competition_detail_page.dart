@@ -409,7 +409,7 @@ class _InfosTab extends StatelessWidget {
                     : '${_money(competition.registrationFee)}'
                         ' ${competition.registrationCurrency}',
               ),
-              _kv('Commission ARENA', '${competition.commissionPct} %'),
+              // Commission ARENA volontairement masquée côté joueur (Lot B).
               if (competition.prizePoolLocal > 0)
                 _kv(
                   'Récompense',

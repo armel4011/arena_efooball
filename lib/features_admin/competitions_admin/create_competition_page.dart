@@ -72,7 +72,9 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
   final _orangeMomoCtrl = TextEditingController();
   final _mtnMomoCtrl = TextEditingController();
   String _currency = 'XAF';
-  double _commissionPct = 15;
+  // Commission ARENA en montant absolu (Lot B). `commission_pct` reste
+  // calculé en dérivé pour cohérence avec la colonne legacy.
+  final _commissionXafCtrl = TextEditingController(text: '0');
   // Places 1 à 4 : une part individuelle modifiable chacune.
   final List<TextEditingController> _topShareCtrls = [
     TextEditingController(text: '50'),
@@ -116,7 +118,10 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
     _orangeMomoCtrl.text = c.orangeMoneyCode ?? '';
     _mtnMomoCtrl.text = c.mtnMomoCode ?? '';
     _currency = c.registrationCurrency;
-    _commissionPct = c.commissionPct.clamp(10, 100).toDouble();
+    final commissionXaf = c.commissionXaf;
+    _commissionXafCtrl.text = commissionXaf == commissionXaf.roundToDouble()
+        ? commissionXaf.round().toString()
+        : commissionXaf.toString();
     _autoGenerateBracket = c.autoGenerateBracket;
     _matchIntervalMinutes = c.matchIntervalMinutes;
     // Reconstruit places individuelles + blocs depuis la liste plate
@@ -154,6 +159,7 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
     _entryFeeCtrl.dispose();
     _orangeMomoCtrl.dispose();
     _mtnMomoCtrl.dispose();
+    _commissionXafCtrl.dispose();
     for (final c in _topShareCtrls) {
       c.dispose();
     }
@@ -514,27 +520,42 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
         ],
       ),
       const SizedBox(height: ArenaSpacing.md),
-      Text('Commission ARENA', style: ArenaText.inputLabel),
+      Text(
+        'Commission ARENA (montant)',
+        style: ArenaText.inputLabel,
+      ),
+      const SizedBox(height: ArenaSpacing.xs),
+      Text(
+        "Saisi en $_currency, jamais affiché côté joueur. C'est ce que "
+        "l'équipe ARENA conserve, séparé de la cagnotte distribuée.",
+        style: ArenaText.small,
+      ),
       const SizedBox(height: ArenaSpacing.xs),
       Row(
         children: [
           Expanded(
-            child: Slider(
-              value: _commissionPct,
-              min: 10,
-              max: 100,
-              divisions: 90,
-              label: '${_commissionPct.round()}%',
-              onChanged: (v) => setState(() => _commissionPct = v),
-              activeColor: ArenaColors.signalBlue,
+            flex: 2,
+            child: ArenaTextField(
+              controller: _commissionXafCtrl,
+              hint: '0',
+              keyboardType: TextInputType.number,
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp('[0-9.]')),
+              ],
+              onChanged: (_) => setState(() {}),
             ),
           ),
-          SizedBox(
-            width: 60,
-            child: Text(
-              '${_commissionPct.round()}%',
-              style: ArenaText.mono,
-              textAlign: TextAlign.right,
+          const SizedBox(width: ArenaSpacing.xs),
+          Expanded(
+            child: Container(
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: ArenaColors.carbon,
+                borderRadius: BorderRadius.circular(ArenaRadius.md),
+                border: Border.all(color: ArenaColors.border),
+              ),
+              child: Text(_currency, style: ArenaText.body),
             ),
           ),
         ],
@@ -610,6 +631,10 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
         value: '${fmt.format(pool.round())} $_currency',
       ),
       ReviewRow(
+        label: 'Commission ARENA',
+        value: '${fmt.format(_commissionXaf().round())} $_currency',
+      ),
+      ReviewRow(
         label: 'Bracket auto',
         value: _autoGenerateBracket ? 'Oui — au quota atteint' : 'Non — manuel',
       ),
@@ -641,9 +666,13 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
 
     final fee = double.tryParse(_entryFeeCtrl.text) ?? 0;
     final pool = _computedPool();
+    final commissionXaf = _commissionXaf();
+    // commission_pct dérivée pour compat de la colonne legacy
+    final derivedCommissionPct =
+        pool > 0 ? (commissionXaf / pool * 100).clamp(0, 100) : 0;
 
     if (_isEditing) {
-      await _submitEdit(adminId, pool);
+      await _submitEdit(adminId, pool, commissionXaf, derivedCommissionPct.toDouble());
       return;
     }
 
@@ -660,7 +689,8 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
         'max_players': _maxPlayers,
         'registration_fee': fee,
         'registration_currency': _currency,
-        'commission_pct': _commissionPct,
+        'commission_xaf': commissionXaf,
+        'commission_pct': derivedCommissionPct,
         'prize_pool_local': pool,
         'prize_pool_currency': _currency,
         'prize_distribution': _prizeDistribution(),
@@ -704,7 +734,12 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
 
   /// Branche édition : ne pousse que les champs « sûrs ». Jeu, format,
   /// capacité, frais et devise restent ceux d'origine.
-  Future<void> _submitEdit(String adminId, double pool) async {
+  Future<void> _submitEdit(
+    String adminId,
+    double pool,
+    double commissionXaf,
+    double derivedCommissionPct,
+  ) async {
     final id = widget.editing!.id;
     final fee = double.tryParse(_entryFeeCtrl.text) ?? 0;
     try {
@@ -713,7 +748,8 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
         'description':
             _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
         'start_date': _startDate!.toUtc().toIso8601String(),
-        'commission_pct': _commissionPct,
+        'commission_xaf': commissionXaf,
+        'commission_pct': derivedCommissionPct,
         'prize_pool_local': pool,
         'prize_distribution': _prizeDistribution(),
         'auto_generate_bracket': _autoGenerateBracket,
@@ -728,7 +764,7 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
         targetId: id,
         afterState: {
           'name': _nameCtrl.text.trim(),
-          'commission_pct': _commissionPct,
+          'commission_xaf': commissionXaf,
         },
       );
       if (!mounted) return;
@@ -791,6 +827,10 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
   /// Cagnotte à persister dans `prize_pool_local` : la somme des
   /// montants de récompense saisis.
   double _computedPool() => _shareTotal().toDouble();
+
+  /// Commission ARENA en montant XAF (Lot B). Parse l'input numérique.
+  double _commissionXaf() =>
+      double.tryParse(_commissionXafCtrl.text.trim()) ?? 0;
 
   Future<void> _pickStartDate() async {
     final now = DateTime.now();

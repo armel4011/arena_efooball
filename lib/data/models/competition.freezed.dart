@@ -37,6 +37,7 @@ mixin _$Competition {
   String get registrationCurrency => throw _privateConstructorUsedError;
   double get commissionPct => throw _privateConstructorUsedError;
   double get prizePoolLocal => throw _privateConstructorUsedError;
+  double get commissionXaf => throw _privateConstructorUsedError;
   double get sponsorBonusLocal =>
       throw _privateConstructorUsedError; // ─── optional / nullable ───────────────────────────────────────────────
   String? get description => throw _privateConstructorUsedError;
@@ -98,6 +99,7 @@ abstract class $CompetitionCopyWith<$Res> {
       String registrationCurrency,
       double commissionPct,
       double prizePoolLocal,
+      double commissionXaf,
       double sponsorBonusLocal,
       String? description,
       String? bannerUrl,
@@ -142,6 +144,7 @@ class _$CompetitionCopyWithImpl<$Res, $Val extends Competition>
     Object? registrationCurrency = null,
     Object? commissionPct = null,
     Object? prizePoolLocal = null,
+    Object? commissionXaf = null,
     Object? sponsorBonusLocal = null,
     Object? description = freezed,
     Object? bannerUrl = freezed,
@@ -206,6 +209,10 @@ class _$CompetitionCopyWithImpl<$Res, $Val extends Competition>
       prizePoolLocal: null == prizePoolLocal
           ? _value.prizePoolLocal
           : prizePoolLocal // ignore: cast_nullable_to_non_nullable
+              as double,
+      commissionXaf: null == commissionXaf
+          ? _value.commissionXaf
+          : commissionXaf // ignore: cast_nullable_to_non_nullable
               as double,
       sponsorBonusLocal: null == sponsorBonusLocal
           ? _value.sponsorBonusLocal
@@ -292,6 +299,7 @@ abstract class _$$CompetitionImplCopyWith<$Res>
       String registrationCurrency,
       double commissionPct,
       double prizePoolLocal,
+      double commissionXaf,
       double sponsorBonusLocal,
       String? description,
       String? bannerUrl,
@@ -334,6 +342,7 @@ class __$$CompetitionImplCopyWithImpl<$Res>
     Object? registrationCurrency = null,
     Object? commissionPct = null,
     Object? prizePoolLocal = null,
+    Object? commissionXaf = null,
     Object? sponsorBonusLocal = null,
     Object? description = freezed,
     Object? bannerUrl = freezed,
@@ -398,6 +407,10 @@ class __$$CompetitionImplCopyWithImpl<$Res>
       prizePoolLocal: null == prizePoolLocal
           ? _value.prizePoolLocal
           : prizePoolLocal // ignore: cast_nullable_to_non_nullable
+              as double,
+      commissionXaf: null == commissionXaf
+          ? _value.commissionXaf
+          : commissionXaf // ignore: cast_nullable_to_non_nullable
               as double,
       sponsorBonusLocal: null == sponsorBonusLocal
           ? _value.sponsorBonusLocal
@@ -479,6 +492,7 @@ class _$CompetitionImpl extends _Competition {
       this.registrationCurrency = 'XAF',
       this.commissionPct = 10,
       this.prizePoolLocal = 0,
+      this.commissionXaf = 0,
       this.sponsorBonusLocal = 0,
       this.description,
       this.bannerUrl,
@@ -536,6 +550,9 @@ class _$CompetitionImpl extends _Competition {
   @override
   @JsonKey()
   final double prizePoolLocal;
+  @override
+  @JsonKey()
+  final double commissionXaf;
   @override
   @JsonKey()
   final double sponsorBonusLocal;
@@ -599,7 +616,7 @@ class _$CompetitionImpl extends _Competition {
 
   @override
   String toString() {
-    return 'Competition(id: $id, name: $name, game: $game, format: $format, startDate: $startDate, status: $status, maxPlayers: $maxPlayers, currentPlayers: $currentPlayers, registrationFee: $registrationFee, registrationCurrency: $registrationCurrency, commissionPct: $commissionPct, prizePoolLocal: $prizePoolLocal, sponsorBonusLocal: $sponsorBonusLocal, description: $description, bannerUrl: $bannerUrl, registrationOpensAt: $registrationOpensAt, registrationClosesAt: $registrationClosesAt, endDate: $endDate, prizePoolCurrency: $prizePoolCurrency, createdBy: $createdBy, createdAt: $createdAt, updatedAt: $updatedAt, orangeMoneyCode: $orangeMoneyCode, mtnMomoCode: $mtnMomoCode, prizeDistribution: $prizeDistribution, matchIntervalMinutes: $matchIntervalMinutes, autoGenerateBracket: $autoGenerateBracket)';
+    return 'Competition(id: $id, name: $name, game: $game, format: $format, startDate: $startDate, status: $status, maxPlayers: $maxPlayers, currentPlayers: $currentPlayers, registrationFee: $registrationFee, registrationCurrency: $registrationCurrency, commissionPct: $commissionPct, prizePoolLocal: $prizePoolLocal, commissionXaf: $commissionXaf, sponsorBonusLocal: $sponsorBonusLocal, description: $description, bannerUrl: $bannerUrl, registrationOpensAt: $registrationOpensAt, registrationClosesAt: $registrationClosesAt, endDate: $endDate, prizePoolCurrency: $prizePoolCurrency, createdBy: $createdBy, createdAt: $createdAt, updatedAt: $updatedAt, orangeMoneyCode: $orangeMoneyCode, mtnMomoCode: $mtnMomoCode, prizeDistribution: $prizeDistribution, matchIntervalMinutes: $matchIntervalMinutes, autoGenerateBracket: $autoGenerateBracket)';
   }
 
   @override
@@ -626,6 +643,8 @@ class _$CompetitionImpl extends _Competition {
                 other.commissionPct == commissionPct) &&
             (identical(other.prizePoolLocal, prizePoolLocal) ||
                 other.prizePoolLocal == prizePoolLocal) &&
+            (identical(other.commissionXaf, commissionXaf) ||
+                other.commissionXaf == commissionXaf) &&
             (identical(other.sponsorBonusLocal, sponsorBonusLocal) ||
                 other.sponsorBonusLocal == sponsorBonusLocal) &&
             (identical(other.description, description) ||
@@ -673,6 +692,7 @@ class _$CompetitionImpl extends _Competition {
         registrationCurrency,
         commissionPct,
         prizePoolLocal,
+        commissionXaf,
         sponsorBonusLocal,
         description,
         bannerUrl,
@@ -720,6 +740,7 @@ abstract class _Competition extends Competition {
       final String registrationCurrency,
       final double commissionPct,
       final double prizePoolLocal,
+      final double commissionXaf,
       final double sponsorBonusLocal,
       final String? description,
       final String? bannerUrl,
@@ -769,6 +790,8 @@ abstract class _Competition extends Competition {
   double get commissionPct;
   @override
   double get prizePoolLocal;
+  @override
+  double get commissionXaf;
   @override
   double
       get sponsorBonusLocal; // ─── optional / nullable ───────────────────────────────────────────────
