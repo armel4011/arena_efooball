@@ -39,9 +39,6 @@ class ArenaColors {
   // ─── Brand ────────────────────────────────────────────────────────────────
   static const Color signalBlue = Color(0xFF4C7AFF);     // --signal-blue (USER primary)
   static const Color neonRed = Color(0xFFFF2D55);        // --neon-red (ADMIN/LIVE)
-  // Mid-stops du dégradé F2 du cold-start splash (branding pack 2026-05).
-  static const Color userMid = Color(0xFF1A2D5C);        // bleu → noir, stop 55%
-  static const Color adminMid = Color(0xFF5C1A2D);       // rouge → noir, stop 55%
 
   // ─── Status ───────────────────────────────────────────────────────────────
   static const Color statusOk = Color(0xFF00C896);
