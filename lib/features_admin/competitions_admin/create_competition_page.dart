@@ -102,6 +102,18 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
   // 0 = pas de gating. Activable seulement pour comp. gratuites.
   final _referralQuotaCtrl = TextEditingController(text: '0');
 
+  // Lot D.2 — mode parrainage. 'any' = tous filleuls, 'engaged' = ont
+  // joué un match OU payé une inscription.
+  String _referralActivityMode = 'any';
+
+  // Lot A.2 — Override intervalles par round (saisi en CSV, parsé en
+  // List<int>). Optionnel. Si vide → fallback `matchIntervalMinutes`.
+  final _roundIntervalsCtrl = TextEditingController();
+
+  // Lot F.1 — Config groupes (visible si format = groups_then_knockout).
+  final _groupCountCtrl = TextEditingController(text: '4');
+  final _qualifiersPerGroupCtrl = TextEditingController(text: '2');
+
   bool get _isEditing => widget.editing != null;
 
   @override
@@ -129,6 +141,15 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
     _autoGenerateBracket = c.autoGenerateBracket;
     _matchIntervalMinutes = c.matchIntervalMinutes;
     _referralQuotaCtrl.text = c.referralQuota.toString();
+    _referralActivityMode = c.referralActivityMode;
+    if (c.roundIntervals != null && c.roundIntervals!.isNotEmpty) {
+      _roundIntervalsCtrl.text = c.roundIntervals!.join(',');
+    }
+    _groupCountCtrl.text =
+        (c.formatConfig['group_count'] as num?)?.toInt().toString() ?? '4';
+    _qualifiersPerGroupCtrl.text =
+        (c.formatConfig['qualifiers_per_group'] as num?)?.toInt().toString() ??
+            '2';
     // Reconstruit places individuelles + blocs depuis la liste plate
     // stockée (best-effort : un bloc relit le % de sa 1ère place).
     final dist = c.prizeDistribution;
@@ -166,6 +187,9 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
     _mtnMomoCtrl.dispose();
     _commissionXafCtrl.dispose();
     _referralQuotaCtrl.dispose();
+    _roundIntervalsCtrl.dispose();
+    _groupCountCtrl.dispose();
+    _qualifiersPerGroupCtrl.dispose();
     for (final c in _topShareCtrls) {
       c.dispose();
     }
@@ -417,12 +441,85 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
           ),
         ),
         const SizedBox(height: ArenaSpacing.md),
-        Text('Intervalle entre rounds', style: ArenaText.inputLabel),
+        Text('Intervalle entre rounds (défaut)', style: ArenaText.inputLabel),
         const SizedBox(height: ArenaSpacing.xs),
         _MatchIntervalPicker(
           current: _matchIntervalMinutes,
           onChanged: (m) => setState(() => _matchIntervalMinutes = m),
         ),
+        const SizedBox(height: ArenaSpacing.md),
+        // Lot A.2 — Override intervalle par round (optionnel)
+        Text('Intervalles personnalisés par round', style: ArenaText.inputLabel),
+        const SizedBox(height: ArenaSpacing.xs),
+        Text(
+          'Liste de minutes séparées par virgules (1 par round). Ex. : '
+          '30,60,120,1440 = round1 → 30min, round2 → 1h, etc. Laisser vide '
+          "pour utiliser l'intervalle par défaut.",
+          style: ArenaText.small,
+        ),
+        const SizedBox(height: ArenaSpacing.xs),
+        ArenaTextField(
+          controller: _roundIntervalsCtrl,
+          hint: 'Ex. 30,60,120,1440 (vide = défaut)',
+          keyboardType: TextInputType.text,
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp('[0-9, ]')),
+          ],
+          onChanged: (_) => setState(() {}),
+        ),
+        if (_format == TournamentFormat.groupsThenKnockout) ...[
+          const SizedBox(height: ArenaSpacing.lg),
+          // Lot F.1 — Config groupes
+          Text('Config groupes', style: ArenaText.h3),
+          const SizedBox(height: ArenaSpacing.xs),
+          Text(
+            'Nombre de groupes + qualifiés par groupe pour la phase '
+            'knockout qui suit.',
+            style: ArenaText.small,
+          ),
+          const SizedBox(height: ArenaSpacing.sm),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Groupes', style: ArenaText.inputLabel),
+                    const SizedBox(height: 4),
+                    ArenaTextField(
+                      controller: _groupCountCtrl,
+                      hint: '4',
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                      ],
+                      onChanged: (_) => setState(() {}),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: ArenaSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Qualifiés / groupe', style: ArenaText.inputLabel),
+                    const SizedBox(height: 4),
+                    ArenaTextField(
+                      controller: _qualifiersPerGroupCtrl,
+                      hint: '2',
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                      ],
+                      onChanged: (_) => setState(() {}),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
       ];
 
   List<Widget> _buildPrizesStep() {
@@ -622,6 +719,38 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
                   ),
                 ],
               ),
+              if (_referralQuota() > 0) ...[
+                const SizedBox(height: ArenaSpacing.md),
+                Text('Mode de comptage', style: ArenaText.inputLabel),
+                const SizedBox(height: ArenaSpacing.xs),
+                Wrap(
+                  spacing: ArenaSpacing.xs,
+                  runSpacing: ArenaSpacing.xs,
+                  children: [
+                    _ModeChip(
+                      label: 'Tout filleul',
+                      active: _referralActivityMode == 'any',
+                      onTap: () =>
+                          setState(() => _referralActivityMode = 'any'),
+                    ),
+                    _ModeChip(
+                      label: 'Filleul engagé',
+                      active: _referralActivityMode == 'engaged',
+                      onTap: () =>
+                          setState(() => _referralActivityMode = 'engaged'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: ArenaSpacing.xs),
+                Text(
+                  _referralActivityMode == 'engaged'
+                      ? 'Filleul engagé = a joué au moins 1 match OU payé '
+                          "1 inscription. Bloque l'astuce \"10 faux comptes\"."
+                      : 'Tout filleul actif compte (création de compte '
+                          'suffisante).',
+                  style: ArenaText.small,
+                ),
+              ],
             ],
           ),
         ),
@@ -769,6 +898,9 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
         'auto_generate_bracket': _autoGenerateBracket,
         'match_interval_minutes': _matchIntervalMinutes,
         'referral_quota': _referralQuota(),
+        'referral_activity_mode': _referralActivityMode,
+        'round_intervals': _roundIntervals(),
+        'format_config': _formatConfig(),
         if (fee > 0) 'orange_money_code': _orangeMomoCtrl.text.trim(),
         if (fee > 0) 'mtn_momo_code': _mtnMomoCtrl.text.trim(),
       });
@@ -827,6 +959,9 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
         'auto_generate_bracket': _autoGenerateBracket,
         'match_interval_minutes': _matchIntervalMinutes,
         'referral_quota': _referralQuota(),
+        'referral_activity_mode': _referralActivityMode,
+        'round_intervals': _roundIntervals(),
+        'format_config': _formatConfig(),
         if (fee > 0) 'orange_money_code': _orangeMomoCtrl.text.trim(),
         if (fee > 0) 'mtn_momo_code': _mtnMomoCtrl.text.trim(),
       });
@@ -907,6 +1042,33 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
 
   /// Quota parrainages requis (Lot D). 0 = pas de gating.
   int _referralQuota() => int.tryParse(_referralQuotaCtrl.text.trim()) ?? 0;
+
+  /// Lot A.2 — Parse `_roundIntervalsCtrl` CSV → List<int>?. Vide ou
+  /// malformé → null (utilise l'intervalle global).
+  List<int>? _roundIntervals() {
+    final raw = _roundIntervalsCtrl.text.trim();
+    if (raw.isEmpty) return null;
+    final parts = raw.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty);
+    final ints = <int>[];
+    for (final p in parts) {
+      final n = int.tryParse(p);
+      if (n == null || n <= 0) return null; // invalid → fallback
+      ints.add(n);
+    }
+    return ints.isEmpty ? null : ints;
+  }
+
+  /// Lot F.1 — Config groupes pour groups_then_knockout.
+  Map<String, dynamic> _formatConfig() {
+    if (_format != TournamentFormat.groupsThenKnockout) {
+      return const <String, dynamic>{};
+    }
+    return <String, dynamic>{
+      'group_count': int.tryParse(_groupCountCtrl.text.trim()) ?? 4,
+      'qualifiers_per_group':
+          int.tryParse(_qualifiersPerGroupCtrl.text.trim()) ?? 2,
+    };
+  }
 
   Future<void> _pickStartDate() async {
     final now = DateTime.now();
@@ -1000,6 +1162,50 @@ class _MatchIntervalPicker extends StatelessWidget {
             onTap: () => onChanged(opt.minutes),
           ),
       ],
+    );
+  }
+}
+
+/// Lot D.2 — Chip radio "Tout filleul" / "Filleul engagé".
+class _ModeChip extends StatelessWidget {
+  const _ModeChip({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(ArenaRadius.round),
+      child: AnimatedContainer(
+        duration: ArenaDurations.short,
+        padding: const EdgeInsets.symmetric(
+          horizontal: ArenaSpacing.md,
+          vertical: 8,
+        ),
+        decoration: BoxDecoration(
+          color: active
+              ? ArenaColors.signalBlue.withValues(alpha: 0.15)
+              : ArenaColors.carbon,
+          borderRadius: BorderRadius.circular(ArenaRadius.round),
+          border: Border.all(
+            color: active ? ArenaColors.signalBlue : ArenaColors.border,
+          ),
+        ),
+        child: Text(
+          label,
+          style: ArenaText.body.copyWith(
+            color: active ? ArenaColors.signalBlue : ArenaColors.silver,
+            fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+          ),
+        ),
+      ),
     );
   }
 }

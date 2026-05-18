@@ -69,6 +69,22 @@ sealed class Competition with _$Competition {
     /// « invite N amis pour t'inscrire »). Trigger DB
     /// `enforce_referral_quota_on_registration` consume cette colonne.
     @Default(0) int referralQuota,
+
+    /// Lot D.2 — Pondération du compteur parrainage.
+    /// - `'any'`  : tous les filleuls actifs comptent (défaut)
+    /// - `'engaged'` : seulement ceux ayant joué un match OU payé une
+    ///   inscription. Bloque l'astuce "10 faux comptes" pour bypasser.
+    @Default('any') String referralActivityMode,
+
+    /// Lot A.2 — Overrides d'intervalle par round (en minutes). Null =
+    /// utilise `matchIntervalMinutes` global. `roundIntervals[N-1]` =
+    /// délai après le round N.
+    List<int>? roundIntervals,
+
+    /// Lot F.1 — Config dépendante du format. Pour `groups_then_knockout`,
+    /// peut contenir `{group_count: int, qualifiers_per_group: int}`.
+    /// Defaults serveur : 4 groupes × 2 qualifiés.
+    @Default(<String, dynamic>{}) Map<String, dynamic> formatConfig,
   }) = _Competition;
 
   const Competition._();

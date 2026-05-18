@@ -77,6 +77,22 @@ mixin _$Competition {
   /// `enforce_referral_quota_on_registration` consume cette colonne.
   int get referralQuota => throw _privateConstructorUsedError;
 
+  /// Lot D.2 — Pondération du compteur parrainage.
+  /// - `'any'`  : tous les filleuls actifs comptent (défaut)
+  /// - `'engaged'` : seulement ceux ayant joué un match OU payé une
+  ///   inscription. Bloque l'astuce "10 faux comptes" pour bypasser.
+  String get referralActivityMode => throw _privateConstructorUsedError;
+
+  /// Lot A.2 — Overrides d'intervalle par round (en minutes). Null =
+  /// utilise `matchIntervalMinutes` global. `roundIntervals[N-1]` =
+  /// délai après le round N.
+  List<int>? get roundIntervals => throw _privateConstructorUsedError;
+
+  /// Lot F.1 — Config dépendante du format. Pour `groups_then_knockout`,
+  /// peut contenir `{group_count: int, qualifiers_per_group: int}`.
+  /// Defaults serveur : 4 groupes × 2 qualifiés.
+  Map<String, dynamic> get formatConfig => throw _privateConstructorUsedError;
+
   /// Serializes this Competition to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
 
@@ -122,7 +138,10 @@ abstract class $CompetitionCopyWith<$Res> {
       List<int> prizeDistribution,
       int matchIntervalMinutes,
       bool autoGenerateBracket,
-      int referralQuota});
+      int referralQuota,
+      String referralActivityMode,
+      List<int>? roundIntervals,
+      Map<String, dynamic> formatConfig});
 }
 
 /// @nodoc
@@ -169,6 +188,9 @@ class _$CompetitionCopyWithImpl<$Res, $Val extends Competition>
     Object? matchIntervalMinutes = null,
     Object? autoGenerateBracket = null,
     Object? referralQuota = null,
+    Object? referralActivityMode = null,
+    Object? roundIntervals = freezed,
+    Object? formatConfig = null,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -287,6 +309,18 @@ class _$CompetitionCopyWithImpl<$Res, $Val extends Competition>
           ? _value.referralQuota
           : referralQuota // ignore: cast_nullable_to_non_nullable
               as int,
+      referralActivityMode: null == referralActivityMode
+          ? _value.referralActivityMode
+          : referralActivityMode // ignore: cast_nullable_to_non_nullable
+              as String,
+      roundIntervals: freezed == roundIntervals
+          ? _value.roundIntervals
+          : roundIntervals // ignore: cast_nullable_to_non_nullable
+              as List<int>?,
+      formatConfig: null == formatConfig
+          ? _value.formatConfig
+          : formatConfig // ignore: cast_nullable_to_non_nullable
+              as Map<String, dynamic>,
     ) as $Val);
   }
 }
@@ -328,7 +362,10 @@ abstract class _$$CompetitionImplCopyWith<$Res>
       List<int> prizeDistribution,
       int matchIntervalMinutes,
       bool autoGenerateBracket,
-      int referralQuota});
+      int referralQuota,
+      String referralActivityMode,
+      List<int>? roundIntervals,
+      Map<String, dynamic> formatConfig});
 }
 
 /// @nodoc
@@ -373,6 +410,9 @@ class __$$CompetitionImplCopyWithImpl<$Res>
     Object? matchIntervalMinutes = null,
     Object? autoGenerateBracket = null,
     Object? referralQuota = null,
+    Object? referralActivityMode = null,
+    Object? roundIntervals = freezed,
+    Object? formatConfig = null,
   }) {
     return _then(_$CompetitionImpl(
       id: null == id
@@ -491,6 +531,18 @@ class __$$CompetitionImplCopyWithImpl<$Res>
           ? _value.referralQuota
           : referralQuota // ignore: cast_nullable_to_non_nullable
               as int,
+      referralActivityMode: null == referralActivityMode
+          ? _value.referralActivityMode
+          : referralActivityMode // ignore: cast_nullable_to_non_nullable
+              as String,
+      roundIntervals: freezed == roundIntervals
+          ? _value._roundIntervals
+          : roundIntervals // ignore: cast_nullable_to_non_nullable
+              as List<int>?,
+      formatConfig: null == formatConfig
+          ? _value._formatConfig
+          : formatConfig // ignore: cast_nullable_to_non_nullable
+              as Map<String, dynamic>,
     ));
   }
 }
@@ -527,8 +579,13 @@ class _$CompetitionImpl extends _Competition {
       final List<int> prizeDistribution = const <int>[0, 0, 0, 0],
       this.matchIntervalMinutes = 60,
       this.autoGenerateBracket = true,
-      this.referralQuota = 0})
+      this.referralQuota = 0,
+      this.referralActivityMode = 'any',
+      final List<int>? roundIntervals,
+      final Map<String, dynamic> formatConfig = const <String, dynamic>{}})
       : _prizeDistribution = prizeDistribution,
+        _roundIntervals = roundIntervals,
+        _formatConfig = formatConfig,
         super._();
 
   factory _$CompetitionImpl.fromJson(Map<String, dynamic> json) =>
@@ -643,9 +700,50 @@ class _$CompetitionImpl extends _Competition {
   @JsonKey()
   final int referralQuota;
 
+  /// Lot D.2 — Pondération du compteur parrainage.
+  /// - `'any'`  : tous les filleuls actifs comptent (défaut)
+  /// - `'engaged'` : seulement ceux ayant joué un match OU payé une
+  ///   inscription. Bloque l'astuce "10 faux comptes" pour bypasser.
+  @override
+  @JsonKey()
+  final String referralActivityMode;
+
+  /// Lot A.2 — Overrides d'intervalle par round (en minutes). Null =
+  /// utilise `matchIntervalMinutes` global. `roundIntervals[N-1]` =
+  /// délai après le round N.
+  final List<int>? _roundIntervals;
+
+  /// Lot A.2 — Overrides d'intervalle par round (en minutes). Null =
+  /// utilise `matchIntervalMinutes` global. `roundIntervals[N-1]` =
+  /// délai après le round N.
+  @override
+  List<int>? get roundIntervals {
+    final value = _roundIntervals;
+    if (value == null) return null;
+    if (_roundIntervals is EqualUnmodifiableListView) return _roundIntervals;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(value);
+  }
+
+  /// Lot F.1 — Config dépendante du format. Pour `groups_then_knockout`,
+  /// peut contenir `{group_count: int, qualifiers_per_group: int}`.
+  /// Defaults serveur : 4 groupes × 2 qualifiés.
+  final Map<String, dynamic> _formatConfig;
+
+  /// Lot F.1 — Config dépendante du format. Pour `groups_then_knockout`,
+  /// peut contenir `{group_count: int, qualifiers_per_group: int}`.
+  /// Defaults serveur : 4 groupes × 2 qualifiés.
+  @override
+  @JsonKey()
+  Map<String, dynamic> get formatConfig {
+    if (_formatConfig is EqualUnmodifiableMapView) return _formatConfig;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableMapView(_formatConfig);
+  }
+
   @override
   String toString() {
-    return 'Competition(id: $id, name: $name, game: $game, format: $format, startDate: $startDate, status: $status, maxPlayers: $maxPlayers, currentPlayers: $currentPlayers, registrationFee: $registrationFee, registrationCurrency: $registrationCurrency, commissionPct: $commissionPct, prizePoolLocal: $prizePoolLocal, commissionXaf: $commissionXaf, sponsorBonusLocal: $sponsorBonusLocal, description: $description, bannerUrl: $bannerUrl, registrationOpensAt: $registrationOpensAt, registrationClosesAt: $registrationClosesAt, endDate: $endDate, prizePoolCurrency: $prizePoolCurrency, createdBy: $createdBy, createdAt: $createdAt, updatedAt: $updatedAt, orangeMoneyCode: $orangeMoneyCode, mtnMomoCode: $mtnMomoCode, prizeDistribution: $prizeDistribution, matchIntervalMinutes: $matchIntervalMinutes, autoGenerateBracket: $autoGenerateBracket, referralQuota: $referralQuota)';
+    return 'Competition(id: $id, name: $name, game: $game, format: $format, startDate: $startDate, status: $status, maxPlayers: $maxPlayers, currentPlayers: $currentPlayers, registrationFee: $registrationFee, registrationCurrency: $registrationCurrency, commissionPct: $commissionPct, prizePoolLocal: $prizePoolLocal, commissionXaf: $commissionXaf, sponsorBonusLocal: $sponsorBonusLocal, description: $description, bannerUrl: $bannerUrl, registrationOpensAt: $registrationOpensAt, registrationClosesAt: $registrationClosesAt, endDate: $endDate, prizePoolCurrency: $prizePoolCurrency, createdBy: $createdBy, createdAt: $createdAt, updatedAt: $updatedAt, orangeMoneyCode: $orangeMoneyCode, mtnMomoCode: $mtnMomoCode, prizeDistribution: $prizeDistribution, matchIntervalMinutes: $matchIntervalMinutes, autoGenerateBracket: $autoGenerateBracket, referralQuota: $referralQuota, referralActivityMode: $referralActivityMode, roundIntervals: $roundIntervals, formatConfig: $formatConfig)';
   }
 
   @override
@@ -704,7 +802,13 @@ class _$CompetitionImpl extends _Competition {
             (identical(other.autoGenerateBracket, autoGenerateBracket) ||
                 other.autoGenerateBracket == autoGenerateBracket) &&
             (identical(other.referralQuota, referralQuota) ||
-                other.referralQuota == referralQuota));
+                other.referralQuota == referralQuota) &&
+            (identical(other.referralActivityMode, referralActivityMode) ||
+                other.referralActivityMode == referralActivityMode) &&
+            const DeepCollectionEquality()
+                .equals(other._roundIntervals, _roundIntervals) &&
+            const DeepCollectionEquality()
+                .equals(other._formatConfig, _formatConfig));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -739,7 +843,10 @@ class _$CompetitionImpl extends _Competition {
         const DeepCollectionEquality().hash(_prizeDistribution),
         matchIntervalMinutes,
         autoGenerateBracket,
-        referralQuota
+        referralQuota,
+        referralActivityMode,
+        const DeepCollectionEquality().hash(_roundIntervals),
+        const DeepCollectionEquality().hash(_formatConfig)
       ]);
 
   /// Create a copy of Competition
@@ -788,7 +895,10 @@ abstract class _Competition extends Competition {
       final List<int> prizeDistribution,
       final int matchIntervalMinutes,
       final bool autoGenerateBracket,
-      final int referralQuota}) = _$CompetitionImpl;
+      final int referralQuota,
+      final String referralActivityMode,
+      final List<int>? roundIntervals,
+      final Map<String, dynamic> formatConfig}) = _$CompetitionImpl;
   const _Competition._() : super._();
 
   factory _Competition.fromJson(Map<String, dynamic> json) =
@@ -879,6 +989,25 @@ abstract class _Competition extends Competition {
   /// `enforce_referral_quota_on_registration` consume cette colonne.
   @override
   int get referralQuota;
+
+  /// Lot D.2 — Pondération du compteur parrainage.
+  /// - `'any'`  : tous les filleuls actifs comptent (défaut)
+  /// - `'engaged'` : seulement ceux ayant joué un match OU payé une
+  ///   inscription. Bloque l'astuce "10 faux comptes" pour bypasser.
+  @override
+  String get referralActivityMode;
+
+  /// Lot A.2 — Overrides d'intervalle par round (en minutes). Null =
+  /// utilise `matchIntervalMinutes` global. `roundIntervals[N-1]` =
+  /// délai après le round N.
+  @override
+  List<int>? get roundIntervals;
+
+  /// Lot F.1 — Config dépendante du format. Pour `groups_then_knockout`,
+  /// peut contenir `{group_count: int, qualifiers_per_group: int}`.
+  /// Defaults serveur : 4 groupes × 2 qualifiés.
+  @override
+  Map<String, dynamic> get formatConfig;
 
   /// Create a copy of Competition
   /// with the given fields replaced by the non-null parameter values.
