@@ -33,40 +33,60 @@ Future<void> bootstrap({
       bundleId: bundleId,
     );
 
-    await _loadEnv();
-    await _initSupabase();
-    await _initFirebase();
-
-    // Pre-load SharedPreferences so providers can read it synchronously.
+    // ─── Critical path : on attend uniquement ce dont SplashPage a besoin
+    // pour rendre sa première frame (SharedPreferences pour le flag
+    // `has_seen_splash_v1`). Tout le reste (Supabase, Firebase, Sentry,
+    // .env) est différé après `runApp` pour minimiser la durée du splash
+    // natif (Android 12+ SplashScreen API garde l'icône au centre tant
+    // que Flutter n'a pas peint).
     final prefs = await SharedPreferences.getInstance();
-
     final overrides = <Override>[
       sharedPreferencesProvider.overrideWithValue(prefs),
     ];
 
-    // Per-flavor DSN — `.env` exposes SENTRY_DSN_USER / SENTRY_DSN_ADMIN.
-    // Falls back to a generic SENTRY_DSN if a flavor-specific one is missing.
-    final dsnKey =
-        flavor == Flavor.admin ? 'SENTRY_DSN_ADMIN' : 'SENTRY_DSN_USER';
-    final sentryDsn = (dotenv.env[dsnKey]?.trim().isNotEmpty ?? false)
-        ? dotenv.env[dsnKey]!.trim()
-        : (dotenv.env['SENTRY_DSN']?.trim() ?? '');
-
-    if (sentryDsn.isNotEmpty) {
-      await SentryFlutter.init((options) {
-        options
-          ..dsn = sentryDsn
-          ..environment = dotenv.env['APP_ENV'] ?? 'development'
-          ..tracesSampleRate = kReleaseMode ? 0.2 : 1.0
-          ..attachScreenshot = false;
-      });
-    } else if (kDebugMode) {
-      debugPrint('[bootstrap] SENTRY_DSN missing — running without Sentry.');
-    }
+    // ─── Background init (~300-500ms total) — ne bloque PAS runApp.
+    // Pendant ce temps, l'utilisateur voit le splash Flutter qui dure
+    // 2.5s (récurrent) ou 5.3s (1er lancement), donc Supabase/Firebase
+    // sont prêts bien avant que le splash se termine.
+    unawaited(_initBackgroundServices(flavor: flavor));
 
     runApp(ProviderScope(overrides: overrides, child: builder()));
   }, (error, stack) {
     Sentry.captureException(error, stackTrace: stack);
+  });
+}
+
+Future<void> _initBackgroundServices({required Flavor flavor}) async {
+  await _loadEnv();
+  // En parallèle : Supabase + Firebase + Sentry.
+  await Future.wait<void>([
+    _initSupabase(),
+    _initFirebase(),
+    _initSentry(flavor: flavor),
+  ]);
+}
+
+Future<void> _initSentry({required Flavor flavor}) async {
+  // Per-flavor DSN — `.env` exposes SENTRY_DSN_USER / SENTRY_DSN_ADMIN.
+  // Falls back to a generic SENTRY_DSN if a flavor-specific one is missing.
+  final dsnKey =
+      flavor == Flavor.admin ? 'SENTRY_DSN_ADMIN' : 'SENTRY_DSN_USER';
+  final sentryDsn = (dotenv.env[dsnKey]?.trim().isNotEmpty ?? false)
+      ? dotenv.env[dsnKey]!.trim()
+      : (dotenv.env['SENTRY_DSN']?.trim() ?? '');
+
+  if (sentryDsn.isEmpty) {
+    if (kDebugMode) {
+      debugPrint('[bootstrap] SENTRY_DSN missing — running without Sentry.');
+    }
+    return;
+  }
+  await SentryFlutter.init((options) {
+    options
+      ..dsn = sentryDsn
+      ..environment = dotenv.env['APP_ENV'] ?? 'development'
+      ..tracesSampleRate = kReleaseMode ? 0.2 : 1.0
+      ..attachScreenshot = false;
   });
 }
 
