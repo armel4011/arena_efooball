@@ -1,0 +1,24 @@
+# ════════════════════════════════════════════════════════════════════
+# ARENA USER — Configuration des icônes (branding pack 2026-05-18)
+# ════════════════════════════════════════════════════════════════════
+# Génération :
+#   flutter pub run flutter_launcher_icons -f flutter_launcher_icons-user.yaml
+#
+# flutter_launcher_icons v0.13.x auto-détecte les fichiers
+# `flutter_launcher_icons-{flavor}.yaml` et ignore alors la section
+# `flutter_launcher_icons:` du pubspec.yaml — d'où la duplication ici.
+# Si tu retires `*-admin.yaml`, le pubspec redevient autoritaire.
+#
+# Workflow flavor-aware : la commande écrit dans `android/app/src/user/res/`
+# pour le flavor user, et `ios/Runner/Assets.xcassets/AppIcon-user.appiconset/`
+# pour iOS (besoin de flutter_flavorizr pour câbler le flavor iOS).
+# ════════════════════════════════════════════════════════════════════
+
+flutter_launcher_icons:
+  android: "ic_launcher"
+  ios: true
+  image_path: "assets/icons/arena_user_1024.png"
+  adaptive_icon_background: "assets/icons/adaptive_user/ic_launcher_background.png"
+  adaptive_icon_foreground: "assets/icons/adaptive_user/ic_launcher_foreground.png"
+  adaptive_icon_monochrome: "assets/icons/adaptive_user/ic_launcher_monochrome.png"
+  remove_alpha_ios: true
