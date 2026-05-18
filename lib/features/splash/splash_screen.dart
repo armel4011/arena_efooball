@@ -311,25 +311,7 @@ class _SplashScreenState extends State<SplashScreen>
           opacity: _gamesOpacity.value.clamp(0.0, 1.0),
           child: Transform.translate(
             offset: Offset(0, _gamesTranslateY.value),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _GameBadge(
-                  label: 'EFB',
-                  color: Color(0xFF00B4D8),
-                ),
-                SizedBox(width: 16),
-                _GameBadge(
-                  label: 'FIFA',
-                  color: Color(0xFF06D6A0),
-                ),
-                SizedBox(width: 16),
-                _GameBadge(
-                  label: 'FC',
-                  color: Color(0xFFF77F00),
-                ),
-              ],
-            ),
+            child: const GamesRow(),
           ),
         );
       },
@@ -401,10 +383,31 @@ class _LogoPainter extends CustomPainter {
 }
 
 // ════════════════════════════════════════════════════════════════════
+// GAMES ROW — 3 badges EFB / FIFA / FC, partagé entre cinematic et short
+// ════════════════════════════════════════════════════════════════════
+class GamesRow extends StatelessWidget {
+  const GamesRow({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        GameBadge(label: 'EFB', color: Color(0xFF00B4D8)),
+        SizedBox(width: 16),
+        GameBadge(label: 'FIFA', color: Color(0xFF06D6A0)),
+        SizedBox(width: 16),
+        GameBadge(label: 'FC', color: Color(0xFFF77F00)),
+      ],
+    );
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════
 // GAME BADGE — 48x48 rounded 12, glow par couleur
 // ════════════════════════════════════════════════════════════════════
-class _GameBadge extends StatelessWidget {
-  const _GameBadge({required this.label, required this.color});
+class GameBadge extends StatelessWidget {
+  const GameBadge({required this.label, required this.color, super.key});
   final String label;
   final Color color;
 

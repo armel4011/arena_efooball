@@ -4,7 +4,7 @@
 // Gère la navigation post-splash :
 //   - Si premier lancement → SplashScreen cinématique 5.3s
 //     (5 phases, matche splash_preview.html)
-//   - Sinon → Splash court 3.5s (fade-in + scale chevrons)
+//   - Sinon → Splash court 2.5s (fade+scale chevrons + 3 game badges)
 //
 // Détecte le premier lancement via SharedPreferences (clé
 // `has_seen_splash_v1`). Utilise GoRouter via `context.go(nextRoute)`.
@@ -68,7 +68,7 @@ class SplashPage extends ConsumerWidget {
             onComplete: () => _navigate(context),
           );
         } else {
-          // Splash court 3.5s — lancements suivants.
+          // Splash court 2.5s — lancements suivants.
           return _ShortSplashScreen(
             isAdmin: isAdmin,
             onComplete: () => _navigate(context),
@@ -85,7 +85,8 @@ class SplashPage extends ConsumerWidget {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// SPLASH COURT (3.5 secondes — lancements suivants)
+// SPLASH COURT (2.5 secondes — lancements suivants)
+// Fade+scale chevrons + 3 game badges en dessous, animés ensemble.
 // ════════════════════════════════════════════════════════════════════
 class _ShortSplashScreen extends StatefulWidget {
   const _ShortSplashScreen({
@@ -123,8 +124,8 @@ class _ShortSplashScreenState extends State<_ShortSplashScreen>
 
   Future<void> _runSequence() async {
     unawaited(_controller.forward());
-    // 3.5s total : 800ms fade-in + 2700ms admire avant transition.
-    await Future<void>.delayed(const Duration(milliseconds: 3500));
+    // 2.5s total : 800ms fade-in + 1700ms admire avant transition.
+    await Future<void>.delayed(const Duration(milliseconds: 2500));
     if (!mounted) return;
     widget.onComplete();
   }
@@ -163,12 +164,20 @@ class _ShortSplashScreenState extends State<_ShortSplashScreen>
             opacity: _fadeIn,
             child: ScaleTransition(
               scale: _scale,
-              child: SizedBox(
-                width: 180,
-                height: 180,
-                child: CustomPaint(
-                  painter: _ChevronShortPainter(chevronAccent: _chevronAccent),
-                ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 180,
+                    height: 180,
+                    child: CustomPaint(
+                      painter:
+                          _ChevronShortPainter(chevronAccent: _chevronAccent),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  const GamesRow(),
+                ],
               ),
             ),
           ),
