@@ -1,0 +1,17 @@
+# ════════════════════════════════════════════════════════════════════
+# ARENA ADMIN — Configuration des icônes
+# ════════════════════════════════════════════════════════════════════
+# À PLACER à la racine du projet sous : flutter_launcher_icons-admin.yaml
+# 
+# Génération :
+#   flutter pub run flutter_launcher_icons -f flutter_launcher_icons-admin.yaml
+# ════════════════════════════════════════════════════════════════════
+
+flutter_launcher_icons:
+  android: "ic_launcher"
+  ios: true
+  image_path: "assets/icons/arena_admin_1024.png"
+  adaptive_icon_background: "assets/icons/adaptive_admin/ic_launcher_background.png"
+  adaptive_icon_foreground: "assets/icons/adaptive_admin/ic_launcher_foreground.png"
+  adaptive_icon_monochrome: "assets/icons/adaptive_admin/ic_launcher_monochrome.png"
+  remove_alpha_ios: true

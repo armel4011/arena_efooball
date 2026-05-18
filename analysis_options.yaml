@@ -7,6 +7,8 @@ analyzer:
     - "**/*.gr.dart"
     - "**/generated/**"
     - "build/**"
+    # Branding pack stocké tel quel : exemples + scripts non-Flutter.
+    - "ARENA_BRANDING_PACK/**"
   errors:
     invalid_annotation_target: ignore
 

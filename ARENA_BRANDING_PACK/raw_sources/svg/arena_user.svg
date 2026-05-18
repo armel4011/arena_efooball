@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ARENA — Icône USER (Vector Strike F2)
+  Source vectoriel scalable, à utiliser pour tous exports PNG.
+  Tokens DESIGN_KIT : signal-blue #4C7AFF + void #0A0A0F + neon-red #FF2D55
+-->
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg-user" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4C7AFF"/>
+      <stop offset="55%" stop-color="#1A2D5C"/>
+      <stop offset="100%" stop-color="#0A0A0F"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Fond dégradé -->
+  <rect width="1024" height="1024" fill="url(#bg-user)"/>
+
+  <!-- Speed dots (5 points à gauche, suggérant la trainée) -->
+  <g fill="#FFFFFF" opacity="0.4">
+    <circle cx="120" cy="340" r="9"/>
+    <circle cx="95" cy="410" r="11"/>
+    <circle cx="70" cy="480" r="13"/>
+    <circle cx="95" cy="550" r="11"/>
+    <circle cx="120" cy="620" r="9"/>
+  </g>
+
+  <!-- 3 chevrons (rafale offensive) -->
+  <polygon points="180,260 340,260 540,420 340,580 180,580 380,420" fill="#FFFFFF"/>
+  <polygon points="340,260 480,260 680,420 480,580 340,580 540,420" fill="#FF2D55"/>
+  <polygon points="480,260 620,260 820,420 620,580 480,580 680,420" fill="#FFFFFF" opacity="0.55"/>
+
+  <!-- Texte ARENA -->
+  <text x="512" y="780" text-anchor="middle"
+        font-family="Bebas Neue, Impact, sans-serif"
+        font-size="140"
+        fill="#FFFFFF"
+        letter-spacing="14"
+        font-weight="700">ARENA</text>
+</svg>
