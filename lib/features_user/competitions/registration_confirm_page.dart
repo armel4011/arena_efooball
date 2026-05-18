@@ -1,10 +1,12 @@
 import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
+import 'package:arena/data/repositories/referral_repository.dart';
 import 'package:arena/features_shared/prize_ranks.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_divider.dart';
+import 'package:arena/features_user/competitions/widgets/referral_progress_card.dart';
 import 'package:arena/features_user/payments/payment_method.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -60,6 +62,16 @@ class _RegistrationConfirmPageState
 
   @override
   Widget build(BuildContext context) {
+    // Lot D — Récupère l'éligibilité parrainage en parallèle. Si la
+    // compétition n'a pas de quota, on a `target=0` et `eligible=true`,
+    // le widget n'est pas affiché et le bouton inscription reste actif.
+    final eligibilityAsync =
+        ref.watch(referralEligibilityProvider(widget.competitionId));
+    final eligibility = eligibilityAsync.valueOrNull;
+    final hasGating = eligibility != null && eligibility.target > 0;
+    final isEligible = eligibility?.eligible ?? !hasGating;
+    final canSubmit = _ack && !_submitting && isEligible;
+
     return Scaffold(
       appBar: const ArenaAppBar(title: 'Confirmer inscription'),
       body: SafeArea(
@@ -91,6 +103,13 @@ class _RegistrationConfirmPageState
             )
                 .animate(delay: 200.ms)
                 .fadeIn(duration: ArenaDurations.medium),
+            if (hasGating) ...[
+              const SizedBox(height: ArenaSpacing.lg),
+              ReferralProgressCard(
+                competitionId: widget.competitionId,
+                referralQuota: eligibility.target,
+              ),
+            ],
             const SizedBox(height: ArenaSpacing.lg),
             _AckTile(
               checked: _ack,
@@ -98,14 +117,16 @@ class _RegistrationConfirmPageState
             ),
             const SizedBox(height: ArenaSpacing.xl),
             ArenaButton(
-              label: _isFree
-                  ? "M'INSCRIRE GRATUITEMENT"
-                  : 'PROCÉDER AU PAIEMENT '
-                      '· ${_formatXaf(widget.entryFeeXaf)} XAF',
+              label: hasGating && !isEligible
+                  ? '👥 PARRAINAGES INSUFFISANTS'
+                  : _isFree
+                      ? "M'INSCRIRE GRATUITEMENT"
+                      : 'PROCÉDER AU PAIEMENT '
+                          '· ${_formatXaf(widget.entryFeeXaf)} XAF',
               fullWidth: true,
               size: ArenaButtonSize.large,
               isLoading: _submitting,
-              onPressed: (_ack && !_submitting) ? _onSubmit : null,
+              onPressed: canSubmit ? _onSubmit : null,
             ),
             const SizedBox(height: ArenaSpacing.sm),
             ArenaButton(
