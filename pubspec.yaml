@@ -110,6 +110,9 @@ dependencies:
   # ─── PHASE 12.5 — Chat présence + typing (Agora RTM) ───────
   agora_rtm: ^2.2.6
 
+  # ─── Native cold-start splash (fond mid-color matche _ShortSplashScreen)
+  flutter_native_splash: ^2.4.1
+
   # ─── DEFERRED (à activer dans leur PHASE) ──────────────────
   #
   # PHASE 2.3 — Apple SSO (compte Apple Developer requis)
@@ -196,3 +199,21 @@ flutter_launcher_icons:
     image_path: "assets/icons/arena_user_1024.png"
     background_color: "#0A0A0F"
     theme_color: "#4C7AFF"
+
+# ─────────────────────────────────────────────────────────────────
+# Native cold-start splash USER (matche _ShortSplashScreen mid color)
+# ─────────────────────────────────────────────────────────────────
+# Le fond #1A2D5C est exactement le stop 55% du dégradé F2 utilisé par
+# `SplashScreen` et `_ShortSplashScreen`. Sur Android 12+, le système
+# affichera `ic_launcher` (master ARENA) au centre par défaut — on ne
+# fournit volontairement pas d'`image` pour bénéficier du fallback OS.
+# Génération : flutter pub run flutter_native_splash:create
+# Variante ADMIN : flutter_native_splash-admin.yaml à la racine.
+flutter_native_splash:
+  color: "#1A2D5C"
+  android_12:
+    color: "#1A2D5C"
+    icon_background_color: "#1A2D5C"
+  ios: true
+  android: true
+  fullscreen: true

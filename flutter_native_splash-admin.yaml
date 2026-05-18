@@ -1,0 +1,14 @@
+# ─────────────────────────────────────────────────────────────────
+# Native cold-start splash ADMIN (matche _ShortSplashScreen mid color)
+# ─────────────────────────────────────────────────────────────────
+# Le fond #5C1A2D est le stop 55% du dégradé F2 ADMIN. Sur Android 12+,
+# le système affichera `ic_launcher` (master ADMIN) au centre par défaut.
+# Génération : flutter pub run flutter_native_splash:create --path=flutter_native_splash-admin.yaml
+flutter_native_splash:
+  color: "#5C1A2D"
+  android_12:
+    color: "#5C1A2D"
+    icon_background_color: "#5C1A2D"
+  ios: true
+  android: true
+  fullscreen: true
