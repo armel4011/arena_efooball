@@ -1,10 +1,15 @@
+import 'dart:io';
+
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/admin/super_admin_dashboard_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:csv/csv.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 /// PHASE 11 · SA4 — super-admin revenue & accounting.
 ///
@@ -26,7 +31,7 @@ class SuperAdminRevenue extends ConsumerWidget {
         title: 'Revenus & compta',
         actions: [
           TextButton(
-            onPressed: () {},
+            onPressed: () => _exportCsv(context, ref),
             child: Text(
               'CSV ↓',
               style: ArenaText.body.copyWith(
@@ -83,13 +88,66 @@ class SuperAdminRevenue extends ConsumerWidget {
                 label: '📥 EXPORT CSV (comptable)',
                 fullWidth: true,
                 size: ArenaButtonSize.large,
-                onPressed: () {},
+                onPressed: () => _exportCsv(context, ref),
               ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  /// Lot B.3 — Génère un CSV avec la décomposition + la table par
+  /// compétition, écrit en cache temp + déclenche le sheet de partage
+  /// natif (`share_plus`).
+  Future<void> _exportCsv(BuildContext context, WidgetRef ref) async {
+    final scaffold = ScaffoldMessenger.of(context);
+    try {
+      final breakdown = await ref.read(superAdminRevenueBreakdownProvider.future);
+      final perComp =
+          await ref.read(superAdminRevenuePerCompetitionProvider.future);
+      final period = ref.read(selectedRevenuePeriodProvider);
+
+      final periodLabel = '${DateFormat('yyyy-MM-dd').format(period.start)}'
+          '_${DateFormat('yyyy-MM-dd').format(period.end)}';
+
+      final rows = <List<dynamic>>[
+        ['Période', periodLabel],
+        [],
+        ['DÉCOMPOSITION'],
+        ['Frais inscriptions collectés (XAF)', breakdown.collectedXaf.round()],
+        ['Payouts versés (XAF)', -breakdown.payoutsXaf.round()],
+        ['Frais processeur (XAF)', -breakdown.processorFeesXaf.round()],
+        ['Marge nette (XAF)', breakdown.marginXaf.round()],
+        ['Marge %', breakdown.marginPct.toStringAsFixed(1)],
+        [],
+        ['PAR COMPÉTITION'],
+        ['Compétition', 'Jeu', 'Inscrits', 'Revenu (XAF)', 'Commission (XAF)'],
+        for (final c in perComp)
+          [
+            c.name,
+            c.game,
+            c.registeredCount,
+            c.revenueXaf.round(),
+            c.commissionXaf.round(),
+          ],
+      ];
+
+      final csv = const ListToCsvConverter().convert(rows);
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/arena-revenue-$periodLabel.csv');
+      await file.writeAsString(csv);
+
+      await Share.shareXFiles(
+        [XFile(file.path, mimeType: 'text/csv')],
+        subject: 'ARENA revenue $periodLabel',
+        text: 'Export comptable ARENA — période $periodLabel.',
+      );
+    } catch (e) {
+      scaffold.showSnackBar(
+        SnackBar(content: Text('Export CSV échoué : $e')),
+      );
+    }
   }
 
   static RevenuePeriod _resolvePeriod(String label) {

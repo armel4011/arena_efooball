@@ -8,6 +8,7 @@ import 'package:arena/core/services/bootstrap.dart';
 import 'package:arena/core/services/notification_service.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/notification_repository.dart';
+import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -57,9 +58,19 @@ class _ArenaAdminAppState extends ConsumerState<ArenaAdminApp> {
     if (userId == _attachedUserId) return;
     _attachedUserId = userId;
     if (userId != null) {
+      // Lot B.1 — ping last_seen_at pour MAU/DAU.
+      unawaited(_pingHeartbeat());
       unawaited(service.attach(userId));
     } else {
       unawaited(service.detach(clearTokenOnServer: true));
+    }
+  }
+
+  Future<void> _pingHeartbeat() async {
+    try {
+      await ref.read(supabaseClientProvider).rpc<dynamic>('heartbeat');
+    } catch (_) {
+      // metric non-critique
     }
   }
 

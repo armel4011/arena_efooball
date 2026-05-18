@@ -117,7 +117,7 @@ class _SuperAdminBroadcastState extends ConsumerState<SuperAdminBroadcast> {
           'type': _notifType,
           'title': _titleCtrl.text.trim(),
           'has_route': route.isNotEmpty,
-          'competition_id': _filter.competitionId,
+          'competition_ids': _filter.competitionIds,
         },
       );
       if (!mounted) return;
@@ -197,13 +197,19 @@ class _SuperAdminBroadcastState extends ConsumerState<SuperAdminBroadcast> {
                   ),
               ],
             ),
-            if (_filter.competitionId != null) ...[
+            if (_filter.competitionIds.isNotEmpty) ...[
               const SizedBox(height: ArenaSpacing.sm),
-              _ActiveCompetitionBadge(
-                competitionId: _filter.competitionId!,
+              _ActiveCompetitionsBadges(
+                competitionIds: _filter.competitionIds,
                 comps: compsAsync.asData?.value ?? const [],
-                onClear: () => setState(() {
-                  _filter = _filter.copyWith(resetCompetitionId: true);
+                onClearOne: (id) => setState(() {
+                  final remaining = _filter.competitionIds
+                      .where((c) => c != id)
+                      .toList();
+                  _filter = _filter.copyWith(
+                    competitionIds: remaining,
+                    resetCompetitionIds: remaining.isEmpty,
+                  );
                 }),
               ),
             ],
@@ -379,8 +385,7 @@ class _SuperAdminBroadcastState extends ConsumerState<SuperAdminBroadcast> {
       ),
       ArenaFilterSection(
         id: 'competition',
-        title: 'Compétition (inscrits)',
-        mode: ArenaFilterMode.radio,
+        title: 'Compétitions (multi-sélection)',
         options: [
           for (final c in comps)
             ArenaFilterOption(
@@ -405,9 +410,7 @@ class _SuperAdminBroadcastState extends ConsumerState<SuperAdminBroadcast> {
       'guilty': [
         if (_filter.guiltyMinCount != null) '${_filter.guiltyMinCount}',
       ],
-      'competition': [
-        if (_filter.competitionId != null) _filter.competitionId!,
-      ],
+      'competition': _filter.competitionIds,
     };
   }
 
@@ -417,7 +420,7 @@ class _SuperAdminBroadcastState extends ConsumerState<SuperAdminBroadcast> {
       final country = selection['country']?.firstOrNull;
       final activity = selection['activity'] ?? const <String>[];
       final guiltyStr = selection['guilty']?.firstOrNull;
-      final competition = selection['competition']?.firstOrNull;
+      final competitions = selection['competition'] ?? const <String>[];
 
       _filter = _filter.copyWith(
         filter: status,
@@ -430,8 +433,8 @@ class _SuperAdminBroadcastState extends ConsumerState<SuperAdminBroadcast> {
         hadDispute: activity.contains('disputed'),
         guiltyMinCount: guiltyStr == null ? null : int.parse(guiltyStr),
         resetGuiltyMin: guiltyStr == null,
-        competitionId: competition,
-        resetCompetitionId: competition == null,
+        competitionIds: competitions,
+        resetCompetitionIds: competitions.isEmpty,
       );
     });
   }
@@ -445,7 +448,7 @@ class _SuperAdminBroadcastState extends ConsumerState<SuperAdminBroadcast> {
     if (_filter.receivedReward) n++;
     if (_filter.hadDispute) n++;
     if (_filter.guiltyMinCount != null) n++;
-    if (_filter.competitionId != null) n++;
+    if (_filter.competitionIds.isNotEmpty) n++;
     return n;
   }
 
@@ -514,50 +517,60 @@ class _LoadingFilterButton extends StatelessWidget {
   }
 }
 
-class _ActiveCompetitionBadge extends StatelessWidget {
-  const _ActiveCompetitionBadge({
-    required this.competitionId,
+class _ActiveCompetitionsBadges extends StatelessWidget {
+  const _ActiveCompetitionsBadges({
+    required this.competitionIds,
     required this.comps,
-    required this.onClear,
+    required this.onClearOne,
   });
 
-  final String competitionId;
+  final List<String> competitionIds;
   final List<FilterableCompetition> comps;
-  final VoidCallback onClear;
+  final ValueChanged<String> onClearOne;
 
   @override
   Widget build(BuildContext context) {
-    final match = comps.where((c) => c.id == competitionId).firstOrNull;
-    final label = match == null
-        ? 'Compétition ciblée'
-        : '🏆 ${match.name} · ${match.currentPlayers}/${match.maxPlayers}';
+    return Wrap(
+      spacing: ArenaSpacing.xs,
+      runSpacing: ArenaSpacing.xs,
+      children: [
+        for (final id in competitionIds)
+          _buildChip(id, comps.where((c) => c.id == id).firstOrNull),
+      ],
+    );
+  }
+
+  Widget _buildChip(String id, FilterableCompetition? c) {
+    final label = c == null ? '🏆 Compétition ciblée' : '🏆 ${c.name}';
     return Container(
       padding: const EdgeInsets.symmetric(
-        horizontal: ArenaSpacing.md,
-        vertical: ArenaSpacing.sm,
+        horizontal: ArenaSpacing.sm,
+        vertical: 6,
       ),
       decoration: BoxDecoration(
         color: ArenaColors.signalBlue.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(ArenaRadius.md),
+        borderRadius: BorderRadius.circular(ArenaRadius.round),
         border: Border.all(color: ArenaColors.signalBlue),
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
+          Flexible(
             child: Text(
               label,
-              style: ArenaText.body.copyWith(
+              style: ArenaText.small.copyWith(
                 color: ArenaColors.signalBlue,
                 fontWeight: FontWeight.w600,
               ),
               overflow: TextOverflow.ellipsis,
             ),
           ),
+          const SizedBox(width: 4),
           InkWell(
-            onTap: onClear,
+            onTap: () => onClearOne(id),
             child: const Icon(
               Icons.close_rounded,
-              size: 18,
+              size: 14,
               color: ArenaColors.signalBlue,
             ),
           ),

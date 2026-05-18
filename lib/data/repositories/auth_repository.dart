@@ -60,6 +60,7 @@ class AuthRepository {
     required String cguVersionAccepted,
     required DateTime privacyPolicyAcceptedAt,
     bool marketingConsent = false,
+    String? referredBy,
   }) async {
     // Pre-validate username uniqueness BEFORE auth.signUp so a clash
     // doesn't leave us with an orphan auth.users row that can't be
@@ -95,6 +96,10 @@ class AuthRepository {
       cguVersionAccepted: cguVersionAccepted,
       privacyPolicyAcceptedAt: privacyPolicyAcceptedAt,
       marketingConsent: marketingConsent,
+      // Lot D.1 — code parrain saisi à l'inscription. Le trigger DB
+      // `ensure_referral_code` pose le code propre du joueur, on garde
+      // referredBy comme lien sortant.
+      referredBy: referredBy,
     );
     try {
       return await _profiles.create(profile);

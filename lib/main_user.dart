@@ -9,6 +9,7 @@ import 'package:arena/core/services/deep_link_service.dart';
 import 'package:arena/core/services/notification_service.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/notification_repository.dart';
+import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/recording/overlay/recording_overlay.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
@@ -81,9 +82,22 @@ class _ArenaUserAppState extends ConsumerState<ArenaUserApp> {
     if (userId == _attachedUserId) return;
     _attachedUserId = userId;
     if (userId != null) {
+      // Lot B.1 — ping le serveur pour mettre à jour profiles.last_seen_at
+      // (alimente le MAU/DAU du dashboard super-admin).
+      unawaited(_pingHeartbeat());
       unawaited(service.attach(userId));
     } else {
       unawaited(service.detach(clearTokenOnServer: true));
+    }
+  }
+
+  /// Best-effort ping de `heartbeat()` RPC. Silencieux en cas d'échec
+  /// (offline, Supabase pas init…) — c'est un metric, pas un blocant.
+  Future<void> _pingHeartbeat() async {
+    try {
+      await ref.read(supabaseClientProvider).rpc<dynamic>('heartbeat');
+    } catch (_) {
+      // ignore : metric non-critique
     }
   }
 

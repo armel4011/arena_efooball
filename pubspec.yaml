@@ -113,6 +113,11 @@ dependencies:
   # ─── Native cold-start splash (fond mid-color matche _ShortSplashScreen)
   flutter_native_splash: ^2.4.1
 
+  # ─── Lot E — Dashboard charts (Phase 11.6) + Export CSV (11.7) ──
+  fl_chart: ^0.69.0
+  csv: ^6.0.0
+  share_plus: ^10.1.4
+
   # ─── DEFERRED (à activer dans leur PHASE) ──────────────────
   #
   # PHASE 2.3 — Apple SSO (compte Apple Developer requis)

@@ -2,6 +2,7 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/admin/super_admin_dashboard_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -22,6 +23,8 @@ class SuperAdminDashboard extends ConsumerWidget {
     final kpisAsync = ref.watch(superAdminKpisProvider);
     final topPlayersAsync = ref.watch(superAdminTopPlayersProvider);
     final countriesAsync = ref.watch(superAdminCountryBreakdownProvider);
+    final signupsAsync = ref.watch(superAdminMonthlySignupsProvider);
+    final monthlyRevenueAsync = ref.watch(superAdminMonthlyRevenueProvider);
     final monthLabel =
         DateFormat('LLLL yyyy', 'fr_FR').format(DateTime.now()).toUpperCase();
 
@@ -34,7 +37,9 @@ class SuperAdminDashboard extends ConsumerWidget {
             ref
               ..invalidate(superAdminKpisProvider)
               ..invalidate(superAdminTopPlayersProvider)
-              ..invalidate(superAdminCountryBreakdownProvider);
+              ..invalidate(superAdminCountryBreakdownProvider)
+              ..invalidate(superAdminMonthlySignupsProvider)
+              ..invalidate(superAdminMonthlyRevenueProvider);
             await ref.read(superAdminKpisProvider.future);
           },
           child: ListView(
@@ -51,11 +56,11 @@ class SuperAdminDashboard extends ConsumerWidget {
               const SizedBox(height: ArenaSpacing.lg),
               Text('📈 Inscriptions / mois', style: ArenaText.h3),
               const SizedBox(height: ArenaSpacing.sm),
-              const _LineChartPlaceholder(),
+              _SignupsLineChart(async: signupsAsync),
               const SizedBox(height: ArenaSpacing.lg),
               Text('💰 Revenus / mois', style: ArenaText.h3),
               const SizedBox(height: ArenaSpacing.sm),
-              const _BarChartPlaceholder(),
+              _RevenueBarChart(async: monthlyRevenueAsync),
               const SizedBox(height: ArenaSpacing.lg),
               Text('🏆 Top 10 joueurs', style: ArenaText.h3),
               const SizedBox(height: ArenaSpacing.sm),
@@ -213,115 +218,210 @@ class _MarginCard extends StatelessWidget {
   }
 }
 
-class _LineChartPlaceholder extends StatelessWidget {
-  const _LineChartPlaceholder();
+// ════════════════════════════════════════════════════════════════════
+// Lot B.2 — Charts d'évolution mensuelle (fl_chart)
+// ════════════════════════════════════════════════════════════════════
+class _SignupsLineChart extends StatelessWidget {
+  const _SignupsLineChart({required this.async});
+  final AsyncValue<List<MonthlyCount>> async;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 120,
-      padding: const EdgeInsets.all(ArenaSpacing.sm),
-      decoration: BoxDecoration(
-        color: ArenaColors.carbon,
-        borderRadius: BorderRadius.circular(ArenaRadius.lg),
-        border: Border.all(color: ArenaColors.border),
+    return async.when(
+      loading: () => const _ChartFrame(child: Center(
+        child: CircularProgressIndicator(color: ArenaColors.signalBlue),
+      ),),
+      error: (e, _) => _ChartFrame(
+        child: Text(
+          'Erreur : $e',
+          style: ArenaText.small.copyWith(color: ArenaColors.neonRed),
+        ),
       ),
-      child: CustomPaint(
-        painter: _LinePainter(),
-        child: const SizedBox.expand(),
-      ),
-    );
-  }
-}
-
-class _LinePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height - 14;
-    final pts = <Offset>[
-      Offset(w * 0.04, h * 0.85),
-      Offset(w * 0.18, h * 0.75),
-      Offset(w * 0.32, h * 0.6),
-      Offset(w * 0.46, h * 0.45),
-      Offset(w * 0.6, h * 0.4),
-      Offset(w * 0.74, h * 0.3),
-      Offset(w * 0.88, h * 0.2),
-      Offset(w * 0.95, h * 0.12),
-    ];
-    final fill = Path()..moveTo(pts.first.dx, h);
-    for (final p in pts) {
-      fill.lineTo(p.dx, p.dy);
-    }
-    fill
-      ..lineTo(pts.last.dx, h)
-      ..close();
-    canvas.drawPath(
-      fill,
-      Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            ArenaColors.signalBlue.withValues(alpha: 0.4),
-            ArenaColors.signalBlue.withValues(alpha: 0),
-          ],
-        ).createShader(Offset.zero & size),
-    );
-    final stroke = Path()..moveTo(pts.first.dx, pts.first.dy);
-    for (final p in pts.skip(1)) {
-      stroke.lineTo(p.dx, p.dy);
-    }
-    canvas.drawPath(
-      stroke,
-      Paint()
-        ..color = ArenaColors.signalBlue
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class _BarChartPlaceholder extends StatelessWidget {
-  const _BarChartPlaceholder();
-
-  static const _heights = [0.30, 0.42, 0.55, 0.65, 0.78, 0.88, 1.0];
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 90,
-      padding: const EdgeInsets.all(ArenaSpacing.sm),
-      decoration: BoxDecoration(
-        color: ArenaColors.carbon,
-        borderRadius: BorderRadius.circular(ArenaRadius.lg),
-        border: Border.all(color: ArenaColors.border),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          for (final h in _heights) ...[
-            Expanded(
-              child: FractionallySizedBox(
-                heightFactor: h,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: ArenaColors.statusOk
-                        .withValues(alpha: 0.6 + 0.4 * h),
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(2),
-                    ),
+      data: (rows) {
+        if (rows.isEmpty) {
+          return _ChartFrame(child: Text(
+            'Aucune inscription sur la période.',
+            style: ArenaText.bodyMuted,
+          ),);
+        }
+        final maxY = rows.fold<double>(
+          1,
+          (acc, r) => r.count.toDouble() > acc ? r.count.toDouble() : acc,
+        );
+        final spots = <FlSpot>[
+          for (var i = 0; i < rows.length; i++)
+            FlSpot(i.toDouble(), rows[i].count.toDouble()),
+        ];
+        return _ChartFrame(
+          height: 140,
+          child: LineChart(
+            LineChartData(
+              minY: 0,
+              maxY: maxY * 1.15,
+              gridData: const FlGridData(show: false),
+              titlesData: FlTitlesData(
+                leftTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                rightTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                topTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    interval: (rows.length / 4).clamp(1, 6).toDouble(),
+                    reservedSize: 18,
+                    getTitlesWidget: (v, _) {
+                      final i = v.toInt();
+                      if (i < 0 || i >= rows.length) {
+                        return const SizedBox.shrink();
+                      }
+                      return Text(
+                        DateFormat('MMM', 'fr_FR')
+                            .format(rows[i].month)
+                            .toUpperCase(),
+                        style: ArenaText.small
+                            .copyWith(color: ArenaColors.silver, fontSize: 9),
+                      );
+                    },
                   ),
                 ),
               ),
+              borderData: FlBorderData(show: false),
+              lineBarsData: [
+                LineChartBarData(
+                  spots: spots,
+                  isCurved: true,
+                  color: ArenaColors.signalBlue,
+                  barWidth: 2,
+                  dotData: const FlDotData(show: false),
+                  belowBarData: BarAreaData(
+                    show: true,
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        ArenaColors.signalBlue.withValues(alpha: 0.4),
+                        ArenaColors.signalBlue.withValues(alpha: 0),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
-            if (h != _heights.last) const SizedBox(width: 4),
-          ],
-        ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _RevenueBarChart extends StatelessWidget {
+  const _RevenueBarChart({required this.async});
+  final AsyncValue<List<MonthlyRevenue>> async;
+
+  @override
+  Widget build(BuildContext context) {
+    return async.when(
+      loading: () => const _ChartFrame(child: Center(
+        child: CircularProgressIndicator(color: ArenaColors.statusOk),
+      ),),
+      error: (e, _) => _ChartFrame(
+        child: Text('Erreur : $e',
+            style: ArenaText.small.copyWith(color: ArenaColors.neonRed),),
       ),
+      data: (rows) {
+        if (rows.isEmpty) {
+          return _ChartFrame(child: Text(
+            'Aucun revenu sur la période.',
+            style: ArenaText.bodyMuted,
+          ),);
+        }
+        final maxY = rows.fold<double>(
+          1,
+          (acc, r) => r.revenueXaf > acc ? r.revenueXaf : acc,
+        );
+        return _ChartFrame(
+          height: 140,
+          child: BarChart(
+            BarChartData(
+              minY: 0,
+              maxY: maxY * 1.15,
+              gridData: const FlGridData(show: false),
+              titlesData: FlTitlesData(
+                leftTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                rightTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                topTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    interval: (rows.length / 4).clamp(1, 6).toDouble(),
+                    reservedSize: 18,
+                    getTitlesWidget: (v, _) {
+                      final i = v.toInt();
+                      if (i < 0 || i >= rows.length) {
+                        return const SizedBox.shrink();
+                      }
+                      return Text(
+                        DateFormat('MMM', 'fr_FR')
+                            .format(rows[i].month)
+                            .toUpperCase(),
+                        style: ArenaText.small
+                            .copyWith(color: ArenaColors.silver, fontSize: 9),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              borderData: FlBorderData(show: false),
+              barGroups: [
+                for (var i = 0; i < rows.length; i++)
+                  BarChartGroupData(
+                    x: i,
+                    barRods: [
+                      BarChartRodData(
+                        toY: rows[i].revenueXaf,
+                        color: ArenaColors.statusOk,
+                        width: 8,
+                        borderRadius:
+                            const BorderRadius.vertical(top: Radius.circular(2)),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ChartFrame extends StatelessWidget {
+  const _ChartFrame({required this.child, this.height = 120});
+  final Widget child;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: height,
+      padding: const EdgeInsets.all(ArenaSpacing.sm),
+      decoration: BoxDecoration(
+        color: ArenaColors.carbon,
+        borderRadius: BorderRadius.circular(ArenaRadius.lg),
+        border: Border.all(color: ArenaColors.border),
+      ),
+      child: child,
     );
   }
 }

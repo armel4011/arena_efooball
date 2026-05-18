@@ -17,6 +17,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 
 /// PHASE 4 — single competition detail page with 4 tabs.
 ///
@@ -336,57 +337,94 @@ class _ReferralCodeCopy extends StatelessWidget {
   const _ReferralCodeCopy({required this.code});
   final String code;
 
+  Future<void> _copy(BuildContext context) async {
+    await Clipboard.setData(ClipboardData(text: code));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Code $code copié dans le presse-papier'),
+        backgroundColor: ArenaColors.statusOk,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  Future<void> _share() async {
+    await Share.share(
+      "Rejoins-moi sur ARENA ! Tournois d'e-sport mobile gratuits avec "
+      "récompenses. Utilise mon code de parrainage à l'inscription : $code",
+      subject: 'Rejoins-moi sur ARENA',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () async {
-        await Clipboard.setData(ClipboardData(text: code));
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Code $code copié dans le presse-papier'),
-            backgroundColor: ArenaColors.statusOk,
-            duration: const Duration(seconds: 2),
+    return Container(
+      padding: const EdgeInsets.all(ArenaSpacing.md),
+      decoration: BoxDecoration(
+        color: ArenaColors.carbon,
+        borderRadius: BorderRadius.circular(ArenaRadius.md),
+        border: Border.all(color: ArenaColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'TON CODE',
+            style: ArenaText.small.copyWith(
+              color: ArenaColors.silver,
+              letterSpacing: 1,
+            ),
           ),
-        );
-      },
-      borderRadius: BorderRadius.circular(ArenaRadius.md),
-      child: Container(
-        padding: const EdgeInsets.all(ArenaSpacing.md),
-        decoration: BoxDecoration(
-          color: ArenaColors.carbon,
-          borderRadius: BorderRadius.circular(ArenaRadius.md),
-          border: Border.all(color: ArenaColors.border),
-        ),
-        child: Row(
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'TON CODE',
-                  style: ArenaText.small.copyWith(
-                    color: ArenaColors.silver,
-                    letterSpacing: 1,
+          const SizedBox(height: 2),
+          Text(
+            code,
+            style: ArenaText.invitCode.copyWith(
+              color: ArenaColors.bone,
+            ),
+          ),
+          const SizedBox(height: ArenaSpacing.sm),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _copy(context),
+                  icon: const Icon(
+                    Icons.content_copy_rounded,
+                    size: 16,
+                    color: ArenaColors.signalBlue,
+                  ),
+                  label: Text(
+                    'Copier',
+                    style: ArenaText.button
+                        .copyWith(color: ArenaColors.signalBlue),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: ArenaColors.signalBlue),
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  code,
-                  style: ArenaText.invitCode.copyWith(
+              ),
+              const SizedBox(width: ArenaSpacing.sm),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: _share,
+                  icon: const Icon(
+                    Icons.share_rounded,
+                    size: 16,
                     color: ArenaColors.bone,
                   ),
+                  label: Text(
+                    'Partager',
+                    style: ArenaText.button.copyWith(color: ArenaColors.bone),
+                  ),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: ArenaColors.signalBlue,
+                  ),
                 ),
-              ],
-            ),
-            const Spacer(),
-            const Icon(
-              Icons.content_copy_rounded,
-              size: 18,
-              color: ArenaColors.signalBlue,
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

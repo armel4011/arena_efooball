@@ -63,6 +63,52 @@ class SuperAdminDashboardRepository {
         CompetitionRevenue.fromJson(row as Map<String, dynamic>),
     ];
   }
+
+  /// Lot B.2 — Évolution mensuelle des inscriptions (12 derniers mois).
+  Future<List<MonthlyCount>> fetchMonthlySignups({int months = 12}) async {
+    final res = await _client
+        .rpc<dynamic>('get_monthly_signups', params: {'p_months': months});
+    return [
+      for (final row in res as List<dynamic>)
+        MonthlyCount.fromJson(row as Map<String, dynamic>),
+    ];
+  }
+
+  /// Lot B.2 — Évolution mensuelle du revenu + marge.
+  Future<List<MonthlyRevenue>> fetchMonthlyRevenue({int months = 12}) async {
+    final res = await _client
+        .rpc<dynamic>('get_monthly_revenue', params: {'p_months': months});
+    return [
+      for (final row in res as List<dynamic>)
+        MonthlyRevenue.fromJson(row as Map<String, dynamic>),
+    ];
+  }
+}
+
+class MonthlyCount {
+  const MonthlyCount({required this.month, required this.count});
+  factory MonthlyCount.fromJson(Map<String, dynamic> json) => MonthlyCount(
+        month: DateTime.parse(json['month_start'] as String),
+        count: (json['count'] as num?)?.toInt() ?? 0,
+      );
+  final DateTime month;
+  final int count;
+}
+
+class MonthlyRevenue {
+  const MonthlyRevenue({
+    required this.month,
+    required this.revenueXaf,
+    required this.marginXaf,
+  });
+  factory MonthlyRevenue.fromJson(Map<String, dynamic> json) => MonthlyRevenue(
+        month: DateTime.parse(json['month_start'] as String),
+        revenueXaf: (json['revenue_xaf'] as num?)?.toDouble() ?? 0,
+        marginXaf: (json['margin_xaf'] as num?)?.toDouble() ?? 0,
+      );
+  final DateTime month;
+  final double revenueXaf;
+  final double marginXaf;
 }
 
 class SuperAdminKpis {
@@ -281,4 +327,14 @@ final superAdminRevenuePerCompetitionProvider =
   return ref
       .watch(superAdminDashboardRepositoryProvider)
       .fetchRevenuePerCompetition();
+});
+
+final superAdminMonthlySignupsProvider =
+    FutureProvider<List<MonthlyCount>>((ref) {
+  return ref.watch(superAdminDashboardRepositoryProvider).fetchMonthlySignups();
+});
+
+final superAdminMonthlyRevenueProvider =
+    FutureProvider<List<MonthlyRevenue>>((ref) {
+  return ref.watch(superAdminDashboardRepositoryProvider).fetchMonthlyRevenue();
 });

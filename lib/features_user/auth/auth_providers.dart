@@ -81,6 +81,7 @@ class SignUpController extends AsyncNotifier<Profile?> {
     required String cguVersionAccepted,
     required DateTime privacyPolicyAcceptedAt,
     bool marketingConsent = false,
+    String? referredBy,
   }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
@@ -96,6 +97,7 @@ class SignUpController extends AsyncNotifier<Profile?> {
             cguVersionAccepted: cguVersionAccepted,
             privacyPolicyAcceptedAt: privacyPolicyAcceptedAt,
             marketingConsent: marketingConsent,
+            referredBy: referredBy,
           );
     });
   }

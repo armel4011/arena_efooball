@@ -34,7 +34,8 @@ class AdminUsersRepository {
         'p_rewarded': f.receivedReward ? true : null,
         'p_disputed': f.hadDispute ? true : null,
         'p_guilty_min': f.guiltyMinCount,
-        'p_competition_id': f.competitionId,
+        'p_competition_ids':
+            f.competitionIds.isEmpty ? null : f.competitionIds,
         'p_limit': limit,
       },
     );
@@ -91,7 +92,7 @@ class AdminUsersFilter {
     this.receivedReward = false,
     this.hadDispute = false,
     this.guiltyMinCount,
-    this.competitionId,
+    this.competitionIds = const <String>[],
   }) : assert(
           guiltyMinCount == null ||
               guiltyMinCount == 1 ||
@@ -125,9 +126,9 @@ class AdminUsersFilter {
   /// correspond aux utilisateurs bannis à vie par la règle 3-strikes.
   final int? guiltyMinCount;
 
-  /// Filtre par compétition (Lot C — item 2) : ne renvoie que les
-  /// utilisateurs inscrits à cette compétition. null = pas de filtre.
-  final String? competitionId;
+  /// Filtre multi-compétitions (Lot C.2) : utilisateurs inscrits à AU
+  /// MOINS UNE des compétitions listées. Liste vide = pas de filtre.
+  final List<String> competitionIds;
 
   AdminUsersFilter copyWith({
     String? countryCode,
@@ -138,12 +139,12 @@ class AdminUsersFilter {
     bool? receivedReward,
     bool? hadDispute,
     int? guiltyMinCount,
-    String? competitionId,
+    List<String>? competitionIds,
     bool resetCountryCode = false,
     bool resetFilter = false,
     bool resetSearch = false,
     bool resetGuiltyMin = false,
-    bool resetCompetitionId = false,
+    bool resetCompetitionIds = false,
   }) {
     return AdminUsersFilter(
       countryCode:
@@ -156,9 +157,9 @@ class AdminUsersFilter {
       hadDispute: hadDispute ?? this.hadDispute,
       guiltyMinCount:
           resetGuiltyMin ? null : (guiltyMinCount ?? this.guiltyMinCount),
-      competitionId: resetCompetitionId
-          ? null
-          : (competitionId ?? this.competitionId),
+      competitionIds: resetCompetitionIds
+          ? const <String>[]
+          : (competitionIds ?? this.competitionIds),
     );
   }
 
@@ -170,7 +171,7 @@ class AdminUsersFilter {
       receivedReward ||
       hadDispute ||
       guiltyMinCount != null ||
-      competitionId != null;
+      competitionIds.isNotEmpty;
 
   @override
   bool operator ==(Object other) =>
@@ -183,7 +184,7 @@ class AdminUsersFilter {
       other.receivedReward == receivedReward &&
       other.hadDispute == hadDispute &&
       other.guiltyMinCount == guiltyMinCount &&
-      other.competitionId == competitionId;
+      _listEquals(other.competitionIds, competitionIds);
 
   @override
   int get hashCode => Object.hash(
@@ -195,8 +196,16 @@ class AdminUsersFilter {
         receivedReward,
         hadDispute,
         guiltyMinCount,
-        competitionId,
+        Object.hashAll(competitionIds),
       );
+
+  static bool _listEquals(List<String> a, List<String> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
 }
 
 /// Lot C — légère liste de compétitions pour le dropdown de filtre.

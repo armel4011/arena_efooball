@@ -39,12 +39,17 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
   bool _marketingAccepted = false;
   int _step = 0;
 
+  // Lot D.1 — Code de parrainage optionnel (ARN-XXXX) saisi au signup.
+  // Stocké en `profiles.referred_by` lors du INSERT.
+  final _referralCodeCtrl = TextEditingController();
+
   late final List<TextEditingController> _ctrls = [
     _emailCtrl,
     _passwordCtrl,
     _passwordConfirmCtrl,
     _usernameCtrl,
     _whatsappCtrl,
+    _referralCodeCtrl,
   ];
 
   @override
@@ -86,6 +91,7 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
   Future<void> _submit() async {
     final now = DateTime.now().toUtc();
     final locale = ref.read(currentLocaleProvider);
+    final referral = _referralCodeCtrl.text.trim().toUpperCase();
     await ref.read(signUpControllerProvider.notifier).signUp(
           email: _emailCtrl.text,
           password: _passwordCtrl.text,
@@ -101,6 +107,7 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
           cguVersionAccepted: _cguVersion,
           privacyPolicyAcceptedAt: now,
           marketingConsent: _marketingAccepted,
+          referredBy: referral.isEmpty ? null : referral,
         );
     if (mounted &&
         ref.read(signUpControllerProvider).hasValue &&
@@ -158,6 +165,7 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
                     isLoading: isLoading,
                   ),
                 1 => _ProfileStep(
+                  referralCodeCtrl: _referralCodeCtrl,
                     usernameCtrl: _usernameCtrl,
                     whatsappCtrl: _whatsappCtrl,
                     countryCode: _countryCode,
@@ -306,6 +314,7 @@ class _ProfileStep extends StatelessWidget {
   const _ProfileStep({
     required this.usernameCtrl,
     required this.whatsappCtrl,
+    required this.referralCodeCtrl,
     required this.countryCode,
     required this.onCountry,
     required this.avatarColor,
@@ -324,6 +333,7 @@ class _ProfileStep extends StatelessWidget {
 
   final TextEditingController usernameCtrl;
   final TextEditingController whatsappCtrl;
+  final TextEditingController referralCodeCtrl;
   final String countryCode;
   final ValueChanged<String> onCountry;
   final ArenaAvatarColor avatarColor;
@@ -399,6 +409,21 @@ class _ProfileStep extends StatelessWidget {
             selected: avatarColor,
             onSelect: onAvatarColor,
             disabled: isLoading,
+          ),
+          const SizedBox(height: ArenaSpacing.md),
+          ArenaTextField(
+            label: 'CODE DE PARRAINAGE (OPTIONNEL)',
+            hint: 'Ex. ARN-3F9A',
+            helper:
+                "Le code d'un ami ARENA. Te permet d'apparaître dans ses "
+                "parrainages — laisser vide si tu n'en as pas.",
+            controller: referralCodeCtrl,
+            prefixIcon: Icons.group_outlined,
+            enabled: !isLoading,
+            maxLength: 12,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9\-]')),
+            ],
           ),
           const SizedBox(height: ArenaSpacing.md),
           _ConsentTile(
