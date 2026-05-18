@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>ARENA — Splash D Final Preview</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --void: #0A0A0F;
+    --carbon: #14141C;
+    --bone: #F5F5F0;
+    --silver: #8B8B95;
+    --silver-dim: #5A5A65;
+    --signal-blue: #4C7AFF;
+    --neon-red: #FF2D55;
+    --status-ok: #00C896;
+    --game-efoot: #00B4D8;
+    --game-fifa: #06D6A0;
+    --game-fc: #F77F00;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #050508;
+    color: var(--bone);
+    font-family: 'Space Grotesk', sans-serif;
+    padding: 32px;
+    min-height: 100vh;
+  }
+  .header {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+  .header h1 {
+    font-family: 'Bebas Neue';
+    font-size: 42px;
+    letter-spacing: 4px;
+    background: linear-gradient(135deg, var(--signal-blue), var(--neon-red));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+  }
+  .controls {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-bottom: 32px;
+  }
+  .btn {
+    background: var(--carbon);
+    border: 1px solid var(--signal-blue);
+    color: var(--bone);
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-family: 'Space Grotesk';
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn:hover {
+    background: var(--signal-blue);
+    transform: translateY(-2px);
+  }
+  .btn.admin {
+    border-color: var(--neon-red);
+  }
+  .btn.admin:hover { background: var(--neon-red); }
+
+  .phones-row {
+    display: flex;
+    gap: 40px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .phone-container {
+    text-align: center;
+  }
+  .phone-label {
+    font-family: 'Bebas Neue';
+    font-size: 18px;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+  .phone-label.user { color: var(--signal-blue); }
+  .phone-label.admin { color: var(--neon-red); }
+
+  .phone {
+    width: 340px;
+    height: 700px;
+    background: #000;
+    border-radius: 48px;
+    padding: 10px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+    position: relative;
+    overflow: hidden;
+  }
+  .notch {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 28px;
+    background: #000;
+    border-radius: 0 0 16px 16px;
+    z-index: 100;
+  }
+  .screen {
+    width: 100%;
+    height: 100%;
+    border-radius: 38px;
+    overflow: hidden;
+    position: relative;
+    background: var(--void);
+  }
+
+  /* ════════════════════════════════════════════ */
+  /* SPLASH D ANIMATION                            */
+  /* ════════════════════════════════════════════ */
+  .splash-d {
+    width: 100%; height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+  }
+  .splash-d.user {
+    background: linear-gradient(135deg, #4C7AFF 0%, #1A2D5C 55%, #0A0A0F 100%);
+  }
+  .splash-d.admin {
+    background: linear-gradient(135deg, #FF2D55 0%, #5C1A2D 55%, #0A0A0F 100%);
+  }
+
+  /* Background stars */
+  .stars {
+    position: absolute;
+    inset: 0;
+    background-image:
+      radial-gradient(circle 1px at 20% 30%, white, transparent),
+      radial-gradient(circle 1px at 80% 60%, white, transparent),
+      radial-gradient(circle 1px at 40% 80%, white, transparent),
+      radial-gradient(circle 1px at 70% 20%, white, transparent),
+      radial-gradient(circle 1px at 10% 60%, white, transparent),
+      radial-gradient(circle 1px at 90% 90%, white, transparent),
+      radial-gradient(circle 1px at 30% 50%, white, transparent),
+      radial-gradient(circle 1px at 60% 35%, white, transparent),
+      radial-gradient(circle 1px at 50% 15%, white, transparent);
+    opacity: 0;
+    animation: stars-fade 5.3s ease-in-out forwards;
+  }
+  @keyframes stars-fade {
+    0% { opacity: 0; }
+    30% { opacity: 0.3; }
+    70% { opacity: 0.7; }
+    90% { opacity: 0.7; }
+    100% { opacity: 0; }
+  }
+
+  /* Spark (Phase 1) */
+  .spark {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background: white;
+    border-radius: 50%;
+    box-shadow:
+      0 0 40px white,
+      0 0 80px #4C7AFF;
+    transform: scale(0);
+    animation: spark-anim 5.3s ease-out forwards;
+  }
+  .admin .spark {
+    box-shadow: 0 0 40px white, 0 0 80px #FF2D55;
+  }
+  @keyframes spark-anim {
+    0% { transform: scale(0); opacity: 0; }
+    5% { transform: scale(0); opacity: 0; }
+    10% { transform: scale(1.5); opacity: 1; }
+    18% { transform: scale(4); opacity: 0.6; }
+    25% { transform: scale(0); opacity: 0; }
+    100% { transform: scale(0); opacity: 0; }
+  }
+
+  /* Logo container */
+  .logo-container {
+    position: relative;
+    z-index: 2;
+    opacity: 0;
+    transform: scale(0.5);
+    animation: logo-anim 5.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+  @keyframes logo-anim {
+    0%, 19% { opacity: 0; transform: scale(0.5); }
+    23% { opacity: 0.5; transform: scale(0.9); }
+    28% { opacity: 1; transform: scale(1.1); }
+    32% { opacity: 1; transform: scale(1); }
+    85% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(0.95); }
+  }
+  .logo-svg {
+    width: 180px;
+    height: 180px;
+  }
+
+  /* Text section */
+  .text-section {
+    margin-top: 24px;
+    text-align: center;
+    z-index: 2;
+    opacity: 0;
+    transform: translateY(20px);
+    animation: text-anim 5.3s ease-out forwards;
+  }
+  @keyframes text-anim {
+    0%, 38% { opacity: 0; transform: translateY(20px); }
+    47% { opacity: 1; transform: translateY(0); }
+    85% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-10px); }
+  }
+  .text-brand {
+    font-family: 'Bebas Neue';
+    font-size: 44px;
+    color: white;
+    letter-spacing: 8px;
+    font-weight: 700;
+  }
+  .text-tagline {
+    font-family: 'Instrument Serif';
+    font-size: 13px;
+    font-style: italic;
+    color: rgba(255,255,255,0.7);
+    letter-spacing: 1.5px;
+    margin-top: 4px;
+  }
+
+  /* Games row (Phase 4) */
+  .games-row {
+    display: flex;
+    gap: 16px;
+    margin-top: 32px;
+    z-index: 2;
+    opacity: 0;
+    transform: translateY(20px);
+    animation: games-anim 5.3s ease-out forwards;
+  }
+  @keyframes games-anim {
+    0%, 53% { opacity: 0; transform: translateY(20px); }
+    62% { opacity: 1; transform: translateY(0); }
+    85% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-10px); }
+  }
+  .game-badge {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Bebas Neue';
+    font-size: 12px;
+    color: white;
+    letter-spacing: 1px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  .game-badge.efoot { background: var(--game-efoot); box-shadow: 0 4px 12px rgba(0,180,216,0.4); }
+  .game-badge.fifa { background: var(--game-fifa); box-shadow: 0 4px 12px rgba(6,214,160,0.4); }
+  .game-badge.fc { background: var(--game-fc); box-shadow: 0 4px 12px rgba(247,127,0,0.4); }
+
+  /* Timeline indicator (educational) */
+  .timeline {
+    max-width: 800px;
+    margin: 50px auto 0;
+    padding: 24px;
+    background: var(--carbon);
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .timeline-title {
+    font-family: 'Bebas Neue';
+    font-size: 18px;
+    letter-spacing: 2px;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+  .timeline-bar {
+    position: relative;
+    height: 40px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .phase {
+    position: absolute;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 600;
+    color: white;
+  }
+  .phase.p1 { left: 0%; width: 20%; background: rgba(255,255,255,0.2); }
+  .phase.p2 { left: 20%; width: 25%; background: var(--signal-blue); }
+  .phase.p3 { left: 45%; width: 15%; background: rgba(255,45,85,0.6); }
+  .phase.p4 { left: 60%; width: 15%; background: rgba(6,214,160,0.6); }
+  .phase.p5 { left: 75%; width: 20%; background: rgba(255,255,255,0.1); }
+  .phase.p6 { left: 95%; width: 5%; background: rgba(255,255,255,0.05); }
+
+  .phase-legend {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+    font-size: 11px;
+    color: var(--silver);
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  .info {
+    background: rgba(76,122,255,0.05);
+    border: 1px solid rgba(76,122,255,0.2);
+    border-radius: 12px;
+    padding: 16px;
+    margin: 32px auto;
+    max-width: 800px;
+    color: var(--silver);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .info strong { color: var(--bone); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>ARENA — SPLASH D FINAL</h1>
+  <p style="color: var(--silver);">Animation cinématique 5.3 secondes • USER & ADMIN côte à côte</p>
+</div>
+
+<div class="controls">
+  <button class="btn" onclick="replay()">🔄 Rejouer l'animation</button>
+</div>
+
+<div class="phones-row">
+
+  <!-- USER -->
+  <div class="phone-container">
+    <div class="phone-label user">USER</div>
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="screen" id="screen-user">
+        <div class="splash-d user">
+          <div class="stars"></div>
+          <div class="spark"></div>
+          <div class="logo-container">
+            <svg class="logo-svg" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+              <g>
+                <circle cx="120" cy="340" r="9" fill="white" opacity="0.4"/>
+                <circle cx="95" cy="410" r="11" fill="white" opacity="0.4"/>
+                <circle cx="70" cy="480" r="13" fill="white" opacity="0.4"/>
+                <circle cx="95" cy="550" r="11" fill="white" opacity="0.4"/>
+                <circle cx="120" cy="620" r="9" fill="white" opacity="0.4"/>
+              </g>
+              <polygon points="180,260 340,260 540,420 340,580 180,580 380,420" fill="white"/>
+              <polygon points="340,260 480,260 680,420 480,580 340,580 540,420" fill="#FF2D55"/>
+              <polygon points="480,260 620,260 820,420 620,580 480,580 680,420" fill="white" opacity="0.55"/>
+            </svg>
+          </div>
+          <div class="text-section">
+            <div class="text-brand">ARENA</div>
+            <div class="text-tagline">SEUL LE TALENT EST RÉCOMPENSÉ...</div>
+          </div>
+          <div class="games-row">
+            <div class="game-badge efoot">EFB</div>
+            <div class="game-badge fifa">FIFA</div>
+            <div class="game-badge fc">FC</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN -->
+  <div class="phone-container">
+    <div class="phone-label admin">ADMIN</div>
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="screen" id="screen-admin">
+        <div class="splash-d admin">
+          <div class="stars"></div>
+          <div class="spark"></div>
+          <div class="logo-container">
+            <svg class="logo-svg" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+              <g>
+                <circle cx="120" cy="340" r="9" fill="white" opacity="0.4"/>
+                <circle cx="95" cy="410" r="11" fill="white" opacity="0.4"/>
+                <circle cx="70" cy="480" r="13" fill="white" opacity="0.4"/>
+                <circle cx="95" cy="550" r="11" fill="white" opacity="0.4"/>
+                <circle cx="120" cy="620" r="9" fill="white" opacity="0.4"/>
+              </g>
+              <polygon points="180,260 340,260 540,420 340,580 180,580 380,420" fill="white"/>
+              <polygon points="340,260 480,260 680,420 480,580 340,580 540,420" fill="#4C7AFF"/>
+              <polygon points="480,260 620,260 820,420 620,580 480,580 680,420" fill="white" opacity="0.55"/>
+            </svg>
+          </div>
+          <div class="text-section">
+            <div class="text-brand">ADMIN</div>
+            <div class="text-tagline">CONSOLE DE GESTION ARENA</div>
+          </div>
+          <div class="games-row">
+            <div class="game-badge efoot">EFB</div>
+            <div class="game-badge fifa">FIFA</div>
+            <div class="game-badge fc">FC</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Timeline -->
+<div class="timeline">
+  <div class="timeline-title">⏱ TIMELINE DE L'ANIMATION</div>
+  <div class="timeline-bar">
+    <div class="phase p1">0-1.0s · Spark</div>
+    <div class="phase p2">1.0-2.2s · Logo</div>
+    <div class="phase p3">2.2-3.0s · Text</div>
+    <div class="phase p4">3.0-3.8s · Games</div>
+    <div class="phase p5">3.8-4.7s · Pause</div>
+    <div class="phase p6"></div>
+  </div>
+  <div class="phase-legend">
+    <div class="legend-item"><div class="legend-dot" style="background: rgba(255,255,255,0.5);"></div>Phase 1 : Spark</div>
+    <div class="legend-item"><div class="legend-dot" style="background: var(--signal-blue);"></div>Phase 2 : Logo</div>
+    <div class="legend-item"><div class="legend-dot" style="background: var(--neon-red);"></div>Phase 3 : Texte</div>
+    <div class="legend-item"><div class="legend-dot" style="background: var(--game-fifa);"></div>Phase 4 : Jeux</div>
+    <div class="legend-item"><div class="legend-dot" style="background: rgba(255,255,255,0.2);"></div>Phase 5 : Pause + Exit</div>
+  </div>
+</div>
+
+<div class="info">
+  <strong>💡 Astuce du widget :</strong> au <strong>premier lancement</strong>, l'animation cinématique complète se joue (5.3s).
+  Aux <strong>lancements suivants</strong>, un splash court de 1.5s s'affiche pour ne pas faire perdre du temps à l'utilisateur.
+  Cette détection se fait via <code style="background: var(--carbon); padding: 2px 6px; border-radius: 4px;">SharedPreferences</code> dans <code>splash_router.dart</code>.
+</div>
+
+<script>
+function replay() {
+  const screens = [document.getElementById('screen-user'), document.getElementById('screen-admin')];
+  screens.forEach(screen => {
+    const parent = screen.parentNode;
+    const clone = screen.cloneNode(true);
+    parent.replaceChild(clone, screen);
+  });
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,229 @@
+# ════════════════════════════════════════════════════════════════════
+# ARENA — Configuration combinée Icônes + Splash
+# ════════════════════════════════════════════════════════════════════
+# À AJOUTER dans le pubspec.yaml du projet (sans casser ce qui existe)
+# ════════════════════════════════════════════════════════════════════
+
+
+# ─────────────────────────────────────────────────────────────────────
+# 1. AJOUTER DANS dependencies:
+# ─────────────────────────────────────────────────────────────────────
+dependencies:
+  flutter:
+    sdk: flutter
+  # ... tes dépendances existantes
+  flutter_riverpod: ^2.4.10        # Pour SplashRouter (probablement déjà présent)
+  shared_preferences: ^2.2.2       # Pour détecter le 1er lancement
+  google_fonts: ^6.2.1             # Bebas Neue, Instrument Serif, Space Grotesk
+
+
+# ─────────────────────────────────────────────────────────────────────
+# 2. AJOUTER DANS dev_dependencies:
+# ─────────────────────────────────────────────────────────────────────
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  # ... tes dev_dependencies existantes
+  flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.4.1
+
+
+# ─────────────────────────────────────────────────────────────────────
+# 3. CONFIG flutter_launcher_icons (au niveau racine du pubspec)
+#    → Pour le flavor USER par défaut
+# ─────────────────────────────────────────────────────────────────────
+flutter_launcher_icons:
+  android: "ic_launcher"
+  ios: true
+  image_path: "assets/icons/arena_user_1024.png"
+
+  # Adaptive icon Android 8+
+  adaptive_icon_background: "assets/icons/adaptive/user/ic_launcher_background.png"
+  adaptive_icon_foreground: "assets/icons/adaptive/user/ic_launcher_foreground.png"
+  adaptive_icon_monochrome: "assets/icons/adaptive/user/ic_launcher_monochrome.png"
+
+  # iOS strict (App Store rejette si alpha)
+  remove_alpha_ios: true
+
+  # Web PWA
+  web:
+    generate: true
+    image_path: "assets/icons/arena_user_1024.png"
+    background_color: "#0A0A0F"
+    theme_color: "#4C7AFF"
+
+
+# ─────────────────────────────────────────────────────────────────────
+# 4. CONFIG flutter_native_splash (au niveau racine)
+#    → Pour le flavor USER par défaut
+# ─────────────────────────────────────────────────────────────────────
+flutter_native_splash:
+  # Couleur de fond (matche le coin haut-gauche du dégradé)
+  color: "#4C7AFF"
+  
+  # Image plein écran (Android < 12 + iOS)
+  image: "assets/splash/splash_user.png"
+  
+  # Android 12+ : juste l'icône centrée
+  android_12:
+    image: "assets/splash/splash_icon_user.png"
+    color: "#0A0A0F"
+    icon_background_color: "#4C7AFF"
+  
+  ios: true
+  ios_content_mode: scaleAspectFill
+  android: true
+  android_gravity: fill
+  fullscreen: true
+  
+  # Web
+  web: true
+  web_image_mode: cover
+
+
+# ─────────────────────────────────────────────────────────────────────
+# 5. SECTION flutter.assets (déclarer les dossiers)
+# ─────────────────────────────────────────────────────────────────────
+flutter:
+  uses-material-design: true
+  
+  assets:
+    - assets/icons/
+    - assets/icons/adaptive/user/
+    - assets/icons/adaptive/admin/
+    - assets/splash/
+    # ... tes autres assets existants
+
+
+# ════════════════════════════════════════════════════════════════════
+# FICHIERS SÉPARÉS À CRÉER POUR LE FLAVOR ADMIN
+# ════════════════════════════════════════════════════════════════════
+
+
+# ─────────────────────────────────────────────────────────────────────
+# 6. FICHIER : flutter_launcher_icons-admin.yaml (à créer à la racine)
+# ─────────────────────────────────────────────────────────────────────
+# COPIER CE CONTENU dans un fichier nommé flutter_launcher_icons-admin.yaml :
+#
+# flutter_launcher_icons:
+#   android: "ic_launcher"
+#   ios: true
+#   image_path: "assets/icons/arena_admin_1024.png"
+#   adaptive_icon_background: "assets/icons/adaptive/admin/ic_launcher_background.png"
+#   adaptive_icon_foreground: "assets/icons/adaptive/admin/ic_launcher_foreground.png"
+#   adaptive_icon_monochrome: "assets/icons/adaptive/admin/ic_launcher_monochrome.png"
+#   remove_alpha_ios: true
+
+
+# ─────────────────────────────────────────────────────────────────────
+# 7. FICHIER : flutter_native_splash-admin.yaml (à créer à la racine)
+# ─────────────────────────────────────────────────────────────────────
+# COPIER CE CONTENU dans un fichier nommé flutter_native_splash-admin.yaml :
+#
+# flutter_native_splash:
+#   color: "#FF2D55"
+#   image: "assets/splash/splash_admin.png"
+#   android_12:
+#     image: "assets/splash/splash_icon_admin.png"
+#     color: "#0A0A0F"
+#     icon_background_color: "#FF2D55"
+#   ios: true
+#   ios_content_mode: scaleAspectFill
+#   android: true
+#   android_gravity: fill
+#   fullscreen: true
+
+
+# ════════════════════════════════════════════════════════════════════
+# COMMANDES À LANCER DANS L'ORDRE
+# ════════════════════════════════════════════════════════════════════
+#
+# 1. flutter pub get
+#
+# 2. Générer icônes USER (default config)
+#    flutter pub run flutter_launcher_icons
+#
+# 3. Générer icônes ADMIN
+#    flutter pub run flutter_launcher_icons -f flutter_launcher_icons-admin.yaml
+#
+# 4. Générer splash USER
+#    flutter pub run flutter_native_splash:create
+#
+# 5. Générer splash ADMIN
+#    flutter pub run flutter_native_splash:create --path=flutter_native_splash-admin.yaml
+#
+# 6. flutter clean && flutter pub get
+#
+# 7. flutter run --flavor user   (ou simplement flutter run si pas de flavors)
+#    flutter run --flavor admin
+
+
+# ════════════════════════════════════════════════════════════════════
+# INTÉGRATION main.dart
+# ════════════════════════════════════════════════════════════════════
+#
+# Voir lib/features/splash/splash_screen.dart et splash_router.dart
+# 
+# Dans le main.dart, le pattern est :
+#
+# import 'package:flutter/material.dart';
+# import 'package:flutter/services.dart';
+# import 'package:flutter_native_splash/flutter_native_splash.dart';
+# import 'package:flutter_riverpod/flutter_riverpod.dart';
+# import 'features/splash/splash_router.dart';
+#
+# void main() async {
+#   final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+#   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+#   
+#   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+#   
+#   // Tes initialisations (Supabase, Firebase, etc.)
+#   
+#   runApp(const ProviderScope(child: ArenaApp()));
+#   FlutterNativeSplash.remove();
+# }
+#
+# class ArenaApp extends StatelessWidget {
+#   @override
+#   Widget build(BuildContext context) {
+#     return MaterialApp(
+#       // ... ta config existante
+#       home: const SplashPage(
+#         isAdmin: false,        // ou true selon le flavor
+#         nextRoute: '/login',   // adapte selon ton routing
+#       ),
+#     );
+#   }
+# }
+
+
+# ════════════════════════════════════════════════════════════════════
+# RÉCAPITULATIF FICHIERS GÉNÉRÉS AUTOMATIQUEMENT
+# ════════════════════════════════════════════════════════════════════
+#
+# Après les commandes ci-dessus, ces fichiers existeront automatiquement :
+#
+# Android (icônes) :
+# - android/app/src/main/res/mipmap-mdpi/ic_launcher.png         48×48
+# - android/app/src/main/res/mipmap-hdpi/ic_launcher.png         72×72
+# - android/app/src/main/res/mipmap-xhdpi/ic_launcher.png        96×96
+# - android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png       144×144
+# - android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png      192×192
+# - android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml   (adaptive)
+#
+# Android (splash) :
+# - android/app/src/main/res/drawable*/launch_background.xml
+# - android/app/src/main/res/drawable*/splash.png (différentes densités)
+#
+# iOS (icônes) :
+# - ios/Runner/Assets.xcassets/AppIcon.appiconset/
+#   ├── Icon-App-1024x1024@1x.png
+#   ├── Icon-App-60x60@2x.png  (=120×120)
+#   ├── Icon-App-60x60@3x.png  (=180×180)
+#   ├── ... (13 fichiers au total)
+#   └── Contents.json
+#
+# iOS (splash) :
+# - ios/Runner/Assets.xcassets/LaunchImage.imageset/
+# - ios/Runner/Base.lproj/LaunchScreen.storyboard
