@@ -1,15 +1,15 @@
-import 'dart:io';
+import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/admin/super_admin_dashboard_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:csv/csv.dart';
+import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 
 /// PHASE 11 · SA4 — super-admin revenue & accounting.
 ///
@@ -98,12 +98,14 @@ class SuperAdminRevenue extends ConsumerWidget {
   }
 
   /// Lot B.3 — Génère un CSV avec la décomposition + la table par
-  /// compétition, écrit en cache temp + déclenche le sheet de partage
-  /// natif (`share_plus`).
+  /// compétition et déclenche un téléchargement natif via `file_saver`.
+  /// Sur Android, le fichier est écrit dans `Downloads/` (MediaStore
+  /// API) ; sur iOS il ouvre le picker "Enregistrer dans Fichiers".
   Future<void> _exportCsv(BuildContext context, WidgetRef ref) async {
     final scaffold = ScaffoldMessenger.of(context);
     try {
-      final breakdown = await ref.read(superAdminRevenueBreakdownProvider.future);
+      final breakdown =
+          await ref.read(superAdminRevenueBreakdownProvider.future);
       final perComp =
           await ref.read(superAdminRevenuePerCompetitionProvider.future);
       final period = ref.read(selectedRevenuePeriodProvider);
@@ -134,14 +136,22 @@ class SuperAdminRevenue extends ConsumerWidget {
       ];
 
       final csv = const ListToCsvConverter().convert(rows);
-      final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/arena-revenue-$periodLabel.csv');
-      await file.writeAsString(csv);
+      // BOM UTF-8 pour qu'Excel ouvre les caractères accentués correctement
+      final bytes = Uint8List.fromList([0xEF, 0xBB, 0xBF, ...utf8.encode(csv)]);
 
-      await Share.shareXFiles(
-        [XFile(file.path, mimeType: 'text/csv')],
-        subject: 'ARENA revenue $periodLabel',
-        text: 'Export comptable ARENA — période $periodLabel.',
+      final savedPath = await FileSaver.instance.saveFile(
+        name: 'arena-revenue-$periodLabel',
+        bytes: bytes,
+        ext: 'csv',
+        mimeType: MimeType.csv,
+      );
+
+      scaffold.showSnackBar(
+        SnackBar(
+          content: Text('CSV téléchargé : $savedPath'),
+          backgroundColor: ArenaColors.statusOk,
+          duration: const Duration(seconds: 5),
+        ),
       );
     } catch (e) {
       scaffold.showSnackBar(
