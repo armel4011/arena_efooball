@@ -110,10 +110,6 @@ dependencies:
   # ─── PHASE 12.5 — Chat présence + typing (Agora RTM) ───────
   agora_rtm: ^2.2.6
 
-  # ─── Cold-start splash (branding pack v2 — preserve/remove) ──
-  # Importé dans bootstrap.dart pour pont entre splash natif et SplashPage.
-  flutter_native_splash: ^2.4.1
-
   # ─── DEFERRED (à activer dans leur PHASE) ──────────────────
   #
   # PHASE 2.3 — Apple SSO (compte Apple Developer requis)
@@ -164,8 +160,7 @@ dev_dependencies:
   # ─── Build flavors ─────────────────────────────────────────
   flutter_flavorizr: ^2.2.3
 
-  # ─── Branding pack v2 (icônes Vector Strike F2 + splash D) ──
-  # flutter_native_splash est en `dependencies` (importé au runtime).
+  # ─── Branding pack v2 (icônes Vector Strike F2) ─────────────
   # Génération : voir docs/BRANDING.md
   flutter_launcher_icons: ^0.13.1
 
@@ -182,9 +177,6 @@ flutter:
     - assets/animations/
     - assets/translations/
     - assets/icons/
-    - assets/icons/adaptive/user/
-    - assets/icons/adaptive/admin/
-    - assets/splash/
 
 # ─────────────────────────────────────────────────────────────────
 # Branding pack v2 — App icons USER (config par défaut)
@@ -204,23 +196,3 @@ flutter_launcher_icons:
     image_path: "assets/icons/arena_user_1024.png"
     background_color: "#0A0A0F"
     theme_color: "#4C7AFF"
-
-# ─────────────────────────────────────────────────────────────────
-# Branding pack v2 — Cold-start splash USER (Splash D)
-# ─────────────────────────────────────────────────────────────────
-# Génération : flutter pub run flutter_native_splash:create
-# Variante ADMIN : flutter_native_splash-admin.yaml à la racine.
-flutter_native_splash:
-  color: "#4C7AFF"
-  image: "assets/splash/splash_user.png"
-  android_12:
-    image: "assets/splash/splash_icon_user.png"
-    color: "#0A0A0F"
-    icon_background_color: "#4C7AFF"
-  ios: true
-  ios_content_mode: scaleAspectFill
-  android: true
-  android_gravity: fill
-  fullscreen: true
-  web: true
-  web_image_mode: cover

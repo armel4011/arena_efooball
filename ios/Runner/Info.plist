@@ -1,99 +1,97 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-	<dict>
-		<key>CADisableMinimumFrameDurationOnPhone</key>
-		<true/>
-		<key>CFBundleDevelopmentRegion</key>
-		<string>$(DEVELOPMENT_LANGUAGE)</string>
-		<key>CFBundleDisplayName</key>
-		<string>Arena</string>
-		<key>CFBundleExecutable</key>
-		<string>$(EXECUTABLE_NAME)</string>
-		<key>CFBundleIdentifier</key>
-		<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-		<key>CFBundleInfoDictionaryVersion</key>
-		<string>6.0</string>
-		<key>CFBundleName</key>
-		<string>arena</string>
-		<key>CFBundlePackageType</key>
-		<string>APPL</string>
-		<key>CFBundleShortVersionString</key>
-		<string>$(FLUTTER_BUILD_NAME)</string>
-		<key>CFBundleSignature</key>
-		<string>????</string>
-		<key>CFBundleVersion</key>
-		<string>$(FLUTTER_BUILD_NUMBER)</string>
-		<key>CFBundleURLTypes</key>
-		<array>
-			<dict>
-				<key>CFBundleURLName</key>
-				<string>com.arena.app</string>
-				<key>CFBundleURLSchemes</key>
-				<array>
-					<string>com.arena.app</string>
-				</array>
-			</dict>
-		</array>
-		<key>LSRequiresIPhoneOS</key>
-		<true/>
-		<key>UIApplicationSceneManifest</key>
+<dict>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>Arena</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>arena</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(FLUTTER_BUILD_NAME)</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	<key>CFBundleVersion</key>
+	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
 		<dict>
-			<key>UIApplicationSupportsMultipleScenes</key>
-			<false/>
-			<key>UISceneConfigurations</key>
-			<dict>
-				<key>UIWindowSceneSessionRoleApplication</key>
-				<array>
-					<dict>
-						<key>UISceneClassName</key>
-						<string>UIWindowScene</string>
-						<key>UISceneConfigurationName</key>
-						<string>flutter</string>
-						<key>UISceneDelegateClassName</key>
-						<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
-						<key>UISceneStoryboardFile</key>
-						<string>Main</string>
-					</dict>
-				</array>
-			</dict>
+			<key>CFBundleURLName</key>
+			<string>com.arena.app</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.arena.app</string>
+			</array>
 		</dict>
-		<key>UIApplicationSupportsIndirectInputEvents</key>
-		<true/>
-		<key>UILaunchStoryboardName</key>
-		<string>LaunchScreen</string>
-		<key>UIMainStoryboardFile</key>
-		<string>Main</string>
-		<key>UISupportedInterfaceOrientations</key>
-		<array>
-			<string>UIInterfaceOrientationPortrait</string>
-			<string>UIInterfaceOrientationLandscapeLeft</string>
-			<string>UIInterfaceOrientationLandscapeRight</string>
-		</array>
-		<key>UISupportedInterfaceOrientations~ipad</key>
-		<array>
-			<string>UIInterfaceOrientationPortrait</string>
-			<string>UIInterfaceOrientationPortraitUpsideDown</string>
-			<string>UIInterfaceOrientationLandscapeLeft</string>
-			<string>UIInterfaceOrientationLandscapeRight</string>
-		</array>
-		<!-- PHASE 8 — Permissions natives anti-cheat + streaming -->
-		<key>NSCameraUsageDescription</key>
-		<string>ARENA utilise la caméra uniquement pendant les diffusions live des finales pour permettre aux spectateurs de vous voir.</string>
-		<key>NSMicrophoneUsageDescription</key>
-		<string>ARENA enregistre l'audio pendant vos matchs comme preuve anti-triche et lors des streams live.</string>
-		<key>NSPhotoLibraryUsageDescription</key>
-		<string>ARENA accède à votre galerie pour vous permettre d'envoyer manuellement la vidéo de votre match en cas de litige.</string>
-		<key>NSPhotoLibraryAddUsageDescription</key>
-		<string>ARENA peut sauvegarder dans votre galerie la vidéo de votre match pour vos archives personnelles.</string>
-		<!-- PHASE 8.7 — Streaming Agora en arrière-plan (audio uniquement) -->
-		<key>UIBackgroundModes</key>
-		<array>
-			<string>audio</string>
-		</array>
-		<key>UIStatusBarHidden</key>
-		<true/>
-		<key>UIViewControllerBasedStatusBarAppearance</key>
+	</array>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
 		<false/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneClassName</key>
+					<string>UIWindowScene</string>
+					<key>UISceneConfigurationName</key>
+					<string>flutter</string>
+					<key>UISceneDelegateClassName</key>
+					<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
+					<key>UISceneStoryboardFile</key>
+					<string>Main</string>
+				</dict>
+			</array>
+		</dict>
 	</dict>
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>UIMainStoryboardFile</key>
+	<string>Main</string>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+
+	<!-- PHASE 8 — Permissions natives anti-cheat + streaming -->
+	<key>NSCameraUsageDescription</key>
+	<string>ARENA utilise la caméra uniquement pendant les diffusions live des finales pour permettre aux spectateurs de vous voir.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>ARENA enregistre l'audio pendant vos matchs comme preuve anti-triche et lors des streams live.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>ARENA accède à votre galerie pour vous permettre d'envoyer manuellement la vidéo de votre match en cas de litige.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>ARENA peut sauvegarder dans votre galerie la vidéo de votre match pour vos archives personnelles.</string>
+
+	<!-- PHASE 8.7 — Streaming Agora en arrière-plan (audio uniquement) -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+	</array>
+</dict>
 </plist>
