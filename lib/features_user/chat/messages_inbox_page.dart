@@ -260,10 +260,14 @@ class _DirectTab extends ConsumerWidget {
                           color: ArenaColors.neonRed,
                         ),
                       ),
-                      confirmDismiss: (_) =>
-                          _confirmDeleteConversation(ctx),
-                      onDismissed: (_) =>
-                          _onDeleteFriendChannel(ctx, ref, fc.channelId),
+                      // Tout dans confirmDismiss : confirm + delete +
+                      // invalidate AVANT le return true, sinon
+                      // "Dismissible widget still part of the tree".
+                      confirmDismiss: (_) => _confirmAndDeleteFriendChannel(
+                        ctx,
+                        ref,
+                        fc.channelId,
+                      ),
                       child: _FriendThreadRow(
                         friendshipId: fc.friendshipId,
                         peer: it.peer,
@@ -287,9 +291,11 @@ class _DirectTab extends ConsumerWidget {
                         color: ArenaColors.neonRed,
                       ),
                     ),
-                    confirmDismiss: (_) => _confirmDeleteConversation(ctx),
-                    onDismissed: (_) =>
-                        _onDeleteConversation(ctx, ref, m.id),
+                    confirmDismiss: (_) => _confirmAndDeleteMatchConversation(
+                      ctx,
+                      ref,
+                      m.id,
+                    ),
                     child: _MatchThreadRow(
                       match: m,
                       opponent: it.peer,
@@ -305,7 +311,8 @@ class _DirectTab extends ConsumerWidget {
     );
   }
 
-  Future<bool> _confirmDeleteConversation(BuildContext context) async {
+  /// Dialog de confirmation simple (réutilisable).
+  Future<bool> _confirmDelete(BuildContext context) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -313,7 +320,7 @@ class _DirectTab extends ConsumerWidget {
         title: const Text('Supprimer cette conversation ?'),
         content: const Text(
           'La conversation sera retirée de ton inbox. Tu peux la retrouver '
-          'en rouvrant le chat depuis la salle de match.',
+          'en rouvrant le chat plus tard.',
         ),
         actions: [
           TextButton(
@@ -331,37 +338,49 @@ class _DirectTab extends ConsumerWidget {
     return ok ?? false;
   }
 
-  Future<void> _onDeleteConversation(
+  /// `confirmDismiss` unifié pour match : confirme + delete + invalidate
+  /// AVANT le return true, sinon Dismissible reste dans l'arbre après
+  /// dismiss async → Flutter throw.
+  Future<bool> _confirmAndDeleteMatchConversation(
     BuildContext context,
     WidgetRef ref,
     String matchId,
   ) async {
     final messenger = ScaffoldMessenger.of(context);
+    final confirmed = await _confirmDelete(context);
+    if (!confirmed) return false;
     try {
       final repo = ref.read(chatRepositoryProvider);
       final channel = await repo.ensureMatchChannel(matchId);
       await repo.softDeleteChannel(channel.id);
       ref.invalidate(myOpenedMatchChannelIdsProvider);
+      return true;
     } catch (e) {
       messenger.showSnackBar(
         SnackBar(content: Text('Échec : ${arenaErrorMessage(e)}')),
       );
+      return false;
     }
   }
 
-  Future<void> _onDeleteFriendChannel(
+  /// Idem pour friend channel.
+  Future<bool> _confirmAndDeleteFriendChannel(
     BuildContext context,
     WidgetRef ref,
     String channelId,
   ) async {
     final messenger = ScaffoldMessenger.of(context);
+    final confirmed = await _confirmDelete(context);
+    if (!confirmed) return false;
     try {
       await ref.read(chatRepositoryProvider).softDeleteChannel(channelId);
       ref.invalidate(myFriendChannelsProvider);
+      return true;
     } catch (e) {
       messenger.showSnackBar(
         SnackBar(content: Text('Échec : ${arenaErrorMessage(e)}')),
       );
+      return false;
     }
   }
 
