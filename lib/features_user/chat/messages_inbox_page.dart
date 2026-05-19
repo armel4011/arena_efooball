@@ -352,7 +352,7 @@ class _DirectTab extends ConsumerWidget {
     try {
       final repo = ref.read(chatRepositoryProvider);
       final channel = await repo.ensureMatchChannel(matchId);
-      await repo.softDeleteChannel(channel.id);
+      await repo.deleteChannel(channel.id);
       ref.invalidate(myOpenedMatchChannelIdsProvider);
       return true;
     } catch (e) {
@@ -373,7 +373,7 @@ class _DirectTab extends ConsumerWidget {
     final confirmed = await _confirmDelete(context);
     if (!confirmed) return false;
     try {
-      await ref.read(chatRepositoryProvider).softDeleteChannel(channelId);
+      await ref.read(chatRepositoryProvider).deleteChannel(channelId);
       ref.invalidate(myFriendChannelsProvider);
       return true;
     } catch (e) {

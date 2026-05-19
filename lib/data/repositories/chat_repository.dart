@@ -220,15 +220,17 @@ class ChatRepository {
         .eq('id', messageId);
   }
 
-  /// Soft-delete d'une conversation par un membre. Pose `deleted_at =
-  /// now()` ; la conv reste pour l'autre user (semantique WhatsApp :
-  /// "supprimer pour moi"). Stockage individuel à implémenter en V2 ;
-  /// V1 = global hide.
-  Future<void> softDeleteChannel(String channelId) async {
-    await _client
-        .from(_channelsTable)
-        .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
-        .eq('id', channelId);
+  /// Hard delete d'un chat channel par un membre (sémantique WhatsApp
+  /// "Supprimer pour tout le monde"). La FK chat_messages.channel_id
+  /// est ON DELETE CASCADE → les messages disparaissent automatiquement.
+  /// ensureMatchChannel/ensureFriendChannel créeront un nouveau channel
+  /// au prochain accès → fresh start sans historique.
+  ///
+  /// V2 follow-up : feature "Supprimer pour moi seulement" via une
+  /// table chat_channel_hidden (user_id, channel_id) qui filtrerait
+  /// côté inbox sans toucher au channel partagé.
+  Future<void> deleteChannel(String channelId) async {
+    await _client.from(_channelsTable).delete().eq('id', channelId);
   }
 
   /// Get-or-create un channel `type='friend'` pour la friendship donnée.
