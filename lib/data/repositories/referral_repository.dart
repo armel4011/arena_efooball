@@ -99,3 +99,11 @@ final myReferralCodeProvider = FutureProvider<String?>((ref) async {
       .maybeSingle();
   return row?['referral_code'] as String?;
 });
+
+/// Nombre de filleuls actifs du user courant (Item 2 prompt 2026-05-19).
+/// `.autoDispose` car ne sert que sur la page Profil.
+final myReferralCountProvider = FutureProvider.autoDispose<int>((ref) async {
+  final userId = ref.watch(currentSessionProvider)?.user.id;
+  if (userId == null) return 0;
+  return ref.watch(referralRepositoryProvider).countMyReferrals(userId);
+});

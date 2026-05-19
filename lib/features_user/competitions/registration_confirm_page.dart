@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Final inscription confirmation before payment (PHASE 4 + 11bis).
 ///
@@ -33,6 +34,8 @@ class RegistrationConfirmPage extends ConsumerStatefulWidget {
     required this.entryFeeXaf,
     required this.totalPrizeXaf,
     required this.prizeDistribution,
+    this.androidStoreUrl,
+    this.iosStoreUrl,
     super.key,
   });
 
@@ -47,6 +50,10 @@ class RegistrationConfirmPage extends ConsumerStatefulWidget {
 
   /// Pourcentages de gains par rang, fournis par la compétition.
   final List<int> prizeDistribution;
+
+  /// Item 1 prompt 2026-05-19 — liens stores du jeu (null = pas affiché).
+  final String? androidStoreUrl;
+  final String? iosStoreUrl;
 
   @override
   ConsumerState<RegistrationConfirmPage> createState() =>
@@ -108,6 +115,16 @@ class _RegistrationConfirmPageState
               ReferralProgressCard(
                 competitionId: widget.competitionId,
                 referralQuota: eligibility.target,
+              ),
+            ],
+            if (widget.androidStoreUrl != null ||
+                widget.iosStoreUrl != null) ...[
+              const SizedBox(height: ArenaSpacing.lg),
+              const _SectionLabel('Télécharger le jeu'),
+              const SizedBox(height: ArenaSpacing.sm),
+              _StoreButtons(
+                androidUrl: widget.androidStoreUrl,
+                iosUrl: widget.iosStoreUrl,
               ),
             ],
             const SizedBox(height: ArenaSpacing.lg),
@@ -447,4 +464,61 @@ String _formatXaf(int amount) {
     buf.write(s[i]);
   }
   return buf.toString();
+}
+
+/// 2 boutons stores (Item 1 prompt 2026-05-19). Affichés en Row quand
+/// les 2 sont présents, l'un en dessous de l'autre sinon.
+class _StoreButtons extends StatelessWidget {
+  const _StoreButtons({this.androidUrl, this.iosUrl});
+
+  final String? androidUrl;
+  final String? iosUrl;
+
+  Future<void> _open(BuildContext context, String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Impossible d'ouvrir le lien.")),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasAndroid = androidUrl != null && androidUrl!.isNotEmpty;
+    final hasIos = iosUrl != null && iosUrl!.isNotEmpty;
+    if (!hasAndroid && !hasIos) return const SizedBox.shrink();
+
+    final androidBtn = hasAndroid
+        ? ArenaButton(
+            label: 'Play Store',
+            icon: Icons.android,
+            fullWidth: true,
+            variant: ArenaButtonVariant.secondary,
+            onPressed: () => _open(context, androidUrl!),
+          )
+        : null;
+    final iosBtn = hasIos
+        ? ArenaButton(
+            label: 'App Store',
+            icon: Icons.apple,
+            fullWidth: true,
+            variant: ArenaButtonVariant.secondary,
+            onPressed: () => _open(context, iosUrl!),
+          )
+        : null;
+
+    if (hasAndroid && hasIos) {
+      return Row(
+        children: [
+          Expanded(child: androidBtn!),
+          const SizedBox(width: ArenaSpacing.sm),
+          Expanded(child: iosBtn!),
+        ],
+      );
+    }
+    return androidBtn ?? iosBtn!;
+  }
 }

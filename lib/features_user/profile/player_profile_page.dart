@@ -5,11 +5,13 @@ import 'package:arena/data/models/player_stats.dart';
 import 'package:arena/data/models/profile.dart';
 import 'package:arena/data/repositories/friends_repository.dart';
 import 'package:arena/data/repositories/match_stats_repository.dart';
+import 'package:arena/data/repositories/referral_repository.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_card.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/profile/avatar_palette.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -79,6 +81,8 @@ class _ProfileBody extends ConsumerWidget {
           _Header(profile: profile),
           const SizedBox(height: ArenaSpacing.lg),
           const _FriendsSection(),
+          const SizedBox(height: ArenaSpacing.lg),
+          const _ReferralBadgeCard(),
           const SizedBox(height: ArenaSpacing.lg),
           _StatsCard(stats: statsAsync),
           const SizedBox(height: ArenaSpacing.lg),
@@ -593,6 +597,128 @@ class _ResultBadge extends StatelessWidget {
           color: Colors.white,
           fontWeight: FontWeight.w800,
         ),
+      ),
+    );
+  }
+}
+
+/// Item 2 prompt 2026-05-19 — Badge parrainage sur la page Profil.
+///
+/// Montre : code parrainage (tap to copy) + nombre de filleuls actifs +
+/// rappel du perk "accès auto aux compétitions gratuites à récompense
+/// conditionnée" pour les users qui atteignent le quota requis par la
+/// compétition. La logique de gating elle-même vit côté DB (trigger
+/// `enforce_referral_quota_on_registration`) ; ce badge n'est qu'un
+/// indicateur informatif.
+class _ReferralBadgeCard extends ConsumerWidget {
+  const _ReferralBadgeCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final codeAsync = ref.watch(myReferralCodeProvider);
+    final countAsync = ref.watch(myReferralCountProvider);
+
+    final code = codeAsync.valueOrNull;
+    final count = countAsync.valueOrNull ?? 0;
+
+    return ArenaCard(
+      padding: const EdgeInsets.all(ArenaSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.group_add_outlined,
+                color: ArenaColors.tierGoldWarm,
+                size: 22,
+              ),
+              const SizedBox(width: ArenaSpacing.sm),
+              Expanded(
+                child: Text(
+                  'Mon parrainage',
+                  style: ArenaTypography.titleMedium,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: ArenaColors.tierGoldWarm.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: ArenaColors.tierGoldWarm.withValues(alpha: 0.5),
+                  ),
+                ),
+                child: Text(
+                  '$count filleul${count > 1 ? 's' : ''}',
+                  style: ArenaTypography.labelMedium.copyWith(
+                    color: ArenaColors.tierGoldWarm,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: ArenaSpacing.sm),
+          if (code != null && code.isNotEmpty)
+            InkWell(
+              onTap: () async {
+                await Clipboard.setData(ClipboardData(text: code));
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Code parrainage copié'),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+              },
+              borderRadius: BorderRadius.circular(ArenaRadius.md),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: ArenaSpacing.md,
+                  vertical: ArenaSpacing.sm,
+                ),
+                decoration: BoxDecoration(
+                  color: ArenaColors.void_,
+                  borderRadius: BorderRadius.circular(ArenaRadius.md),
+                  border: Border.all(color: ArenaColors.tierGoldWarm),
+                ),
+                child: Row(
+                  children: [
+                    Text(
+                      code,
+                      style: ArenaTypography.titleMedium.copyWith(
+                        color: ArenaColors.bone,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 2,
+                      ),
+                    ),
+                    const Spacer(),
+                    const Icon(
+                      Icons.copy_outlined,
+                      size: 18,
+                      color: ArenaColors.tierGoldWarm,
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            Text(
+              'Génération du code en cours…',
+              style: ArenaText.bodyMuted,
+            ),
+          const SizedBox(height: ArenaSpacing.sm),
+          Text(
+            'Partage ton code pour parrainer des amis. Une fois ton '
+            'quota atteint, tu accèdes automatiquement aux compétitions '
+            'gratuites avec récompense conditionnée.',
+            style: ArenaText.small.copyWith(color: ArenaColors.silver),
+          ),
+        ],
       ),
     );
   }

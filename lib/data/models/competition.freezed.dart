@@ -93,6 +93,13 @@ mixin _$Competition {
   /// Defaults serveur : 4 groupes × 2 qualifiés.
   Map<String, dynamic> get formatConfig => throw _privateConstructorUsedError;
 
+  /// Item 1 prompt 2026-05-19 — URLs des stores pour télécharger le
+  /// jeu utilisé par cette compétition. Null = pas de lien proposé
+  /// (le joueur se débrouille). Affichés comme 2 boutons sur la
+  /// page registration_confirm côté user.
+  String? get androidStoreUrl => throw _privateConstructorUsedError;
+  String? get iosStoreUrl => throw _privateConstructorUsedError;
+
   /// Serializes this Competition to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
 
@@ -141,7 +148,9 @@ abstract class $CompetitionCopyWith<$Res> {
       int referralQuota,
       String referralActivityMode,
       List<int>? roundIntervals,
-      Map<String, dynamic> formatConfig});
+      Map<String, dynamic> formatConfig,
+      String? androidStoreUrl,
+      String? iosStoreUrl});
 }
 
 /// @nodoc
@@ -191,6 +200,8 @@ class _$CompetitionCopyWithImpl<$Res, $Val extends Competition>
     Object? referralActivityMode = null,
     Object? roundIntervals = freezed,
     Object? formatConfig = null,
+    Object? androidStoreUrl = freezed,
+    Object? iosStoreUrl = freezed,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -321,6 +332,14 @@ class _$CompetitionCopyWithImpl<$Res, $Val extends Competition>
           ? _value.formatConfig
           : formatConfig // ignore: cast_nullable_to_non_nullable
               as Map<String, dynamic>,
+      androidStoreUrl: freezed == androidStoreUrl
+          ? _value.androidStoreUrl
+          : androidStoreUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
+      iosStoreUrl: freezed == iosStoreUrl
+          ? _value.iosStoreUrl
+          : iosStoreUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 }
@@ -365,7 +384,9 @@ abstract class _$$CompetitionImplCopyWith<$Res>
       int referralQuota,
       String referralActivityMode,
       List<int>? roundIntervals,
-      Map<String, dynamic> formatConfig});
+      Map<String, dynamic> formatConfig,
+      String? androidStoreUrl,
+      String? iosStoreUrl});
 }
 
 /// @nodoc
@@ -413,6 +434,8 @@ class __$$CompetitionImplCopyWithImpl<$Res>
     Object? referralActivityMode = null,
     Object? roundIntervals = freezed,
     Object? formatConfig = null,
+    Object? androidStoreUrl = freezed,
+    Object? iosStoreUrl = freezed,
   }) {
     return _then(_$CompetitionImpl(
       id: null == id
@@ -543,6 +566,14 @@ class __$$CompetitionImplCopyWithImpl<$Res>
           ? _value._formatConfig
           : formatConfig // ignore: cast_nullable_to_non_nullable
               as Map<String, dynamic>,
+      androidStoreUrl: freezed == androidStoreUrl
+          ? _value.androidStoreUrl
+          : androidStoreUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
+      iosStoreUrl: freezed == iosStoreUrl
+          ? _value.iosStoreUrl
+          : iosStoreUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -582,7 +613,9 @@ class _$CompetitionImpl extends _Competition {
       this.referralQuota = 0,
       this.referralActivityMode = 'any',
       final List<int>? roundIntervals,
-      final Map<String, dynamic> formatConfig = const <String, dynamic>{}})
+      final Map<String, dynamic> formatConfig = const <String, dynamic>{},
+      this.androidStoreUrl,
+      this.iosStoreUrl})
       : _prizeDistribution = prizeDistribution,
         _roundIntervals = roundIntervals,
         _formatConfig = formatConfig,
@@ -741,9 +774,18 @@ class _$CompetitionImpl extends _Competition {
     return EqualUnmodifiableMapView(_formatConfig);
   }
 
+  /// Item 1 prompt 2026-05-19 — URLs des stores pour télécharger le
+  /// jeu utilisé par cette compétition. Null = pas de lien proposé
+  /// (le joueur se débrouille). Affichés comme 2 boutons sur la
+  /// page registration_confirm côté user.
+  @override
+  final String? androidStoreUrl;
+  @override
+  final String? iosStoreUrl;
+
   @override
   String toString() {
-    return 'Competition(id: $id, name: $name, game: $game, format: $format, startDate: $startDate, status: $status, maxPlayers: $maxPlayers, currentPlayers: $currentPlayers, registrationFee: $registrationFee, registrationCurrency: $registrationCurrency, commissionPct: $commissionPct, prizePoolLocal: $prizePoolLocal, commissionXaf: $commissionXaf, sponsorBonusLocal: $sponsorBonusLocal, description: $description, bannerUrl: $bannerUrl, registrationOpensAt: $registrationOpensAt, registrationClosesAt: $registrationClosesAt, endDate: $endDate, prizePoolCurrency: $prizePoolCurrency, createdBy: $createdBy, createdAt: $createdAt, updatedAt: $updatedAt, orangeMoneyCode: $orangeMoneyCode, mtnMomoCode: $mtnMomoCode, prizeDistribution: $prizeDistribution, matchIntervalMinutes: $matchIntervalMinutes, autoGenerateBracket: $autoGenerateBracket, referralQuota: $referralQuota, referralActivityMode: $referralActivityMode, roundIntervals: $roundIntervals, formatConfig: $formatConfig)';
+    return 'Competition(id: $id, name: $name, game: $game, format: $format, startDate: $startDate, status: $status, maxPlayers: $maxPlayers, currentPlayers: $currentPlayers, registrationFee: $registrationFee, registrationCurrency: $registrationCurrency, commissionPct: $commissionPct, prizePoolLocal: $prizePoolLocal, commissionXaf: $commissionXaf, sponsorBonusLocal: $sponsorBonusLocal, description: $description, bannerUrl: $bannerUrl, registrationOpensAt: $registrationOpensAt, registrationClosesAt: $registrationClosesAt, endDate: $endDate, prizePoolCurrency: $prizePoolCurrency, createdBy: $createdBy, createdAt: $createdAt, updatedAt: $updatedAt, orangeMoneyCode: $orangeMoneyCode, mtnMomoCode: $mtnMomoCode, prizeDistribution: $prizeDistribution, matchIntervalMinutes: $matchIntervalMinutes, autoGenerateBracket: $autoGenerateBracket, referralQuota: $referralQuota, referralActivityMode: $referralActivityMode, roundIntervals: $roundIntervals, formatConfig: $formatConfig, androidStoreUrl: $androidStoreUrl, iosStoreUrl: $iosStoreUrl)';
   }
 
   @override
@@ -808,7 +850,11 @@ class _$CompetitionImpl extends _Competition {
             const DeepCollectionEquality()
                 .equals(other._roundIntervals, _roundIntervals) &&
             const DeepCollectionEquality()
-                .equals(other._formatConfig, _formatConfig));
+                .equals(other._formatConfig, _formatConfig) &&
+            (identical(other.androidStoreUrl, androidStoreUrl) ||
+                other.androidStoreUrl == androidStoreUrl) &&
+            (identical(other.iosStoreUrl, iosStoreUrl) ||
+                other.iosStoreUrl == iosStoreUrl));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -846,7 +892,9 @@ class _$CompetitionImpl extends _Competition {
         referralQuota,
         referralActivityMode,
         const DeepCollectionEquality().hash(_roundIntervals),
-        const DeepCollectionEquality().hash(_formatConfig)
+        const DeepCollectionEquality().hash(_formatConfig),
+        androidStoreUrl,
+        iosStoreUrl
       ]);
 
   /// Create a copy of Competition
@@ -898,7 +946,9 @@ abstract class _Competition extends Competition {
       final int referralQuota,
       final String referralActivityMode,
       final List<int>? roundIntervals,
-      final Map<String, dynamic> formatConfig}) = _$CompetitionImpl;
+      final Map<String, dynamic> formatConfig,
+      final String? androidStoreUrl,
+      final String? iosStoreUrl}) = _$CompetitionImpl;
   const _Competition._() : super._();
 
   factory _Competition.fromJson(Map<String, dynamic> json) =
@@ -1008,6 +1058,15 @@ abstract class _Competition extends Competition {
   /// Defaults serveur : 4 groupes × 2 qualifiés.
   @override
   Map<String, dynamic> get formatConfig;
+
+  /// Item 1 prompt 2026-05-19 — URLs des stores pour télécharger le
+  /// jeu utilisé par cette compétition. Null = pas de lien proposé
+  /// (le joueur se débrouille). Affichés comme 2 boutons sur la
+  /// page registration_confirm côté user.
+  @override
+  String? get androidStoreUrl;
+  @override
+  String? get iosStoreUrl;
 
   /// Create a copy of Competition
   /// with the given fields replaced by the non-null parameter values.

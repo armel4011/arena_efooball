@@ -1,5 +1,7 @@
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/data/models/profile.dart';
 import 'package:arena/data/models/standings.dart';
+import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:arena/data/repositories/standings_repository.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:arena/features_shared/widgets/error_state.dart';
@@ -36,6 +38,19 @@ class GroupStandingsPage extends ConsumerWidget {
                 ' rencontres seront jouées.',
           );
         }
+        // Item 5 prompt 2026-05-19 — résout les profils des joueurs
+        // une fois pour toutes les groupes (un seul round-trip) au lieu
+        // d'afficher "Joueur abc123…" comme avant.
+        final ids = <String>{
+          for (final b in buckets) for (final r in b.rows) r.profileId,
+        };
+        final key = (ids.toList()..sort()).join(',');
+        final peers = key.isEmpty
+            ? const <String, Profile>{}
+            : ref.watch(profilesByIdsProvider(key)).maybeWhen(
+                  data: (m) => m,
+                  orElse: () => const <String, Profile>{},
+                );
         return RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(competitionStandingsProvider(competitionId));
@@ -45,7 +60,8 @@ class GroupStandingsPage extends ConsumerWidget {
           child: ListView.builder(
             padding: const EdgeInsets.all(ArenaSpacing.lg),
             itemCount: buckets.length,
-            itemBuilder: (_, i) => _GroupTable(bucket: buckets[i]),
+            itemBuilder: (_, i) =>
+                _GroupTable(bucket: buckets[i], peers: peers),
           ),
         );
       },
@@ -54,9 +70,10 @@ class GroupStandingsPage extends ConsumerWidget {
 }
 
 class _GroupTable extends StatelessWidget {
-  const _GroupTable({required this.bucket});
+  const _GroupTable({required this.bucket, required this.peers});
 
   final StandingsBucket bucket;
+  final Map<String, Profile> peers;
 
   @override
   Widget build(BuildContext context) {
@@ -114,7 +131,8 @@ class _GroupTable extends StatelessWidget {
 
   DataRow _row(GroupStandingRow r, int total) {
     final pid = r.profileId;
-    final label = 'Joueur ${pid.substring(0, 6)}…';
+    final peer = peers[pid];
+    final label = peer?.username ?? 'Joueur ${pid.substring(0, 6)}…';
     final pos = r.position ?? bucket.rows.indexOf(r) + 1;
     final isLeader = pos == 1;
     return DataRow(

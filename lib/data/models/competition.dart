@@ -85,6 +85,13 @@ sealed class Competition with _$Competition {
     /// peut contenir `{group_count: int, qualifiers_per_group: int}`.
     /// Defaults serveur : 4 groupes × 2 qualifiés.
     @Default(<String, dynamic>{}) Map<String, dynamic> formatConfig,
+
+    /// Item 1 prompt 2026-05-19 — URLs des stores pour télécharger le
+    /// jeu utilisé par cette compétition. Null = pas de lien proposé
+    /// (le joueur se débrouille). Affichés comme 2 boutons sur la
+    /// page registration_confirm côté user.
+    String? androidStoreUrl,
+    String? iosStoreUrl,
   }) = _Competition;
 
   const Competition._();

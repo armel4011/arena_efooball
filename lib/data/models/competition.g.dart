@@ -61,6 +61,8 @@ _$CompetitionImpl _$$CompetitionImplFromJson(Map<String, dynamic> json) =>
           .toList(),
       formatConfig: json['format_config'] as Map<String, dynamic>? ??
           const <String, dynamic>{},
+      androidStoreUrl: json['android_store_url'] as String?,
+      iosStoreUrl: json['ios_store_url'] as String?,
     );
 
 Map<String, dynamic> _$$CompetitionImplToJson(_$CompetitionImpl instance) =>
@@ -109,4 +111,7 @@ Map<String, dynamic> _$$CompetitionImplToJson(_$CompetitionImpl instance) =>
       'referral_activity_mode': instance.referralActivityMode,
       if (instance.roundIntervals case final value?) 'round_intervals': value,
       'format_config': instance.formatConfig,
+      if (instance.androidStoreUrl case final value?)
+        'android_store_url': value,
+      if (instance.iosStoreUrl case final value?) 'ios_store_url': value,
     };

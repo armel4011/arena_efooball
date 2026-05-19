@@ -388,6 +388,8 @@ final userRouterProvider = Provider<GoRouter>((ref) {
             totalPrizeXaf: extra?.totalPrizeXaf ?? 0,
             prizeDistribution:
                 extra?.prizeDistribution ?? const [50, 25, 15, 10],
+            androidStoreUrl: extra?.androidStoreUrl,
+            iosStoreUrl: extra?.iosStoreUrl,
           );
         },
       ),
@@ -619,6 +621,8 @@ class RegistrationConfirmArgs {
     required this.entryFeeXaf,
     required this.totalPrizeXaf,
     required this.prizeDistribution,
+    this.androidStoreUrl,
+    this.iosStoreUrl,
   });
 
   final String competitionName;
@@ -631,4 +635,8 @@ class RegistrationConfirmArgs {
 
   /// Pourcentages de gains par rang (ex. `[50, 25, 15, 10]`).
   final List<int> prizeDistribution;
+
+  /// Item 1 prompt 2026-05-19 — liens stores du jeu (null = pas affiché).
+  final String? androidStoreUrl;
+  final String? iosStoreUrl;
 }

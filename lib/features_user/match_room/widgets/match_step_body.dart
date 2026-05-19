@@ -28,15 +28,7 @@ class StepBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return switch (match.status) {
-      MatchStatus.pending || MatchStatus.scheduled => role ==
-              MatchRole.observer
-          ? const ObserverWaitingPlaceholder(
-              icon: Icons.vpn_key_outlined,
-              title: 'En attente du code room',
-              description: 'Les joueurs vont créer une room dans le jeu et'
-                  ' partager le code ici.',
-            )
-          : ShareCodeForm(match: match),
+      MatchStatus.pending || MatchStatus.scheduled => _stepShareCode(),
       MatchStatus.ready => RoomReadyView(match: match, role: role),
       MatchStatus.inProgress ||
       MatchStatus.scorePending ||
@@ -64,6 +56,34 @@ class StepBody extends StatelessWidget {
           description: "L'un des joueurs n'a pas démarré à temps.",
         ),
     };
+  }
+
+  /// Status `pending`/`scheduled` : seul le joueur HOME voit le
+  /// formulaire de partage du code room. L'AWAY voit un placeholder
+  /// d'attente, l'observer un placeholder neutre.
+  ///
+  /// Fix item 4 prompt 2026-05-19 — avant, les 2 joueurs voyaient le
+  /// formulaire en même temps, ce qui créait des conflits de saisie.
+  Widget _stepShareCode() {
+    if (role == MatchRole.observer) {
+      return const ObserverWaitingPlaceholder(
+        icon: Icons.vpn_key_outlined,
+        title: 'En attente du code room',
+        description: 'Les joueurs vont créer une room dans le jeu et'
+            ' partager le code ici.',
+      );
+    }
+    if (!role.isHomeOf(match)) {
+      // AWAY player : attend que HOME envoie le code.
+      return const ObserverWaitingPlaceholder(
+        icon: Icons.hourglass_top,
+        title: 'En attente du code de HOME',
+        description: 'Tu es AWAY sur ce match. Le joueur à domicile '
+            "crée la room dans le jeu et t'enverra le code ici dès "
+            "qu'il l'aura partagé.",
+      );
+    }
+    return ShareCodeForm(match: match);
   }
 }
 

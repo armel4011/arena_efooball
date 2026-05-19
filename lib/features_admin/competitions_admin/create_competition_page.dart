@@ -116,6 +116,10 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
   final _groupCountCtrl = TextEditingController(text: '4');
   final _qualifiersPerGroupCtrl = TextEditingController(text: '2');
 
+  // Item 1 prompt 2026-05-19 — URLs des stores du jeu (optionnels).
+  final _androidStoreUrlCtrl = TextEditingController();
+  final _iosStoreUrlCtrl = TextEditingController();
+
   bool get _isEditing => widget.editing != null;
 
   @override
@@ -152,6 +156,8 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
     _qualifiersPerGroupCtrl.text =
         (c.formatConfig['qualifiers_per_group'] as num?)?.toInt().toString() ??
             '2';
+    _androidStoreUrlCtrl.text = c.androidStoreUrl ?? '';
+    _iosStoreUrlCtrl.text = c.iosStoreUrl ?? '';
     // Reconstruit places individuelles + blocs depuis la liste plate
     // stockée (best-effort : un bloc relit le % de sa 1ère place).
     final dist = c.prizeDistribution;
@@ -192,6 +198,8 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
     _roundIntervalsCtrl.dispose();
     _groupCountCtrl.dispose();
     _qualifiersPerGroupCtrl.dispose();
+    _androidStoreUrlCtrl.dispose();
+    _iosStoreUrlCtrl.dispose();
     for (final c in _topShareCtrls) {
       c.dispose();
     }
@@ -402,6 +410,32 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
             ),
           ),
         ),
+        const SizedBox(height: ArenaSpacing.lg),
+        Text('Liens stores du jeu (optionnel)', style: ArenaText.h3),
+        const SizedBox(height: ArenaSpacing.xs),
+        Text(
+          "Le joueur verra 2 boutons sur la page d'inscription pour "
+          'télécharger le jeu. Laisse vide pour ne pas afficher.',
+          style: ArenaText.small,
+        ),
+        const SizedBox(height: ArenaSpacing.sm),
+        Text('Play Store (Android)', style: ArenaText.inputLabel),
+        const SizedBox(height: ArenaSpacing.xs),
+        ArenaTextField(
+          controller: _androidStoreUrlCtrl,
+          hint: 'https://play.google.com/store/apps/details?id=…',
+          keyboardType: TextInputType.url,
+          onChanged: (_) => setState(() {}),
+        ),
+        const SizedBox(height: ArenaSpacing.sm),
+        Text('App Store (iOS)', style: ArenaText.inputLabel),
+        const SizedBox(height: ArenaSpacing.xs),
+        ArenaTextField(
+          controller: _iosStoreUrlCtrl,
+          hint: 'https://apps.apple.com/app/id…',
+          keyboardType: TextInputType.url,
+          onChanged: (_) => setState(() {}),
+        ),
       ];
 
   List<Widget> _buildPrizesStep() {
@@ -563,6 +597,13 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
         'format_config': _formatConfig(),
         if (fee > 0) 'orange_money_code': _orangeMomoCtrl.text.trim(),
         if (fee > 0) 'mtn_momo_code': _mtnMomoCtrl.text.trim(),
+        'android_store_url':
+            _androidStoreUrlCtrl.text.trim().isEmpty
+                ? null
+                : _androidStoreUrlCtrl.text.trim(),
+        'ios_store_url': _iosStoreUrlCtrl.text.trim().isEmpty
+            ? null
+            : _iosStoreUrlCtrl.text.trim(),
         }),
       );
       await ref.read(adminAuditLogRepositoryProvider).record(
@@ -625,6 +666,13 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
         'format_config': _formatConfig(),
         if (fee > 0) 'orange_money_code': _orangeMomoCtrl.text.trim(),
         if (fee > 0) 'mtn_momo_code': _mtnMomoCtrl.text.trim(),
+        'android_store_url':
+            _androidStoreUrlCtrl.text.trim().isEmpty
+                ? null
+                : _androidStoreUrlCtrl.text.trim(),
+        'ios_store_url': _iosStoreUrlCtrl.text.trim().isEmpty
+            ? null
+            : _iosStoreUrlCtrl.text.trim(),
       });
       await ref.read(adminAuditLogRepositoryProvider).record(
         adminId: adminId,

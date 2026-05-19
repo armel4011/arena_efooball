@@ -284,6 +284,8 @@ void _openInscriptionFlow(BuildContext context, Competition c) {
       entryFeeXaf: c.registrationFee.round(),
       totalPrizeXaf: c.prizePoolLocal.round(),
       prizeDistribution: c.prizeDistribution,
+      androidStoreUrl: c.androidStoreUrl,
+      iosStoreUrl: c.iosStoreUrl,
     ),
   );
 }
