@@ -33,6 +33,9 @@ lib/features_user/recording/overlay/recording_overlay.dart
 # ArenaColors n'a de version transparent equivalent.
 lib/features_user/recording/match_in_progress_overlay.dart
 lib/features_user/chat/chat_page.dart
+# CallScreen — texte/icône blanc sur boutons signalBlue (active) et
+# neonRed (hangup). Contraste lecture sur fond saturé.
+lib/features_user/chat/call_screen.dart
 lib/features_user/profile/public_profile_page.dart
 lib/features_user/profile/player_profile_page.dart
 lib/features_user/profile/friends_search_page.dart
