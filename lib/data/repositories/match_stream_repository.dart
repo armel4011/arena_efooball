@@ -1,3 +1,4 @@
+import 'package:arena/core/utils/poll_stream.dart';
 import 'package:arena/data/models/match_stream.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -113,6 +114,20 @@ class MatchStreamRepository {
           ],
         );
   }
+
+  /// One-shot lecture des streams publics actifs, utilisée par le poll
+  /// downgrade (cf. `activePublicStreamsProvider`). Le filtre is_active
+  /// est appliqué côté serveur pour limiter le payload.
+  Future<List<MatchStream>> listActivePublic({int limit = 50}) async {
+    final rows = await _client
+        .from(_table)
+        .select()
+        .eq('is_public', true)
+        .eq('is_active', true)
+        .order('started_at', ascending: false)
+        .limit(limit);
+    return [for (final r in rows) MatchStream.fromJson(r)];
+  }
 }
 
 final matchStreamRepositoryProvider = Provider<MatchStreamRepository>((ref) {
@@ -124,8 +139,14 @@ final matchStreamsByMatchProvider = StreamProvider.family
   return ref.watch(matchStreamRepositoryProvider).watchByMatch(matchId);
 });
 
-/// Drives `LiveStreamsPage` — every active public stream, realtime.
+/// Drives `LiveStreamsPage` — every active public stream.
+///
+/// Downgrade Realtime → poll (audit 2026-05-19) : un screen découverte
+/// grand public n'a pas besoin d'updates instantanés, et chaque client
+/// qui consomme un Realtime stream coûte 1 channel sur la limite Pro
+/// (500 channels concurrents par projet). Poll 45s suffit.
 final activePublicStreamsProvider =
     StreamProvider<List<MatchStream>>((ref) {
-  return ref.watch(matchStreamRepositoryProvider).watchActivePublic();
+  final repo = ref.watch(matchStreamRepositoryProvider);
+  return pollStream(const Duration(seconds: 45), repo.listActivePublic);
 });

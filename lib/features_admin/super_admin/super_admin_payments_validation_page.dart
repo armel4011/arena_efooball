@@ -1,5 +1,6 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/core/utils/arena_error_message.dart';
+import 'package:arena/core/utils/sentry_trace.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_payments_repository.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
@@ -94,10 +95,14 @@ class _SuperAdminPaymentsValidationPageState
     );
     if (ok != true || !mounted) return;
     try {
-      await ref.read(adminPaymentsRepositoryProvider).validate(
-            paymentId: row.payment.id,
-            adminId: adminId,
-          );
+      await traceAsync(
+        'admin.payment.validate',
+        'p2p manual ${row.payment.amountLocal} ${row.payment.currency}',
+        () => ref.read(adminPaymentsRepositoryProvider).validate(
+              paymentId: row.payment.id,
+              adminId: adminId,
+            ),
+      );
       await ref.read(adminAuditLogRepositoryProvider).record(
         adminId: adminId,
         action: 'payment_validated',

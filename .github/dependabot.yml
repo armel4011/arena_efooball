@@ -1,0 +1,47 @@
+# Dependabot — bumps automatiques pour les écosystèmes utilisés par Arena.
+# Audit 2026-05-19 : compense l'absence de pin sur ~50 deps `^`. Les PR
+# auto-générées passent par la CI normale (analyze + test + coverage).
+
+version: 2
+updates:
+  # Flutter / Dart deps
+  - package-ecosystem: "pub"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Africa/Douala"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+    labels:
+      - "dependencies"
+      - "pub"
+
+  # GitHub Actions workflows
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Africa/Douala"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "ci"
+    labels:
+      - "dependencies"
+      - "github-actions"
+
+  # Android gradle
+  - package-ecosystem: "gradle"
+    directory: "/android"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "android"
+    labels:
+      - "dependencies"
+      - "android"

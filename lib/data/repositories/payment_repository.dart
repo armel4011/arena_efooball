@@ -1,3 +1,4 @@
+import 'package:arena/core/utils/poll_stream.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:flutter/foundation.dart';
@@ -152,6 +153,22 @@ class PaymentRepository {
               for (final row in rows.reversed) PaymentRecord.fromJson(row),
             ],);
   }
+
+  /// One-shot historique paiements du joueur courant. Utilisé par le
+  /// poll downgrade (`myPaymentsProvider`).
+  Future<List<PaymentRecord>> listMine({int limit = 50}) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) return const [];
+    final rows = await _client
+        .from(_table)
+        .select()
+        .eq('user_id', userId)
+        .order('created_at', ascending: false)
+        .limit(limit);
+    return [
+      for (final row in rows) PaymentRecord.fromJson(row),
+    ];
+  }
 }
 
 final paymentRepositoryProvider = Provider<PaymentRepository>((ref) {
@@ -165,13 +182,19 @@ final paymentByIdProvider =
   return ref.watch(paymentRepositoryProvider).watchById(id);
 });
 
+/// Historique paiements du joueur courant (écran P6).
+///
+/// Downgrade Realtime → poll (audit 2026-05-19) : un validate paiement
+/// admin met ~minutes, l'utilisateur reload la page volontairement.
+/// Poll 60s couvre largement la perception et libère le Realtime
+/// channel pour les usages critiques.
 final myPaymentsProvider = StreamProvider<List<PaymentRecord>>((ref) {
-  // Re-bâti la stream quand l'auth devient prête.
   final session = ref.watch(currentSessionProvider);
   if (session == null) {
     return Stream.value(const <PaymentRecord>[]);
   }
-  return ref.watch(paymentRepositoryProvider).watchMine();
+  final repo = ref.watch(paymentRepositoryProvider);
+  return pollStream(const Duration(seconds: 60), repo.listMine);
 });
 
 /// Map competition_id → PaymentRecord pour les paiements actuellement

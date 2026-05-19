@@ -83,5 +83,15 @@ jobs:
         # historiques au 2026-05-19 à résorber progressivement).
         run: bash scripts/check_spacing.sh
 
-      - name: Test
-        run: flutter test --reporter expanded
+      - name: Test (avec coverage)
+        run: flutter test --reporter expanded --coverage
+
+      - name: Upload coverage to Codecov
+        # Non bloquant : si CODECOV_TOKEN n'est pas configuré (fork PR
+        # par ex.), le step ne fail pas le pipeline. Le token est public-
+        # safe pour repo public, à mettre en secret pour repo privé.
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage/lcov.info
+          fail_ci_if_error: false
+        continue-on-error: true

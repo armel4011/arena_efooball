@@ -176,6 +176,9 @@ dev_dependencies:
 
   # ─── Tests ─────────────────────────────────────────────────
   mocktail: ^1.0.4
+  # Goldens + harnais utilitaires pour test/golden_path_test.dart
+  # (audit 2026-05-19).
+  golden_toolkit: ^0.15.0
 
 flutter:
   uses-material-design: true

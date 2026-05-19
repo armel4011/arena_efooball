@@ -1,3 +1,4 @@
+import 'package:arena/core/utils/poll_stream.dart';
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
@@ -162,16 +163,21 @@ final competitionRepositoryProvider = Provider<CompetitionRepository>((ref) {
   return CompetitionRepository(ref.watch(supabaseClientProvider));
 });
 
-/// Realtime list of competitions, optionally filtered by game.
+/// Liste des compétitions, optionnellement filtrée par jeu.
 ///
-/// Use `competitionsListProvider(null)` for the unfiltered stream.
-/// `.autoDispose` : libère le cache + ferme le stream WebSocket quand
-/// l'écran qui watch est démonté — sinon 1 stream par variant de filtre
-/// (game=null, eFoot, FIFA, FC Mobile) reste vivant pour la session.
+/// Downgrade Realtime → poll (audit 2026-05-19) : la liste de compét.
+/// n'a pas besoin d'updates instantanés (un admin crée une compét.
+/// toutes les heures au mieux). Poll 60s tient la fraîcheur perçue
+/// et libère 4 channels Realtime (1 par variant de filtre game).
+/// `.autoDispose` cancel le polling quand l'écran ferme.
 final competitionsListProvider =
     StreamProvider.family.autoDispose<List<Competition>, GameType?>(
         (ref, game) {
-  return ref.watch(competitionRepositoryProvider).watch(game: game);
+  final repo = ref.watch(competitionRepositoryProvider);
+  return pollStream(
+    const Duration(seconds: 60),
+    () => repo.list(game: game),
+  );
 });
 
 /// Realtime stream of one competition by id. `.autoDispose` évite que

@@ -411,3 +411,130 @@ class PublishToggleCard extends StatelessWidget {
     );
   }
 }
+
+/// Picker d'intervalle entre rounds (Lot A — auto-management). Valeurs
+/// en minutes : 30 / 60 / 120 / 240 / 1440. Stocké tel quel dans la
+/// colonne `competitions.match_interval_minutes`.
+class MatchIntervalPicker extends StatelessWidget {
+  const MatchIntervalPicker({
+    required this.current,
+    required this.onChanged,
+    super.key,
+  });
+
+  final int current;
+  final ValueChanged<int> onChanged;
+
+  static const _options = <({int minutes, String label})>[
+    (minutes: 30, label: '30 min'),
+    (minutes: 60, label: '1 h'),
+    (minutes: 120, label: '2 h'),
+    (minutes: 240, label: '4 h'),
+    (minutes: 1440, label: '1 jour'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: ArenaSpacing.xs,
+      runSpacing: ArenaSpacing.xs,
+      children: [
+        for (final opt in _options)
+          IntervalChip(
+            label: opt.label,
+            active: opt.minutes == current,
+            onTap: () => onChanged(opt.minutes),
+          ),
+      ],
+    );
+  }
+}
+
+/// Lot D.2 — Chip radio "Tout filleul" / "Filleul engagé".
+class ModeChip extends StatelessWidget {
+  const ModeChip({
+    required this.label,
+    required this.active,
+    required this.onTap,
+    super.key,
+  });
+
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(ArenaRadius.round),
+      child: AnimatedContainer(
+        duration: ArenaDurations.short,
+        padding: const EdgeInsets.symmetric(
+          horizontal: ArenaSpacing.md,
+          vertical: 8,
+        ),
+        decoration: BoxDecoration(
+          color: active
+              ? ArenaColors.signalBlue.withValues(alpha: 0.15)
+              : ArenaColors.carbon,
+          borderRadius: BorderRadius.circular(ArenaRadius.round),
+          border: Border.all(
+            color: active ? ArenaColors.signalBlue : ArenaColors.border,
+          ),
+        ),
+        child: Text(
+          label,
+          style: ArenaText.body.copyWith(
+            color: active ? ArenaColors.signalBlue : ArenaColors.silver,
+            fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class IntervalChip extends StatelessWidget {
+  const IntervalChip({
+    required this.label,
+    required this.active,
+    required this.onTap,
+    super.key,
+  });
+
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(ArenaRadius.round),
+      child: AnimatedContainer(
+        duration: ArenaDurations.short,
+        padding: const EdgeInsets.symmetric(
+          horizontal: ArenaSpacing.md,
+          vertical: 8,
+        ),
+        decoration: BoxDecoration(
+          color: active
+              ? ArenaColors.signalBlue.withValues(alpha: 0.15)
+              : ArenaColors.carbon,
+          borderRadius: BorderRadius.circular(ArenaRadius.round),
+          border: Border.all(
+            color: active ? ArenaColors.signalBlue : ArenaColors.border,
+          ),
+        ),
+        child: Text(
+          label,
+          style: ArenaText.body.copyWith(
+            color: active ? ArenaColors.signalBlue : ArenaColors.silver,
+            fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+}

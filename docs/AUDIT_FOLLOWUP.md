@@ -170,11 +170,37 @@ réelle avec >10k users actifs. Re-audit après `SELECT pg_stat_reset()`
 
 - [x] **#9 Helper `arenaErrorMessage(Object e)`** — `lib/core/utils/arena_error_message.dart`. Mappe `AuthFailure` / `AuthException` / `PostgrestException` (codes 23505/23503/42501/PGRST301) / `FunctionException` / `SocketException` → message FR. Appliqué aux 11 catches de 6 pages admin/super-admin (users, payments_validation, invitations, payouts, reintegration, disputes, bracket_management). Les autres `'Échec : $e'` peuvent migrer incrémentalement. Note : les 14 repositories de `lib/data/repositories/` n'ont déjà aucun catch générique — ils bubble up les erreurs natives (pattern correct). Le typing dette était surévaluée par l'audit initial.
 
-### Restant après cette wave
+## Audit complet 2026-05-19 — wave 2 (ce commit)
 
-- [ ] **#4 create_competition_page.dart** (1254 lignes) à découper.
-- [ ] **#8 Downgrade poll** sur 3 streams non-critiques (competitions_list, payments_history, watchActivePublic).
-- [ ] **#7 CI** codecov + dependabot + golden_toolkit.
-- [ ] **#11 Phase 4 Sentry traces** custom.
-- [ ] **#5 Tests** match_room + admin core (couverture 1.8 % → cible 5 %).
+### Refacto
+
+- [x] **#4 create_competition_page.dart 1254 → 791 lignes** (-37 %, sous 800 ✓). Extrait `WizardStepFees` (274 l.) et `WizardStepFormat` (194 l.) en widgets indépendants sous `widgets/`. Les 3 classes privées chip (`_MatchIntervalPicker`, `_ModeChip`, `_IntervalChip`) déplacées dans `competition_form_widgets.dart` (réutilisables). Les step builders `_buildInfosStep`/`_buildPrizesStep`/`_buildReviewStep` restent inline (couplage state fort, retour `List<Widget>`).
+
+### Perf scaling
+
+- [x] **#8 Downgrade Realtime → poll** sur 3 streams non-critiques :
+  - `competitionsListProvider` (4 variants par filtre game) → poll 60s
+  - `myPaymentsProvider` (P6 historique) → poll 60s
+  - `activePublicStreamsProvider` (live streams page) → poll 45s
+  Helper `lib/core/utils/poll_stream.dart` réutilisable (`Stream<T> pollStream(Duration, Future<T> Function())`). Libère ~5-6 channels Realtime par client actif, soulage la limite Pro = 500 channels concurrents.
+
+### CI
+
+- [x] **#7 Codecov** ajouté à `.github/workflows/ci.yml` (step `flutter test --coverage` + `codecov-action@v4`, `continue-on-error: true` pour ne pas bloquer si CODECOV_TOKEN absent).
+- [x] **Dependabot** : `.github/dependabot.yml` créé (pub weekly, github-actions weekly, gradle monthly).
+- [x] **golden_toolkit ^0.15.0** ajouté en dev_dependency (la suite golden existe déjà via `test/golden_path_test.dart`, le toolkit servira aux prochains goldens visuels).
+
+### Observability
+
+- [x] **#11 Phase 4 Sentry traces** : helpers `traceAsync<T>` et `traceSpan<T>` (`lib/core/utils/sentry_trace.dart`) appliqués à 2 chemins critiques (create competition + validate payment). `SentryProviderObserver` câblé dans `bootstrap.dart` — toute exception qui throw depuis un Riverpod provider est désormais capturée avec breadcrumb + tag `riverpod.provider`.
+
+### Tests (couverture)
+
+- [x] **#5 Tests unitaires + widget** : `arena_error_message_test` (8 tests), `poll_stream_test` (2 tests), `wizard_step_fees_test` (3 tests). **+13 tests → 182 total** (de 169). Ratio reste bas (~2 %) mais le runway des helpers neufs est verrouillé.
+
+### Restant
+
 - [ ] **iOS deployment target 13 → 14** (P3).
+- [ ] **Tests intégration** `integration_test/` toujours vide (golden_path_test couvre la majorité des routes côté unit).
+- [ ] Étendre `arenaErrorMessage` aux ~40 catches UI non encore migrés (mécanique).
+- [ ] Étendre `traceAsync` à : match score submission, friend requests, registration P2.

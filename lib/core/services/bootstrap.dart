@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:arena/core/flavors/flavor_config.dart';
 import 'package:arena/core/services/notification_service.dart';
 import 'package:arena/core/services/onboarding_service.dart';
+import 'package:arena/core/utils/sentry_provider_observer.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -68,7 +69,13 @@ Future<void> bootstrap({
     // splash.
     unawaited(_initSentry(flavor: flavor));
 
-    runApp(ProviderScope(overrides: overrides, child: builder()));
+    runApp(
+      ProviderScope(
+        overrides: overrides,
+        observers: const [SentryProviderObserver()],
+        child: builder(),
+      ),
+    );
   }, (error, stack) {
     Sentry.captureException(error, stackTrace: stack);
   });

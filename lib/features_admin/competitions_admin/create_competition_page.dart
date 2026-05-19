@@ -1,9 +1,12 @@
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/core/utils/sentry_trace.dart';
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_competitions_repository.dart';
 import 'package:arena/features_admin/competitions_admin/widgets/competition_form_widgets.dart';
+import 'package:arena/features_admin/competitions_admin/widgets/wizard_step_fees.dart';
+import 'package:arena/features_admin/competitions_admin/widgets/wizard_step_format.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/prize_ranks.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
@@ -11,7 +14,6 @@ import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_stepper.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -259,9 +261,42 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
                 padding: const EdgeInsets.all(ArenaSpacing.lg),
                 children: [
                   if (_step == 0) ..._buildInfosStep(),
-                  if (_step == 1) ..._buildFormatStep(),
+                  if (_step == 1)
+                    WizardStepFormat(
+                      format: _format,
+                      maxPlayers: _maxPlayers,
+                      autoGenerateBracket: _autoGenerateBracket,
+                      matchIntervalMinutes: _matchIntervalMinutes,
+                      roundIntervalsCtrl: _roundIntervalsCtrl,
+                      groupCountCtrl: _groupCountCtrl,
+                      qualifiersPerGroupCtrl: _qualifiersPerGroupCtrl,
+                      isEditing: _isEditing,
+                      onFormatChanged: (f) => setState(() => _format = f),
+                      onMaxPlayersChanged:
+                          (n) => setState(() => _maxPlayers = n),
+                      onAutoGenerateChanged:
+                          (v) => setState(() => _autoGenerateBracket = v),
+                      onMatchIntervalChanged:
+                          (m) => setState(() => _matchIntervalMinutes = m),
+                      onChanged: () => setState(() {}),
+                    ),
                   if (_step == 2) ..._buildPrizesStep(),
-                  if (_step == 3) ..._buildFeesStep(),
+                  if (_step == 3)
+                    WizardStepFees(
+                      entryFeeCtrl: _entryFeeCtrl,
+                      currency: _currency,
+                      commissionXafCtrl: _commissionXafCtrl,
+                      orangeMomoCtrl: _orangeMomoCtrl,
+                      mtnMomoCtrl: _mtnMomoCtrl,
+                      referralQuotaCtrl: _referralQuotaCtrl,
+                      referralActivityMode: _referralActivityMode,
+                      isEditing: _isEditing,
+                      onChanged: () => setState(() {}),
+                      onCurrencyChanged:
+                          (c) => setState(() => _currency = c),
+                      onReferralModeChanged:
+                          (m) => setState(() => _referralActivityMode = m),
+                    ),
                   if (_step == 4) ..._buildReviewStep(),
                 ],
               ),
@@ -369,159 +404,6 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
         ),
       ];
 
-  List<Widget> _buildFormatStep() => [
-        if (_isEditing) ...[
-          Container(
-            padding: const EdgeInsets.all(ArenaSpacing.md),
-            decoration: BoxDecoration(
-              color: ArenaColors.signalBlue.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(ArenaRadius.md),
-              border: Border.all(
-                color: ArenaColors.signalBlue.withValues(alpha: 0.3),
-              ),
-            ),
-            child: Text(
-              'ℹ Format et capacité ne sont pas modifiables après '
-              'création — ils conditionnent le bracket déjà calculé.',
-              style: ArenaText.body,
-            ),
-          ),
-          const SizedBox(height: ArenaSpacing.md),
-        ],
-        Text('Format du tournoi', style: ArenaText.inputLabel),
-        const SizedBox(height: ArenaSpacing.xs),
-        _lockable(
-          FormatPicker(
-            current: _format,
-            onChanged: (f) => setState(() => _format = f),
-          ),
-        ),
-        const SizedBox(height: ArenaSpacing.md),
-        Text('Nombre de joueurs max', style: ArenaText.inputLabel),
-        const SizedBox(height: ArenaSpacing.xs),
-        _lockable(
-          MaxPlayersPicker(
-            current: _maxPlayers,
-            onChanged: (n) => setState(() => _maxPlayers = n),
-          ),
-        ),
-        const SizedBox(height: ArenaSpacing.lg),
-        // ─── Auto-management (Lot A) ────────────────────────────────
-        Text(
-          'Gestion automatique',
-          style: ArenaText.h3,
-        ),
-        const SizedBox(height: ArenaSpacing.xs),
-        Text(
-          'Le bracket est généré + le scheduling des rounds se fait sans '
-          'intervention quand toutes les places sont prises.',
-          style: ArenaText.small,
-        ),
-        const SizedBox(height: ArenaSpacing.sm),
-        Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: ArenaSpacing.md,
-            vertical: ArenaSpacing.sm,
-          ),
-          decoration: BoxDecoration(
-            color: ArenaColors.carbon,
-            borderRadius: BorderRadius.circular(ArenaRadius.md),
-            border: Border.all(color: ArenaColors.border),
-          ),
-          child: SwitchListTile.adaptive(
-            value: _autoGenerateBracket,
-            onChanged: (v) => setState(() => _autoGenerateBracket = v),
-            title: Text('Bracket auto', style: ArenaText.body),
-            subtitle: Text(
-              'Génère le bracket dès que les inscriptions atteignent le quota.',
-              style: ArenaText.small,
-            ),
-            contentPadding: EdgeInsets.zero,
-            activeThumbColor: ArenaColors.signalBlue,
-          ),
-        ),
-        const SizedBox(height: ArenaSpacing.md),
-        Text('Intervalle entre rounds (défaut)', style: ArenaText.inputLabel),
-        const SizedBox(height: ArenaSpacing.xs),
-        _MatchIntervalPicker(
-          current: _matchIntervalMinutes,
-          onChanged: (m) => setState(() => _matchIntervalMinutes = m),
-        ),
-        const SizedBox(height: ArenaSpacing.md),
-        // Lot A.2 — Override intervalle par round (optionnel)
-        Text('Intervalles personnalisés par round', style: ArenaText.inputLabel),
-        const SizedBox(height: ArenaSpacing.xs),
-        Text(
-          'Liste de minutes séparées par virgules (1 par round). Ex. : '
-          '30,60,120,1440 = round1 → 30min, round2 → 1h, etc. Laisser vide '
-          "pour utiliser l'intervalle par défaut.",
-          style: ArenaText.small,
-        ),
-        const SizedBox(height: ArenaSpacing.xs),
-        ArenaTextField(
-          controller: _roundIntervalsCtrl,
-          hint: 'Ex. 30,60,120,1440 (vide = défaut)',
-          keyboardType: TextInputType.text,
-          inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp('[0-9, ]')),
-          ],
-          onChanged: (_) => setState(() {}),
-        ),
-        if (_format == TournamentFormat.groupsThenKnockout) ...[
-          const SizedBox(height: ArenaSpacing.lg),
-          // Lot F.1 — Config groupes
-          Text('Config groupes', style: ArenaText.h3),
-          const SizedBox(height: ArenaSpacing.xs),
-          Text(
-            'Nombre de groupes + qualifiés par groupe pour la phase '
-            'knockout qui suit.',
-            style: ArenaText.small,
-          ),
-          const SizedBox(height: ArenaSpacing.sm),
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Groupes', style: ArenaText.inputLabel),
-                    const SizedBox(height: 4),
-                    ArenaTextField(
-                      controller: _groupCountCtrl,
-                      hint: '4',
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                      ],
-                      onChanged: (_) => setState(() {}),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: ArenaSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Qualifiés / groupe', style: ArenaText.inputLabel),
-                    const SizedBox(height: 4),
-                    ArenaTextField(
-                      controller: _qualifiersPerGroupCtrl,
-                      hint: '2',
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                      ],
-                      onChanged: (_) => setState(() {}),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ];
-
   List<Widget> _buildPrizesStep() {
     final topCount = _rewardedCount < 4 ? _rewardedCount : 4;
     return [
@@ -569,230 +451,6 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
         ],
       const SizedBox(height: ArenaSpacing.md),
       ShareTotalCard(total: _shareTotal(), currency: _currency),
-    ];
-  }
-
-  List<Widget> _buildFeesStep() {
-    final fee = double.tryParse(_entryFeeCtrl.text) ?? 0;
-    final isPaid = fee > 0;
-    return [
-      Container(
-        padding: const EdgeInsets.all(ArenaSpacing.md),
-        decoration: BoxDecoration(
-          color: ArenaColors.signalBlue.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(ArenaRadius.md),
-          border: Border.all(
-            color: ArenaColors.signalBlue.withValues(alpha: 0.3),
-          ),
-        ),
-        child: Text(
-          "ℹ Frais d'inscription = 0 → compétition GRATUITE (badge sur la "
-          'carte + bypass paiement). Sinon le joueur paie en P2P sur les '
-          'codes marchands ci-dessous, et le super-admin valide manuellement.',
-          style: ArenaText.body,
-        ),
-      ),
-      const SizedBox(height: ArenaSpacing.md),
-      Text("Frais d'inscription", style: ArenaText.inputLabel),
-      const SizedBox(height: ArenaSpacing.xs),
-      Row(
-        children: [
-          Expanded(
-            flex: 2,
-            child: _lockable(
-              ArenaTextField(
-                controller: _entryFeeCtrl,
-                hint: '0',
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp('[0-9.]')),
-                ],
-                onChanged: (_) => setState(() {}),
-              ),
-            ),
-          ),
-          const SizedBox(width: ArenaSpacing.xs),
-          Expanded(
-            child: _lockable(
-              CurrencyPicker(
-                current: _currency,
-                onChanged: (c) => setState(() => _currency = c),
-              ),
-            ),
-          ),
-        ],
-      ),
-      const SizedBox(height: ArenaSpacing.md),
-      Text(
-        'Commission ARENA (montant)',
-        style: ArenaText.inputLabel,
-      ),
-      const SizedBox(height: ArenaSpacing.xs),
-      Text(
-        "Saisi en $_currency, jamais affiché côté joueur. C'est ce que "
-        "l'équipe ARENA conserve, séparé de la cagnotte distribuée.",
-        style: ArenaText.small,
-      ),
-      const SizedBox(height: ArenaSpacing.xs),
-      Row(
-        children: [
-          Expanded(
-            flex: 2,
-            child: ArenaTextField(
-              controller: _commissionXafCtrl,
-              hint: '0',
-              keyboardType: TextInputType.number,
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp('[0-9.]')),
-              ],
-              onChanged: (_) => setState(() {}),
-            ),
-          ),
-          const SizedBox(width: ArenaSpacing.xs),
-          Expanded(
-            child: Container(
-              alignment: Alignment.center,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(
-                color: ArenaColors.carbon,
-                borderRadius: BorderRadius.circular(ArenaRadius.md),
-                border: Border.all(color: ArenaColors.border),
-              ),
-              child: Text(_currency, style: ArenaText.body),
-            ),
-          ),
-        ],
-      ),
-      if (!isPaid) ...[
-        const SizedBox(height: ArenaSpacing.lg),
-        Container(
-          padding: const EdgeInsets.all(ArenaSpacing.md),
-          decoration: BoxDecoration(
-            color: ArenaColors.tierGoldWarm.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(ArenaRadius.md),
-            border: Border.all(
-              color: ArenaColors.tierGoldWarm.withValues(alpha: 0.4),
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '👥 Parrainage requis (optionnel — Lot D)',
-                style: ArenaText.h3,
-              ),
-              const SizedBox(height: ArenaSpacing.xs),
-              Text(
-                'Force le joueur à parrainer N personnes via son code '
-                "(ARN-XXXX) avant de pouvoir s'inscrire. Pertinent pour "
-                'les compétitions gratuites avec récompense. 0 = pas de '
-                'gating.',
-                style: ArenaText.small,
-              ),
-              const SizedBox(height: ArenaSpacing.sm),
-              Row(
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: ArenaTextField(
-                      controller: _referralQuotaCtrl,
-                      hint: '0',
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                      ],
-                      onChanged: (_) => setState(() {}),
-                    ),
-                  ),
-                  const SizedBox(width: ArenaSpacing.xs),
-                  Expanded(
-                    child: Container(
-                      alignment: Alignment.center,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        color: ArenaColors.carbon,
-                        borderRadius: BorderRadius.circular(ArenaRadius.md),
-                        border: Border.all(color: ArenaColors.border),
-                      ),
-                      child: Text('amis', style: ArenaText.body),
-                    ),
-                  ),
-                ],
-              ),
-              if (_referralQuota() > 0) ...[
-                const SizedBox(height: ArenaSpacing.md),
-                Text('Mode de comptage', style: ArenaText.inputLabel),
-                const SizedBox(height: ArenaSpacing.xs),
-                Wrap(
-                  spacing: ArenaSpacing.xs,
-                  runSpacing: ArenaSpacing.xs,
-                  children: [
-                    _ModeChip(
-                      label: 'Tout filleul',
-                      active: _referralActivityMode == 'any',
-                      onTap: () =>
-                          setState(() => _referralActivityMode = 'any'),
-                    ),
-                    _ModeChip(
-                      label: 'Filleul engagé',
-                      active: _referralActivityMode == 'engaged',
-                      onTap: () =>
-                          setState(() => _referralActivityMode = 'engaged'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: ArenaSpacing.xs),
-                Text(
-                  _referralActivityMode == 'engaged'
-                      ? 'Filleul engagé = a joué au moins 1 match OU payé '
-                          "1 inscription. Bloque l'astuce \"10 faux comptes\"."
-                      : 'Tout filleul actif compte (création de compte '
-                          'suffisante).',
-                  style: ArenaText.small,
-                ),
-              ],
-            ],
-          ),
-        ),
-      ],
-      if (isPaid) ...[
-        const SizedBox(height: ArenaSpacing.lg),
-        Container(
-          padding: const EdgeInsets.all(ArenaSpacing.md),
-          decoration: arenaWarningCardDecoration(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '📱 Codes marchands (requis pour comp. payante)',
-                style: ArenaText.h3,
-              ),
-              const SizedBox(height: ArenaSpacing.xs),
-              Text(
-                'Affichés au joueur sur P2 quand il paie. Le super-admin '
-                'valide ensuite manuellement chaque transaction reçue.',
-                style: ArenaText.small,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: ArenaSpacing.md),
-        Text('Code marchand Orange Money', style: ArenaText.inputLabel),
-        const SizedBox(height: ArenaSpacing.xs),
-        ArenaTextField(
-          controller: _orangeMomoCtrl,
-          hint: 'ex. *126*1*001234#',
-          onChanged: (_) => setState(() {}),
-        ),
-        const SizedBox(height: ArenaSpacing.md),
-        Text('Code marchand MTN MoMo', style: ArenaText.inputLabel),
-        const SizedBox(height: ArenaSpacing.xs),
-        ArenaTextField(
-          controller: _mtnMomoCtrl,
-          hint: 'ex. *126*7*009876#',
-          onChanged: (_) => setState(() {}),
-        ),
-      ],
     ];
   }
 
@@ -877,8 +535,10 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
     }
 
     try {
-      final created =
-          await ref.read(adminCompetitionsRepositoryProvider).create({
+      final created = await traceAsync(
+        'admin.competition.create',
+        _isEditing ? 'edit existing' : 'new from wizard',
+        () => ref.read(adminCompetitionsRepositoryProvider).create({
         'name': _nameCtrl.text.trim(),
         'game': _game.value,
         'format': _format.value,
@@ -903,7 +563,8 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
         'format_config': _formatConfig(),
         if (fee > 0) 'orange_money_code': _orangeMomoCtrl.text.trim(),
         if (fee > 0) 'mtn_momo_code': _mtnMomoCtrl.text.trim(),
-      });
+        }),
+      );
       await ref.read(adminAuditLogRepositoryProvider).record(
         adminId: adminId,
         action: 'competition_created',
@@ -1126,129 +787,5 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
       default:
         return '';
     }
-  }
-}
-
-/// Picker d'intervalle entre rounds (Lot A — auto-management). Valeurs
-/// en minutes : 30 / 60 / 120 / 240 / 1440. Stocké tel quel dans la
-/// colonne `competitions.match_interval_minutes`.
-class _MatchIntervalPicker extends StatelessWidget {
-  const _MatchIntervalPicker({
-    required this.current,
-    required this.onChanged,
-  });
-
-  final int current;
-  final ValueChanged<int> onChanged;
-
-  static const _options = <({int minutes, String label})>[
-    (minutes: 30, label: '30 min'),
-    (minutes: 60, label: '1 h'),
-    (minutes: 120, label: '2 h'),
-    (minutes: 240, label: '4 h'),
-    (minutes: 1440, label: '1 jour'),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: ArenaSpacing.xs,
-      runSpacing: ArenaSpacing.xs,
-      children: [
-        for (final opt in _options)
-          _IntervalChip(
-            label: opt.label,
-            active: opt.minutes == current,
-            onTap: () => onChanged(opt.minutes),
-          ),
-      ],
-    );
-  }
-}
-
-/// Lot D.2 — Chip radio "Tout filleul" / "Filleul engagé".
-class _ModeChip extends StatelessWidget {
-  const _ModeChip({
-    required this.label,
-    required this.active,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(ArenaRadius.round),
-      child: AnimatedContainer(
-        duration: ArenaDurations.short,
-        padding: const EdgeInsets.symmetric(
-          horizontal: ArenaSpacing.md,
-          vertical: 8,
-        ),
-        decoration: BoxDecoration(
-          color: active
-              ? ArenaColors.signalBlue.withValues(alpha: 0.15)
-              : ArenaColors.carbon,
-          borderRadius: BorderRadius.circular(ArenaRadius.round),
-          border: Border.all(
-            color: active ? ArenaColors.signalBlue : ArenaColors.border,
-          ),
-        ),
-        child: Text(
-          label,
-          style: ArenaText.body.copyWith(
-            color: active ? ArenaColors.signalBlue : ArenaColors.silver,
-            fontWeight: active ? FontWeight.w600 : FontWeight.w500,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _IntervalChip extends StatelessWidget {
-  const _IntervalChip({
-    required this.label,
-    required this.active,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(ArenaRadius.round),
-      child: AnimatedContainer(
-        duration: ArenaDurations.short,
-        padding: const EdgeInsets.symmetric(
-          horizontal: ArenaSpacing.md,
-          vertical: 8,
-        ),
-        decoration: BoxDecoration(
-          color: active
-              ? ArenaColors.signalBlue.withValues(alpha: 0.15)
-              : ArenaColors.carbon,
-          borderRadius: BorderRadius.circular(ArenaRadius.round),
-          border: Border.all(
-            color: active ? ArenaColors.signalBlue : ArenaColors.border,
-          ),
-        ),
-        child: Text(
-          label,
-          style: ArenaText.body.copyWith(
-            color: active ? ArenaColors.signalBlue : ArenaColors.silver,
-            fontWeight: active ? FontWeight.w600 : FontWeight.w500,
-          ),
-        ),
-      ),
-    );
   }
 }
