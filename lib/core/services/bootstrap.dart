@@ -33,37 +33,45 @@ Future<void> bootstrap({
       bundleId: bundleId,
     );
 
-    // ─── Critical path : on attend uniquement ce dont SplashPage a besoin
-    // pour rendre sa première frame (SharedPreferences pour le flag
-    // `has_seen_splash_v1`). Tout le reste (Supabase, Firebase, Sentry,
-    // .env) est différé après `runApp` pour minimiser la durée du splash
-    // natif (Android 12+ SplashScreen API garde l'icône au centre tant
-    // que Flutter n'a pas peint).
+    // ─── Critical path : on attend SharedPreferences (flag `has_seen_
+    // splash_v1`) + .env + Supabase + Firebase avant `runApp`. Tous sont
+    // load-bearing pour la 1re frame :
+    //
+    // * Supabase : `userRouterProvider` consomme `currentSessionProvider`
+    //   → `supabaseClientProvider` qui assert `Supabase.instance._isInit
+    //   ialized`. Race observée 2026-05-19 (log `Failed assertion line
+    //   44 pos 7: '_instance._isInitialized'`).
+    //
+    // * Firebase : le post-frame callback de `_ArenaUserAppState.init
+    //   State` instancie `NotificationService` dont le constructor lit
+    //   `FirebaseMessaging.instance` (assert `Firebase.app` initialisé).
+    //   Race observée 2026-05-19 (log `MethodChannelFirebase.app ...
+    //   NotificationService(notification_service.dart:35)`).
+    //
+    // Coût : ~250-400 ms ajoutés au pre-runApp. Le splash Flutter dure
+    // 2.5 s (récurrent) ou 5.3 s (1er lancement), donc invisible.
     final prefs = await SharedPreferences.getInstance();
     final overrides = <Override>[
       sharedPreferencesProvider.overrideWithValue(prefs),
     ];
 
-    // ─── Background init (~300-500ms total) — ne bloque PAS runApp.
-    // Pendant ce temps, l'utilisateur voit le splash Flutter qui dure
-    // 2.5s (récurrent) ou 5.3s (1er lancement), donc Supabase/Firebase
-    // sont prêts bien avant que le splash se termine.
-    unawaited(_initBackgroundServices(flavor: flavor));
+    await _loadEnv();
+    await Future.wait<void>([
+      _initSupabase(),
+      _initFirebase(),
+    ]);
+
+    // ─── Background init (~200-500 ms) — ne bloque PAS runApp.
+    // Sentry n'est pas consommé pendant la 1re frame : il a une queue
+    // interne qui accepte les events avant `SentryFlutter.init`. Le
+    // binding natif (env. 500 ms) reste différé pour préserver la perf
+    // splash.
+    unawaited(_initSentry(flavor: flavor));
 
     runApp(ProviderScope(overrides: overrides, child: builder()));
   }, (error, stack) {
     Sentry.captureException(error, stackTrace: stack);
   });
-}
-
-Future<void> _initBackgroundServices({required Flavor flavor}) async {
-  await _loadEnv();
-  // En parallèle : Supabase + Firebase + Sentry.
-  await Future.wait<void>([
-    _initSupabase(),
-    _initFirebase(),
-    _initSentry(flavor: flavor),
-  ]);
 }
 
 Future<void> _initSentry({required Flavor flavor}) async {
