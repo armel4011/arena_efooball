@@ -96,6 +96,60 @@ Future<void> _initSentry({required Flavor flavor}) async {
       ..tracesSampleRate = kReleaseMode ? 0.2 : 1.0
       ..attachScreenshot = false;
   });
+
+  // ─── Phase 4/4 — observability scope ────────────────────────────────
+  // Tags posés une fois pour toute la session : permettent de filtrer
+  // les issues par app (com.arena.app vs com.arena.admin) et par
+  // version sans avoir à inspecter chaque event individuellement.
+  await Sentry.configureScope((scope) {
+    scope
+      ..setTag('flavor', flavor == Flavor.admin ? 'admin' : 'user')
+      ..setTag('bundle_id', FlavorConfig.instance.bundleId);
+  });
+}
+
+/// Push le user courant sur le scope Sentry quand la session bouge.
+///
+/// Appelé par `_initSupabase()` après l'init du client. Branché sur
+/// `onAuthStateChange` (même flux que le hook Realtime JWT) :
+///  * `signedIn` / `tokenRefreshed` → setUser(id, email)
+///  * `signedOut`                    → setUser(null) + breadcrumb
+///
+/// Sentry n'a pas besoin du profile complet (username / role) ici —
+/// on garde le hook côté Supabase auth pour rester async-safe et
+/// indépendant de Riverpod (qui n'est pas encore prêt pendant le
+/// pre-runApp). Le tag `role` peut être posé plus tard depuis
+/// `currentProfileProvider` si besoin.
+void _attachSentryUserBinder(SupabaseClient client) {
+  // Push initial — couvre le cas d'une session déjà restaurée.
+  final initial = client.auth.currentSession?.user;
+  if (initial != null) {
+    Sentry.configureScope((scope) {
+      scope.setUser(SentryUser(id: initial.id, email: initial.email));
+    });
+  }
+
+  client.auth.onAuthStateChange.listen((data) {
+    final user = data.session?.user;
+    final event = data.event;
+    Sentry.configureScope((scope) {
+      scope.setUser(
+        user == null
+            ? null
+            : SentryUser(id: user.id, email: user.email),
+      );
+    });
+    Sentry.addBreadcrumb(
+      Breadcrumb(
+        category: 'auth',
+        message: event.name,
+        level: SentryLevel.info,
+        data: {
+          if (user != null) 'user_id': user.id,
+        },
+      ),
+    );
+  });
 }
 
 Future<void> _loadEnv() async {
@@ -166,4 +220,9 @@ Future<void> _initSupabase() async {
   if (initialToken != null) {
     unawaited(client.realtime.setAuth(initialToken));
   }
+
+  // Sentry user binder (Phase 4/4) — câblé après l'init Supabase. Le
+  // hook est tolérant à un Sentry non-initialisé (SENTRY_DSN absent) :
+  // `configureScope` et `addBreadcrumb` sont des no-ops dans ce cas.
+  _attachSentryUserBinder(client);
 }
