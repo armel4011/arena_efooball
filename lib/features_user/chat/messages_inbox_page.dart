@@ -352,7 +352,11 @@ class _DirectTab extends ConsumerWidget {
     try {
       final repo = ref.read(chatRepositoryProvider);
       final channel = await repo.ensureMatchChannel(matchId);
-      await repo.deleteChannel(channel.id);
+      // "Supprimer pour moi" : hide + cleared_at = now(). Le peer
+      // garde sa conv et l'historique. Si je rouvre plus tard, la
+      // conv revient dans mon inbox via ensureMatchChannel qui
+      // un-hide automatiquement (mais cleared_at masque l'historique).
+      await repo.hideChannelForMe(channel.id);
       ref.invalidate(myOpenedMatchChannelIdsProvider);
       return true;
     } catch (e) {
@@ -373,7 +377,7 @@ class _DirectTab extends ConsumerWidget {
     final confirmed = await _confirmDelete(context);
     if (!confirmed) return false;
     try {
-      await ref.read(chatRepositoryProvider).deleteChannel(channelId);
+      await ref.read(chatRepositoryProvider).hideChannelForMe(channelId);
       ref.invalidate(myFriendChannelsProvider);
       return true;
     } catch (e) {

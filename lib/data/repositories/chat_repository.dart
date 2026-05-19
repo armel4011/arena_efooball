@@ -27,17 +27,17 @@ class ChatRepository {
   /// friend chats n'apparaissaient nulle part dans l'inbox.
   Future<List<({String channelId, String friendshipId, String peerId})>>
       listMyFriendChannels(String me) async {
+    // 1. Liste tous les friend channels où je suis membre.
     final rows = await _client
         .from(_channelsTable)
         .select('id, friendship_id, friendships!inner(requester_id, addressee_id, status)')
         .eq('type', 'friend')
-        .isFilter('deleted_at', null)
         .eq('friendships.status', 'accepted')
         .or(
           'requester_id.eq.$me,addressee_id.eq.$me',
           referencedTable: 'friendships',
         );
-    final out =
+    final all =
         <({String channelId, String friendshipId, String peerId})>[];
     for (final row in rows as List<dynamic>) {
       final map = row as Map<String, dynamic>;
@@ -47,7 +47,7 @@ class ChatRepository {
       final addressee = f['addressee_id'] as String?;
       final peer = requester == me ? addressee : requester;
       if (peer == null) continue;
-      out.add(
+      all.add(
         (
           channelId: map['id'] as String,
           friendshipId: map['friendship_id'] as String,
@@ -55,23 +55,53 @@ class ChatRepository {
         ),
       );
     }
-    return out;
+    if (all.isEmpty) return all;
+
+    // 2. Filtre les channels masqués pour moi (hidden=true dans
+    // chat_channel_user_state). RLS limite déjà les rows à moi.
+    final ids = [for (final c in all) c.channelId];
+    final hiddenRows = await _client
+        .from(_userStateTable)
+        .select('channel_id')
+        .eq('hidden', true)
+        .inFilter('channel_id', ids);
+    final hidden = {
+      for (final r in hiddenRows as List<dynamic>)
+        (r as Map<String, dynamic>)['channel_id'] as String,
+    };
+    return [for (final c in all) if (!hidden.contains(c.channelId)) c];
   }
 
   /// Renvoie l'ensemble des match_ids pour lesquels un `chat_channel`
-  /// de type=match existe déjà — passé en input la liste des matchs
-  /// du joueur. Alimente l'inbox messages (DIRECT tab) pour ne lister
-  /// que les conversations vraiment initiées (≠ tous mes matchs).
+  /// de type=match existe déjà (et n'est pas masqué pour moi). Alimente
+  /// l'inbox DIRECT pour n'afficher que les vraies conversations.
   Future<Set<String>> openedMatchChannelIds(List<String> matchIds) async {
     if (matchIds.isEmpty) return const {};
     final rows = await _client
         .from(_channelsTable)
-        .select('match_id')
+        .select('id, match_id')
         .eq('type', 'match')
         .inFilter('match_id', matchIds);
+    final byMatch = <String, String>{};
+    for (final r in rows as List<dynamic>) {
+      final map = r as Map<String, dynamic>;
+      byMatch[map['match_id'] as String] = map['id'] as String;
+    }
+    if (byMatch.isEmpty) return const {};
+
+    // Retire les channels masqués pour moi.
+    final hiddenRows = await _client
+        .from(_userStateTable)
+        .select('channel_id')
+        .eq('hidden', true)
+        .inFilter('channel_id', byMatch.values.toList());
+    final hiddenChannelIds = {
+      for (final r in hiddenRows as List<dynamic>)
+        (r as Map<String, dynamic>)['channel_id'] as String,
+    };
     return {
-      for (final r in rows as List<dynamic>)
-        (r as Map<String, dynamic>)['match_id'] as String,
+      for (final e in byMatch.entries)
+        if (!hiddenChannelIds.contains(e.value)) e.key,
     };
   }
 
@@ -220,17 +250,57 @@ class ChatRepository {
         .eq('id', messageId);
   }
 
-  /// Hard delete d'un chat channel par un membre (sémantique WhatsApp
-  /// "Supprimer pour tout le monde"). La FK chat_messages.channel_id
-  /// est ON DELETE CASCADE → les messages disparaissent automatiquement.
-  /// ensureMatchChannel/ensureFriendChannel créeront un nouveau channel
-  /// au prochain accès → fresh start sans historique.
-  ///
-  /// V2 follow-up : feature "Supprimer pour moi seulement" via une
-  /// table chat_channel_hidden (user_id, channel_id) qui filtrerait
-  /// côté inbox sans toucher au channel partagé.
-  Future<void> deleteChannel(String channelId) async {
-    await _client.from(_channelsTable).delete().eq('id', channelId);
+  static const _userStateTable = 'chat_channel_user_state';
+
+  /// Sémantique WhatsApp "Supprimer pour moi" :
+  ///   - hidden=true → masque la conv dans MON inbox (peer pas affecté)
+  ///   - cleared_at=now() → masque les messages antérieurs côté MOI
+  ///     (filtre client-side dans watchMessages)
+  /// Upsert (insert si manquant, update sinon).
+  Future<void> hideChannelForMe(String channelId) async {
+    final me = _client.auth.currentUser?.id;
+    if (me == null) return;
+    await _client.from(_userStateTable).upsert({
+      'user_id': me,
+      'channel_id': channelId,
+      'hidden': true,
+      'cleared_at': DateTime.now().toUtc().toIso8601String(),
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
+    });
+  }
+
+  /// Inverse de hideChannelForMe : remet la conv dans mon inbox sans
+  /// effacer cleared_at (l'historique antérieur reste filtré). Appelée
+  /// automatiquement à chaque ensureXxxChannel — un user qui rouvre
+  /// le chat veut le revoir dans son inbox.
+  Future<void> unhideChannelForMe(String channelId) async {
+    final me = _client.auth.currentUser?.id;
+    if (me == null) return;
+    // Upsert hidden=false (insert si row inexistante avec cleared_at=null,
+    // update si existante sans toucher cleared_at).
+    await _client.from(_userStateTable).upsert({
+      'user_id': me,
+      'channel_id': channelId,
+      'hidden': false,
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
+    });
+  }
+
+  /// Renvoie le `cleared_at` de ma row chat_channel_user_state pour ce
+  /// channel, null s'il n'y a pas eu de clearing. Utilisé pour filtrer
+  /// les messages dans watchMessages.
+  Future<DateTime?> myChatClearedAt(String channelId) async {
+    final me = _client.auth.currentUser?.id;
+    if (me == null) return null;
+    final row = await _client
+        .from(_userStateTable)
+        .select('cleared_at')
+        .eq('user_id', me)
+        .eq('channel_id', channelId)
+        .maybeSingle();
+    final raw = row?['cleared_at'] as String?;
+    if (raw == null) return null;
+    return DateTime.parse(raw);
   }
 
   /// Get-or-create un channel `type='friend'` pour la friendship donnée.
@@ -256,9 +326,24 @@ final chatRepositoryProvider = Provider<ChatRepository>((ref) {
 });
 
 /// Auto-fetches (or creates) the chat channel attached to a match.
+/// Au passage, un-hide pour moi (si la conv était "supprimée pour moi"
+/// elle ré-apparaît dans l'inbox) + invalide les providers inbox pour
+/// déclencher le refresh.
 final matchChannelProvider =
-    FutureProvider.family.autoDispose<ChatChannel, String>((ref, matchId) {
-  return ref.watch(chatRepositoryProvider).ensureMatchChannel(matchId);
+    FutureProvider.family.autoDispose<ChatChannel, String>((ref, matchId) async {
+  final repo = ref.watch(chatRepositoryProvider);
+  final channel = await repo.ensureMatchChannel(matchId);
+  await repo.unhideChannelForMe(channel.id);
+  ref.invalidate(myOpenedMatchChannelIdsProvider);
+  return channel;
+});
+
+/// Cleared_at de ma chat_channel_user_state pour ce channel — utilisé
+/// pour filtrer les messages que je voyais avant d'avoir "supprimé pour
+/// moi" la conversation (sémantique WhatsApp).
+final myChatClearedAtProvider =
+    FutureProvider.family.autoDispose<DateTime?, String>((ref, channelId) {
+  return ref.watch(chatRepositoryProvider).myChatClearedAt(channelId);
 });
 
 /// Realtime stream of all messages in a chat channel, oldest → newest.

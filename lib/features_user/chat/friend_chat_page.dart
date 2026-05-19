@@ -235,6 +235,8 @@ class _FriendChatPageState extends ConsumerState<FriendChatPage> {
   Widget _buildBody(ChatChannel channel) {
     final selfId = ref.watch(currentSessionProvider)?.user.id;
     final msgsAsync = ref.watch(channelMessagesProvider(channel.id));
+    final clearedAt =
+        ref.watch(myChatClearedAtProvider(channel.id)).valueOrNull;
     return Column(
       children: [
         Expanded(
@@ -245,7 +247,15 @@ class _FriendChatPageState extends ConsumerState<FriendChatPage> {
               onRetry: () =>
                   ref.invalidate(channelMessagesProvider(channel.id)),
             ),
-            data: (messages) {
+            data: (rawMessages) {
+              final messages = clearedAt == null
+                  ? rawMessages
+                  : [
+                      for (final m in rawMessages)
+                        if (m.createdAt == null ||
+                            m.createdAt!.isAfter(clearedAt))
+                          m,
+                    ];
               if (messages.isEmpty) {
                 return const EmptyState(
                   icon: Icons.chat_bubble_outline,
@@ -315,10 +325,17 @@ class _FriendChatPageState extends ConsumerState<FriendChatPage> {
 }
 
 /// Resolve (or create) le `chat_channel` type=friend pour la friendship.
+/// Au passage, un-hide pour moi (sémantique WhatsApp : rouvrir une
+/// conv "supprimée pour moi" la fait ré-apparaître dans l'inbox) +
+/// invalide l'inbox provider pour qu'il pick up le changement.
 final _friendChannelProvider =
     FutureProvider.family.autoDispose<ChatChannel, String>(
         (ref, friendshipId) async {
-  return ref.read(chatRepositoryProvider).ensureFriendChannel(friendshipId);
+  final repo = ref.read(chatRepositoryProvider);
+  final channel = await repo.ensureFriendChannel(friendshipId);
+  await repo.unhideChannelForMe(channel.id);
+  ref.invalidate(myFriendChannelsProvider);
+  return channel;
 });
 
 /// Resolve le profil de l'ami à partir de la friendship.

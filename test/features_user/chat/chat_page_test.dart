@@ -89,7 +89,13 @@ class _FakeChatRepository implements ChatRepository {
   Future<void> softDeleteMessage(String messageId) async {}
 
   @override
-  Future<void> deleteChannel(String channelId) async {}
+  Future<void> hideChannelForMe(String channelId) async {}
+
+  @override
+  Future<void> unhideChannelForMe(String channelId) async {}
+
+  @override
+  Future<DateTime?> myChatClearedAt(String channelId) async => null;
 
   @override
   Future<ChatChannel> ensureFriendChannel(String friendshipId) async {

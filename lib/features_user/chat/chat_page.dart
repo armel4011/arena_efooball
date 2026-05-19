@@ -351,6 +351,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   Widget _buildChannelBody(ChatChannel channel) {
     final selfId = ref.watch(currentSessionProvider)?.user.id;
     final messagesAsync = ref.watch(channelMessagesProvider(channel.id));
+    final clearedAt =
+        ref.watch(myChatClearedAtProvider(channel.id)).valueOrNull;
 
     return Column(
       children: [
@@ -363,7 +365,18 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 channelMessagesProvider(channel.id),
               ),
             ),
-            data: (messages) {
+            data: (rawMessages) {
+              // Filtre client-side : messages avant cleared_at sont
+              // masqués pour moi (le peer voit tout — sémantique
+              // WhatsApp "Supprimer pour moi").
+              final messages = clearedAt == null
+                  ? rawMessages
+                  : [
+                      for (final m in rawMessages)
+                        if (m.createdAt == null ||
+                            m.createdAt!.isAfter(clearedAt))
+                          m,
+                    ];
               if (messages.isEmpty) {
                 return const EmptyState(
                   icon: Icons.chat_bubble_outline,
