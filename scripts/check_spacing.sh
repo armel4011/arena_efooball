@@ -11,7 +11,10 @@
 #         bash scripts/check_spacing.sh --strict  # exit 1 if any found
 # ─────────────────────────────────────────────────────────────────────────────
 
-set -euo pipefail
+# Pas de `pipefail` : on utilise `grep | head -5` plus bas et SIGPIPE
+# propagerait un exit 141. La sémantique d'origine n'a pas besoin de
+# pipefail (les pipes sont des "best-effort report").
+set -eu
 
 cd "$(dirname "$0")/.."
 
