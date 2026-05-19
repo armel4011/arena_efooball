@@ -92,15 +92,6 @@ class ProfileRepository {
     }).eq('id', id);
   }
 
-  /// Stream of the profile row matching [id]. Powered by Supabase
-  /// Realtime, pushes updates whenever the row changes server-side.
-  Stream<Profile?> watch(String id) {
-    return _client
-        .from(_table)
-        .stream(primaryKey: ['id'])
-        .eq('id', id)
-        .map((rows) => rows.isEmpty ? null : Profile.fromJson(rows.first));
-  }
 }
 
 /// Supabase client. Overridable in tests (or in builds where Supabase
