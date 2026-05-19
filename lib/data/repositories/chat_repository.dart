@@ -72,6 +72,23 @@ class ChatRepository {
     return [for (final c in all) if (!hidden.contains(c.channelId)) c];
   }
 
+  /// Map matchId → channelId pour les channels type='match' existants.
+  /// Utilisé par myUnreadCountsProvider pour résoudre les channels
+  /// derrière les match_ids retournés par openedMatchChannelIds.
+  Future<Map<String, String>> matchChannelIdsFor(List<String> matchIds) async {
+    if (matchIds.isEmpty) return const {};
+    final rows = await _client
+        .from(_channelsTable)
+        .select('id, match_id')
+        .eq('type', 'match')
+        .inFilter('match_id', matchIds);
+    return {
+      for (final r in rows as List<dynamic>)
+        (r as Map<String, dynamic>)['match_id'] as String:
+            r['id'] as String,
+    };
+  }
+
   /// Renvoie l'ensemble des match_ids pour lesquels un `chat_channel`
   /// de type=match existe déjà (et n'est pas masqué pour moi). Alimente
   /// l'inbox DIRECT pour n'afficher que les vraies conversations.
@@ -286,6 +303,70 @@ class ChatRepository {
     });
   }
 
+  /// Marque ce channel comme lu — pose last_read_at = now() dans ma
+  /// row chat_channel_user_state. Le badge "messages non-lus" disparaît
+  /// après. Préserve hidden (upsert ne touche que les columns spécifiées
+  /// dans l'UPDATE part, et default sinon pour l'INSERT part).
+  Future<void> markChannelAsRead(String channelId) async {
+    final me = _client.auth.currentUser?.id;
+    if (me == null) return;
+    await _client.from(_userStateTable).upsert({
+      'user_id': me,
+      'channel_id': channelId,
+      'last_read_at': DateTime.now().toUtc().toIso8601String(),
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
+    });
+  }
+
+  /// Compte les messages non-lus pour chaque channel passé en input.
+  /// Returns un Map<channelId, count>. Un channel sans messages non-lus
+  /// est absent de la map (≠ count=0 si la row n'a pas been initialisée
+  /// pour ce user).
+  ///
+  /// Implémentation côté client (1 SELECT states + 1 SELECT messages).
+  /// Cap à 500 messages totaux pour ne pas exploser à scale — UI
+  /// affiche "99+" au-delà.
+  Future<Map<String, int>> getUnreadCounts(List<String> channelIds) async {
+    if (channelIds.isEmpty) return const {};
+    final me = _client.auth.currentUser?.id;
+    if (me == null) return const {};
+
+    // 1. last_read_at par channel pour moi
+    final stateRows = await _client
+        .from(_userStateTable)
+        .select('channel_id, last_read_at')
+        .eq('user_id', me)
+        .inFilter('channel_id', channelIds);
+    final lastReadByChannel = <String, DateTime>{};
+    for (final r in stateRows as List<dynamic>) {
+      final map = r as Map<String, dynamic>;
+      final ts = map['last_read_at'] as String?;
+      if (ts != null) {
+        lastReadByChannel[map['channel_id'] as String] = DateTime.parse(ts);
+      }
+    }
+
+    // 2. Messages de ces channels, pas de moi, pas deleted
+    final msgs = await _client
+        .from(_messagesTable)
+        .select('channel_id, created_at')
+        .inFilter('channel_id', channelIds)
+        .isFilter('deleted_at', null)
+        .neq('sender_id', me)
+        .limit(500);
+
+    final counts = <String, int>{};
+    for (final m in msgs as List<dynamic>) {
+      final map = m as Map<String, dynamic>;
+      final channelId = map['channel_id'] as String;
+      final createdAt = DateTime.parse(map['created_at'] as String);
+      final lastRead = lastReadByChannel[channelId];
+      if (lastRead != null && !createdAt.isAfter(lastRead)) continue;
+      counts[channelId] = (counts[channelId] ?? 0) + 1;
+    }
+    return counts;
+  }
+
   /// Renvoie le `cleared_at` de ma row chat_channel_user_state pour ce
   /// channel, null s'il n'y a pas eu de clearing. Utilisé pour filtrer
   /// les messages dans watchMessages.
@@ -326,15 +407,16 @@ final chatRepositoryProvider = Provider<ChatRepository>((ref) {
 });
 
 /// Auto-fetches (or creates) the chat channel attached to a match.
-/// Au passage, un-hide pour moi (si la conv était "supprimée pour moi"
-/// elle ré-apparaît dans l'inbox) + invalide les providers inbox pour
-/// déclencher le refresh.
+/// Au passage : un-hide + mark as read + invalide les providers inbox.
 final matchChannelProvider =
     FutureProvider.family.autoDispose<ChatChannel, String>((ref, matchId) async {
   final repo = ref.watch(chatRepositoryProvider);
   final channel = await repo.ensureMatchChannel(matchId);
   await repo.unhideChannelForMe(channel.id);
-  ref.invalidate(myOpenedMatchChannelIdsProvider);
+  await repo.markChannelAsRead(channel.id);
+  ref
+    ..invalidate(myOpenedMatchChannelIdsProvider)
+    ..invalidate(myUnreadCountsProvider);
   return channel;
 });
 
@@ -370,4 +452,45 @@ final myFriendChannelsProvider = FutureProvider.autoDispose<
   final me = ref.watch(currentSessionProvider)?.user.id;
   if (me == null) return const [];
   return ref.watch(chatRepositoryProvider).listMyFriendChannels(me);
+});
+
+/// Map matchId → channelId pour mes matchs avec chat. Utilisé par
+/// l'inbox pour résoudre les unread counts sur les rows match.
+final myMatchChannelIdsMapProvider =
+    FutureProvider.autoDispose<Map<String, String>>((ref) async {
+  final matches = await ref.watch(myAllMatchesProvider.future);
+  if (matches.isEmpty) return const {};
+  final ids = [for (final m in matches) m.id];
+  return ref.watch(chatRepositoryProvider).matchChannelIdsFor(ids);
+});
+
+/// Item 3 wave F (2026-05-19) — compteurs de messages non-lus par
+/// channel, alimente les badges sur les rows inbox. Map<channelId, int>.
+/// Channels sans messages non-lus sont absents (= 0).
+///
+/// Le provider est invalidé quand :
+/// - L'utilisateur ouvre une conv (markChannelAsRead inside
+///   matchChannelProvider / _friendChannelProvider)
+/// - L'utilisateur supprime une conv (hideChannelForMe)
+/// - Pull-to-refresh sur l'inbox
+final myUnreadCountsProvider =
+    FutureProvider.autoDispose<Map<String, int>>((ref) async {
+  final me = ref.watch(currentSessionProvider)?.user.id;
+  if (me == null) return const {};
+  final repo = ref.watch(chatRepositoryProvider);
+  // On veut counter tous les channels où je suis membre, pas que les
+  // friend channels. Source : listMyFriendChannels + openedMatchChannelIds.
+  final friends = await ref.watch(myFriendChannelsProvider.future);
+  final matchIds = await ref.watch(myOpenedMatchChannelIdsProvider.future);
+  final allChannelIds = <String>{
+    ...friends.map((f) => f.channelId),
+  };
+  if (matchIds.isNotEmpty) {
+    // Le openedMatchChannelIdsProvider rend des match_ids ; il faut
+    // résoudre les channel_id correspondants. Petit fetch séparé.
+    final matchChannels = await repo.matchChannelIdsFor(matchIds.toList());
+    allChannelIds.addAll(matchChannels.values);
+  }
+  if (allChannelIds.isEmpty) return const {};
+  return repo.getUnreadCounts(allChannelIds.toList());
 });

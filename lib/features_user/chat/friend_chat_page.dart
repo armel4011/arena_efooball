@@ -334,7 +334,10 @@ final _friendChannelProvider =
   final repo = ref.read(chatRepositoryProvider);
   final channel = await repo.ensureFriendChannel(friendshipId);
   await repo.unhideChannelForMe(channel.id);
-  ref.invalidate(myFriendChannelsProvider);
+  await repo.markChannelAsRead(channel.id);
+  ref
+    ..invalidate(myFriendChannelsProvider)
+    ..invalidate(myUnreadCountsProvider);
   return channel;
 });
 

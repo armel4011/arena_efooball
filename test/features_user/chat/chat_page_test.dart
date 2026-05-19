@@ -98,6 +98,19 @@ class _FakeChatRepository implements ChatRepository {
   Future<DateTime?> myChatClearedAt(String channelId) async => null;
 
   @override
+  Future<void> markChannelAsRead(String channelId) async {}
+
+  @override
+  Future<Map<String, int>> getUnreadCounts(List<String> channelIds) async =>
+      const {};
+
+  @override
+  Future<Map<String, String>> matchChannelIdsFor(
+    List<String> matchIds,
+  ) async =>
+      const {};
+
+  @override
   Future<ChatChannel> ensureFriendChannel(String friendshipId) async {
     return ChatChannel(
       id: _channelId,

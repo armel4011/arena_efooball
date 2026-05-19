@@ -135,17 +135,23 @@ class _DirectTab extends ConsumerWidget {
     final matchesAsync = ref.watch(myAllMatchesProvider);
     final openedIdsAsync = ref.watch(myOpenedMatchChannelIdsProvider);
     final friendChannelsAsync = ref.watch(myFriendChannelsProvider);
+    final unreadCounts =
+        ref.watch(myUnreadCountsProvider).valueOrNull ?? const {};
+    final matchChannelMap =
+        ref.watch(myMatchChannelIdsMapProvider).valueOrNull ?? const {};
 
     return RefreshIndicator(
       onRefresh: () async {
         ref
           ..invalidate(myAllMatchesProvider)
           ..invalidate(myOpenedMatchChannelIdsProvider)
-          ..invalidate(myFriendChannelsProvider);
+          ..invalidate(myFriendChannelsProvider)
+          ..invalidate(myUnreadCountsProvider);
         await Future.wait([
           ref.read(myAllMatchesProvider.future),
           ref.read(myOpenedMatchChannelIdsProvider.future),
           ref.read(myFriendChannelsProvider.future),
+          ref.read(myUnreadCountsProvider.future),
         ]);
       },
       child: matchesAsync.when(
@@ -202,7 +208,11 @@ class _DirectTab extends ConsumerWidget {
                 if (friendChannels.isNotEmpty)
                   const _InboxItem.sectionHeader('AMIS'),
                 for (final fc in friendChannels)
-                  _InboxItem.friend(fc, peers[fc.peerId]),
+                  _InboxItem.friend(
+                    fc,
+                    peers[fc.peerId],
+                    unread: unreadCounts[fc.channelId] ?? 0,
+                  ),
                 if (conversations.isNotEmpty && friendChannels.isNotEmpty)
                   const _InboxItem.sectionHeader('MATCHS'),
                 for (var i = 0; i < conversations.length; i++)
@@ -212,6 +222,9 @@ class _DirectTab extends ConsumerWidget {
                         ? conversations[i].player2Id
                         : conversations[i].player1Id],
                     highlighted: i == 0 && _isHot(conversations[i]),
+                    unread: unreadCounts[
+                            matchChannelMap[conversations[i].id]] ??
+                        0,
                   ),
               ];
               return ListView.separated(
@@ -271,6 +284,7 @@ class _DirectTab extends ConsumerWidget {
                       child: _FriendThreadRow(
                         friendshipId: fc.friendshipId,
                         peer: it.peer,
+                        unread: it.unread,
                       ),
                     );
                   }
@@ -300,6 +314,7 @@ class _DirectTab extends ConsumerWidget {
                       match: m,
                       opponent: it.peer,
                       highlighted: it.highlighted,
+                      unread: it.unread,
                     ),
                   );
                 },
@@ -406,11 +421,13 @@ class _MatchThreadRow extends StatelessWidget {
     required this.match,
     required this.opponent,
     required this.highlighted,
+    this.unread = 0,
   });
 
   final ArenaMatch match;
   final Profile? opponent;
   final bool highlighted;
+  final int unread;
 
   @override
   Widget build(BuildContext context) {
@@ -480,6 +497,10 @@ class _MatchThreadRow extends StatelessWidget {
                   ],
                 ),
               ),
+              if (unread > 0) ...[
+                const SizedBox(width: 6),
+                _UnreadBadge(count: unread),
+              ],
             ],
           ),
         ),
@@ -706,6 +727,7 @@ class _InboxItem {
     this.match,
     this.peer,
     this.highlighted = false,
+    this.unread = 0,
   });
 
   const _InboxItem.sectionHeader(String label)
@@ -713,18 +735,26 @@ class _InboxItem {
 
   const _InboxItem.friend(
     ({String channelId, String friendshipId, String peerId}) friend,
-    Profile? peer,
-  ) : this._(kind: _InboxItemKind.friend, friend: friend, peer: peer);
+    Profile? peer, {
+    required int unread,
+  }) : this._(
+          kind: _InboxItemKind.friend,
+          friend: friend,
+          peer: peer,
+          unread: unread,
+        );
 
   const _InboxItem.match(
     ArenaMatch match,
     Profile? peer, {
     required bool highlighted,
+    required int unread,
   }) : this._(
           kind: _InboxItemKind.match,
           match: match,
           peer: peer,
           highlighted: highlighted,
+          unread: unread,
         );
 
   final _InboxItemKind kind;
@@ -733,15 +763,21 @@ class _InboxItem {
   final ArenaMatch? match;
   final Profile? peer;
   final bool highlighted;
+  final int unread;
 }
 
 /// Row inbox pour un friend chat (Item 3 wave C — 2026-05-19).
 /// Tap → /chat/friend/:friendshipId. Layout cohérent avec _MatchThreadRow.
 class _FriendThreadRow extends StatelessWidget {
-  const _FriendThreadRow({required this.friendshipId, required this.peer});
+  const _FriendThreadRow({
+    required this.friendshipId,
+    required this.peer,
+    this.unread = 0,
+  });
 
   final String friendshipId;
   final Profile? peer;
+  final int unread;
 
   @override
   Widget build(BuildContext context) {
@@ -791,13 +827,47 @@ class _FriendThreadRow extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(
-                Icons.chevron_right,
-                color: ArenaColors.silverDim,
-                size: 20,
-              ),
+              if (unread > 0)
+                _UnreadBadge(count: unread)
+              else
+                const Icon(
+                  Icons.chevron_right,
+                  color: ArenaColors.silverDim,
+                  size: 20,
+                ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Badge "messages non-lus" style WhatsApp — bulle bleue avec compteur.
+/// Affiche "99+" pour count >= 100.
+class _UnreadBadge extends StatelessWidget {
+  const _UnreadBadge({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = count >= 100 ? '99+' : '$count';
+    return Container(
+      constraints: const BoxConstraints(minWidth: 22, minHeight: 22),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: const BoxDecoration(
+        color: ArenaColors.signalBlue,
+        shape: BoxShape.rectangle,
+        borderRadius: BorderRadius.all(Radius.circular(999)),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        label,
+        style: ArenaText.small.copyWith(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+          fontSize: 11,
         ),
       ),
     );
