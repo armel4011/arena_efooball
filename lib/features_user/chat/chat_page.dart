@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/services/agora_rtm_service.dart';
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/core/utils/arena_error_message.dart';
 import 'package:arena/data/models/chat_channel.dart';
 import 'package:arena/data/models/chat_message.dart';
 import 'package:arena/data/models/profile.dart';
@@ -15,10 +17,12 @@ import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:arena/features_shared/widgets/error_state.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/chat/messages_inbox_page.dart';
+import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 /// PHASE 6 — 1-on-1 match chat. Hands the matchId to
 /// [matchChannelProvider] which fetches or auto-creates the
@@ -57,6 +61,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   /// `true` once we've seen `remoteJoinChannel` from the opponent.
   bool _peerOnline = false;
+
+  /// Toggle de l'overlay emoji picker — visible quand l'utilisateur
+  /// tape sur le bouton smiley.
+  bool _showEmojiPanel = false;
+
+  /// `true` pendant l'upload d'un media (caméra/galerie). Bloque les
+  /// boutons send/attach/emoji pour éviter les doubles posts.
+  bool _uploading = false;
 
   @override
   void initState() {
@@ -163,6 +175,131 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
   }
 
+  Future<void> _pickAndSendImage(String channelId, ImageSource source) async {
+    if (_uploading) return;
+    final selfId = ref.read(currentSessionProvider)?.user.id;
+    if (selfId == null) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    final picker = ImagePicker();
+    final XFile? picked;
+    try {
+      picked = await picker.pickImage(
+        source: source,
+        imageQuality: 80,
+        maxWidth: 1920,
+      );
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Picker indisponible : ${arenaErrorMessage(e)}')),
+      );
+      return;
+    }
+    if (picked == null || !mounted) return;
+
+    setState(() => _uploading = true);
+    try {
+      await ref.read(chatRepositoryProvider).sendMediaMessage(
+            channelId: channelId,
+            senderId: selfId,
+            file: File(picked.path),
+            mediaType: 'image',
+          );
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Échec upload : ${arenaErrorMessage(e)}')),
+      );
+    } finally {
+      if (mounted) setState(() => _uploading = false);
+    }
+  }
+
+  Future<void> _showAttachSheet(String channelId) async {
+    if (_uploading) return;
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: ArenaColors.carbon,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(
+                Icons.photo_library_outlined,
+                color: ArenaColors.signalBlue,
+              ),
+              title: const Text('Choisir dans la galerie'),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.photo_camera_outlined,
+                color: ArenaColors.signalBlue,
+              ),
+              title: const Text('Prendre une photo'),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+            const SizedBox(height: ArenaSpacing.sm),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+    await _pickAndSendImage(channelId, source);
+  }
+
+  void _toggleEmojiPanel() {
+    setState(() => _showEmojiPanel = !_showEmojiPanel);
+    if (_showEmojiPanel) FocusScope.of(context).unfocus();
+  }
+
+  void _onEmojiSelected(Category? _, Emoji emoji) {
+    final selection = _inputCtrl.selection;
+    final text = _inputCtrl.text;
+    final start = selection.start < 0 ? text.length : selection.start;
+    final end = selection.end < 0 ? text.length : selection.end;
+    final newText = text.replaceRange(start, end, emoji.emoji);
+    _inputCtrl
+      ..text = newText
+      ..selection =
+          TextSelection.collapsed(offset: start + emoji.emoji.length);
+  }
+
+  Future<void> _confirmAndDeleteMessage(ChatMessage msg) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: ArenaColors.carbon,
+        title: const Text('Supprimer ce message ?'),
+        content: const Text(
+          "Ce message sera marqué comme supprimé. L'autre joueur "
+          'verra "Message supprimé" à la place.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: ArenaColors.neonRed),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('SUPPRIMER'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    try {
+      await ref.read(chatRepositoryProvider).softDeleteMessage(msg.id);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Échec : ${arenaErrorMessage(e)}')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final channelAsync = ref.watch(matchChannelProvider(widget.matchId));
@@ -238,9 +375,13 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                   // the newest message sits at the bottom of the
                   // (reversed) ListView.
                   final msg = messages[messages.length - 1 - i];
-                  return _Bubble(
+                  final isSelf = msg.senderId == selfId;
+                  return ChatBubble(
                     message: msg,
-                    isSelf: msg.senderId == selfId,
+                    isSelf: isSelf,
+                    onLongPress: isSelf
+                        ? () => _confirmAndDeleteMessage(msg)
+                        : null,
                   );
                 },
               );
@@ -248,11 +389,39 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           ),
         ),
         const Divider(height: 1, color: ArenaColors.border),
-        _MessageInput(
+        ChatMessageInput(
           controller: _inputCtrl,
-          sending: _sending,
+          sending: _sending || _uploading,
+          emojiActive: _showEmojiPanel,
           onSend: () => _send(channel.id),
+          onToggleEmoji: _toggleEmojiPanel,
+          onAttach: () => _showAttachSheet(channel.id),
         ),
+        if (_showEmojiPanel)
+          SizedBox(
+            height: 260,
+            child: EmojiPicker(
+              onEmojiSelected: _onEmojiSelected,
+              textEditingController: _inputCtrl,
+              config: const Config(
+                emojiViewConfig: EmojiViewConfig(
+                  backgroundColor: ArenaColors.void_,
+                  columns: 8,
+                ),
+                categoryViewConfig: CategoryViewConfig(
+                  backgroundColor: ArenaColors.carbon,
+                  iconColor: ArenaColors.silver,
+                  iconColorSelected: ArenaColors.signalBlue,
+                  indicatorColor: ArenaColors.signalBlue,
+                ),
+                bottomActionBarConfig: BottomActionBarConfig(
+                  backgroundColor: ArenaColors.carbon,
+                  buttonColor: ArenaColors.carbon,
+                  buttonIconColor: ArenaColors.silver,
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -417,72 +586,207 @@ class _CircleIconButton extends StatelessWidget {
   }
 }
 
-class _Bubble extends StatelessWidget {
-  const _Bubble({required this.message, required this.isSelf});
+/// Bubble unitaire d'un message — partagée entre [ChatPage] (match) et
+/// `FriendChatPage`. Long-press déclenche [onLongPress] (typiquement
+/// "supprimer mon message").
+class ChatBubble extends ConsumerWidget {
+  const ChatBubble({
+    required this.message,
+    required this.isSelf,
+    this.onLongPress,
+    super.key,
+  });
 
   final ChatMessage message;
   final bool isSelf;
+  final VoidCallback? onLongPress;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (message.type == 'room_code') {
       return _RoomCodeBubble(message: message);
     }
+
+    final isDeleted = message.deletedAt != null;
+    final hasMedia = !isDeleted && message.mediaUrl != null;
     final scheme = Theme.of(context).colorScheme;
-    return Align(
-      alignment: isSelf ? Alignment.centerRight : Alignment.centerLeft,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
-        ),
-        child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 2),
-          padding: const EdgeInsets.symmetric(
-            horizontal: ArenaSpacing.md,
-            vertical: ArenaSpacing.sm,
+
+    return GestureDetector(
+      onLongPress: isDeleted ? null : onLongPress,
+      child: Align(
+        alignment: isSelf ? Alignment.centerRight : Alignment.centerLeft,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.75,
           ),
-          decoration: BoxDecoration(
-            color: isSelf ? scheme.primary : ArenaColors.carbon2,
-            borderRadius: BorderRadius.only(
-              topLeft: const Radius.circular(16),
-              topRight: const Radius.circular(16),
-              bottomLeft: Radius.circular(isSelf ? 16 : 4),
-              bottomRight: Radius.circular(isSelf ? 4 : 16),
+          child: Container(
+            margin: const EdgeInsets.symmetric(vertical: 2),
+            padding: hasMedia
+                ? const EdgeInsets.all(4)
+                : const EdgeInsets.symmetric(
+                    horizontal: ArenaSpacing.md,
+                    vertical: ArenaSpacing.sm,
+                  ),
+            decoration: BoxDecoration(
+              color: isSelf ? scheme.primary : ArenaColors.carbon2,
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(16),
+                topRight: const Radius.circular(16),
+                bottomLeft: Radius.circular(isSelf ? 16 : 4),
+                bottomRight: Radius.circular(isSelf ? 4 : 16),
+              ),
+              boxShadow: isSelf && !hasMedia
+                  ? [
+                      BoxShadow(
+                        color: scheme.primary.withValues(alpha: 0.45),
+                        blurRadius: 18,
+                        spreadRadius: -2,
+                        offset: const Offset(0, 4),
+                      ),
+                    ]
+                  : null,
             ),
-            boxShadow: isSelf
-                ? [
-                    BoxShadow(
-                      color: scheme.primary.withValues(alpha: 0.45),
-                      blurRadius: 18,
-                      spreadRadius: -2,
-                      offset: const Offset(0, 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (isDeleted)
+                  Text(
+                    'Message supprimé',
+                    style: ArenaText.body.copyWith(
+                      color: isSelf
+                          ? Colors.white.withValues(alpha: 0.6)
+                          : ArenaColors.silver,
+                      fontStyle: FontStyle.italic,
                     ),
-                  ]
-                : null,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                message.content,
-                style: ArenaText.body.copyWith(
-                  color: isSelf ? Colors.white : ArenaColors.bone,
+                  )
+                else ...[
+                  if (hasMedia)
+                    _MediaPreview(
+                      pathInBucket: message.mediaUrl!,
+                      mediaType: message.mediaType,
+                    ),
+                  if (message.content.isNotEmpty)
+                    Padding(
+                      padding: hasMedia
+                          ? const EdgeInsets.fromLTRB(
+                              ArenaSpacing.sm,
+                              ArenaSpacing.xs,
+                              ArenaSpacing.sm,
+                              0,
+                            )
+                          : EdgeInsets.zero,
+                      child: Text(
+                        message.content,
+                        style: ArenaText.body.copyWith(
+                          color: isSelf ? Colors.white : ArenaColors.bone,
+                        ),
+                      ),
+                    ),
+                ],
+                Padding(
+                  padding: hasMedia
+                      ? const EdgeInsets.symmetric(
+                          horizontal: ArenaSpacing.sm,
+                          vertical: 2,
+                        )
+                      : const EdgeInsets.only(top: 2),
+                  child: Text(
+                    _formatTimestamp(message.createdAt, isSelf: isSelf),
+                    style: ArenaText.small.copyWith(
+                      color: isSelf
+                          ? Colors.white.withValues(alpha: 0.75)
+                          : ArenaColors.silver,
+                      fontSize: 9,
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                _formatTimestamp(message.createdAt, isSelf: isSelf),
-                style: ArenaText.small.copyWith(
-                  color: isSelf
-                      ? Colors.white.withValues(alpha: 0.75)
-                      : ArenaColors.silver,
-                  fontSize: 9,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Charge l'image media via signed URL Storage (expire 1h). Le
+/// `FutureBuilder` est keyé sur le path pour ne pas re-fetcher quand
+/// la bubble est juste re-rendue.
+class _MediaPreview extends ConsumerWidget {
+  const _MediaPreview({required this.pathInBucket, required this.mediaType});
+
+  final String pathInBucket;
+  final String? mediaType;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (mediaType != null && mediaType != 'image') {
+      // V1: seules les images sont rendues. Video/audio en V1.5.
+      return Container(
+        height: 80,
+        width: 200,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: ArenaColors.carbon,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text('Media: $mediaType (V1.5)', style: ArenaText.small),
+      );
+    }
+    return FutureBuilder<String>(
+      key: ValueKey('media_$pathInBucket'),
+      future: ref.read(chatRepositoryProvider).signedMediaUrl(pathInBucket),
+      builder: (context, snap) {
+        if (snap.connectionState != ConnectionState.done) {
+          return Container(
+            width: 220,
+            height: 160,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: ArenaColors.carbon,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          );
+        }
+        if (snap.hasError || snap.data == null) {
+          return Container(
+            width: 220,
+            height: 80,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: ArenaColors.carbon,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.broken_image_outlined,
+              color: ArenaColors.silver,
+            ),
+          );
+        }
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.network(
+            snap.data!,
+            fit: BoxFit.cover,
+            width: 240,
+            errorBuilder: (_, __, ___) => Container(
+              width: 220,
+              height: 80,
+              alignment: Alignment.center,
+              color: ArenaColors.carbon,
+              child: const Icon(
+                Icons.broken_image_outlined,
+                color: ArenaColors.silver,
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -563,16 +867,25 @@ String _formatTimestamp(DateTime? created, {required bool isSelf}) {
   return isSelf ? '$h:$m ✓✓' : '$h:$m';
 }
 
-class _MessageInput extends StatelessWidget {
-  const _MessageInput({
+/// Composer du chat (input texte + emoji + attach). Partagé entre
+/// [ChatPage] (match) et `FriendChatPage`.
+class ChatMessageInput extends StatelessWidget {
+  const ChatMessageInput({
     required this.controller,
     required this.sending,
+    required this.emojiActive,
     required this.onSend,
+    required this.onToggleEmoji,
+    required this.onAttach,
+    super.key,
   });
 
   final TextEditingController controller;
   final bool sending;
+  final bool emojiActive;
   final VoidCallback onSend;
+  final VoidCallback onToggleEmoji;
+  final VoidCallback onAttach;
 
   @override
   Widget build(BuildContext context) {
@@ -586,37 +899,22 @@ class _MessageInput extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           IconButton(
-            tooltip: 'Emoji',
-            icon: const Icon(
-              Icons.emoji_emotions_outlined,
-              color: ArenaColors.silver,
+            tooltip: emojiActive ? 'Clavier' : 'Emoji',
+            icon: Icon(
+              emojiActive
+                  ? Icons.keyboard_outlined
+                  : Icons.emoji_emotions_outlined,
+              color: emojiActive ? ArenaColors.signalBlue : ArenaColors.silver,
             ),
-            onPressed: sending
-                ? null
-                : () => ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content:
-                            Text('Le picker emoji arrive en PHASE 12.5.'),
-                        duration: Duration(seconds: 2),
-                      ),
-                    ),
+            onPressed: sending ? null : onToggleEmoji,
           ),
           IconButton(
-            tooltip: 'Joindre',
+            tooltip: 'Joindre une image',
             icon: const Icon(
               Icons.attach_file_outlined,
               color: ArenaColors.silver,
             ),
-            onPressed: sending
-                ? null
-                : () => ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          "L'envoi de pièces jointes arrive en PHASE 12.5.",
-                        ),
-                        duration: Duration(seconds: 2),
-                      ),
-                    ),
+            onPressed: sending ? null : onAttach,
           ),
           Expanded(
             child: ArenaTextField(

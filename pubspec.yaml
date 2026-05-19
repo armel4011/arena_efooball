@@ -81,6 +81,12 @@ dependencies:
   otp: ^3.1.4
   qr_flutter: ^4.1.0
 
+  # ─── PHASE 12.5 — Emoji picker pour le chat ────────────────
+  emoji_picker_flutter: ^4.3.0
+  # Charge un fichier image local depuis la galerie (déjà via
+  # file_picker existant, mais image_picker offre un UX caméra)
+  image_picker: ^1.1.2
+
   # ─── PHASE 8 — Anti-cheat + Streaming Agora sélectif ───────
   agora_rtc_engine: ^6.6.3
   flutter_screen_recording: ^2.0.25

@@ -1,5 +1,6 @@
 import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/core/utils/arena_error_message.dart';
 import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/match_status.dart';
@@ -203,10 +204,29 @@ class _DirectTab extends ConsumerWidget {
                       m.player1Id == me ? m.player2Id : m.player1Id;
                   final opponent =
                       opponentId == null ? null : peers[opponentId];
-                  return _MatchThreadRow(
-                    match: m,
-                    opponent: opponent,
-                    highlighted: i == 0 && _isHot(m),
+                  return Dismissible(
+                    key: ValueKey('inbox_match_${m.id}'),
+                    direction: DismissDirection.endToStart,
+                    background: Container(
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.only(right: ArenaSpacing.lg),
+                      decoration: BoxDecoration(
+                        color: ArenaColors.neonRed.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(
+                        Icons.delete_outline,
+                        color: ArenaColors.neonRed,
+                      ),
+                    ),
+                    confirmDismiss: (_) => _confirmDeleteConversation(ctx),
+                    onDismissed: (_) =>
+                        _onDeleteConversation(ctx, ref, m.id),
+                    child: _MatchThreadRow(
+                      match: m,
+                      opponent: opponent,
+                      highlighted: i == 0 && _isHot(m),
+                    ),
                   );
                 },
               );
@@ -215,6 +235,50 @@ class _DirectTab extends ConsumerWidget {
         },
       ),
     );
+  }
+
+  Future<bool> _confirmDeleteConversation(BuildContext context) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: ArenaColors.carbon,
+        title: const Text('Supprimer cette conversation ?'),
+        content: const Text(
+          'La conversation sera retirée de ton inbox. Tu peux la retrouver '
+          'en rouvrant le chat depuis la salle de match.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: ArenaColors.neonRed),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('SUPPRIMER'),
+          ),
+        ],
+      ),
+    );
+    return ok ?? false;
+  }
+
+  Future<void> _onDeleteConversation(
+    BuildContext context,
+    WidgetRef ref,
+    String matchId,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final repo = ref.read(chatRepositoryProvider);
+      final channel = await repo.ensureMatchChannel(matchId);
+      await repo.softDeleteChannel(channel.id);
+      ref.invalidate(myOpenedMatchChannelIdsProvider);
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Échec : ${arenaErrorMessage(e)}')),
+      );
+    }
   }
 
   static bool _isHot(ArenaMatch m) {

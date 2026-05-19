@@ -18,6 +18,11 @@ sealed class ChatMessage with _$ChatMessage {
     DateTime? moderatedAt,
     String? moderatedReason,
     DateTime? createdAt,
+    // Phase 12.5 — médias dans le chat (image/video/audio).
+    String? mediaUrl,
+    String? mediaType,
+    // Soft-delete par sender. UI affiche "Message supprimé" si !=null.
+    DateTime? deletedAt,
   }) = _ChatMessage;
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) =>

@@ -21,6 +21,11 @@ _$ChatMessageImpl _$$ChatMessageImplFromJson(Map<String, dynamic> json) =>
       createdAt: json['created_at'] == null
           ? null
           : DateTime.parse(json['created_at'] as String),
+      mediaUrl: json['media_url'] as String?,
+      mediaType: json['media_type'] as String?,
+      deletedAt: json['deleted_at'] == null
+          ? null
+          : DateTime.parse(json['deleted_at'] as String),
     );
 
 Map<String, dynamic> _$$ChatMessageImplToJson(_$ChatMessageImpl instance) =>
@@ -36,4 +41,8 @@ Map<String, dynamic> _$$ChatMessageImplToJson(_$ChatMessageImpl instance) =>
       if (instance.moderatedReason case final value?) 'moderated_reason': value,
       if (instance.createdAt?.toIso8601String() case final value?)
         'created_at': value,
+      if (instance.mediaUrl case final value?) 'media_url': value,
+      if (instance.mediaType case final value?) 'media_type': value,
+      if (instance.deletedAt?.toIso8601String() case final value?)
+        'deleted_at': value,
     };

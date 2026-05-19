@@ -23,6 +23,18 @@ class FriendsRepository {
 
   // ───── Lectures ─────────────────────────────────────────────────────────
 
+  /// Renvoie une friendship par id. Utilisé par `FriendChatPage` pour
+  /// résoudre le peer profile depuis un friendship_id en URL.
+  Future<Friendship?> getById(String id) async {
+    final row = await _client
+        .from(_table)
+        .select()
+        .eq('id', id)
+        .maybeSingle();
+    if (row == null) return null;
+    return Friendship.fromJson(row);
+  }
+
   /// Renvoie l'éventuelle row liant `me` et `target` (peu importe le statut).
   Future<Friendship?> findBetween({
     required String me,

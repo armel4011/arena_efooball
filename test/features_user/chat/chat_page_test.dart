@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:arena/data/models/chat_channel.dart';
 import 'package:arena/data/models/chat_message.dart';
 import 'package:arena/data/repositories/chat_repository.dart';
@@ -66,6 +68,36 @@ class _FakeChatRepository implements ChatRepository {
     required String content,
   }) async {
     sent.add((channelId: channelId, senderId: senderId, content: content));
+  }
+
+  @override
+  Future<void> sendMediaMessage({
+    required String channelId,
+    required String senderId,
+    required File file,
+    required String mediaType,
+    String content = '',
+  }) async {}
+
+  @override
+  Future<String> signedMediaUrl(
+    String path, {
+    Duration expiresIn = const Duration(hours: 1),
+  }) async => 'https://example.test/$path';
+
+  @override
+  Future<void> softDeleteMessage(String messageId) async {}
+
+  @override
+  Future<void> softDeleteChannel(String channelId) async {}
+
+  @override
+  Future<ChatChannel> ensureFriendChannel(String friendshipId) async {
+    return ChatChannel(
+      id: _channelId,
+      type: 'friend',
+      friendshipId: friendshipId,
+    );
   }
 }
 

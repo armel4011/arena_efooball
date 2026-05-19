@@ -24,9 +24,11 @@ mixin _$ChatChannel {
   String get type => throw _privateConstructorUsedError;
   String? get matchId => throw _privateConstructorUsedError;
   String? get competitionId => throw _privateConstructorUsedError;
+  String? get friendshipId => throw _privateConstructorUsedError;
   String? get name => throw _privateConstructorUsedError;
   bool get isArchived => throw _privateConstructorUsedError;
   DateTime? get createdAt => throw _privateConstructorUsedError;
+  DateTime? get deletedAt => throw _privateConstructorUsedError;
 
   /// Serializes this ChatChannel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -49,9 +51,11 @@ abstract class $ChatChannelCopyWith<$Res> {
       String type,
       String? matchId,
       String? competitionId,
+      String? friendshipId,
       String? name,
       bool isArchived,
-      DateTime? createdAt});
+      DateTime? createdAt,
+      DateTime? deletedAt});
 }
 
 /// @nodoc
@@ -73,9 +77,11 @@ class _$ChatChannelCopyWithImpl<$Res, $Val extends ChatChannel>
     Object? type = null,
     Object? matchId = freezed,
     Object? competitionId = freezed,
+    Object? friendshipId = freezed,
     Object? name = freezed,
     Object? isArchived = null,
     Object? createdAt = freezed,
+    Object? deletedAt = freezed,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -94,6 +100,10 @@ class _$ChatChannelCopyWithImpl<$Res, $Val extends ChatChannel>
           ? _value.competitionId
           : competitionId // ignore: cast_nullable_to_non_nullable
               as String?,
+      friendshipId: freezed == friendshipId
+          ? _value.friendshipId
+          : friendshipId // ignore: cast_nullable_to_non_nullable
+              as String?,
       name: freezed == name
           ? _value.name
           : name // ignore: cast_nullable_to_non_nullable
@@ -105,6 +115,10 @@ class _$ChatChannelCopyWithImpl<$Res, $Val extends ChatChannel>
       createdAt: freezed == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      deletedAt: freezed == deletedAt
+          ? _value.deletedAt
+          : deletedAt // ignore: cast_nullable_to_non_nullable
               as DateTime?,
     ) as $Val);
   }
@@ -123,9 +137,11 @@ abstract class _$$ChatChannelImplCopyWith<$Res>
       String type,
       String? matchId,
       String? competitionId,
+      String? friendshipId,
       String? name,
       bool isArchived,
-      DateTime? createdAt});
+      DateTime? createdAt,
+      DateTime? deletedAt});
 }
 
 /// @nodoc
@@ -145,9 +161,11 @@ class __$$ChatChannelImplCopyWithImpl<$Res>
     Object? type = null,
     Object? matchId = freezed,
     Object? competitionId = freezed,
+    Object? friendshipId = freezed,
     Object? name = freezed,
     Object? isArchived = null,
     Object? createdAt = freezed,
+    Object? deletedAt = freezed,
   }) {
     return _then(_$ChatChannelImpl(
       id: null == id
@@ -166,6 +184,10 @@ class __$$ChatChannelImplCopyWithImpl<$Res>
           ? _value.competitionId
           : competitionId // ignore: cast_nullable_to_non_nullable
               as String?,
+      friendshipId: freezed == friendshipId
+          ? _value.friendshipId
+          : friendshipId // ignore: cast_nullable_to_non_nullable
+              as String?,
       name: freezed == name
           ? _value.name
           : name // ignore: cast_nullable_to_non_nullable
@@ -177,6 +199,10 @@ class __$$ChatChannelImplCopyWithImpl<$Res>
       createdAt: freezed == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      deletedAt: freezed == deletedAt
+          ? _value.deletedAt
+          : deletedAt // ignore: cast_nullable_to_non_nullable
               as DateTime?,
     ));
   }
@@ -190,9 +216,11 @@ class _$ChatChannelImpl implements _ChatChannel {
       required this.type,
       this.matchId,
       this.competitionId,
+      this.friendshipId,
       this.name,
       this.isArchived = false,
-      this.createdAt});
+      this.createdAt,
+      this.deletedAt});
 
   factory _$ChatChannelImpl.fromJson(Map<String, dynamic> json) =>
       _$$ChatChannelImplFromJson(json);
@@ -206,16 +234,20 @@ class _$ChatChannelImpl implements _ChatChannel {
   @override
   final String? competitionId;
   @override
+  final String? friendshipId;
+  @override
   final String? name;
   @override
   @JsonKey()
   final bool isArchived;
   @override
   final DateTime? createdAt;
+  @override
+  final DateTime? deletedAt;
 
   @override
   String toString() {
-    return 'ChatChannel(id: $id, type: $type, matchId: $matchId, competitionId: $competitionId, name: $name, isArchived: $isArchived, createdAt: $createdAt)';
+    return 'ChatChannel(id: $id, type: $type, matchId: $matchId, competitionId: $competitionId, friendshipId: $friendshipId, name: $name, isArchived: $isArchived, createdAt: $createdAt, deletedAt: $deletedAt)';
   }
 
   @override
@@ -228,17 +260,21 @@ class _$ChatChannelImpl implements _ChatChannel {
             (identical(other.matchId, matchId) || other.matchId == matchId) &&
             (identical(other.competitionId, competitionId) ||
                 other.competitionId == competitionId) &&
+            (identical(other.friendshipId, friendshipId) ||
+                other.friendshipId == friendshipId) &&
             (identical(other.name, name) || other.name == name) &&
             (identical(other.isArchived, isArchived) ||
                 other.isArchived == isArchived) &&
             (identical(other.createdAt, createdAt) ||
-                other.createdAt == createdAt));
+                other.createdAt == createdAt) &&
+            (identical(other.deletedAt, deletedAt) ||
+                other.deletedAt == deletedAt));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   int get hashCode => Object.hash(runtimeType, id, type, matchId, competitionId,
-      name, isArchived, createdAt);
+      friendshipId, name, isArchived, createdAt, deletedAt);
 
   /// Create a copy of ChatChannel
   /// with the given fields replaced by the non-null parameter values.
@@ -262,9 +298,11 @@ abstract class _ChatChannel implements ChatChannel {
       required final String type,
       final String? matchId,
       final String? competitionId,
+      final String? friendshipId,
       final String? name,
       final bool isArchived,
-      final DateTime? createdAt}) = _$ChatChannelImpl;
+      final DateTime? createdAt,
+      final DateTime? deletedAt}) = _$ChatChannelImpl;
 
   factory _ChatChannel.fromJson(Map<String, dynamic> json) =
       _$ChatChannelImpl.fromJson;
@@ -278,11 +316,15 @@ abstract class _ChatChannel implements ChatChannel {
   @override
   String? get competitionId;
   @override
+  String? get friendshipId;
+  @override
   String? get name;
   @override
   bool get isArchived;
   @override
   DateTime? get createdAt;
+  @override
+  DateTime? get deletedAt;
 
   /// Create a copy of ChatChannel
   /// with the given fields replaced by the non-null parameter values.

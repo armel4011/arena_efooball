@@ -28,7 +28,12 @@ mixin _$ChatMessage {
   bool get isModerated => throw _privateConstructorUsedError;
   DateTime? get moderatedAt => throw _privateConstructorUsedError;
   String? get moderatedReason => throw _privateConstructorUsedError;
-  DateTime? get createdAt => throw _privateConstructorUsedError;
+  DateTime? get createdAt =>
+      throw _privateConstructorUsedError; // Phase 12.5 — médias dans le chat (image/video/audio).
+  String? get mediaUrl => throw _privateConstructorUsedError;
+  String? get mediaType =>
+      throw _privateConstructorUsedError; // Soft-delete par sender. UI affiche "Message supprimé" si !=null.
+  DateTime? get deletedAt => throw _privateConstructorUsedError;
 
   /// Serializes this ChatMessage to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -55,7 +60,10 @@ abstract class $ChatMessageCopyWith<$Res> {
       bool isModerated,
       DateTime? moderatedAt,
       String? moderatedReason,
-      DateTime? createdAt});
+      DateTime? createdAt,
+      String? mediaUrl,
+      String? mediaType,
+      DateTime? deletedAt});
 }
 
 /// @nodoc
@@ -82,6 +90,9 @@ class _$ChatMessageCopyWithImpl<$Res, $Val extends ChatMessage>
     Object? moderatedAt = freezed,
     Object? moderatedReason = freezed,
     Object? createdAt = freezed,
+    Object? mediaUrl = freezed,
+    Object? mediaType = freezed,
+    Object? deletedAt = freezed,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -120,6 +131,18 @@ class _$ChatMessageCopyWithImpl<$Res, $Val extends ChatMessage>
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
               as DateTime?,
+      mediaUrl: freezed == mediaUrl
+          ? _value.mediaUrl
+          : mediaUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
+      mediaType: freezed == mediaType
+          ? _value.mediaType
+          : mediaType // ignore: cast_nullable_to_non_nullable
+              as String?,
+      deletedAt: freezed == deletedAt
+          ? _value.deletedAt
+          : deletedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
     ) as $Val);
   }
 }
@@ -141,7 +164,10 @@ abstract class _$$ChatMessageImplCopyWith<$Res>
       bool isModerated,
       DateTime? moderatedAt,
       String? moderatedReason,
-      DateTime? createdAt});
+      DateTime? createdAt,
+      String? mediaUrl,
+      String? mediaType,
+      DateTime? deletedAt});
 }
 
 /// @nodoc
@@ -166,6 +192,9 @@ class __$$ChatMessageImplCopyWithImpl<$Res>
     Object? moderatedAt = freezed,
     Object? moderatedReason = freezed,
     Object? createdAt = freezed,
+    Object? mediaUrl = freezed,
+    Object? mediaType = freezed,
+    Object? deletedAt = freezed,
   }) {
     return _then(_$ChatMessageImpl(
       id: null == id
@@ -204,6 +233,18 @@ class __$$ChatMessageImplCopyWithImpl<$Res>
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
               as DateTime?,
+      mediaUrl: freezed == mediaUrl
+          ? _value.mediaUrl
+          : mediaUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
+      mediaType: freezed == mediaType
+          ? _value.mediaType
+          : mediaType // ignore: cast_nullable_to_non_nullable
+              as String?,
+      deletedAt: freezed == deletedAt
+          ? _value.deletedAt
+          : deletedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
     ));
   }
 }
@@ -220,7 +261,10 @@ class _$ChatMessageImpl implements _ChatMessage {
       this.isModerated = false,
       this.moderatedAt,
       this.moderatedReason,
-      this.createdAt});
+      this.createdAt,
+      this.mediaUrl,
+      this.mediaType,
+      this.deletedAt});
 
   factory _$ChatMessageImpl.fromJson(Map<String, dynamic> json) =>
       _$$ChatMessageImplFromJson(json);
@@ -245,10 +289,18 @@ class _$ChatMessageImpl implements _ChatMessage {
   final String? moderatedReason;
   @override
   final DateTime? createdAt;
+// Phase 12.5 — médias dans le chat (image/video/audio).
+  @override
+  final String? mediaUrl;
+  @override
+  final String? mediaType;
+// Soft-delete par sender. UI affiche "Message supprimé" si !=null.
+  @override
+  final DateTime? deletedAt;
 
   @override
   String toString() {
-    return 'ChatMessage(id: $id, channelId: $channelId, content: $content, senderId: $senderId, type: $type, isModerated: $isModerated, moderatedAt: $moderatedAt, moderatedReason: $moderatedReason, createdAt: $createdAt)';
+    return 'ChatMessage(id: $id, channelId: $channelId, content: $content, senderId: $senderId, type: $type, isModerated: $isModerated, moderatedAt: $moderatedAt, moderatedReason: $moderatedReason, createdAt: $createdAt, mediaUrl: $mediaUrl, mediaType: $mediaType, deletedAt: $deletedAt)';
   }
 
   @override
@@ -270,13 +322,31 @@ class _$ChatMessageImpl implements _ChatMessage {
             (identical(other.moderatedReason, moderatedReason) ||
                 other.moderatedReason == moderatedReason) &&
             (identical(other.createdAt, createdAt) ||
-                other.createdAt == createdAt));
+                other.createdAt == createdAt) &&
+            (identical(other.mediaUrl, mediaUrl) ||
+                other.mediaUrl == mediaUrl) &&
+            (identical(other.mediaType, mediaType) ||
+                other.mediaType == mediaType) &&
+            (identical(other.deletedAt, deletedAt) ||
+                other.deletedAt == deletedAt));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, id, channelId, content, senderId,
-      type, isModerated, moderatedAt, moderatedReason, createdAt);
+  int get hashCode => Object.hash(
+      runtimeType,
+      id,
+      channelId,
+      content,
+      senderId,
+      type,
+      isModerated,
+      moderatedAt,
+      moderatedReason,
+      createdAt,
+      mediaUrl,
+      mediaType,
+      deletedAt);
 
   /// Create a copy of ChatMessage
   /// with the given fields replaced by the non-null parameter values.
@@ -304,7 +374,10 @@ abstract class _ChatMessage implements ChatMessage {
       final bool isModerated,
       final DateTime? moderatedAt,
       final String? moderatedReason,
-      final DateTime? createdAt}) = _$ChatMessageImpl;
+      final DateTime? createdAt,
+      final String? mediaUrl,
+      final String? mediaType,
+      final DateTime? deletedAt}) = _$ChatMessageImpl;
 
   factory _ChatMessage.fromJson(Map<String, dynamic> json) =
       _$ChatMessageImpl.fromJson;
@@ -326,7 +399,15 @@ abstract class _ChatMessage implements ChatMessage {
   @override
   String? get moderatedReason;
   @override
-  DateTime? get createdAt;
+  DateTime?
+      get createdAt; // Phase 12.5 — médias dans le chat (image/video/audio).
+  @override
+  String? get mediaUrl;
+  @override
+  String?
+      get mediaType; // Soft-delete par sender. UI affiche "Message supprimé" si !=null.
+  @override
+  DateTime? get deletedAt;
 
   /// Create a copy of ChatMessage
   /// with the given fields replaced by the non-null parameter values.

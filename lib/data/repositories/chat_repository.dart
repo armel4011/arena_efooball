@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:arena/data/models/chat_channel.dart';
 import 'package:arena/data/models/chat_message.dart';
 import 'package:arena/data/repositories/match_repository.dart';
@@ -108,6 +110,101 @@ class ChatRepository {
       'content': capped,
       'type': 'text',
     });
+  }
+
+  static const _mediaBucket = 'chat-media';
+
+  /// Upload [file] dans le bucket `chat-media` sous le path
+  /// `<channelId>/<timestamp>_<filename>`, puis crée un message
+  /// `type='image'|'video'|'audio'` avec `media_url` rempli.
+  ///
+  /// La caption optionnelle ([content]) sert pour les images
+  /// commentées ; pas obligatoire (le check schema accepte content=0
+  /// si media_url est rempli).
+  Future<void> sendMediaMessage({
+    required String channelId,
+    required String senderId,
+    required File file,
+    required String mediaType, // 'image' | 'video' | 'audio'
+    String content = '',
+  }) async {
+    assert(
+      mediaType == 'image' || mediaType == 'video' || mediaType == 'audio',
+      'mediaType invalide',
+    );
+
+    final fileName = file.path.split(RegExp(r'[/\\]')).last;
+    final stamp = DateTime.now().millisecondsSinceEpoch;
+    final path = '$channelId/${stamp}_$fileName';
+
+    await _client.storage.from(_mediaBucket).upload(path, file);
+    final publicPath = path; // on stocke le path interne — signed URL au read
+
+    final cappedContent = content.trim().length > 2000
+        ? content.trim().substring(0, 2000)
+        : content.trim();
+
+    await _client.from(_messagesTable).insert({
+      'channel_id': channelId,
+      'sender_id': senderId,
+      'content': cappedContent,
+      'type': mediaType == 'image' ? 'image' : 'text',
+      'media_url': publicPath,
+      'media_type': mediaType,
+    });
+  }
+
+  /// Génère une signed URL (1h) pour télécharger un média de chat.
+  /// Le path est ce qui a été stocké dans `chat_messages.media_url`.
+  Future<String> signedMediaUrl(
+    String path, {
+    Duration expiresIn = const Duration(hours: 1),
+  }) async {
+    return _client.storage
+        .from(_mediaBucket)
+        .createSignedUrl(path, expiresIn.inSeconds);
+  }
+
+  /// Soft-delete d'un message par son sender. Pose `deleted_at = now()`
+  /// et redact le `content` à vide ; la RLS chat_messages_soft_delete_self
+  /// autorise l'UPDATE uniquement par le sender.
+  Future<void> softDeleteMessage(String messageId) async {
+    await _client
+        .from(_messagesTable)
+        .update({
+          'deleted_at': DateTime.now().toUtc().toIso8601String(),
+          'content': '',
+          'media_url': null,
+        })
+        .eq('id', messageId);
+  }
+
+  /// Soft-delete d'une conversation par un membre. Pose `deleted_at =
+  /// now()` ; la conv reste pour l'autre user (semantique WhatsApp :
+  /// "supprimer pour moi"). Stockage individuel à implémenter en V2 ;
+  /// V1 = global hide.
+  Future<void> softDeleteChannel(String channelId) async {
+    await _client
+        .from(_channelsTable)
+        .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', channelId);
+  }
+
+  /// Get-or-create un channel `type='friend'` pour la friendship donnée.
+  /// Passe par la RPC `ensure_friend_channel` (security definer) qui
+  /// vérifie que le caller est membre de la friendship et qu'elle est
+  /// `accepted`.
+  Future<ChatChannel> ensureFriendChannel(String friendshipId) async {
+    final channelId = await _client.rpc<String>(
+      'ensure_friend_channel',
+      params: {'p_friendship_id': friendshipId},
+    );
+    final row = await _client
+        .from(_channelsTable)
+        .select()
+        .eq('id', channelId)
+        .single();
+    return ChatChannel.fromJson(row);
   }
 }
 

@@ -120,14 +120,27 @@ class _FriendsTab extends ConsumerWidget {
               final (f, peer) = rows[i];
               return _PeerRow(
                 profile: peer,
-                trailing: _RowAction(
-                  label: 'Retirer',
-                  icon: Icons.person_remove_outlined,
-                  variant: ArenaButtonVariant.ghost,
-                  onPressed: () => _confirmRemove(context, ref, f, peer)
-                      .then((ok) {
-                    if (ok) onChanged();
-                  }),
+                onTap: () => context.push(UserRoutes.friendChatPath(f.id)),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _MiniButton(
+                      icon: Icons.chat_bubble_outline,
+                      color: ArenaColors.signalBlue,
+                      onPressed: () => context.push(
+                        UserRoutes.friendChatPath(f.id),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    _MiniButton(
+                      icon: Icons.person_remove_outlined,
+                      color: ArenaColors.danger,
+                      onPressed: () =>
+                          _confirmRemove(context, ref, f, peer).then((ok) {
+                        if (ok) onChanged();
+                      }),
+                    ),
+                  ],
                 ),
               );
             },
@@ -411,10 +424,17 @@ class _BlockedTab extends ConsumerWidget {
 // Building blocks
 // ─────────────────────────────────────────────────────────────────────────────
 class _PeerRow extends StatelessWidget {
-  const _PeerRow({required this.profile, required this.trailing});
+  const _PeerRow({
+    required this.profile,
+    required this.trailing,
+    this.onTap,
+  });
 
   final Profile profile;
   final Widget trailing;
+
+  /// Override du tap sur la row. Par défaut, ouvre le profil public.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -422,7 +442,8 @@ class _PeerRow extends StatelessWidget {
     final initial =
         profile.username.isEmpty ? '?' : profile.username[0].toUpperCase();
     return ArenaCard(
-      onTap: () => context.push(UserRoutes.publicProfilePath(profile.username)),
+      onTap: onTap ??
+          () => context.push(UserRoutes.publicProfilePath(profile.username)),
       padding: const EdgeInsets.symmetric(
         vertical: ArenaSpacing.sm,
         horizontal: ArenaSpacing.md,

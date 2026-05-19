@@ -15,9 +15,11 @@ sealed class ChatChannel with _$ChatChannel {
     required String type,
     String? matchId,
     String? competitionId,
+    String? friendshipId,
     String? name,
     @Default(false) bool isArchived,
     DateTime? createdAt,
+    DateTime? deletedAt,
   }) = _ChatChannel;
 
   factory ChatChannel.fromJson(Map<String, dynamic> json) =>

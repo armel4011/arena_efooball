@@ -13,6 +13,7 @@ import 'package:arena/features_user/auth/reset_password_code_page.dart';
 import 'package:arena/features_user/auth/reset_password_page.dart';
 import 'package:arena/features_user/auth/splash_user_screen.dart';
 import 'package:arena/features_user/chat/chat_page.dart';
+import 'package:arena/features_user/chat/friend_chat_page.dart';
 import 'package:arena/features_user/chat/messages_inbox_page.dart';
 import 'package:arena/features_user/competitions/competition_detail_page.dart';
 import 'package:arena/features_user/competitions/registration_confirm_page.dart';
@@ -62,6 +63,7 @@ abstract final class UserRoutes {
   static const competitionDetail = '/competitions/:id';
   static const matchRoom = '/match/:id';
   static const matchChat = '/chat/match/:id';
+  static const friendChat = '/chat/friend/:friendshipId';
   static const liveStreams = '/streams';
   static const watchStream = '/streams/watch/:id';
   static const profileEdit = '/profile/edit';
@@ -100,6 +102,10 @@ abstract final class UserRoutes {
 
   /// Builds the concrete `/chat/match/<id>` URL.
   static String matchChatPath(String matchId) => '/chat/match/$matchId';
+
+  /// Builds the concrete `/chat/friend/<friendshipId>` URL.
+  static String friendChatPath(String friendshipId) =>
+      '/chat/friend/$friendshipId';
 
   /// Builds `/profile/u/<username>` — profil public d'un autre joueur.
   /// Le username vient de `profiles.username` (case sensitive côté URL
@@ -312,6 +318,13 @@ final userRouterProvider = Provider<GoRouter>((ref) {
         name: 'user.matchChat',
         builder: (context, state) => ChatPage(
           matchId: state.pathParameters['id'] ?? '',
+        ),
+      ),
+      GoRoute(
+        path: UserRoutes.friendChat,
+        name: 'user.friendChat',
+        builder: (context, state) => FriendChatPage(
+          friendshipId: state.pathParameters['friendshipId'] ?? '',
         ),
       ),
       GoRoute(
