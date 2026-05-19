@@ -13,6 +13,7 @@ import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:arena/features_shared/widgets/error_state.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
+import 'package:arena/features_user/chat/call_screen.dart';
 import 'package:arena/features_user/chat/chat_page.dart';
 import 'package:arena/features_user/chat/messages_inbox_page.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
@@ -202,6 +203,7 @@ class _FriendChatPageState extends ConsumerState<FriendChatPage> {
         child: Column(
           children: [
             _FriendChatAppBar(
+              friendshipId: widget.friendshipId,
               peer: peerAsync.valueOrNull,
               onBack: () {
                 if (context.canPop()) {
@@ -336,8 +338,13 @@ final _friendPeerProvider =
 });
 
 class _FriendChatAppBar extends StatelessWidget {
-  const _FriendChatAppBar({required this.peer, required this.onBack});
+  const _FriendChatAppBar({
+    required this.friendshipId,
+    required this.peer,
+    required this.onBack,
+  });
 
+  final String friendshipId;
   final Profile? peer;
   final VoidCallback onBack;
 
@@ -411,6 +418,32 @@ class _FriendChatAppBar extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
+            ),
+          ),
+          InkWell(
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => CallScreen(
+                  scope: 'friend',
+                  id: friendshipId,
+                  peerName: peer?.username ?? 'Ami',
+                ),
+                fullscreenDialog: true,
+              ),
+            ),
+            borderRadius: BorderRadius.circular(999),
+            child: Container(
+              width: 30,
+              height: 30,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: ArenaColors.carbon,
+              ),
+              child: const Icon(
+                Icons.call_outlined,
+                size: 16,
+                color: ArenaColors.bone,
               ),
             ),
           ),

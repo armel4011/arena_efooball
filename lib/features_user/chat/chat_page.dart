@@ -16,6 +16,7 @@ import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:arena/features_shared/widgets/error_state.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
+import 'package:arena/features_user/chat/call_screen.dart';
 import 'package:arena/features_user/chat/messages_inbox_page.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:flutter/material.dart';
@@ -310,6 +311,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         child: Column(
           children: [
             _ChatAppBar(
+              matchId: widget.matchId,
               opponent: opponentAsync.valueOrNull,
               peerTyping: _peerTyping,
               peerOnline: _peerOnline,
@@ -443,12 +445,14 @@ final _opponentProvider =
 
 class _ChatAppBar extends StatelessWidget {
   const _ChatAppBar({
+    required this.matchId,
     required this.opponent,
     required this.peerTyping,
     required this.peerOnline,
     required this.onBack,
   });
 
+  final String matchId;
   final Profile? opponent;
   final bool peerTyping;
   final bool peerOnline;
@@ -549,10 +553,14 @@ class _ChatAppBar extends StatelessWidget {
           ),
           _CircleIconButton(
             icon: Icons.call_outlined,
-            onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Les appels arrivent en PHASE 12.5.'),
-                duration: Duration(seconds: 2),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => CallScreen(
+                  scope: 'match',
+                  id: matchId,
+                  peerName: opponent?.username ?? 'Joueur',
+                ),
+                fullscreenDialog: true,
               ),
             ),
           ),
