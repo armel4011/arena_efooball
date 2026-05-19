@@ -93,3 +93,88 @@ Détail des 25 conservés (18 defensive, 6 V2-deferred, 1 historique trace) :
 - Aucun secret côté client (`SERVICE_ROLE_KEY`, `RESEND_API_KEY` introuvables dans `lib/`).
 - iOS deployment target = 13.0 (EOL Apple 2023) — bump à 14+ à considérer.
 - `firebase_options.dart` absent côté Flutter (init Firebase par `google-services.json` seul, Android-only OK ; pour iOS lancer `flutterfire configure`).
+
+## Préparation scale 1M users (2026-05-19, sessions 23281e4 → ce commit)
+
+Plan en 4 phases lancé suite aux screenshots WhatsApp 13:46 (Realtime
+errors + question scale). Status :
+
+- [x] **Phase 1 — Realtime JWT refresh** — commit `23281e4`. Sans listener
+  `onAuthStateChange` → `client.realtime.setAuth(token)`, les 22 streams
+  `from(t).stream(...)` échouent après chaque refresh JWT (~60 min).
+- [x] **Phase 2 — Bornes + autoDispose** — commit `239c315`. 5 endpoints
+  unbounded plafonnés (`competitions.list`, `match_stats.getForPlayer`,
+  `friends.list*`×4) + 8 family providers passés en `.autoDispose`
+  (mémoire + WebSocket count).
+- [x] **Phase 3 — DB hardening** — ce commit. `search_path` immutable
+  sur les 3 functions restantes (`next_power_of_two`, `gen_referral_code`,
+  `ensure_referral_code`).
+- [ ] **Phase 4 — Observability** — Sentry custom traces + cadrage.
+
+### Actions manuelles côté Supabase Dashboard (pas SQL)
+
+- [ ] **Auth DB Connection Strategy = absolute** (advisor INFO,
+  cache_key `auth_db_connections_absolute`) — actuel : Auth limité à 10
+  connexions absolues. À 1M users, l'upgrade de l'instance ne propage
+  pas automatiquement plus de connexions. Action : Supabase Dashboard →
+  Settings → Auth → Connection strategy → `Percentage based`. Cf.
+  https://supabase.com/docs/guides/deployment/going-into-prod.
+- [ ] **Realtime channels limit** — Supabase Pro plan = 500 channels
+  concurrents par projet. Pour 1M users actifs (~5% concurrent = 50k),
+  passer en Realtime Enterprise OU dégrader les `.stream()` en poll
+  pour les écrans non-critiques (cf. dette Phase 2.5 ci-dessous).
+- [ ] **Storage cache-control** — vérifier que `match-recordings`,
+  `avatars/`, `banners/` ont `cache-control: public, max-age=86400`
+  pour profiter du CDN edge. Action : Supabase Dashboard → Storage →
+  Configuration bucket → Cache-control.
+
+### Dettes assumées Phase 2.5 (V2, traction-dependent)
+
+- [ ] **Pagination admin endpoints** (`admin_matches.watchAll`,
+  `admin_competitions.watch`, `admin_disputes.watchAll`) — fetchent
+  toute la table puis filtrent client-side. OK à <100 admins, problème
+  à 100k+ rows. À paginer via `.range(start, end)` + `FutureProvider
+  .family` quand le DB grossit.
+- [ ] **Realtime → Poll** sur écrans non-critiques (`competition
+  _repository.watch`, `watchMyRegisteredCompetitionIds`, `friends
+  _repository.watchIncomingPendingCount`, `match_stream_repository
+  .watchActivePublic`, `payment_repository.watchMine`). Économise 1
+  WebSocket par stream et par client à scale. Audit explore dans
+  l'historique session 2026-05-19.
+- [ ] **Index composite `matches(player1_id, status, finished_at DESC)`**
+  + symmetric pour `player2_id` — accélère `match_stats.getForPlayer`
+  qui devient critique sur power users (10k+ matches). Pas créé V1 :
+  3 indexes supplémentaires sont coûteux en INSERT. À ajouter quand
+  P95 de la query dépasse 200 ms.
+
+### Indexes inutilisés (advisor INFO — re-audit pending)
+
+26 unused indexes flaggés au 2026-05-19 (idem audit 2026-05-17). Aucune
+suppression : tous restent `defensive` jusqu'à 4 semaines de traction
+réelle avec >10k users actifs. Re-audit après `SELECT pg_stat_reset()`
++ 1 mois de prod.
+
+## Audit complet 2026-05-19 — wave 1 (ce commit)
+
+### Sécurité backend
+
+- [x] **Migration RPC ACL** — `20260519160000_rpc_acl_revoke_anon_security_definer.sql`. REVOKE EXECUTE FROM anon sur 20 fonctions SECURITY DEFINER (triggers, bracket generators, super-admin RPC, helpers). Bonus : `_require_super_admin()` ajouté à `get_monthly_revenue` et `get_monthly_signups` qui n'avaient AUCUN gate auth. Advisor `anon_security_definer_function_executable` : 20 → 0. Les 24 `authenticated_*` restants sont documentés intentionnels (cf. `20260517110007`).
+- [x] **Phase 3 search_path** — `20260519133930_harden_search_path_3_remaining_functions.sql` poussée sur remote.
+
+### Perf
+
+- [x] **#3 .limit(5000)** — `admin_kpis_repository.dart:38` (+ les 3 autres queries du dashboard KPI). Cap défensif contre les scans massifs `matches`/`competitions`/`disputes`/`payouts` à scale.
+- [x] **#6 .autoDispose** — 14 family providers patchés : `matchPlayersProvider`, `matchChannelProvider`, `channelMessagesProvider`, `competitionRankingProvider`, `adminAuditLogProvider`, `userNotificationsProvider`, `unreadNotificationCountProvider`, `adminCompetitionsProvider`, `adminCompetitionRegistrantsProvider`, `adminMatchesProvider`, `competitionStandingsProvider`, `adminDisputeByMatchProvider`, `adminUsersProvider`, `_opponentProvider` (chat). `pendingScoreSubmissionProvider` + `pendingRoomCodeProvider` volontairement conservés (commentaire "survit aux remounts" intentionnel).
+
+### Hygiène code
+
+- [x] **#9 Helper `arenaErrorMessage(Object e)`** — `lib/core/utils/arena_error_message.dart`. Mappe `AuthFailure` / `AuthException` / `PostgrestException` (codes 23505/23503/42501/PGRST301) / `FunctionException` / `SocketException` → message FR. Appliqué aux 11 catches de 6 pages admin/super-admin (users, payments_validation, invitations, payouts, reintegration, disputes, bracket_management). Les autres `'Échec : $e'` peuvent migrer incrémentalement. Note : les 14 repositories de `lib/data/repositories/` n'ont déjà aucun catch générique — ils bubble up les erreurs natives (pattern correct). Le typing dette était surévaluée par l'audit initial.
+
+### Restant après cette wave
+
+- [ ] **#4 create_competition_page.dart** (1254 lignes) à découper.
+- [ ] **#8 Downgrade poll** sur 3 streams non-critiques (competitions_list, payments_history, watchActivePublic).
+- [ ] **#7 CI** codecov + dependabot + golden_toolkit.
+- [ ] **#11 Phase 4 Sentry traces** custom.
+- [ ] **#5 Tests** match_room + admin core (couverture 1.8 % → cible 5 %).
+- [ ] **iOS deployment target 13 → 14** (P3).

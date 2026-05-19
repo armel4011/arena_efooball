@@ -133,7 +133,7 @@ class AdminMatchesFilter {
 }
 
 final adminMatchesProvider =
-    StreamProvider.family<List<ArenaMatch>, AdminMatchesFilter>((ref, filter) {
+    StreamProvider.family.autoDispose<List<ArenaMatch>, AdminMatchesFilter>((ref, filter) {
   return ref
       .watch(adminMatchesRepositoryProvider)
       .watchAll(status: filter.status, competitionId: filter.competitionId);

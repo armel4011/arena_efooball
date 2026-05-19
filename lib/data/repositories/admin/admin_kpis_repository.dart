@@ -29,18 +29,30 @@ class AdminKpisRepository {
 
   final SupabaseClient _client;
 
+  static const _kpiCap = 5000;
+
   Future<AdminKpis> fetch() async {
     final results = await Future.wait([
       _client
           .from('competitions')
           .select('id')
-          .inFilter('status', const ['registration_open', 'ongoing']),
-      _client.from('matches').select('id').eq('status', 'in_progress'),
+          .inFilter('status', const ['registration_open', 'ongoing'])
+          .limit(_kpiCap),
+      _client
+          .from('matches')
+          .select('id')
+          .eq('status', 'in_progress')
+          .limit(_kpiCap),
       _client
           .from('disputes')
           .select('id')
-          .inFilter('status', const ['open', 'escalated']),
-      _client.from('payouts').select('amount_local').eq('status', 'pending'),
+          .inFilter('status', const ['open', 'escalated'])
+          .limit(_kpiCap),
+      _client
+          .from('payouts')
+          .select('amount_local')
+          .eq('status', 'pending')
+          .limit(_kpiCap),
     ]);
 
     final payouts = results[3];

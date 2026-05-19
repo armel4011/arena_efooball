@@ -1,4 +1,5 @@
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/core/utils/arena_error_message.dart';
 import 'package:arena/data/models/profile.dart';
 import 'package:arena/data/models/reintegration_request.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
@@ -212,7 +213,7 @@ class _RequestCard extends ConsumerWidget {
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Échec : $e')),
+        SnackBar(content: Text('Échec : ${arenaErrorMessage(e)}')),
       );
     }
   }
@@ -253,7 +254,7 @@ class _RequestCard extends ConsumerWidget {
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Échec : $e')),
+        SnackBar(content: Text('Échec : ${arenaErrorMessage(e)}')),
       );
     }
   }

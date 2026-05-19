@@ -1,4 +1,5 @@
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/core/utils/arena_error_message.dart';
 import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
@@ -210,7 +211,7 @@ class _EmptyStateState extends ConsumerState<_EmptyState> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Échec : $e')),
+        SnackBar(content: Text('Échec : ${arenaErrorMessage(e)}')),
       );
     } finally {
       if (mounted) setState(() => _generating = false);
@@ -493,7 +494,7 @@ class _MatchRow extends ConsumerWidget {
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Échec : $e')),
+        SnackBar(content: Text('Échec : ${arenaErrorMessage(e)}')),
       );
     }
   }
@@ -512,7 +513,7 @@ class _MatchRow extends ConsumerWidget {
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Échec : $e')),
+        SnackBar(content: Text('Échec : ${arenaErrorMessage(e)}')),
       );
     }
   }

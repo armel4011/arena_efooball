@@ -117,13 +117,13 @@ final chatRepositoryProvider = Provider<ChatRepository>((ref) {
 
 /// Auto-fetches (or creates) the chat channel attached to a match.
 final matchChannelProvider =
-    FutureProvider.family<ChatChannel, String>((ref, matchId) {
+    FutureProvider.family.autoDispose<ChatChannel, String>((ref, matchId) {
   return ref.watch(chatRepositoryProvider).ensureMatchChannel(matchId);
 });
 
 /// Realtime stream of all messages in a chat channel, oldest → newest.
 final channelMessagesProvider =
-    StreamProvider.family<List<ChatMessage>, String>((ref, channelId) {
+    StreamProvider.family.autoDispose<List<ChatMessage>, String>((ref, channelId) {
   return ref.watch(chatRepositoryProvider).watchMessages(channelId);
 });
 

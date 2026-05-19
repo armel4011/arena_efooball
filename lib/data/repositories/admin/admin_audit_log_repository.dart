@@ -125,7 +125,7 @@ class AdminAuditLogFilter {
   int get hashCode => Object.hash(category, periodDays, searchQuery);
 }
 
-final adminAuditLogProvider = FutureProvider.family<
+final adminAuditLogProvider = FutureProvider.family.autoDispose<
     List<AdminAuditLog>, AdminAuditLogFilter>((ref, filter) {
   return ref.watch(adminAuditLogRepositoryProvider).list(
         category: filter.category,

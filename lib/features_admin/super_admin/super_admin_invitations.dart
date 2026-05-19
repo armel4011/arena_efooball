@@ -1,4 +1,5 @@
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/core/utils/arena_error_message.dart';
 import 'package:arena/data/models/invitation_code.dart';
 import 'package:arena/data/models/user_role.dart';
 import 'package:arena/data/repositories/admin/admin_invitations_repository.dart';
@@ -115,7 +116,7 @@ class _SuperAdminInvitationsState
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Échec : $e')),
+        SnackBar(content: Text('Échec : ${arenaErrorMessage(e)}')),
       );
     }
   }
@@ -282,7 +283,7 @@ class _CodeCard extends ConsumerWidget {
                         } catch (e) {
                           if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Échec : $e')),
+                            SnackBar(content: Text('Échec : ${arenaErrorMessage(e)}')),
                           );
                         }
                       },
@@ -345,7 +346,7 @@ class _CodeCard extends ConsumerWidget {
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Échec : $e')),
+        SnackBar(content: Text('Échec : ${arenaErrorMessage(e)}')),
       );
     }
   }

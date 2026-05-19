@@ -106,14 +106,14 @@ final notificationRepositoryProvider = Provider<NotificationRepository>((ref) {
 /// Realtime stream of the signed-in user's notifications, newest first.
 /// Returns an empty list when no user is signed in (signed-out splash etc.).
 final userNotificationsProvider =
-    StreamProvider.family<List<ArenaNotification>, String>((ref, userId) {
+    StreamProvider.family.autoDispose<List<ArenaNotification>, String>((ref, userId) {
   return ref.watch(notificationRepositoryProvider).watch(userId);
 });
 
 /// Convenience — unread count derived from the stream above. Used by the
 /// home page bell badge.
 final unreadNotificationCountProvider =
-    Provider.family<int, String>((ref, userId) {
+    Provider.family.autoDispose<int, String>((ref, userId) {
   final notifs = ref.watch(userNotificationsProvider(userId));
   return notifs.maybeWhen(
     data: (list) => list.where((n) => n.isUnread).length,

@@ -82,6 +82,6 @@ final adminOpenDisputesProvider = StreamProvider<List<Dispute>>((ref) {
 });
 
 final adminDisputeByMatchProvider =
-    FutureProvider.family<Dispute?, String>((ref, matchId) {
+    FutureProvider.family.autoDispose<Dispute?, String>((ref, matchId) {
   return ref.watch(adminDisputesRepositoryProvider).getByMatchId(matchId);
 });

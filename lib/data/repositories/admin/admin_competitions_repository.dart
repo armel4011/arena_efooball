@@ -245,14 +245,14 @@ class AdminCompetitionsFilter {
   int get hashCode => Object.hash(status, game);
 }
 
-final adminCompetitionsProvider = StreamProvider.family<
+final adminCompetitionsProvider = StreamProvider.family.autoDispose<
     List<Competition>, AdminCompetitionsFilter>((ref, filter) {
   return ref
       .watch(adminCompetitionsRepositoryProvider)
       .watch(status: filter.status, game: filter.game);
 });
 
-final adminCompetitionRegistrantsProvider = FutureProvider.family<
+final adminCompetitionRegistrantsProvider = FutureProvider.family.autoDispose<
     List<AdminCompetitionRegistrant>, String>((ref, competitionId) {
   return ref
       .watch(adminCompetitionsRepositoryProvider)

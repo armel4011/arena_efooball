@@ -261,7 +261,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 /// Resolves the opponent profile for the current match, regardless of
 /// whether the seated player sits on the player1 or player2 slot.
 final _opponentProvider =
-    FutureProvider.family<Profile?, String>((ref, matchId) async {
+    FutureProvider.family.autoDispose<Profile?, String>((ref, matchId) async {
   final selfId = ref.watch(currentSessionProvider)?.user.id;
   if (selfId == null) return null;
   final match = await ref.watch(matchByIdProvider(matchId).future);

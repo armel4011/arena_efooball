@@ -63,7 +63,7 @@ final standingsRepositoryProvider = Provider<StandingsRepository>((ref) {
 });
 
 final competitionStandingsProvider =
-    FutureProvider.family<List<StandingsBucket>, String>((ref, competitionId) {
+    FutureProvider.family.autoDispose<List<StandingsBucket>, String>((ref, competitionId) {
   return ref
       .watch(standingsRepositoryProvider)
       .forCompetition(competitionId);

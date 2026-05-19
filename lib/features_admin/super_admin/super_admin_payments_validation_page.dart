@@ -1,4 +1,5 @@
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/core/utils/arena_error_message.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_payments_repository.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
@@ -118,7 +119,7 @@ class _SuperAdminPaymentsValidationPageState
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur : $e')),
+        SnackBar(content: Text('Erreur : ${arenaErrorMessage(e)}')),
       );
     }
   }
@@ -197,7 +198,7 @@ class _SuperAdminPaymentsValidationPageState
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur : $e')),
+        SnackBar(content: Text('Erreur : ${arenaErrorMessage(e)}')),
       );
     }
   }

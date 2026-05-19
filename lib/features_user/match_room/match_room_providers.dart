@@ -25,7 +25,7 @@ class MatchPlayers {
 
 /// Loads the two players' profiles in parallel for the match header.
 final matchPlayersProvider =
-    FutureProvider.family<MatchPlayers, String>((ref, matchId) async {
+    FutureProvider.family.autoDispose<MatchPlayers, String>((ref, matchId) async {
   final match = await ref.watch(matchByIdProvider(matchId).future);
   if (match == null) return const MatchPlayers(p1: null, p2: null);
   final repo = ref.watch(profileRepositoryProvider);

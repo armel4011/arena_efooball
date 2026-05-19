@@ -186,7 +186,7 @@ final competitionByIdProvider =
 /// joueur). `FutureProvider` — pas de Realtime en V1.0, on invalide au
 /// pull-to-refresh, comme les standings de poule.
 final competitionRankingProvider =
-    FutureProvider.family<List<CompetitionRankingEntry>, String>(
+    FutureProvider.family.autoDispose<List<CompetitionRankingEntry>, String>(
         (ref, competitionId) {
   return ref.watch(competitionRepositoryProvider).getRanking(competitionId);
 });

@@ -254,6 +254,6 @@ final filterableCompetitionsProvider =
 });
 
 final adminUsersProvider =
-    FutureProvider.family<List<Profile>, AdminUsersFilter>((ref, filter) {
+    FutureProvider.family.autoDispose<List<Profile>, AdminUsersFilter>((ref, filter) {
   return ref.watch(adminUsersRepositoryProvider).list(filter: filter);
 });
