@@ -27,6 +27,12 @@
 
     <!-- Upload manuel d'une vidéo depuis la galerie (Android 13+) -->
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <!-- Upload d'image dans le chat (Phase 12.5 item 3) — Android 13+ -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <!-- Android 14+ partial photo access — bonne pratique -->
+    <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
+    <!-- Caméra pour prendre une photo depuis le chat (item 3) -->
+    <uses-permission android:name="android.permission.CAMERA" />
     <!-- Fallback Android 12 et inférieur -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />

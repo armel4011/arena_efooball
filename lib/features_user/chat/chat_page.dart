@@ -199,14 +199,21 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     if (picked == null || !mounted) return;
 
     setState(() => _uploading = true);
+    final file = File(picked.path);
+    debugPrint('[chat] upload media start :'
+        ' path=${picked.path}'
+        ' size=${await file.length()} bytes'
+        ' channel=$channelId');
     try {
       await ref.read(chatRepositoryProvider).sendMediaMessage(
             channelId: channelId,
             senderId: selfId,
-            file: File(picked.path),
+            file: file,
             mediaType: 'image',
           );
-    } catch (e) {
+      debugPrint('[chat] upload media OK');
+    } catch (e, st) {
+      debugPrint('[chat] upload media FAILED: $e\n$st');
       if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(content: Text('Échec upload : ${arenaErrorMessage(e)}')),
