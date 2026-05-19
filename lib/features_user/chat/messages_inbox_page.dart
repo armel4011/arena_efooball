@@ -134,28 +134,29 @@ class _DirectTab extends ConsumerWidget {
     final me = ref.watch(currentSessionProvider)?.user.id;
     final matchesAsync = ref.watch(myAllMatchesProvider);
     final openedIdsAsync = ref.watch(myOpenedMatchChannelIdsProvider);
+    final friendChannelsAsync = ref.watch(myFriendChannelsProvider);
 
     return RefreshIndicator(
       onRefresh: () async {
         ref
           ..invalidate(myAllMatchesProvider)
-          ..invalidate(myOpenedMatchChannelIdsProvider);
+          ..invalidate(myOpenedMatchChannelIdsProvider)
+          ..invalidate(myFriendChannelsProvider);
         await Future.wait([
           ref.read(myAllMatchesProvider.future),
           ref.read(myOpenedMatchChannelIdsProvider.future),
+          ref.read(myFriendChannelsProvider.future),
         ]);
       },
       child: matchesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => _ErrorList(message: 'Erreur : $e'),
         data: (matches) {
-          if (matches.isEmpty || me == null) {
+          if (me == null) {
             return const EmptyState(
               icon: Icons.chat_bubble_outline,
               title: 'Aucune conversation',
-              description:
-                  'Tes conversations apparaîtront ici dès que tu '
-                  'ouvriras la chat depuis la salle de match.',
+              description: 'Reconnecte-toi pour voir tes conversations.',
             );
           }
           // Filtre : ne garde que les matchs dont la chat a été initiée.
@@ -167,13 +168,15 @@ class _DirectTab extends ConsumerWidget {
                 for (final m in matches)
                   if (openedIds.contains(m.id)) m,
               ];
-              if (conversations.isEmpty) {
+              final friendChannels =
+                  friendChannelsAsync.valueOrNull ?? const [];
+              if (conversations.isEmpty && friendChannels.isEmpty) {
                 return const EmptyState(
                   icon: Icons.chat_bubble_outline,
                   title: 'Aucune conversation',
                   description:
-                      'Ouvre la chat depuis une salle de match — elle '
-                      'apparaîtra ici.',
+                      'Tes chats apparaîtront ici — ouvre une discussion '
+                      "depuis la salle de match ou depuis l'onglet Amis.",
                 );
               }
               final opponentIds = <String>{
@@ -181,13 +184,36 @@ class _DirectTab extends ConsumerWidget {
                   if (m.player1Id == me && m.player2Id != null) m.player2Id!
                   else if (m.player2Id == me && m.player1Id != null)
                     m.player1Id!,
+                for (final fc in friendChannels) fc.peerId,
               };
               final key = (opponentIds.toList()..sort()).join(',');
-              final peersAsync = ref.watch(profilesByIdsProvider(key));
+              final peersAsync = key.isEmpty
+                  ? const AsyncValue<Map<String, Profile>>.data(
+                      <String, Profile>{},
+                    )
+                  : ref.watch(profilesByIdsProvider(key));
               final peers = peersAsync.maybeWhen(
                 data: (m) => m,
                 orElse: () => const <String, Profile>{},
               );
+              // Construit la liste plate : friends d'abord (s'il y en a),
+              // puis matches.
+              final items = <_InboxItem>[
+                if (friendChannels.isNotEmpty)
+                  const _InboxItem.sectionHeader('AMIS'),
+                for (final fc in friendChannels)
+                  _InboxItem.friend(fc, peers[fc.peerId]),
+                if (conversations.isNotEmpty && friendChannels.isNotEmpty)
+                  const _InboxItem.sectionHeader('MATCHS'),
+                for (var i = 0; i < conversations.length; i++)
+                  _InboxItem.match(
+                    conversations[i],
+                    peers[conversations[i].player1Id == me
+                        ? conversations[i].player2Id
+                        : conversations[i].player1Id],
+                    highlighted: i == 0 && _isHot(conversations[i]),
+                  ),
+              ];
               return ListView.separated(
                 padding: const EdgeInsets.fromLTRB(
                   ArenaSpacing.lg,
@@ -195,15 +221,57 @@ class _DirectTab extends ConsumerWidget {
                   ArenaSpacing.lg,
                   ArenaSpacing.lg,
                 ),
-                itemCount: conversations.length,
+                itemCount: items.length,
                 separatorBuilder: (_, __) =>
                     const SizedBox(height: ArenaSpacing.sm),
                 itemBuilder: (ctx, i) {
-                  final m = conversations[i];
-                  final opponentId =
-                      m.player1Id == me ? m.player2Id : m.player1Id;
-                  final opponent =
-                      opponentId == null ? null : peers[opponentId];
+                  final it = items[i];
+                  if (it.kind == _InboxItemKind.header) {
+                    return Padding(
+                      padding: EdgeInsets.only(
+                        top: i == 0 ? 0 : ArenaSpacing.sm,
+                        bottom: 4,
+                      ),
+                      child: Text(
+                        it.headerLabel!,
+                        style: ArenaText.small.copyWith(
+                          color: ArenaColors.silver,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    );
+                  }
+                  if (it.kind == _InboxItemKind.friend) {
+                    final fc = it.friend!;
+                    return Dismissible(
+                      key: ValueKey('inbox_friend_${fc.channelId}'),
+                      direction: DismissDirection.endToStart,
+                      background: Container(
+                        alignment: Alignment.centerRight,
+                        padding:
+                            const EdgeInsets.only(right: ArenaSpacing.lg),
+                        decoration: BoxDecoration(
+                          color: ArenaColors.neonRed.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: const Icon(
+                          Icons.delete_outline,
+                          color: ArenaColors.neonRed,
+                        ),
+                      ),
+                      confirmDismiss: (_) =>
+                          _confirmDeleteConversation(ctx),
+                      onDismissed: (_) =>
+                          _onDeleteFriendChannel(ctx, ref, fc.channelId),
+                      child: _FriendThreadRow(
+                        friendshipId: fc.friendshipId,
+                        peer: it.peer,
+                      ),
+                    );
+                  }
+                  // match
+                  final m = it.match!;
                   return Dismissible(
                     key: ValueKey('inbox_match_${m.id}'),
                     direction: DismissDirection.endToStart,
@@ -224,8 +292,8 @@ class _DirectTab extends ConsumerWidget {
                         _onDeleteConversation(ctx, ref, m.id),
                     child: _MatchThreadRow(
                       match: m,
-                      opponent: opponent,
-                      highlighted: i == 0 && _isHot(m),
+                      opponent: it.peer,
+                      highlighted: it.highlighted,
                     ),
                   );
                 },
@@ -274,6 +342,22 @@ class _DirectTab extends ConsumerWidget {
       final channel = await repo.ensureMatchChannel(matchId);
       await repo.softDeleteChannel(channel.id);
       ref.invalidate(myOpenedMatchChannelIdsProvider);
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Échec : ${arenaErrorMessage(e)}')),
+      );
+    }
+  }
+
+  Future<void> _onDeleteFriendChannel(
+    BuildContext context,
+    WidgetRef ref,
+    String channelId,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(chatRepositoryProvider).softDeleteChannel(channelId);
+      ref.invalidate(myFriendChannelsProvider);
     } catch (e) {
       messenger.showSnackBar(
         SnackBar(content: Text('Échec : ${arenaErrorMessage(e)}')),
@@ -585,4 +669,114 @@ ArenaAvatarColor inboxAvatarFor(String seed) {
   if (seed.isEmpty) return ArenaAvatarColor.blue;
   final c = seed.codeUnitAt(0) % ArenaAvatarColor.values.length;
   return ArenaAvatarColor.values[c];
+}
+
+// ─── Inbox unified item (AMIS + MATCHS) ──────────────────────────────────────
+
+enum _InboxItemKind { header, friend, match }
+
+class _InboxItem {
+  const _InboxItem._({
+    required this.kind,
+    this.headerLabel,
+    this.friend,
+    this.match,
+    this.peer,
+    this.highlighted = false,
+  });
+
+  const _InboxItem.sectionHeader(String label)
+      : this._(kind: _InboxItemKind.header, headerLabel: label);
+
+  const _InboxItem.friend(
+    ({String channelId, String friendshipId, String peerId}) friend,
+    Profile? peer,
+  ) : this._(kind: _InboxItemKind.friend, friend: friend, peer: peer);
+
+  const _InboxItem.match(
+    ArenaMatch match,
+    Profile? peer, {
+    required bool highlighted,
+  }) : this._(
+          kind: _InboxItemKind.match,
+          match: match,
+          peer: peer,
+          highlighted: highlighted,
+        );
+
+  final _InboxItemKind kind;
+  final String? headerLabel;
+  final ({String channelId, String friendshipId, String peerId})? friend;
+  final ArenaMatch? match;
+  final Profile? peer;
+  final bool highlighted;
+}
+
+/// Row inbox pour un friend chat (Item 3 wave C — 2026-05-19).
+/// Tap → /chat/friend/:friendshipId. Layout cohérent avec _MatchThreadRow.
+class _FriendThreadRow extends StatelessWidget {
+  const _FriendThreadRow({required this.friendshipId, required this.peer});
+
+  final String friendshipId;
+  final Profile? peer;
+
+  @override
+  Widget build(BuildContext context) {
+    final username = peer?.username ?? 'Ami';
+    final initials = username.isEmpty ? '?' : username[0].toUpperCase();
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => context.push(UserRoutes.friendChatPath(friendshipId)),
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: ArenaColors.carbon2,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: ArenaColors.border),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              ArenaAvatar(
+                initials: initials,
+                color: inboxAvatarFor(username),
+              ),
+              const SizedBox(width: ArenaSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      username,
+                      style: ArenaText.small.copyWith(
+                        color: ArenaColors.bone,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Discuter avec ton ami',
+                      style: ArenaText.small.copyWith(
+                        color: ArenaColors.silver,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right,
+                color: ArenaColors.silverDim,
+                size: 20,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

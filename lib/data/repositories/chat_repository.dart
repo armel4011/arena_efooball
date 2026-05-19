@@ -4,6 +4,7 @@ import 'package:arena/data/models/chat_channel.dart';
 import 'package:arena/data/models/chat_message.dart';
 import 'package:arena/data/repositories/match_repository.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
+import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -16,6 +17,46 @@ class ChatRepository {
   static const _messagesTable = 'chat_messages';
 
   final SupabaseClient _client;
+
+  /// Liste les chat_channels type='friend' non-supprimés où le user
+  /// courant est l'un des 2 membres de la friendship accepted.
+  /// Retourne pour chaque channel le triplet (channel, peer profile,
+  /// friendship_id) prêt à rendre dans l'inbox.
+  ///
+  /// Item 3 wave C (test phone 2026-05-19) — lacune wave A : les
+  /// friend chats n'apparaissaient nulle part dans l'inbox.
+  Future<List<({String channelId, String friendshipId, String peerId})>>
+      listMyFriendChannels(String me) async {
+    final rows = await _client
+        .from(_channelsTable)
+        .select('id, friendship_id, friendships!inner(requester_id, addressee_id, status)')
+        .eq('type', 'friend')
+        .isFilter('deleted_at', null)
+        .eq('friendships.status', 'accepted')
+        .or(
+          'requester_id.eq.$me,addressee_id.eq.$me',
+          referencedTable: 'friendships',
+        );
+    final out =
+        <({String channelId, String friendshipId, String peerId})>[];
+    for (final row in rows as List<dynamic>) {
+      final map = row as Map<String, dynamic>;
+      final f = map['friendships'] as Map<String, dynamic>?;
+      if (f == null) continue;
+      final requester = f['requester_id'] as String?;
+      final addressee = f['addressee_id'] as String?;
+      final peer = requester == me ? addressee : requester;
+      if (peer == null) continue;
+      out.add(
+        (
+          channelId: map['id'] as String,
+          friendshipId: map['friendship_id'] as String,
+          peerId: peer,
+        ),
+      );
+    }
+    return out;
+  }
 
   /// Renvoie l'ensemble des match_ids pour lesquels un `chat_channel`
   /// de type=match existe déjà — passé en input la liste des matchs
@@ -233,4 +274,13 @@ final myOpenedMatchChannelIdsProvider =
   if (matches.isEmpty) return const {};
   final ids = [for (final m in matches) m.id];
   return ref.watch(chatRepositoryProvider).openedMatchChannelIds(ids);
+});
+
+/// Item 3 wave C (2026-05-19) — friend chats du user courant, à
+/// afficher dans la section AMIS de l'inbox DIRECT.
+final myFriendChannelsProvider = FutureProvider.autoDispose<
+    List<({String channelId, String friendshipId, String peerId})>>((ref) async {
+  final me = ref.watch(currentSessionProvider)?.user.id;
+  if (me == null) return const [];
+  return ref.watch(chatRepositoryProvider).listMyFriendChannels(me);
 });

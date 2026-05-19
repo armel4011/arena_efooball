@@ -99,6 +99,10 @@ class _FakeChatRepository implements ChatRepository {
       friendshipId: friendshipId,
     );
   }
+
+  @override
+  Future<List<({String channelId, String friendshipId, String peerId})>>
+      listMyFriendChannels(String me) async => const [];
 }
 
 Widget _scoped({
