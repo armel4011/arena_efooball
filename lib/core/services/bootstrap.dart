@@ -143,4 +143,27 @@ Future<void> _initSupabase() async {
   }
 
   await Supabase.initialize(url: url, anonKey: anon);
+
+  // ─── Realtime auth refresh hook ──────────────────────────────────────
+  // Supabase Flutter ne propage PAS automatiquement le nouveau JWT au
+  // client Realtime quand la session se refresh (~60 min). Sans ce hook,
+  // tous les `.from(t).stream(...)` et `.channel(...)` rejettent avec
+  // `InvalidJWTToken: Token has expired N seconds ago` quelques secondes
+  // après le refresh (observé 2026-05-19 sur Home + Compétitions).
+  //
+  // On écoute `onAuthStateChange` et on pousse le nouvel access_token
+  // dans le client Realtime à chaque event (signedIn, tokenRefreshed,
+  // signedOut → null). Listener fire-and-forget, jamais dispose : il
+  // vit le temps de l'app.
+  final client = Supabase.instance.client;
+  client.auth.onAuthStateChange.listen((data) {
+    final token = data.session?.accessToken;
+    unawaited(client.realtime.setAuth(token));
+  });
+  // Push initial — couvre le cas où une session était déjà restaurée
+  // depuis le storage avant que l'écouteur ne soit attaché.
+  final initialToken = client.auth.currentSession?.accessToken;
+  if (initialToken != null) {
+    unawaited(client.realtime.setAuth(initialToken));
+  }
 }
