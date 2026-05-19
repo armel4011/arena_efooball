@@ -32,8 +32,8 @@ Catégories traitées : `use_build_context_synchronously` (1, payment-critique),
 Audit ciblé après commit `482ea83` : la majorité des `Colors.white|black` restants sont justifiés (contraste sur gradient, overlay scrim semi-transparent, brand externe). Seuls **2 FIX directs** et **~5 EXTEND** (palette à enrichir) sont de vrais TODO.
 
 **Décision préalable à prendre :**
-- [ ] **Option A** — lint custom qui interdit `Color(0xFF…)` / `Colors.xxx` hors `lib/core/theme/` (réactivation `custom_lint` quand analyzer 7.7+ disponible).
-- [ ] **Option B** — passe manuelle fichier par fichier après enrichissement palette.
+- [x] **Option A** — script guard `scripts/check_colors.{sh,ps1}` + allowlist `scripts/colors_allowlist.txt` (commit `<pending>`, 2026-05-19). Miroir de `check_spacing` ; `--strict` exit 1 si régression hors allowlist. 81 KEEPs catalogués (gradient contrast / brand-protected Google / overlay isolate `recording_overlay` / scrim semi-transparent). `custom_lint` natif reste à activer si/quand `very_good_analysis` 10.x supporte analyzer 7.7+ — pour l'instant le script couvre la même finalité.
+- [ ] **Option B** — passe manuelle fichier par fichier après enrichissement palette. (Non choisie : 81 violations actuelles sont KEEP justifiés ; Option A préventive suffit.)
 
 **FIX immédiat (tokens déjà disponibles) :**
 - [x] `lib/features_shared/widgets/arena_phone_frame.dart:22` — `Color(0xFF1A1A22)` → `ArenaColors.carbon2` (commit `69011db`).

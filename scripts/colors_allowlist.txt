@@ -1,0 +1,62 @@
+# ─────────────────────────────────────────────────────────────────────────
+# scripts/colors_allowlist.txt — fichiers exemptés du check_colors lint
+# ─────────────────────────────────────────────────────────────────────────
+# Chaque ligne = un chemin relatif à la racine du repo, suivi d'un
+# commentaire explicatif. Lignes vides + lignes commençant par '#' sont
+# ignorées. Le script check_colors.sh accepte ces fichiers comme ayant
+# des KEEP justifiés (contrast gradient, brand-protected, overlay isolate,
+# etc.). Toute violation dans un fichier NON listé ici = régression.
+#
+# Audit follow-up source : docs/AUDIT_FOLLOWUP.md (section "Couleurs
+# hardcodées résiduelles") — la liste KEEP a été ratifiée le 2026-05-17
+# et étendue ici quand de nouveaux écrans s'ajoutent.
+
+# ─── Splash & branding ────────────────────────────────────────────────
+# Les écrans splash utilisent des Color() hex pour les gradients
+# cinématiques (la palette ArenaColors n'expose pas ces tons mid).
+lib/features/splash/splash_screen.dart
+lib/features/splash/splash_router.dart
+
+# ─── Brand-protected (charte externe imposée) ─────────────────────────
+# Google Sign-In : couleurs imposées par la charte Google (cf
+#   https://developers.google.com/identity/branding-guidelines).
+lib/features_shared/widgets/google_sign_in_button.dart
+
+# ─── Isolate sans accès aux tokens ────────────────────────────────────
+# `flutter_overlay_window` spawne un isolate Flutter détaché où
+# ArenaColors n'est pas chargé. Les Color() inline y sont obligés.
+lib/features_user/recording/overlay/recording_overlay.dart
+
+# ─── Overlay scrim semi-transparent / hairlines ───────────────────────
+# Patterns : Colors.black.withValues(alpha: 0.35) pour scrim sur média,
+# Colors.white.withValues(alpha: 0.06) pour les hairlines. Aucun token
+# ArenaColors n'a de version transparent equivalent.
+lib/features_user/recording/match_in_progress_overlay.dart
+lib/features_user/chat/chat_page.dart
+lib/features_user/profile/public_profile_page.dart
+lib/features_user/profile/player_profile_page.dart
+lib/features_user/profile/friends_search_page.dart
+lib/features_user/profile/friends_page.dart
+lib/features_user/profile/edit_profile_page.dart
+lib/features_user/home/main_layout.dart
+lib/features_user/payments/payment_failed_page.dart
+lib/features_user/payments/payment_history_page.dart
+lib/features_user/payments/payment_method_picker_page.dart
+lib/features_user/payments/payment_success_page.dart
+lib/features_user/competitions/widgets/paid_competition_card.dart
+lib/features_user/competitions/competition_detail_page.dart
+lib/features_admin/bracket_admin/admin_bracket_management_page.dart
+lib/features_admin/auth_admin/totp_setup_screen.dart
+
+# ─── Widgets shared : contrast sur gradient / dark surface ────────────
+# Colors.white explicite pour garantir contraste lecture sur gradients
+# / surfaces sombres. Le token ArenaColors.bone (#F5F5F0) est légèrement
+# crémeux, white pur est requis dans ces cas.
+lib/features_shared/widgets/arena_phone_frame.dart
+lib/features_shared/widgets/arena_glass_card.dart
+lib/features_shared/widgets/arena_floating_button.dart
+lib/features_shared/widgets/arena_dialog.dart
+lib/features_shared/widgets/arena_button.dart
+lib/features_shared/widgets/arena_banner.dart
+lib/features_shared/widgets/arena_badge.dart
+lib/features_shared/widgets/arena_avatar.dart
