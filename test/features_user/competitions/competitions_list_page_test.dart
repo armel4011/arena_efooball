@@ -51,11 +51,11 @@ void main() {
     await tester.pumpWidget(_scoped(const []));
     await tester.pumpAndSettle();
 
+    // Lot C.1 : les chips inline ont été remplacés par un ArenaFilterMenu
+    // (bottom-sheet). On vérifie que le bouton "FILTRES" et l'empty state
+    // sont visibles ; les options de jeu sont désormais dans la sheet.
     expect(find.text('Aucune compétition'), findsOneWidget);
-    expect(find.text('Tous'), findsOneWidget);
-    expect(find.text('eFootball'), findsOneWidget);
-    expect(find.text('FIFA Mobile'), findsOneWidget);
-    expect(find.text('EA SPORTS FC Mobile'), findsOneWidget);
+    expect(find.text('FILTRES'), findsOneWidget);
   });
 
   testWidgets('renders one card per competition under the default filter',
@@ -80,12 +80,17 @@ void main() {
     expect(find.text('GRATUITE'), findsNWidgets(2));
   });
 
-  testWidgets('filter chip toggles selection visually', (tester) async {
+  testWidgets('filter menu applies the selected game', (tester) async {
     await bumpViewport(tester);
     await tester.pumpWidget(_scoped(const []));
     await tester.pumpAndSettle();
 
+    // Lot C.1 : on ouvre la sheet, on tape eFootball, on applique.
+    await tester.tap(find.text('FILTRES'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('eFootball'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('APPLIQUER'));
     await tester.pumpAndSettle();
 
     // The filtered empty-state copy switches to mention the selected

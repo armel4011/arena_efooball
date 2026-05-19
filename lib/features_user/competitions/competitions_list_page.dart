@@ -4,6 +4,7 @@ import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
 import 'package:arena/data/repositories/payment_repository.dart';
+import 'package:arena/features_shared/widgets/arena_filter_menu.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:arena/features_shared/widgets/error_state.dart';
 import 'package:arena/features_user/competitions/widgets/competition_filter_chips.dart';
@@ -16,12 +17,13 @@ import 'package:intl/intl.dart';
 
 /// PHASE 4 — list of competitions, filterable by game + status + tarif.
 ///
-/// Maps to screen #10 of `arena_v2.html`. Trois rangées de chips sur le
-/// haut (jeu / statut / tarif), puis cards plein-largeur par compétition.
+/// Maps to screen #10 of `arena_v2.html`. Lot C.1 : les trois rangées
+/// de chips ont été consolidées dans un seul `ArenaFilterMenu` qui ouvre
+/// une bottom-sheet — preserve la même UX (jeu + statut + tarif) en
+/// libérant l'en-tête de la page.
 ///
-/// Le rendu des cards et la logique des filtres sont extraits dans
-/// `widgets/` (PR 2026-05-17, refacto P1 audit followup) pour garder
-/// cette page sous la barre des 250 lignes.
+/// Le rendu des cards et la logique des filtres (enums `StatusBucket` /
+/// `PricingBucket`) sont extraits dans `widgets/`.
 class CompetitionsListPage extends ConsumerStatefulWidget {
   const CompetitionsListPage({super.key});
 
@@ -46,35 +48,30 @@ class _CompetitionsListPageState extends ConsumerState<CompetitionsListPage> {
             ArenaSpacing.lg,
             ArenaSpacing.md,
             ArenaSpacing.lg,
-            0,
+            ArenaSpacing.sm,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
-              Text('JEU', style: ArenaText.inputLabel),
-              const SizedBox(height: ArenaSpacing.sm),
-              GameChips(
-                selected: _game,
-                onChanged: (g) => setState(() => _game = g),
+              ArenaFilterMenu(
+                activeCount: _activeFilterCount(),
+                sections: _buildSections(),
+                initialSelection: _selectionSnapshot(),
+                onApply: _applySelection,
               ),
-              const SizedBox(height: ArenaSpacing.sm),
-              Text('STATUS', style: ArenaText.inputLabel),
-              const SizedBox(height: ArenaSpacing.sm),
-              StatusChips(
-                selected: _bucket,
-                onChanged: (b) => setState(() => _bucket = b),
-              ),
-              const SizedBox(height: ArenaSpacing.sm),
-              Text('TARIF', style: ArenaText.inputLabel),
-              const SizedBox(height: ArenaSpacing.sm),
-              PricingChips(
-                selected: _pricing,
-                onChanged: (p) => setState(() => _pricing = p),
-              ),
+              const Spacer(),
+              if (_activeFilterCount() > 0)
+                TextButton(
+                  onPressed: _resetAll,
+                  child: Text(
+                    'Réinitialiser',
+                    style: ArenaText.small.copyWith(
+                      color: ArenaColors.signalBlue,
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
-        const SizedBox(height: ArenaSpacing.sm),
         const Divider(height: 1, thickness: 1, color: ArenaColors.border),
         Expanded(
           child: async.when(
@@ -140,6 +137,84 @@ class _CompetitionsListPageState extends ConsumerState<CompetitionsListPage> {
         ),
       ],
     );
+  }
+
+  // ─── Filter helpers (mapping page state ↔ ArenaFilterMenu) ──────────
+
+  List<ArenaFilterSection> _buildSections() {
+    return [
+      ArenaFilterSection(
+        id: 'game',
+        title: 'Jeu',
+        mode: ArenaFilterMode.radio,
+        options: [
+          for (final g in GameType.values)
+            ArenaFilterOption(id: g.name, label: g.label),
+        ],
+      ),
+      ArenaFilterSection(
+        id: 'status',
+        title: 'Statut',
+        mode: ArenaFilterMode.radio,
+        options: [
+          for (final b in StatusBucket.values)
+            ArenaFilterOption(id: b.name, label: b.label),
+        ],
+      ),
+      ArenaFilterSection(
+        id: 'pricing',
+        title: 'Tarif',
+        mode: ArenaFilterMode.radio,
+        options: [
+          for (final p in PricingBucket.values)
+            ArenaFilterOption(id: p.name, label: p.label),
+        ],
+      ),
+    ];
+  }
+
+  Map<String, List<String>> _selectionSnapshot() {
+    return {
+      'game': _game == null ? const [] : [_game!.name],
+      'status': [_bucket.name],
+      'pricing': _pricing == PricingBucket.all ? const [] : [_pricing.name],
+    };
+  }
+
+  void _applySelection(Map<String, List<String>> selection) {
+    setState(() {
+      final gameId = selection['game']?.firstOrNull;
+      _game = gameId == null
+          ? null
+          : GameType.values.firstWhere((g) => g.name == gameId);
+
+      final statusId = selection['status']?.firstOrNull;
+      // Status n'a pas d'option "toutes" — fallback sur upcoming si vide.
+      _bucket = statusId == null
+          ? StatusBucket.upcoming
+          : StatusBucket.values.firstWhere((b) => b.name == statusId);
+
+      final pricingId = selection['pricing']?.firstOrNull;
+      _pricing = pricingId == null
+          ? PricingBucket.all
+          : PricingBucket.values.firstWhere((p) => p.name == pricingId);
+    });
+  }
+
+  int _activeFilterCount() {
+    var n = 0;
+    if (_game != null) n++;
+    if (_bucket != StatusBucket.upcoming) n++;
+    if (_pricing != PricingBucket.all) n++;
+    return n;
+  }
+
+  void _resetAll() {
+    setState(() {
+      _game = null;
+      _bucket = StatusBucket.upcoming;
+      _pricing = PricingBucket.all;
+    });
   }
 }
 

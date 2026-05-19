@@ -5,6 +5,7 @@ import 'package:arena/data/repositories/admin/admin_matches_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
+import 'package:arena/features_shared/widgets/arena_filter_menu.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,10 +13,10 @@ import 'package:intl/intl.dart';
 
 /// PHASE 11 · A10 — global admin matches list with status filters.
 ///
-/// Reads `matches` realtime via [adminMatchesProvider]. The status
-/// chip maps onto [MatchStatus] groups (pending / live / completed /
-/// disputed). Tap a card → not yet wired (admin still uses the bracket
-/// page for verdicts in V1.0).
+/// Reads `matches` realtime via [adminMatchesProvider]. Lot C.1 : la
+/// rangée de chips status inline a été remplacée par `ArenaFilterMenu`
+/// (radio, défaut = Tous). Tap a card → not yet wired (admin still uses
+/// the bracket page for verdicts in V1.0).
 ///
 /// Maps to screen A10 of `arena_v2.html`.
 class AdminMatchesListPage extends ConsumerStatefulWidget {
@@ -52,24 +53,31 @@ class _AdminMatchesListPageState
         child: ListView(
           padding: const EdgeInsets.all(ArenaSpacing.lg),
           children: [
-            Text('STATUS', style: ArenaText.inputLabel),
-            const SizedBox(height: ArenaSpacing.sm),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  for (final f in _MatchesFilter.values)
-                    Padding(
-                      padding:
-                          const EdgeInsets.only(right: ArenaSpacing.xs),
-                      child: _Chip(
-                        label: f.label,
-                        active: f == _filter,
-                        onTap: () => setState(() => _filter = f),
+            Row(
+              children: [
+                ArenaFilterMenu(
+                  activeCount: _filter == _MatchesFilter.all ? 0 : 1,
+                  sections: _buildSections(),
+                  initialSelection: {
+                    'status': _filter == _MatchesFilter.all
+                        ? const []
+                        : [_filter.name],
+                  },
+                  onApply: _applySelection,
+                ),
+                const Spacer(),
+                if (_filter != _MatchesFilter.all)
+                  TextButton(
+                    onPressed: () =>
+                        setState(() => _filter = _MatchesFilter.all),
+                    child: Text(
+                      'Réinitialiser',
+                      style: ArenaText.small.copyWith(
+                        color: ArenaColors.signalBlue,
                       ),
                     ),
-                ],
-              ),
+                  ),
+              ],
             ),
             const SizedBox(height: ArenaSpacing.md),
             list.when(
@@ -107,6 +115,32 @@ class _AdminMatchesListPageState
       ),
     );
   }
+
+  List<ArenaFilterSection> _buildSections() {
+    return [
+      ArenaFilterSection(
+        id: 'status',
+        title: 'Statut',
+        mode: ArenaFilterMode.radio,
+        options: [
+          // On omet `all` : empty selection = "tous".
+          for (final f in _MatchesFilter.values.where(
+            (e) => e != _MatchesFilter.all,
+          ))
+            ArenaFilterOption(id: f.name, label: f.label),
+        ],
+      ),
+    ];
+  }
+
+  void _applySelection(Map<String, List<String>> selection) {
+    final id = selection['status']?.firstOrNull;
+    setState(() {
+      _filter = id == null
+          ? _MatchesFilter.all
+          : _MatchesFilter.values.firstWhere((f) => f.name == id);
+    });
+  }
 }
 
 enum _MatchesFilter {
@@ -119,49 +153,6 @@ enum _MatchesFilter {
   const _MatchesFilter(this.label, this.status);
   final String label;
   final MatchStatus? status;
-}
-
-class _Chip extends StatelessWidget {
-  const _Chip({
-    required this.label,
-    required this.active,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(ArenaRadius.round),
-      child: AnimatedContainer(
-        duration: ArenaDurations.short,
-        padding: const EdgeInsets.symmetric(
-          horizontal: ArenaSpacing.md,
-          vertical: 6,
-        ),
-        decoration: BoxDecoration(
-          color: active
-              ? ArenaColors.signalBlue.withValues(alpha: 0.15)
-              : ArenaColors.carbon,
-          borderRadius: BorderRadius.circular(ArenaRadius.round),
-          border: Border.all(
-            color: active ? ArenaColors.signalBlue : ArenaColors.border,
-          ),
-        ),
-        child: Text(
-          label,
-          style: ArenaText.body.copyWith(
-            color: active ? ArenaColors.signalBlue : ArenaColors.silver,
-            fontWeight: active ? FontWeight.w600 : FontWeight.w500,
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class _MatchCard extends StatelessWidget {
