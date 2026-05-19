@@ -241,11 +241,14 @@ class _DetailBody extends StatelessWidget {
             unselectedLabelColor: ArenaColors.silver,
             indicatorColor: ArenaColors.signalBlue,
             indicatorWeight: 2,
-            tabs: const [
-              Tab(text: 'INFOS'),
-              Tab(text: 'PARTICIP.'),
-              Tab(text: 'BRACKET'),
-              Tab(text: 'CLASSEMENT'),
+            tabs: [
+              const Tab(text: 'INFOS'),
+              const Tab(text: 'PARTICIP.'),
+              // L'onglet 2 montre le bracket pour une élimination directe,
+              // mais le classement des poules pour groups_then_knockout
+              // et round_robin — d'où le label dynamique.
+              Tab(text: _phaseTabLabel(competition.format)),
+              const Tab(text: 'CLASSEMENT'),
             ],
           ),
           Expanded(
@@ -259,7 +262,11 @@ class _DetailBody extends StatelessWidget {
                   description: 'La liste des inscrits avec avatars et stats'
                       ' arrivera ici. Source : table `registrations`.',
                 ),
-                if (competition.format.isBracket)
+                // Fix item 5 (2026-05-19) : `isBracket` est true pour
+                // groups_then_knockout aussi → la GroupStandingsPage
+                // n'était jamais affichée. On switch maintenant sur le
+                // format exact : seul single_elimination → BracketView.
+                if (competition.format == TournamentFormat.singleElimination)
                   BracketView(competitionId: competition.id)
                 else
                   GroupStandingsPage(competitionId: competition.id),
@@ -646,3 +653,10 @@ ArenaAvatarColor _avatarColorForSeed(String seed) {
 
 String _formatMoney(num v) =>
     NumberFormat.decimalPattern('fr').format(v).replaceAll(',', ' ');
+
+/// Label de l'onglet 2 du détail compétition. Élimination directe →
+/// "BRACKET" (arbre KO) ; sinon "POULES" (classement de groupes /
+/// round-robin).
+String _phaseTabLabel(TournamentFormat format) {
+  return format == TournamentFormat.singleElimination ? 'BRACKET' : 'POULES';
+}
