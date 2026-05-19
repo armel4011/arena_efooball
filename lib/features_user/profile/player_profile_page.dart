@@ -653,7 +653,7 @@ class _ReferralBadgeCard extends ConsumerWidget {
                   ),
                 ),
                 child: Text(
-                  '$count filleul${count > 1 ? 's' : ''}',
+                  '$count invité${count > 1 ? 's' : ''}',
                   style: ArenaTypography.labelMedium.copyWith(
                     color: ArenaColors.tierGoldWarm,
                     fontWeight: FontWeight.w700,

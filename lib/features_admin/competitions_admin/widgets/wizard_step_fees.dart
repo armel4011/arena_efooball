@@ -205,12 +205,12 @@ class WizardStepFees extends StatelessWidget {
                     runSpacing: ArenaSpacing.xs,
                     children: [
                       ModeChip(
-                        label: 'Tout filleul',
+                        label: 'Tout invité',
                         active: referralActivityMode == 'any',
                         onTap: () => onReferralModeChanged('any'),
                       ),
                       ModeChip(
-                        label: 'Filleul engagé',
+                        label: 'Invité engagé',
                         active: referralActivityMode == 'engaged',
                         onTap: () => onReferralModeChanged('engaged'),
                       ),
@@ -219,9 +219,9 @@ class WizardStepFees extends StatelessWidget {
                   const SizedBox(height: ArenaSpacing.xs),
                   Text(
                     referralActivityMode == 'engaged'
-                        ? 'Filleul engagé = a joué au moins 1 match OU payé '
+                        ? 'Invité engagé = a joué au moins 1 match OU payé '
                             "1 inscription. Bloque l'astuce \"10 faux comptes\"."
-                        : 'Tout filleul actif compte (création de compte '
+                        : 'Tout invité actif compte (création de compte '
                             'suffisante).',
                     style: ArenaText.small,
                   ),
