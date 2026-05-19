@@ -18,11 +18,9 @@ class WizardStepFees extends StatelessWidget {
     required this.orangeMomoCtrl,
     required this.mtnMomoCtrl,
     required this.referralQuotaCtrl,
-    required this.referralActivityMode,
     required this.isEditing,
     required this.onChanged,
     required this.onCurrencyChanged,
-    required this.onReferralModeChanged,
     super.key,
   });
 
@@ -32,11 +30,9 @@ class WizardStepFees extends StatelessWidget {
   final TextEditingController orangeMomoCtrl;
   final TextEditingController mtnMomoCtrl;
   final TextEditingController referralQuotaCtrl;
-  final String referralActivityMode;
   final bool isEditing;
   final VoidCallback onChanged;
   final ValueChanged<String> onCurrencyChanged;
-  final ValueChanged<String> onReferralModeChanged;
 
   Widget _lockable(Widget child) {
     if (!isEditing) return child;
@@ -197,32 +193,10 @@ class WizardStepFees extends StatelessWidget {
                   ],
                 ),
                 if (_referralQuota() > 0) ...[
-                  const SizedBox(height: ArenaSpacing.md),
-                  Text('Mode de comptage', style: ArenaText.inputLabel),
-                  const SizedBox(height: ArenaSpacing.xs),
-                  Wrap(
-                    spacing: ArenaSpacing.xs,
-                    runSpacing: ArenaSpacing.xs,
-                    children: [
-                      ModeChip(
-                        label: 'Tout invité',
-                        active: referralActivityMode == 'any',
-                        onTap: () => onReferralModeChanged('any'),
-                      ),
-                      ModeChip(
-                        label: 'Invité engagé',
-                        active: referralActivityMode == 'engaged',
-                        onTap: () => onReferralModeChanged('engaged'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: ArenaSpacing.xs),
+                  const SizedBox(height: ArenaSpacing.sm),
                   Text(
-                    referralActivityMode == 'engaged'
-                        ? 'Invité engagé = a joué au moins 1 match OU payé '
-                            "1 inscription. Bloque l'astuce \"10 faux comptes\"."
-                        : 'Tout invité actif compte (création de compte '
-                            'suffisante).',
+                    'Tout invité actif compte vers le quota '
+                    '(création de compte suffisante).',
                     style: ArenaText.small,
                   ),
                 ],

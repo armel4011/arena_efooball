@@ -32,11 +32,9 @@ void main() {
             orangeMomoCtrl: orange,
             mtnMomoCtrl: mtn,
             referralQuotaCtrl: referralQuota,
-            referralActivityMode: 'any',
             isEditing: false,
             onChanged: () {},
             onCurrencyChanged: (_) {},
-            onReferralModeChanged: (_) {},
           ),
         ),
       );
@@ -61,11 +59,9 @@ void main() {
             orangeMomoCtrl: orange,
             mtnMomoCtrl: mtn,
             referralQuotaCtrl: referralQuota,
-            referralActivityMode: 'any',
             isEditing: false,
             onChanged: () {},
             onCurrencyChanged: (_) {},
-            onReferralModeChanged: (_) {},
           ),
         ),
       );
@@ -92,17 +88,19 @@ void main() {
             orangeMomoCtrl: orange,
             mtnMomoCtrl: mtn,
             referralQuotaCtrl: referralQuota,
-            referralActivityMode: 'engaged',
             isEditing: false,
             onChanged: () {},
             onCurrencyChanged: (_) {},
-            onReferralModeChanged: (_) {},
           ),
         ),
       );
 
-      expect(find.text('Mode de comptage'), findsOneWidget);
-      expect(find.textContaining('Filleul engagé'), findsWidgets);
+      // Avec quota > 0, on affiche l'explication "Tout invité actif"
+      // (le ModeChip de choix any/engaged a été retiré 2026-05-19).
+      expect(
+        find.textContaining('Tout invité actif compte'),
+        findsOneWidget,
+      );
     });
   });
 }

@@ -104,9 +104,10 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
   // 0 = pas de gating. Activable seulement pour comp. gratuites.
   final _referralQuotaCtrl = TextEditingController(text: '0');
 
-  // Lot D.2 — mode parrainage. 'any' = tous filleuls, 'engaged' = ont
-  // joué un match OU payé une inscription.
-  String _referralActivityMode = 'any';
+  // Lot D.2 — mode parrainage. Décision user 2026-05-19 : règle unique
+  // 'any' (tout invité actif compte). L'option 'engaged' du wizard est
+  // retirée mais la colonne `competitions.referral_activity_mode` reste
+  // pour compat — toujours forcée à 'any' au submit.
 
   // Lot A.2 — Override intervalles par round (saisi en CSV, parsé en
   // List<int>). Optionnel. Si vide → fallback `matchIntervalMinutes`.
@@ -147,7 +148,7 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
     _autoGenerateBracket = c.autoGenerateBracket;
     _matchIntervalMinutes = c.matchIntervalMinutes;
     _referralQuotaCtrl.text = c.referralQuota.toString();
-    _referralActivityMode = c.referralActivityMode;
+    // referral_activity_mode toujours 'any' depuis le wizard — pas de UI.
     if (c.roundIntervals != null && c.roundIntervals!.isNotEmpty) {
       _roundIntervalsCtrl.text = c.roundIntervals!.join(',');
     }
@@ -297,13 +298,10 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
                       orangeMomoCtrl: _orangeMomoCtrl,
                       mtnMomoCtrl: _mtnMomoCtrl,
                       referralQuotaCtrl: _referralQuotaCtrl,
-                      referralActivityMode: _referralActivityMode,
                       isEditing: _isEditing,
                       onChanged: () => setState(() {}),
                       onCurrencyChanged:
                           (c) => setState(() => _currency = c),
-                      onReferralModeChanged:
-                          (m) => setState(() => _referralActivityMode = m),
                     ),
                   if (_step == 4) ..._buildReviewStep(),
                 ],
@@ -592,7 +590,7 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
         'auto_generate_bracket': _autoGenerateBracket,
         'match_interval_minutes': _matchIntervalMinutes,
         'referral_quota': _referralQuota(),
-        'referral_activity_mode': _referralActivityMode,
+        'referral_activity_mode': 'any',
         'round_intervals': _roundIntervals(),
         'format_config': _formatConfig(),
         if (fee > 0) 'orange_money_code': _orangeMomoCtrl.text.trim(),
@@ -661,7 +659,7 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
         'auto_generate_bracket': _autoGenerateBracket,
         'match_interval_minutes': _matchIntervalMinutes,
         'referral_quota': _referralQuota(),
-        'referral_activity_mode': _referralActivityMode,
+        'referral_activity_mode': 'any',
         'round_intervals': _roundIntervals(),
         'format_config': _formatConfig(),
         if (fee > 0) 'orange_money_code': _orangeMomoCtrl.text.trim(),
