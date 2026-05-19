@@ -105,14 +105,19 @@ class ManualVideoUploadService {
         result: uploadResult,
         session: session,
       );
-    } catch (_) {
+    } catch (e, st) {
       // Best-effort: close the session so it doesn't show as active
-      // forever in the player's history.
+      // forever in the player's history. The exception is rethrown so
+      // the caller (ManualUploadButton) can surface it to the user ;
+      // pas de Sentry ici car le caller capture la trace contextuelle.
       try {
         await _repo.markEnded(session.id);
-      } catch (e) {
-        debugPrint('[manual-upload] markEnded cleanup failed: $e');
+      } catch (cleanupErr) {
+        debugPrint(
+          '[manual-upload] markEnded cleanup failed: $cleanupErr (after $e)',
+        );
       }
+      debugPrint('[manual-upload] pickAndUpload failed: $e\n$st');
       rethrow;
     }
   }

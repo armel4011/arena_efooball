@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/payment_repository.dart';
@@ -10,6 +12,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// PHASE 11bis · P2 — Mobile Money details (paiement P2P manuel).
@@ -210,7 +214,21 @@ class _MobileMoneyDetailsPageState
           maskedPhone: _maskPhone(_phoneCtrl.text.trim(), widget.dialCode),
         ),
       );
-    } catch (e) {
+    } on PostgrestException catch (e, st) {
+      await Sentry.captureException(e, stackTrace: st);
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Erreur lors de l'envoi : ${e.message}")),
+      );
+    } on SocketException catch (e) {
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Pas de connexion : $e')),
+      );
+    } catch (e, st) {
+      await Sentry.captureException(e, stackTrace: st);
       if (!mounted) return;
       setState(() => _submitting = false);
       ScaffoldMessenger.of(context).showSnackBar(

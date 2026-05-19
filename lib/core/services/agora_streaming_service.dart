@@ -1,10 +1,13 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:arena/core/services/agora_token_client.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 /// State machine of the local Agora session.
 sealed class AgoraSessionState {
@@ -127,7 +130,14 @@ class AgoraStreamingService {
     AgoraToken token;
     try {
       token = await _tokenClient.fetch(matchId: matchId, role: role);
-    } catch (e) {
+    } on SocketException catch (e) {
+      _emit(AgoraFailed('token_fetch_failed: $e'));
+      rethrow;
+    } on TimeoutException catch (e) {
+      _emit(AgoraFailed('token_fetch_failed: $e'));
+      rethrow;
+    } catch (e, st) {
+      await Sentry.captureException(e, stackTrace: st);
       _emit(AgoraFailed('token_fetch_failed: $e'));
       rethrow;
     }
@@ -158,7 +168,18 @@ class AgoraStreamingService {
           }
         },
       );
-    } catch (e) {
+    } on PlatformException catch (e, st) {
+      await Sentry.captureException(e, stackTrace: st);
+      _emit(AgoraFailed('join_failed: $e'));
+      rethrow;
+    } on SocketException catch (e) {
+      _emit(AgoraFailed('join_failed: $e'));
+      rethrow;
+    } on TimeoutException catch (e) {
+      _emit(AgoraFailed('join_failed: $e'));
+      rethrow;
+    } catch (e, st) {
+      await Sentry.captureException(e, stackTrace: st);
       _emit(AgoraFailed('join_failed: $e'));
       rethrow;
     }

@@ -7,6 +7,8 @@ import 'package:arena/data/repositories/match_stream_repository.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 final _filenameRandom = Random();
 
@@ -114,7 +116,15 @@ class RecordingService {
     MatchStream session;
     try {
       session = await _repo.openSession(matchId: matchId, playerId: playerId);
-    } catch (e) {
+    } on PostgrestException catch (e, st) {
+      await Sentry.captureException(e, stackTrace: st);
+      _emit(RecordingError('Failed to open recording session: ${e.message}'));
+      rethrow;
+    } on SocketException catch (e) {
+      _emit(RecordingError('Failed to open recording session (network): $e'));
+      rethrow;
+    } catch (e, st) {
+      await Sentry.captureException(e, stackTrace: st);
       _emit(RecordingError('Failed to open recording session: $e'));
       rethrow;
     }
@@ -133,8 +143,14 @@ class RecordingService {
         notificationTitle: notificationTitle,
         notificationMessage: notificationMessage,
       );
-    } catch (e) {
+    } on PlatformException catch (e, st) {
+      await Sentry.captureException(e, stackTrace: st);
       // Rollback DB session — recording never actually started.
+      await _safeMarkEnded(session.id);
+      _emit(RecordingError('Failed to start screen recorder: $e'));
+      rethrow;
+    } catch (e, st) {
+      await Sentry.captureException(e, stackTrace: st);
       await _safeMarkEnded(session.id);
       _emit(RecordingError('Failed to start screen recorder: $e'));
       rethrow;
@@ -177,10 +193,16 @@ class RecordingService {
     String localPath;
     try {
       localPath = await _platform.stopRecording();
-    } catch (e) {
+    } on PlatformException catch (e, st) {
+      await Sentry.captureException(e, stackTrace: st);
       _emit(RecordingError('Failed to stop screen recorder: $e'));
       // Don't rethrow — we still want to mark the session ended in DB
       // so it's not left dangling forever.
+      await _safeMarkEnded(current.session.id);
+      return null;
+    } catch (e, st) {
+      await Sentry.captureException(e, stackTrace: st);
+      _emit(RecordingError('Failed to stop screen recorder: $e'));
       await _safeMarkEnded(current.session.id);
       return null;
     }

@@ -5,7 +5,9 @@ import 'package:arena/core/services/recording_overlay_controller.dart';
 import 'package:arena/core/services/recording_service.dart';
 import 'package:arena/data/repositories/match_repository.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 /// High-level state of an in-progress recorded match.
 sealed class CoordinatorState {
@@ -182,7 +184,14 @@ class MatchRecordingCoordinator {
         try {
           final localPath = await stopCleanly();
           _saveStopController.add(localPath);
+        } on PlatformException catch (e, st) {
+          await Sentry.captureException(e, stackTrace: st);
+          if (kDebugMode) {
+            debugPrint('[coordinator] saveAndStop failed: $e\n$st');
+          }
+          _saveStopController.add(null);
         } catch (e, st) {
+          await Sentry.captureException(e, stackTrace: st);
           if (kDebugMode) {
             debugPrint('[coordinator] saveAndStop failed: $e\n$st');
           }
@@ -255,7 +264,13 @@ class MatchRecordingCoordinator {
     // closed by the time the admin pulls it up for review.
     try {
       await _recording.stop();
+    } on PlatformException catch (e, st) {
+      await Sentry.captureException(e, stackTrace: st);
+      if (kDebugMode) {
+        debugPrint('[coordinator] recording.stop() failed: $e\n$st');
+      }
     } catch (e, st) {
+      await Sentry.captureException(e, stackTrace: st);
       if (kDebugMode) {
         debugPrint('[coordinator] recording.stop() failed: $e\n$st');
       }
@@ -263,6 +278,7 @@ class MatchRecordingCoordinator {
     try {
       await _overlay.stop();
     } catch (e, st) {
+      await Sentry.captureException(e, stackTrace: st);
       if (kDebugMode) {
         debugPrint('[coordinator] overlay.stop() failed: $e\n$st');
       }

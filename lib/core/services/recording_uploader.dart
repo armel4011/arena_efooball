@@ -4,6 +4,7 @@ import 'package:arena/data/repositories/match_stream_repository.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Hard cap on accepted upload size — must mirror the bucket's
@@ -97,22 +98,43 @@ class RecordingUploader {
               contentType: _mimeForExtension(extension),
             ),
           );
+    } on StorageException catch (e, st) {
+      if (kDebugMode) {
+        debugPrint('[upload] storage upload failed: ${e.message}\n$st');
+      }
+      await Sentry.captureException(e, stackTrace: st);
+      throw RecordingUploadException('Upload failed: ${e.message}');
+    } on SocketException catch (e, st) {
+      if (kDebugMode) {
+        debugPrint('[upload] network error during upload: $e\n$st');
+      }
+      throw RecordingUploadException('Upload failed (network): $e');
     } catch (e, st) {
       if (kDebugMode) {
         debugPrint('[upload] storage upload failed: $e\n$st');
       }
+      await Sentry.captureException(e, stackTrace: st);
       throw RecordingUploadException('Upload failed: $e');
     }
 
     try {
       await _repo.attachUrl(streamId, objectPath);
-    } catch (e, st) {
+    } on PostgrestException catch (e, st) {
       // The file is already in Storage at this point — surface the
       // failure but keep the orphaned object so a retry has something
-      // to attach to.
+      // to attach to. Sentry capture so we can spot/cleanup orphans.
+      if (kDebugMode) {
+        debugPrint('[upload] attachUrl($streamId) failed: ${e.message}\n$st');
+      }
+      await Sentry.captureException(e, stackTrace: st);
+      throw RecordingUploadException(
+        'Stored to bucket but failed to attach URL: ${e.message}',
+      );
+    } catch (e, st) {
       if (kDebugMode) {
         debugPrint('[upload] attachUrl($streamId) failed: $e\n$st');
       }
+      await Sentry.captureException(e, stackTrace: st);
       throw RecordingUploadException(
         'Stored to bucket but failed to attach URL: $e',
       );
@@ -157,7 +179,19 @@ class RecordingUploader {
               contentType: _mimeForExtension(extension),
             ),
           );
-    } catch (e) {
+    } on StorageException catch (e, st) {
+      if (kDebugMode) {
+        debugPrint('[uploadBinary] storage upload failed: ${e.message}\n$st');
+      }
+      await Sentry.captureException(e, stackTrace: st);
+      throw RecordingUploadException('Upload failed: ${e.message}');
+    } on SocketException catch (e, st) {
+      throw RecordingUploadException('Upload failed (network): $e\n$st');
+    } catch (e, st) {
+      if (kDebugMode) {
+        debugPrint('[uploadBinary] storage upload failed: $e\n$st');
+      }
+      await Sentry.captureException(e, stackTrace: st);
       throw RecordingUploadException('Upload failed: $e');
     }
 
