@@ -18,13 +18,13 @@ Découpage en widgets / sous-pages, pas un refactor mécanique.
 - [x] `lib/features_user/competitions/competitions_list_page.dart` — 842 → **226** lignes (2026-05-17, commit `<pending>`). Découpé en 4 widgets sous `competitions/widgets/` : `competition_filter_chips` (enums + 3 chip rows), `free_competition_card`, `paid_competition_card`, `competition_list_card` (dispatcher).
 
 ### 21 issues `flutter analyze` restantes
-Toutes manuelles (non couvertes par `dart fix`). Listées par règle :
+- [x] **Résolu le 2026-05-17, commit `98ba7e9`** — `flutter analyze` passe à `No issues found!` (re-vérifié 2026-05-19, toujours 0 issue).
 
-- [ ] `use_build_context_synchronously` — `lib/features_user/payments/payment_processing_page.dart:217`
-  (critique : payment flow, vérifier `if (!mounted)` autour de la nav)
-- [ ] `cascade_invocations` (~4 occurrences) — `payment_processing_page.dart:91`, `edit_profile_page.dart:74`, `match_recording_lifecycle.dart:207`, etc.
-- [ ] `comment_references` — `lib/features_user/onboarding/onboarding_slide.dart:4`
-- [ ] Reste : voir `flutter analyze --no-pub --no-fatal-infos` pour la liste à jour
+Catégories traitées : `use_build_context_synchronously` (1, payment-critique),
+`cascade_invocations` (6), `avoid_equals_and_hash_code_on_mutable_classes`
+(6 via `@immutable`), `avoid_dynamic_calls` (4 via cast en amont),
+`no_default_cases` (3 switchs `MatchStatus` rendus exhaustifs),
+`eol_at_end_of_file` (1).
 
 ## P2 — hygiène diffuse
 
