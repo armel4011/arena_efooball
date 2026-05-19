@@ -90,7 +90,7 @@ jobs:
         # Non bloquant : si CODECOV_TOKEN n'est pas configuré (fork PR
         # par ex.), le step ne fail pas le pipeline. Le token est public-
         # safe pour repo public, à mettre en secret pour repo privé.
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v6
         with:
           files: coverage/lcov.info
           fail_ci_if_error: false
