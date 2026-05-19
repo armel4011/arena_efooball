@@ -68,8 +68,10 @@ final referralRepositoryProvider = Provider<ReferralRepository>((ref) {
 
 /// Éligibilité du user courant pour une compétition.
 /// `(competitionId, userId)` keyed family pour le cache automatique.
-final referralEligibilityProvider =
-    FutureProvider.family<ReferralEligibility, String>((ref, competitionId) {
+/// `.autoDispose` — l'éligibilité est checkée uniquement sur l'écran
+/// d'inscription. Rien ne la consomme ensuite.
+final referralEligibilityProvider = FutureProvider.family
+    .autoDispose<ReferralEligibility, String>((ref, competitionId) {
   final userId = ref.watch(currentSessionProvider)?.user.id;
   if (userId == null) {
     return Future.value(const ReferralEligibility(

@@ -158,8 +158,10 @@ final paymentRepositoryProvider = Provider<PaymentRepository>((ref) {
   return PaymentRepository(ref.watch(supabaseClientProvider));
 });
 
+/// `.autoDispose` — le payment processing page est court (P3/P4) ; rien
+/// ne re-consomme un payment id passé.
 final paymentByIdProvider =
-    StreamProvider.family<PaymentRecord?, String>((ref, id) {
+    StreamProvider.family.autoDispose<PaymentRecord?, String>((ref, id) {
   return ref.watch(paymentRepositoryProvider).watchById(id);
 });
 

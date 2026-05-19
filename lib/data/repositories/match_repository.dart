@@ -275,20 +275,24 @@ final matchRepositoryProvider = Provider<MatchRepository>((ref) {
 /// "Reading from a closed socket" exceptions on dispose. Pull-to-refresh
 /// is enough for the bracket — the rare admin/live dashboard that *does*
 /// need a streamed bracket can use `watchForCompetition` directly.
-final competitionMatchesProvider =
-    FutureProvider.family<List<ArenaMatch>, String>((ref, competitionId) {
+final competitionMatchesProvider = FutureProvider.family
+    .autoDispose<List<ArenaMatch>, String>((ref, competitionId) {
   return ref.watch(matchRepositoryProvider).listForCompetition(competitionId);
 });
 
-/// Realtime stream of a single match by id.
+/// Realtime stream of a single match by id. `.autoDispose` empêche le
+/// cache de stocker N matches visités à vie (1 stream WebSocket par
+/// match resterait actif pour la session).
 final matchByIdProvider =
-    StreamProvider.family<ArenaMatch?, String>((ref, matchId) {
+    StreamProvider.family.autoDispose<ArenaMatch?, String>((ref, matchId) {
   return ref.watch(matchRepositoryProvider).watchById(matchId);
 });
 
-/// Realtime stream of score-submission events for a match.
-final matchScoreSubmissionsProvider = StreamProvider.family<
-    List<Map<String, dynamic>>, String>((ref, matchId) {
+/// Realtime stream of score-submission events for a match. `.autoDispose`
+/// — utilisé uniquement dans le MatchRoom; rien ne le consomme après
+/// la fin du match.
+final matchScoreSubmissionsProvider = StreamProvider.family
+    .autoDispose<List<Map<String, dynamic>>, String>((ref, matchId) {
   return ref.watch(matchRepositoryProvider).watchScoreSubmissions(matchId);
 });
 

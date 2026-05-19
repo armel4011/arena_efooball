@@ -43,13 +43,16 @@ class FriendsRepository {
 
   /// Toutes les amitiés acceptées de `me`. Renvoie les Friendship rows ;
   /// la résolution profil → `listFriendProfiles` ci-dessous.
-  Future<List<Friendship>> listAccepted(String me) async {
+  /// Cap à 200 (super-connectors gèrent leur liste, l'app affiche le
+  /// reste via une recherche).
+  Future<List<Friendship>> listAccepted(String me, {int limit = 200}) async {
     final rows = await _client
         .from(_table)
         .select()
         .or('requester_id.eq.$me,addressee_id.eq.$me')
         .eq('status', 'accepted')
-        .order('updated_at', ascending: false);
+        .order('updated_at', ascending: false)
+        .limit(limit);
     return [
       for (final row in rows as List<dynamic>)
         Friendship.fromJson(row as Map<String, dynamic>),
@@ -57,27 +60,37 @@ class FriendsRepository {
   }
 
   /// Demandes pending entrantes (addressee = me). Pour l'onglet "Demandes".
-  Future<List<Friendship>> listIncomingPending(String me) async {
+  /// Cap à 100 (UX : un user qui en accumule plus n'a pas l'usage d'une
+  /// liste exhaustive, qu'il fasse tri/accept/reject d'abord).
+  Future<List<Friendship>> listIncomingPending(
+    String me, {
+    int limit = 100,
+  }) async {
     final rows = await _client
         .from(_table)
         .select()
         .eq('addressee_id', me)
         .eq('status', 'pending')
-        .order('created_at', ascending: false);
+        .order('created_at', ascending: false)
+        .limit(limit);
     return [
       for (final row in rows as List<dynamic>)
         Friendship.fromJson(row as Map<String, dynamic>),
     ];
   }
 
-  /// Demandes pending sortantes (requester = me).
-  Future<List<Friendship>> listOutgoingPending(String me) async {
+  /// Demandes pending sortantes (requester = me). Cap à 100.
+  Future<List<Friendship>> listOutgoingPending(
+    String me, {
+    int limit = 100,
+  }) async {
     final rows = await _client
         .from(_table)
         .select()
         .eq('requester_id', me)
         .eq('status', 'pending')
-        .order('created_at', ascending: false);
+        .order('created_at', ascending: false)
+        .limit(limit);
     return [
       for (final row in rows as List<dynamic>)
         Friendship.fromJson(row as Map<String, dynamic>),
@@ -85,13 +98,15 @@ class FriendsRepository {
   }
 
   /// Utilisateurs que `me` a bloqués (`blocked_by = me`). Le bloqueur est
-  /// le seul qui voit ces rows comme actionnables (unblock).
-  Future<List<Friendship>> listBlockedByMe(String me) async {
+  /// le seul qui voit ces rows comme actionnables (unblock). Cap à 50
+  /// (cas marginal, qui bloque 50+ users a un autre problème).
+  Future<List<Friendship>> listBlockedByMe(String me, {int limit = 50}) async {
     final rows = await _client
         .from(_table)
         .select()
         .eq('status', 'blocked')
-        .eq('blocked_by', me);
+        .eq('blocked_by', me)
+        .limit(limit);
     return [
       for (final row in rows as List<dynamic>)
         Friendship.fromJson(row as Map<String, dynamic>),

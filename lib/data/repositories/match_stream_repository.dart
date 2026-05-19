@@ -119,8 +119,8 @@ final matchStreamRepositoryProvider = Provider<MatchStreamRepository>((ref) {
   return MatchStreamRepository(ref.watch(supabaseClientProvider));
 });
 
-final matchStreamsByMatchProvider =
-    StreamProvider.family<List<MatchStream>, String>((ref, matchId) {
+final matchStreamsByMatchProvider = StreamProvider.family
+    .autoDispose<List<MatchStream>, String>((ref, matchId) {
   return ref.watch(matchStreamRepositoryProvider).watchByMatch(matchId);
 });
 

@@ -22,12 +22,19 @@ class MatchStatsRepository {
 
   /// Aggregates W/L/D + goals scored/conceded for [playerId] across
   /// every `matches.status = 'completed'` row they are seated in.
-  Future<PlayerStats> getForPlayer(String playerId) async {
+  ///
+  /// Cap à 500 matches pour borner le travail de serialization (power
+  /// users 10k+ matches). Quand l'agrégat persistant `profiles.stats`
+  /// devient autoritaire, ce repo passe en pure read sur stats — d'ici
+  /// là on plafonne.
+  Future<PlayerStats> getForPlayer(String playerId, {int limit = 500}) async {
     final rows = await _client
         .from(_table)
         .select()
         .or('player1_id.eq.$playerId,player2_id.eq.$playerId')
-        .eq('status', 'completed');
+        .eq('status', 'completed')
+        .order('finished_at', ascending: false)
+        .limit(limit);
 
     final matches = [for (final r in rows) ArenaMatch.fromJson(r)];
     return foldMatches(playerId, matches);

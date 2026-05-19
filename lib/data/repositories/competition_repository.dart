@@ -40,11 +40,13 @@ class CompetitionRepository {
   final SupabaseClient _client;
 
   /// Single fetch — typically not used directly by UI (prefer [watch]),
-  /// but handy for tests and for one-shot lookups.
-  Future<List<Competition>> list({GameType? game}) async {
+  /// but handy for tests and for one-shot lookups. Cap à 50 pour
+  /// borner le résultat à scale (1M users + 10k compétitions).
+  Future<List<Competition>> list({GameType? game, int limit = 50}) async {
     final query = _client.from(_table).select();
     final filtered = game == null ? query : query.eq('game', game.value);
-    final rows = await filtered.order('start_date', ascending: true);
+    final rows =
+        await filtered.order('start_date', ascending: true).limit(limit);
     return [
       for (final row in rows as List<dynamic>)
         Competition.fromJson(row as Map<String, dynamic>),
@@ -163,14 +165,20 @@ final competitionRepositoryProvider = Provider<CompetitionRepository>((ref) {
 /// Realtime list of competitions, optionally filtered by game.
 ///
 /// Use `competitionsListProvider(null)` for the unfiltered stream.
+/// `.autoDispose` : libère le cache + ferme le stream WebSocket quand
+/// l'écran qui watch est démonté — sinon 1 stream par variant de filtre
+/// (game=null, eFoot, FIFA, FC Mobile) reste vivant pour la session.
 final competitionsListProvider =
-    StreamProvider.family<List<Competition>, GameType?>((ref, game) {
+    StreamProvider.family.autoDispose<List<Competition>, GameType?>(
+        (ref, game) {
   return ref.watch(competitionRepositoryProvider).watch(game: game);
 });
 
-/// Realtime stream of one competition by id.
+/// Realtime stream of one competition by id. `.autoDispose` évite que
+/// chaque competition visitée reste cachée à vie (memory leak après
+/// browse de 50+ compétitions).
 final competitionByIdProvider =
-    StreamProvider.family<Competition?, String>((ref, id) {
+    StreamProvider.family.autoDispose<Competition?, String>((ref, id) {
   return ref.watch(competitionRepositoryProvider).watchById(id);
 });
 
