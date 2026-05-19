@@ -62,7 +62,7 @@ class StartStreamingBanner extends ConsumerWidget {
                   isMine
                       ? 'Ce match est sélectionné pour la diffusion live'
                       : 'Match diffusé en direct',
-                  style: const TextStyle(
+                  style: ArenaText.body.copyWith(
                     color: ArenaColors.text,
                     fontWeight: FontWeight.w600,
                   ),

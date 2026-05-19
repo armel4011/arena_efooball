@@ -185,7 +185,10 @@ class _ActionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       leading: Icon(icon, color: color),
-      title: Text(label, style: const TextStyle(color: ArenaColors.text)),
+      title: Text(
+        label,
+        style: ArenaText.body.copyWith(color: ArenaColors.text),
+      ),
       onTap: onTap,
     );
   }

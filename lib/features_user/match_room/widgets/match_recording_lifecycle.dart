@@ -308,10 +308,9 @@ class _LifecycleBanner extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: TextStyle(
+              style: ArenaText.small.copyWith(
                 color: color,
                 fontWeight: FontWeight.w600,
-                fontSize: 12,
               ),
             ),
           ),

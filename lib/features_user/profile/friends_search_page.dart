@@ -79,7 +79,7 @@ class _FriendsSearchPageState extends ConsumerState<FriendsSearchPage> {
               controller: _controller,
               autofocus: true,
               onChanged: _onChanged,
-              style: const TextStyle(color: ArenaColors.bone),
+              style: ArenaText.body.copyWith(color: ArenaColors.bone),
               decoration: InputDecoration(
                 hintText: "Nom d'utilisateur",
                 hintStyle: ArenaTypography.bodyMedium.copyWith(
@@ -116,7 +116,7 @@ class _ResultList extends StatelessWidget {
         padding: const EdgeInsets.all(ArenaSpacing.lg),
         child: Text(
           'Erreur : $e',
-          style: const TextStyle(color: ArenaColors.danger),
+          style: ArenaText.body.copyWith(color: ArenaColors.danger),
         ),
       ),
       data: (profiles) {

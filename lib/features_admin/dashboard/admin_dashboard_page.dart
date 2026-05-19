@@ -78,9 +78,11 @@ class AdminDashboardPage extends ConsumerWidget {
                     ),
                     TextButton(
                       onPressed: () => Navigator.pop(ctx, true),
-                      child: const Text(
+                      child: Text(
                         'Déconnexion',
-                        style: TextStyle(color: ArenaColors.neonRed),
+                        style: ArenaText.button.copyWith(
+                          color: ArenaColors.neonRed,
+                        ),
                       ),
                     ),
                   ],

@@ -57,7 +57,7 @@ class _ErrorState extends StatelessWidget {
         child: Text(
           message,
           textAlign: TextAlign.center,
-          style: const TextStyle(color: ArenaColors.danger),
+          style: ArenaText.body.copyWith(color: ArenaColors.danger),
         ),
       ),
     );
@@ -592,7 +592,7 @@ class _RecentMatches extends StatelessWidget {
       error: (e, _) => ArenaCard(
         child: Text(
           'Erreur: $e',
-          style: const TextStyle(color: ArenaColors.danger),
+          style: ArenaText.body.copyWith(color: ArenaColors.danger),
         ),
       ),
       data: (matches) {

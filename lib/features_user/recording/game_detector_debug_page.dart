@@ -114,7 +114,7 @@ class _UsageStatsCard extends StatelessWidget {
                   const SizedBox(width: ArenaSpacing.sm),
                   Text(
                     'Usage stats access: ${granted ? "GRANTED" : "DENIED"}',
-                    style: const TextStyle(
+                    style: ArenaText.body.copyWith(
                       color: ArenaColors.text,
                       fontWeight: FontWeight.w600,
                     ),
@@ -123,9 +123,9 @@ class _UsageStatsCard extends StatelessWidget {
               ),
               if (!granted) ...[
                 const SizedBox(height: ArenaSpacing.sm),
-                const Text(
+                Text(
                   'Settings → Apps → Special access → Usage access → ARENA → ON',
-                  style: TextStyle(color: ArenaColors.textMuted, fontSize: 12),
+                  style: ArenaText.small.copyWith(color: ArenaColors.textMuted),
                 ),
                 const SizedBox(height: ArenaSpacing.sm),
                 ArenaButton(
@@ -159,9 +159,9 @@ class _InstalledGamesCard extends StatelessWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Installed target games',
-                style: TextStyle(
+                style: ArenaText.body.copyWith(
                   color: ArenaColors.text,
                   fontWeight: FontWeight.w600,
                 ),
@@ -184,15 +184,14 @@ class _InstalledGamesCard extends StatelessWidget {
                       const SizedBox(width: ArenaSpacing.sm),
                       Text(
                         game.displayName,
-                        style: const TextStyle(color: ArenaColors.text),
+                        style: ArenaText.body.copyWith(color: ArenaColors.text),
                       ),
                       const SizedBox(width: ArenaSpacing.sm),
                       Text(
                         game.packageAndroid,
-                        style: const TextStyle(
+                        style: ArenaText.monoSmall.copyWith(
                           color: ArenaColors.textFaint,
                           fontSize: 11,
-                          fontFamily: 'monospace',
                         ),
                       ),
                     ],
@@ -221,18 +220,18 @@ class _ForegroundGameCard extends StatelessWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Foreground (live, polled every 2s)',
-                style: TextStyle(
+                style: ArenaText.body.copyWith(
                   color: ArenaColors.text,
                   fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(height: ArenaSpacing.sm),
               if (game == null)
-                const Text(
+                Text(
                   '— no target game in foreground —',
-                  style: TextStyle(color: ArenaColors.textMuted),
+                  style: ArenaText.bodyMuted,
                 )
               else
                 Row(
@@ -248,7 +247,7 @@ class _ForegroundGameCard extends StatelessWidget {
                     const SizedBox(width: ArenaSpacing.sm),
                     Text(
                       game.displayName,
-                      style: const TextStyle(
+                      style: ArenaText.body.copyWith(
                         color: ArenaColors.text,
                         fontWeight: FontWeight.w600,
                       ),

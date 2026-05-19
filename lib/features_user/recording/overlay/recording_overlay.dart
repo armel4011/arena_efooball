@@ -175,6 +175,11 @@ class _RecordingOverlayButtonState extends State<RecordingOverlayButton> {
                     const SizedBox(height: 2),
                     Text(
                       _tick.formatted,
+                      // KEEP : ce widget tourne dans un isolate Flutter
+                      // détaché (flutter_overlay_window). GoogleFonts
+                      // n'est pas initialisé côté isolate, donc on
+                      // garde un TextStyle natif minimal au lieu
+                      // d'`ArenaText.small`.
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w700,

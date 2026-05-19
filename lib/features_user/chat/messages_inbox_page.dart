@@ -509,7 +509,7 @@ class _ErrorList extends StatelessWidget {
       padding: const EdgeInsets.all(ArenaSpacing.lg),
       child: Text(
         message,
-        style: const TextStyle(color: ArenaColors.danger),
+        style: ArenaText.body.copyWith(color: ArenaColors.danger),
       ),
     );
   }

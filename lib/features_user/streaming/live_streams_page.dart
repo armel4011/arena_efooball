@@ -31,7 +31,7 @@ class LiveStreamsPage extends ConsumerWidget {
         error: (e, _) => Center(
           child: Text(
             'Erreur: $e',
-            style: const TextStyle(color: ArenaColors.danger),
+            style: ArenaText.body.copyWith(color: ArenaColors.danger),
           ),
         ),
         data: (streams) {

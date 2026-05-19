@@ -12,7 +12,10 @@ class HomeErrorRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: ArenaSpacing.lg),
-      child: Text(message, style: const TextStyle(color: ArenaColors.danger)),
+      child: Text(
+        message,
+        style: ArenaText.body.copyWith(color: ArenaColors.danger),
+      ),
     );
   }
 }

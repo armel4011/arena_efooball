@@ -123,7 +123,9 @@ class _PlaceholderText extends StatelessWidget {
     return Center(
       child: Text(
         text,
-        style: TextStyle(color: ArenaColors.bone.withValues(alpha: 0.7)),
+        style: ArenaText.body.copyWith(
+          color: ArenaColors.bone.withValues(alpha: 0.7),
+        ),
       ),
     );
   }
@@ -157,10 +159,9 @@ class _ViewerCountBadge extends ConsumerWidget {
             const SizedBox(width: 6),
             Text(
               '$count',
-              style: const TextStyle(
+              style: ArenaText.small.copyWith(
                 color: ArenaColors.bone,
                 fontWeight: FontWeight.w600,
-                fontSize: 13,
               ),
             ),
           ],

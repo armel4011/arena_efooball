@@ -34,7 +34,7 @@ class PlayerProfilePage extends ConsumerWidget {
           child: Text(
             'Erreur: $e',
             textAlign: TextAlign.center,
-            style: const TextStyle(color: ArenaColors.danger),
+            style: ArenaText.body.copyWith(color: ArenaColors.danger),
           ),
         ),
       ),
@@ -193,7 +193,7 @@ class _StatsCard extends StatelessWidget {
       error: (e, _) => ArenaCard(
         child: Text(
           'Stats indisponibles ($e)',
-          style: const TextStyle(color: ArenaColors.danger),
+          style: ArenaText.body.copyWith(color: ArenaColors.danger),
         ),
       ),
       data: (s) => DecoratedBox(
@@ -389,7 +389,7 @@ class _RecentMatches extends StatelessWidget {
       error: (e, _) => ArenaCard(
         child: Text(
           'Erreur: $e',
-          style: const TextStyle(color: ArenaColors.danger),
+          style: ArenaText.body.copyWith(color: ArenaColors.danger),
         ),
       ),
       data: (matches) {

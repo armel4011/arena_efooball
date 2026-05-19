@@ -356,10 +356,9 @@ class _ChatAppBar extends StatelessWidget {
                       children: [
                         Text(
                           username,
-                          style: const TextStyle(
+                          style: ArenaText.small.copyWith(
                             color: ArenaColors.bone,
                             fontWeight: FontWeight.w700,
-                            fontSize: 12,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),

@@ -33,7 +33,7 @@ class ActiveCompetitionsSection extends ConsumerWidget {
             ),
             error: (e, _) => Text(
               'Erreur : $e',
-              style: const TextStyle(color: ArenaColors.danger),
+              style: ArenaText.body.copyWith(color: ArenaColors.danger),
             ),
             data: (all) {
               final active = all
