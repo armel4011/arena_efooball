@@ -8,7 +8,12 @@ analyzer:
     - "**/generated/**"
     - "build/**"
     # Branding pack stocké tel quel : exemples + scripts non-Flutter.
+    # Le nom du dossier varie entre commits (lower/upper case sur certains
+    # systèmes de fichiers), on couvre les deux pour que `flutter analyze`
+    # soit cohérent entre Windows local (case-insensitive) et Linux CI
+    # (case-sensitive).
     - "ARENA_BRANDING_PACK/**"
+    - "arena_branding_pack/**"
   errors:
     invalid_annotation_target: ignore
 
