@@ -69,5 +69,19 @@ jobs:
       - name: Analyze
         run: flutter analyze --no-fatal-infos
 
+      - name: Design-system guard — colors (strict)
+        # Bloque toute couleur hardcodée nouvelle hors `lib/core/theme/`.
+        # Les KEEPs légitimes (brand, overlay isolate, scrim) sont listés
+        # dans `scripts/colors_allowlist.txt`. Strict mode = exit 1 sur
+        # régression. Baseline propre au 2026-05-19 (0 régression).
+        run: bash scripts/check_colors.sh --strict
+
+      - name: Design-system guard — spacing (info)
+        # Compte les `EdgeInsets.*` / `SizedBox(height|width: N)` hardcodés
+        # hors tokens `ArenaSpacing.*`. Non-strict : affiche le compteur
+        # pour visibilité, sans bloquer le merge (203 violations
+        # historiques au 2026-05-19 à résorber progressivement).
+        run: bash scripts/check_spacing.sh
+
       - name: Test
         run: flutter test --reporter expanded
