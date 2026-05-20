@@ -42,7 +42,7 @@ Rollout progressif :
 
 > Mis à jour le **2026-05-20**.
 > **V1.0 fonctionnellement complète** — les 54 écrans sont livrés, les
-> 13 Edge Functions déployées, le social V1 est en ligne. Le travail en
+> 14 Edge Functions déployées, le social V1 est en ligne. Le travail en
 > cours porte sur le durcissement (audits de sécurité / perf), le polish
 > du chat et la préparation du lancement.
 >
@@ -77,8 +77,9 @@ Rollout progressif :
 - **65 migrations SQL** — schéma Postgres complet, RLS sur toutes les
   tables, triggers (auto-bracket, auto-finals, FCM dispatch, emails,
   stats, modération chat, 3-strikes), index, publication Realtime.
-- **13 Edge Functions** déployées :
+- **14 Edge Functions** déployées :
   - `get_agora_token`, `get-agora-rtm-token` — tokens streaming / chat
+  - `get-agora-call-token` — token RTC des appels audio 1v1 (chat)
   - `setup-totp`, `verify-totp-setup`, `admin-stepup-totp`, `admin-verify-totp` — TOTP admin
   - `register-admin` — onboarding admin par code d'invitation
   - `dispatch_notification` — push FCM v1
@@ -146,7 +147,7 @@ lib/
 supabase/
 ├── migrations/              # 65 migrations SQL (schéma, RLS, triggers, index, crons)
 ├── seeds/                   # Fixtures dev (dev_phase5_match_room.sql, dev_super_admin.sql)
-└── functions/               # 13 Edge Functions Deno + dossier _shared
+└── functions/               # 14 Edge Functions Deno + dossier _shared
 ```
 
 Convention de nommage et stack technique imposée :

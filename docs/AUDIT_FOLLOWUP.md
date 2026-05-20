@@ -205,3 +205,41 @@ réelle avec >10k users actifs. Re-audit après `SELECT pg_stat_reset()`
 - [ ] **Tests intégration** `integration_test/` toujours vide (golden_path_test couvre la majorité des routes côté unit).
 - [ ] Étendre `arenaErrorMessage` aux ~40 catches UI non encore migrés (mécanique).
 - [ ] Étendre `traceAsync` à : match score submission, friend requests, registration P2.
+
+## Diagnostic complet 2026-05-20 (ce commit)
+
+`flutter analyze` 0 issue · 182/182 tests verts · aucun secret en dur.
+Points traités dans cette passe :
+
+- [x] **Edge Function fantôme** — `get-agora-call-token` était déployée
+  (v1, `verify_jwt:true`) mais n'avait aucun code source versionné. Code
+  récupéré depuis Supabase et committé dans
+  `supabase/functions/get-agora-call-token/index.ts`. README corrigé :
+  13 → 14 Edge Functions.
+- [x] **Worktree obsolète** — `.claude/worktrees/lucid-mcnulty-5bf4c2/`
+  (2.7 Go) retiré (corbeille). La branche `claude/lucid-mcnulty-5bf4c2`
+  est **conservée** : elle porte 2 commits non mergés (`080a0ff`
+  perf realtime publication Phase 3/4, `2d9aee0` Sentry user context
+  Phase 4/4). À merger ou cherry-pick dans `main`, sinon supprimer la
+  branche.
+- [x] **`sentry_flutter`** bumpé `^9.19.0` → `^9.20.0`.
+
+### Risque accepté — `is_blocked_pair` exposée à `authenticated`
+
+L'advisor `authenticated_security_definer_function_executable` flagge
+`public.is_blocked_pair(p_user_a uuid, p_user_b uuid)` : tout utilisateur
+authentifié peut, via `/rest/v1/rpc/is_blocked_pair`, tester l'état de
+blocage entre **deux UUID arbitraires** (pas seulement les siens).
+
+- **Pourquoi conservée** : la fonction est `SECURITY DEFINER` et est
+  appelée par ~plusieurs policies RLS (`chat_messages_no_blocked_pair`
+  RESTRICTIVE, etc.). Lui retirer `EXECUTE` côté `authenticated` ou la
+  passer `SECURITY INVOKER` casserait l'évaluation RLS au runtime.
+- **Surface réelle** : fuite booléenne mineure (existe-t-il un blocage
+  entre A et B). Pas de PII, pas d'énumération de comptes (les UUID ne
+  sont pas devinables). Idem `is_admin()` / `is_super_admin()` —
+  intentionnellement exposées (cf. note `20260517110007`).
+- **Décision** : **risque accepté V1.0**, advisor restera WARN. Si une
+  passe future veut le fermer : wrapper RPC qui exige
+  `p_user_a = auth.uid() OR p_user_b = auth.uid()`, en gardant la
+  fonction interne non exposée pour les policies.
