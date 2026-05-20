@@ -49,7 +49,11 @@ dependencies:
   supabase_flutter: ^2.8.0
 
   # ─── Crash reporting — PHASE 0 ─────────────────────────────
-  sentry_flutter: ^9.20.0
+  # Version épinglée : sentry_flutter 9.20.0 casse la compilation Kotlin
+  # Android (`Unresolved reference 'SentryFlutterReplayRecorder'` dans
+  # SentryFlutterPlugin.kt). `flutter analyze`/`test` ne lancent pas de
+  # build Gradle, donc ne le détectent pas. Retester au prochain bump.
+  sentry_flutter: 9.19.0
 
   # ─── Stockage — PHASE 0/2 ──────────────────────────────────
   flutter_secure_storage: ^9.2.2
