@@ -135,6 +135,18 @@ jobs:
       - name: Stub .env (CI uses placeholders, no real secrets)
         run: cp .env.example .env
 
+      - name: Stub google-services.json (CI — FCM non câblé)
+        # `google-services.json` (config Firebase) est gitignoré, donc
+        # absent des runners — il vit dans `android/app/src/<flavor>/`.
+        # Le plugin Gradle `com.google.gms.google-services` exige pourtant
+        # un fichier avec un client correspondant à l'applicationId, sinon
+        # la tâche `processXxxGoogleServices` échoue. Ce stub aux valeurs
+        # bidons laisse compiler toute la chaîne Android — FCM n'est
+        # simplement pas réellement câblé en CI, sans effet sur le build.
+        run: |
+          mkdir -p android/app/src/${{ matrix.flavor }}
+          echo '{"project_info":{"project_number":"000000000000","project_id":"arena-ci-stub","storage_bucket":"arena-ci-stub.appspot.com"},"client":[{"client_info":{"mobilesdk_app_id":"1:000000000000:android:0000000000000000000000","android_client_info":{"package_name":"com.arena.app"}},"oauth_client":[],"api_key":[{"current_key":"AIzaSyA-CI-STUB-NOT-A-REAL-KEY-000000"}],"services":{"appinvite_service":{"other_platform_oauth_client":[]}}},{"client_info":{"mobilesdk_app_id":"1:000000000000:android:1111111111111111111111","android_client_info":{"package_name":"com.arena.admin"}},"oauth_client":[],"api_key":[{"current_key":"AIzaSyA-CI-STUB-NOT-A-REAL-KEY-000000"}],"services":{"appinvite_service":{"other_platform_oauth_client":[]}}}],"configuration_version":"1"}' > android/app/src/${{ matrix.flavor }}/google-services.json
+
       - name: pub get
         run: flutter pub get
 
