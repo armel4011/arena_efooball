@@ -573,16 +573,21 @@ class _ChatAppBar extends StatelessWidget {
           ),
           _CircleIconButton(
             icon: Icons.call_outlined,
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => CallScreen(
-                  scope: 'match',
-                  id: matchId,
-                  peerName: opponent?.username ?? 'Joueur',
+            onTap: () {
+              final peer = opponent;
+              if (peer == null) return;
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => CallScreen(
+                    scope: 'match',
+                    id: matchId,
+                    calleeId: peer.id,
+                    peerName: peer.username,
+                  ),
+                  fullscreenDialog: true,
                 ),
-                fullscreenDialog: true,
-              ),
-            ),
+              );
+            },
           ),
         ],
       ),

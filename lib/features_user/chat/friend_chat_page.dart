@@ -442,16 +442,19 @@ class _FriendChatAppBar extends StatelessWidget {
             ),
           ),
           InkWell(
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => CallScreen(
-                  scope: 'friend',
-                  id: friendshipId,
-                  peerName: peer?.username ?? 'Ami',
-                ),
-                fullscreenDialog: true,
-              ),
-            ),
+            onTap: peer == null
+                ? null
+                : () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => CallScreen(
+                          scope: 'friend',
+                          id: friendshipId,
+                          calleeId: peer!.id,
+                          peerName: peer!.username,
+                        ),
+                        fullscreenDialog: true,
+                      ),
+                    ),
             borderRadius: BorderRadius.circular(999),
             child: Container(
               width: 30,

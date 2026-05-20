@@ -8,9 +8,11 @@ import 'package:arena/core/services/bootstrap.dart';
 import 'package:arena/core/services/deep_link_service.dart';
 import 'package:arena/core/services/notification_service.dart';
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/data/repositories/call_repository.dart';
 import 'package:arena/data/repositories/notification_repository.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
+import 'package:arena/features_user/chat/incoming_call_screen.dart';
 import 'package:arena/features_user/recording/overlay/recording_overlay.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -48,6 +50,10 @@ class _ArenaUserAppState extends ConsumerState<ArenaUserApp> {
   DeepLinkService? _deepLinkService;
   NotificationService? _notifications;
   String? _attachedUserId;
+
+  /// Dernier appel entrant déjà présenté — évite de re-pousser l'écran
+  /// quand le flux Realtime ré-émet la même ligne.
+  String? _shownIncomingCallId;
 
   @override
   void initState() {
@@ -106,9 +112,27 @@ class _ArenaUserAppState extends ConsumerState<ArenaUserApp> {
     final locale = ref.watch(currentLocaleProvider);
     final router = ref.watch(userRouterProvider);
 
-    ref.listen(currentSessionProvider, (_, session) {
-      _syncNotificationsWithSession(session?.user.id);
-    });
+    ref
+      ..listen(currentSessionProvider, (_, session) {
+        _syncNotificationsWithSession(session?.user.id);
+      })
+      // Appel entrant — fait surgir l'écran de sonnerie quel que soit
+      // l'écran courant (poussé sur le navigator racine du routeur).
+      ..listen(incomingCallProvider, (_, asyncCall) {
+        final call = asyncCall.value;
+        if (call == null) {
+          _shownIncomingCallId = null;
+          return;
+        }
+        if (call.id == _shownIncomingCallId) return;
+        _shownIncomingCallId = call.id;
+        router.routerDelegate.navigatorKey.currentState?.push(
+          MaterialPageRoute<void>(
+            builder: (_) => IncomingCallScreen(call: call),
+            fullscreenDialog: true,
+          ),
+        );
+      });
 
     return MaterialApp.router(
       title: FlavorConfig.instance.appName,
