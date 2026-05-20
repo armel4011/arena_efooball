@@ -64,7 +64,10 @@ class _ProfileBody extends ConsumerWidget {
     ref
       ..invalidate(currentProfileProvider)
       ..invalidate(playerStatsProvider(profile.id))
-      ..invalidate(playerRecentMatchesProvider(profile.id));
+      ..invalidate(playerRecentMatchesProvider(profile.id))
+      // Le compteur d'invités est un FutureProvider (pas de Realtime sur
+      // `profiles`) : sans cette invalidation il reste figé au pull-to-refresh.
+      ..invalidate(myReferralCountProvider);
     await ref.read(currentProfileProvider.future);
   }
 
