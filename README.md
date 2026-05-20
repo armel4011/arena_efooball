@@ -3,8 +3,8 @@
 Plateforme panafricaine de tournois e-sport mobile dédiée aux jeux de
 football virtuel : **eFootball**, **FIFA Mobile**, **EA SPORTS FC Mobile**.
 
-> Spécifications de référence : [`ARENA_MASTER_PROMPT.md`](./ARENA_MASTER_PROMPT.md)
-> et [`ARENA_FLUTTER_PROMPT.md`](./ARENA_FLUTTER_PROMPT.md).
+> Spécifications de référence : [`docs/ARENA_MASTER_PROMPT.md`](./docs/ARENA_MASTER_PROMPT.md)
+> et [`docs/ARENA_FLUTTER_PROMPT.md`](./docs/ARENA_FLUTTER_PROMPT.md).
 > Toute décision technique part de ces deux fichiers.
 
 ---
@@ -19,9 +19,14 @@ ARENA est une **plateforme à 2 apps Flutter, 1 codebase** :
 | **ARENA Admin** | `com.arena.admin` | Admins / super-admins | Sideload + web responsive |
 
 Backend partagé sur **Supabase** (Postgres + Auth + Realtime + Storage +
-Edge Functions). Stack temps réel : Agora RTM (présence chat) + Agora RTC
-(streaming finales sélectif). Paiements : CinetPay (MoMo), NowPayments
-(crypto), Flutterwave (V1.1 anglophone).
+Edge Functions + pg_cron). Stack temps réel : **Agora RTM** (présence /
+typing du chat) + **Agora RTC** (streaming sélectif des finales et appels
+audio 1v1 du chat). Notifications : **Firebase FCM** (push v1) + centre
+in-app. Emails transactionnels : **Resend**.
+
+**Paiements V1.0** : flux **P2P manuel** par mobile money (Orange Money /
+MTN MoMo), validé un par un par un super-admin. L'intégration d'agrégateurs
+automatiques (CinetPay, NowPayments) est reportée en V2.
 
 Rollout progressif :
 
@@ -35,90 +40,88 @@ Rollout progressif :
 
 ## État du projet
 
-> Mis à jour le 2026-05-12 — phase 11 (espace admin complet) terminée.
+> Mis à jour le **2026-05-20**.
+> **V1.0 fonctionnellement complète** — les 54 écrans sont livrés, les
+> 13 Edge Functions déployées, le social V1 est en ligne. Le travail en
+> cours porte sur le durcissement (audits de sécurité / perf), le polish
+> du chat et la préparation du lancement.
+>
+> ⚠️ Les fonctionnalités **Agora RTC** — streaming live des finales et
+> appels audio 1v1 du chat — n'ont jamais été validées en conditions
+> réelles : le code est livré mais ces flux ne sont pas testés.
 
-### ✅ Phases terminées
+### ✅ Livré
 
-| Phase | Domaine | Statut |
+| Domaine | Détail | Statut |
 |---|---|---|
-| **0** | Setup + flavors `user`/`admin` + bootstrap | ✅ |
-| **0.5** | Onboarding 4 slides (`onboarding_page/slide/gate`) | ✅ |
-| **1** | Theme (`arena_colors/theme/typography`) + 7 widgets partagés | ✅ |
-| **1bis** | i18n FR/EN/AR + currency + feature flags | ✅ |
-| **0 backend** | 26 tables Supabase + RLS + indexes + seed config V1.0 | ✅ |
-| **2** | Auth user (login, register, forgot/reset, link, CGU) + deep link `com.arena.app://reset-password` | ✅ |
-| **2bis** | Auth admin (splash, login, invitation, TOTP setup/verify) — Flutter only, 4 Edge Functions différées en 12.5 | ✅ |
-| **3** | Layout joueur (`MainLayout` + 4 tabs avec `IndexedStack`) + HomePage (header, sections phase-aware, stats depuis `profile.stats`, pull-to-refresh) | ✅ |
-| **4** | Compétitions : modèles freezed (`Competition`, `ArenaMatch`, `Standings*`), repos Supabase, `CompetitionsListPage` filtrable, `CompetitionDetailPage` (4 tabs, CTA inscription), `BracketView` (matches par round) et `GroupStandingsView` (DataTable) | ✅ |
-| **5** | Match Room (`MatchRoomPage` + route `/match/:id`) : 5.B nav depuis bracket, 5.C partage de code room (claim home seat) + clipboard, 5.D saisie collaborative du score (stream `match_events` + auto-commit/dispute). Migration RLS `20260506200001` qui autorise les joueurs participants à updater leur match en attendant les Edge Functions (12.5). | ✅ |
-| **6** | Chat 1-on-1 par match : `ChatPage` + route `/chat/match/:id`, `ChatRepository` (`ensureMatchChannel`, `watchMessages`, `sendMessage`), bubbles WhatsApp-style (newest en bas, self à droite). Migration RLS `20260506200002` (player INSERT du channel + `chat_channels`/`chat_messages` ajoutés à la publication realtime). Agora RTM (présence/typing) reporté en 12.5. | ✅ |
-| **8** | Anti-cheat + streaming Agora sélectif. **8.1** permissions natives (`permissions_service`) + manifest Android/iOS étendus. **8.2** `game_detector_service` (eFootball / EA FC, polling 2s via `installed_apps` + `app_usage`). **8.3** `recording_service` (auto-stop 25 min) + `recording_uploader` + `manual_video_upload_service` vers bucket privé `match-recordings/{matchId}/{playerId}/...mp4` (cap 500 MB). **8.4** overlay isolate (`flutter_overlay_window`) — bouton 72dp rouge, timer MM:SS, drag-to-side, IPC typé, tap court = MainActivity.bringMainActivityToFront() (Kotlin MethodChannel), tap long = 3 actions. **8.5** `match_recording_coordinator` orchestre la grace window (2 min) → `markForfeit()` (status=forfeited, winner_id=opponent, event logged). **8.7** streaming Agora sélectif : `agora_streaming_service` + `agora_token_client` + Edge Function `get_agora_token` (déployée — App Certificate jamais sur le client), `LiveStreamsPage` + `WatchStreamPage` + `StartStreamingBanner`, compteur viewers temps réel via Supabase Realtime presence. Auto-finals : trigger DB `auto_publish_final_match` (status→ongoing × `bracket_nodes.is_grand_final` ⇒ `is_streamed`/`auto_final` + flip `streams.is_public` HOME), trigger catch-up `auto_publish_late_stream` sur INSERT. Migrations `20260507100001` (storage bucket + 5 RLS), `20260507100002` (streams player RLS), `20260507100003` (auto-finals triggers). | ✅ |
-| **9** | Profil joueur + paramètres + suppression compte RGPD. **9.1** `PlayerProfilePage` (tab 3 du `MainLayout`) — header avatar coloré + username + pays/email, stats card (V/D/N + ratio + buts), 5 derniers matchs cliquables, pull-to-refresh. `EditProfilePage` (route `/profile/edit`) — username 3-20 chars, palette 12 couleurs, dropdown 13 pays V1.0 francophones. `MatchStatsRepository.foldMatches()` calcule W/L/D + buts client-side depuis `matches.status='completed'`. **9.2** `SettingsPage` (route `/settings`) 4 sections : Préférences (langue via `LanguageSwitcher`, devise read-only, switch `marketing_consent`), Compte (changer email/mdp via `auth.updateUser`, méthodes connexion en placeholder PHASE 2.3), Confidentialité (export = placeholder, suppression compte → 9.3), Aide & Infos (revoir intro reset `OnboardingFlagController`). **9.3** `DeleteAccountPage` (route `/profile/delete`) workflow 4 étapes : avertissement → vérif gains pending → confirmation password (re-auth) + tape littéral "SUPPRIMER" → soft-delete via `requestAccountDeletion()` (set `account_deletion_requested_at` / `deleted_at` / `account_deletion_reason` / `is_active=false`) + sign-out. **9.4** Export ZIP données = placeholder snackbar (Edge Function `export_user_data` reportée en 12.5). | ✅ |
-| **10** | Notifications FCM + center in-app. `ArenaNotification` model + `NotificationRepository` (realtime stream `public.notifications` + `markRead` / `markAllRead` + `saveFcmToken` / `clearFcmToken`). `NotificationService` (init Firebase, POST_NOTIFICATIONS, `getToken` → `profiles.fcm_token`, token refresh, `onMessage` → `flutter_local_notifications` (channel `arena_default`, importance HIGH), `onMessageOpenedApp` + `getInitialMessage` → `router.go(data.route)`). Background handler top-level (`@pragma('vm:entry-point')`). Service attaché/détaché sur auth-state via `ref.listen(currentSessionProvider)` côté `main_user.dart` + `main_admin.dart` (token effacé à la déconnexion). `NotificationsPage` câblée à `userNotificationsProvider` (filtres Toutes/Matchs/Gains/Système + emoji par type + glow card unread + `_formatTimestamp` FR). Badge bell HOME via `unreadNotificationCountProvider` (route → `/notifications`). Plugin Gradle `com.google.gms.google-services` 4.4.2 actif (config par flavor : `app/src/user/` + `app/src/admin/`, projet Firebase `arena-caf28`). Edge Function `send_targeted_notification` (dispatch FCM côté serveur) **reportée en PHASE 12.5** — l'insert manuel dans `notifications` alimente le feed in-app mais ne déclenche pas de push tant que la fonction n'est pas déployée. | ✅ |
-| **11** | Espace admin complet (10 écrans + 3 algos bracket). **11.A** modèles freezed `Dispute`, `Payout`, `AdminAuditLog`, `InvitationCode`, `BracketNode`. **11.B** repos admin (`AdminKpisRepository`, `AdminCompetitionsRepository`, `AdminMatchesRepository`, `AdminDisputesRepository`, `AdminPayoutsRepository`, `AdminAuditLogRepository`, `AdminUsersRepository`, `AdminInvitationsRepository`, `AdminBracketRepository`). **11.C** RLS `20260512100001_phase11_admin_write_rls` : `payouts_admin_update` + `admin_audit_log_admin_insert` (insert append-only avec `admin_id = auth.uid()`). **11.D** générateurs de bracket purs Dart dans `lib/core/utils/bracket_generators/` : `single_elimination` (puissance de 2 + byes), `round_robin` (circle method), `groups_then_knockout` (snake-draft + KO empty-slots). **11.E** câblage des 10 écrans v2 (mockés depuis wave 4) : `AdminDashboardPage` (KPIs live + 5 derniers audit + quick actions), `AdminCompetitionsListPage` (filtres status/jeu + détail/bracket/annuler), `CreateCompetitionPage` (5 étapes Infos/Format/Prix/Frais/Récap + insert), `AdminCompetitionDetailPage` (3 tabs Infos/Matchs/Actions), `AdminMatchesListPage` (status filter), `AdminBracketManagementPage` (génération format-aware + dialog scores + audit), `AdminPayoutsPage` (validation 1×1 + batch anti-erreur), `AdminDisputesPage` (verdict J1/J2/annulation + résolution dispute), `AdminStreamModerationPage` (kill switch via `setStreamingPublic(false)`), `AdminAuditLogPage` (filtres catégorie/période/search). **11.F** super-admin : `SuperAdminInvitations` (générer/copier/révoquer codes), `SuperAdminUsers` (ban/débannir/KYC override). `super_admin_dashboard` + `super_admin_revenue` restent en mock visuel (agrégateurs MAU/DAU/margin **reportés en PHASE 12.5** — `admin_kpis` view jamais déployée). Edge Functions admin (`validate_payout`, `cascade_match_winner` côté EF, `register_admin`, etc.) **reportées en PHASE 12.5** : Flutter + RLS player-write seulement, le payouts/disputes/audit s'écrivent directement sur les tables sous policy admin. | ✅ |
+| **Fondations** | Setup, flavors `user`/`admin`, thème `ArenaColors`/`ArenaText`, 10 widgets partagés, i18n FR/EN/AR, feature flags | ✅ |
+| **Auth** | Login / register / forgot-reset (OTP) / lier compte / CGU, deep link `com.arena.app://reset-password`, **Google SSO natif**, numéro WhatsApp requis | ✅ |
+| **Auth admin** | Splash, login, onboarding par code d'invitation `ARENA-XXXX-XXXX-XXXX`, **TOTP** (Google Authenticator) avec backup codes | ✅ |
+| **Compétitions** | Liste filtrable, détail 4 tabs, inscription + confirmation, bracket (single-elim / round-robin / groupes→KO), classements, modèle financier (frais, distribution Top 4) | ✅ |
+| **Match Room** | Partage de code room, saisie collaborative du score, dispute, preuve image, forfait sur fenêtre de grâce | ✅ |
+| **Chat** | 1v1 par match + canaux d'amis, médias, emoji, suppression style WhatsApp, badges non-lus, inbox (Direct / Compétitions / Amis) | ✅ |
+| **Appels audio** | Appels 1v1 dans le chat via Agora RTC — code livré, **jamais testé end-to-end** | ⚠️ |
+| **Anti-cheat** | Permissions natives, détection du jeu, enregistrement d'écran (overlay flottant), upload vers bucket privé, coordinateur forfait | ✅ |
+| **Streaming** | Agora RTC sélectif sur les finales, auto-publication via triggers DB, compteur viewers temps réel — code livré, **jamais testé end-to-end** | ⚠️ |
+| **Profil & RGPD** | Profil joueur + stats, édition, paramètres, suppression de compte (soft-delete), **export des données** (Edge Function) | ✅ |
+| **Notifications** | FCM (trigger pg_net → Edge Function → FCM v1) + centre in-app, broadcast admin ciblé (5 filtres d'activité) | ✅ |
+| **Espace admin** | 10 écrans (dashboard KPI, compétitions, matchs, bracket, payouts, disputes, modération streams, audit log) + 3 générateurs de bracket | ✅ |
+| **Espace super-admin** | Dashboard live (MAU/DAU/marge), revenus + export CSV, gestion des codes d'invitation, gestion des utilisateurs (ban / KYC) | ✅ |
+| **Paiements P2P** | Mobile money manuel Orange/MTN, validation 1×1 ou batch anti-erreur, historique paiements & gains, page KYC payout | ✅ |
+| **Modération** | Règle 3-strikes (ban à vie au 3e verdict coupable), canal de réintégration « Arena Requête » (SLA 48h), filtre de mots bannis sur le chat | ✅ |
+| **Social V1** | Système d'amis (`friendships` + RPC), profil public, recherche par username, blocages (RLS chat bloque les paires bloquées) | ✅ |
+| **Parrainage** | Codes de parrainage, gating d'inscription, règle « tout invité actif compte » | ✅ |
 
-> **SSO Google/Apple** reportés en **PHASE 2.3** (libs `google_sign_in` /
-> `sign_in_with_apple` commentées dans `pubspec.yaml`). La page
-> `LinkExistingAccountPage` est wired mais inerte jusque-là.
->
-> **Edge Functions admin** différées en **PHASE 12.5** :
-> `register-admin`, `setup-totp`, `verify-totp-setup`, `admin-verify-totp`.
-> Sans elles, l'invitation et le TOTP affichent un message "feature
-> pending" via `BackendUnavailableFailure`.
->
-> **Phase 4 / 5 — dettes assumées** : les tabs *Participants* et *Prix*
-> du détail compétition affichent encore un placeholder, et le bracket /
-> classement / match-room affichent les joueurs sous forme
-> `Joueur abc123…`. La jointure `profiles` (nom + avatar) est reportée
-> à la phase 13 (polish). Le bracket reste sur `FutureProvider` +
-> pull-to-refresh + invalidation au retour de la match-room (le
-> `StreamProvider` triggerait un ANR sur émulateur Android x86 vu les
-> 3 channels Realtime simultanés). Un seed dev
-> `supabase/seeds/dev_phase5_match_room.sql` crée 2 comptes test et
-> 7 matches couvrant chaque écran phase 5.
->
-> **Phase 8 — dettes assumées** : (a) **8.6 iOS Live Activity** reportée
-> en **PHASE 8b** (lib `live_activities` commentée — requiert un compte
-> Apple Developer pour signer le widget Dynamic Island). (b) **Compteur
-> viewers DB-side** : les colonnes `matches.current_viewers_count` /
-> `peak_viewers_count` restent à 0 ; la projection admin sera mise à
-> jour par une Edge Function en **PHASE 12.5**. Côté joueur, le compteur
-> live affiché sur `WatchStreamPage` vient de Supabase Realtime presence,
-> donc fonctionne sans dépendre de cette projection. (c) **Notification
-> HOME quand son match est sélectionné** : la PHASE 10 expose le canal
-> in-app + push, mais le dispatch (`send_targeted_notification`) reste
-> en PHASE 12.5 — tant qu'il n'est pas déployé, la sélection ne pousse
-> pas de notif. (d) Tests sur device physique (Android avec eFootball installé)
-> obligatoires avant V1.0 — l'émulateur ne reproduit pas les permissions
-> MEDIA_PROJECTION / SYSTEM_ALERT_WINDOW à l'identique.
->
-> **Phase 9 — dettes assumées** : (a) **Edge Function `cleanup_deleted_
-> accounts`** (cron 24h, anonymise les comptes après 30 jours) reportée
-> en **PHASE 12.5**. Tant qu'elle n'existe pas, les rows soft-deleted
-> restent en DB indéfiniment — les politiques RLS existantes filtrent
-> déjà sur `deleted_at IS NULL` donc aucune fuite côté client. (b)
-> **Edge Function `export_user_data`** (génère ZIP `profile.json` /
-> `matches.json` / `payments.json` / `chat_messages.json`, lien email
-> 24h) reportée en 12.5 — le bouton "Télécharger mes données" affiche
-> un snackbar placeholder. (c) **Email de confirmation suppression**
-> reporté en 12.5 (idem ZIP). (d) **Stats temps réel** : la PHASE 12.5
-> Edge Function `recalculate_player_stats` mettra à jour
-> `profiles.stats jsonb` après chaque match clos, en attendant le
-> profil recompute client-side à chaque ouverture (volume V1.0 OK).
-> (e) **Méthodes de connexion (Google/Apple)** affichées en placeholder
-> dans Settings, en attendant **PHASE 2.3**.
+### 🔧 Backend déployé
 
-### ⏭️ Phases à venir
+- **65 migrations SQL** — schéma Postgres complet, RLS sur toutes les
+  tables, triggers (auto-bracket, auto-finals, FCM dispatch, emails,
+  stats, modération chat, 3-strikes), index, publication Realtime.
+- **13 Edge Functions** déployées :
+  - `get_agora_token`, `get-agora-rtm-token` — tokens streaming / chat
+  - `setup-totp`, `verify-totp-setup`, `admin-stepup-totp`, `admin-verify-totp` — TOTP admin
+  - `register-admin` — onboarding admin par code d'invitation
+  - `dispatch_notification` — push FCM v1
+  - `send-transactional-email` — dispatcher Resend
+  - `moderate-chat-message` — filtre de mots bannis + log anti-cheat
+  - `export-user-data` — droit RGPD à la portabilité
+  - `cleanup-deleted-accounts` — cron RGPD (hard-delete à J+30)
+  - `cleanup-streams` — cron horaire (streams périmés + storage 30j)
+- **2 crons pg_cron** : `cleanup-deleted-accounts` (03:15 quotidien) et
+  `cleanup-streams` (horaire).
 
-| Phase | Domaine | Estimation |
-|---|---|---|
-| **8b** | iOS Live Activity (Dynamic Island) — Apple Dev requis | 1h |
-| **11bis** | Paiements CinetPay + NowPayments + payouts | 5-6h |
-| **12** | Espace super-admin | 2h |
-| **12.5** | Edge Functions (18) + pg_cron + automatisation | 11-13h |
-| **13** | Polish + tests + lancement V1.0 | 5-6h |
+### 🛡️ Durcissement (en cours)
 
-**Total V1.0 restant** : ~12h (Edge Functions admin + match-room + `send_targeted_notification` + `moderate_chat_message` + viewers count projection + `cleanup_deleted_accounts` + `export_user_data` + `recalculate_player_stats` + `validate_payout` + `register_admin` + `admin_kpis` MV / `platform_revenue` agrégateur, toutes regroupées en 12.5). Voir le master prompt section "ROADMAP" pour le détail.
+Plusieurs vagues d'audit sécurité / perf ont été passées :
+
+- ACL des RPC `SECURITY DEFINER` (REVOKE anon ciblé), consolidation des
+  policies RLS PERMISSIVE/RESTRICTIVE, `search_path` immuable.
+- Préparation au scaling ~1M users : refresh JWT propagé au client
+  Realtime, bornes sur les requêtes, `autoDispose` sur les providers,
+  dégradation Realtime → polling sur les écrans non-critiques.
+- Observabilité Sentry (traces custom sur les chemins critiques).
+- CI durcie : `flutter analyze` à 0 issue, codecov, Dependabot.
+
+Le suivi détaillé est dans [`docs/AUDIT_FOLLOWUP.md`](./docs/AUDIT_FOLLOWUP.md).
+
+### ⏭️ Reste avant le lancement V1.0
+
+| Sujet | Note |
+|---|---|
+| **Tests sur device physique** | Android avec un jeu installé — l'émulateur ne reproduit pas `MEDIA_PROJECTION` / `SYSTEM_ALERT_WINDOW`. |
+| **Validation des flux Agora RTC** | Le streaming live (diffusion d'une finale + visionnage spectateur) et les appels audio 1v1 du chat n'ont jamais été testés en conditions réelles. À valider avant le lancement. |
+| **Keystore release Android** | Infra de signature prête ; le keystore reste à générer côté équipe (sa perte = perte de l'identité Play Store). |
+| **Tests d'intégration** | `integration_test/` encore vide — le golden path est couvert par les widget tests. |
+| **Documents légaux** | CGU, Privacy Policy, mentions par pays (voir « Conformité légale »). |
+
+### 📦 Reporté en V2
+
+- **Apple SSO** (`sign_in_with_apple`) et **iOS Live Activity / Dynamic
+  Island** (`live_activities`) — requièrent un compte Apple Developer actif.
+- **Paiements automatiques** : intégration CinetPay (MoMo) et NowPayments
+  (crypto) en remplacement du flux P2P manuel.
+- Pagination des endpoints admin et dégradation Realtime supplémentaire
+  (à activer avec la traction réelle).
 
 ---
 
@@ -129,22 +132,26 @@ lib/
 ├── main_user.dart           # Entry point app User
 ├── main_admin.dart          # Entry point app Admin
 │
-├── core/                    # 🔧 SHARED (theme, router, services, i18n, flavors)
-├── data/                    # 🔧 SHARED (modèles freezed + repositories)
-├── features_shared/         # 🔧 SHARED (widgets, pages communes)
-├── features_user/           # 📱 USER ONLY (28 écrans)
-├── features_admin/          # 🛡️ ADMIN ONLY (19 écrans)
+├── core/                    # 🔧 SHARED — theme, router, services, i18n, flavors, utils
+├── data/                    # 🔧 SHARED — modèles freezed + repositories
+├── features_shared/         # 🔧 SHARED — widgets & pages communes
+├── features_user/           # 📱 USER — auth, onboarding, home, competitions,
+│                            #   bracket, match_room, chat, recording, streaming,
+│                            #   payments, payouts, profile, notifications
+├── features_admin/          # 🛡️ ADMIN — auth_admin, dashboard, competitions_admin,
+│                            #   matches_admin, bracket_admin, disputes_admin,
+│                            #   payouts_admin, streams_admin, audit, super_admin
 └── l10n/generated/          # ARB compilés (FR / EN / AR)
 
 supabase/
-├── migrations/              # 13 migrations SQL (26 tables, RLS, indexes, phase-5/6 player-write RLS + realtime publication, phase-8 storage bucket + streams RLS + auto-finals triggers)
-├── seeds/                   # Dev fixtures (ex. dev_phase5_match_room.sql)
-└── functions/               # Edge Functions (1 déployée — `get_agora_token` ; les 16 autres en Phase 12.5)
+├── migrations/              # 65 migrations SQL (schéma, RLS, triggers, index, crons)
+├── seeds/                   # Fixtures dev (dev_phase5_match_room.sql, dev_super_admin.sql)
+└── functions/               # 13 Edge Functions Deno + dossier _shared
 ```
 
 Convention de nommage et stack technique imposée :
-voir [`ARENA_MASTER_PROMPT.md`](./ARENA_MASTER_PROMPT.md) — section
-"Architecture technique complète".
+voir [`docs/ARENA_MASTER_PROMPT.md`](./docs/ARENA_MASTER_PROMPT.md) — section
+« Architecture technique complète ».
 
 ---
 
@@ -207,32 +214,38 @@ flutter test
 flutter test integration_test
 ```
 
-Couverture actuelle (150 tests) : modèles freezed, widgets partagés,
-services i18n, router redirect (onboarding → splash → home), 4 pages
-auth user (`forgot/reset/link/cgu`), 4 écrans admin
-(`login/invitation/totp_setup/totp_verify`), shell joueur phase 3
-(`MainLayout` + `HomePage`), phase 4 (`CompetitionsListPage` filtre +
-cards, `CompetitionDetailPage` tabs + CTA, `BracketView` groupage par
-round, `GroupStandingsView` DataTable), phase 6 (`ChatPage`), phase 8
-(recording state machine, coordinator pause/forfeit grace, overlay
-controller IPC, manual upload, game detector, agora streaming state
-machine, permissions service), et phase 9 (`MatchStatsRepository.
-foldMatches` W/L/D/buts sous toutes les perspectives + tab Profil dans
-`MainLayout`). Le happy-path complet d'invitation admin sera couvert
-via test d'intégration une fois l'Edge Function `register-admin`
-livrée (PHASE 12.5). Tests sur device physique (Android + jeu installé)
-obligatoires en phase 13 avant lancement.
+**182 tests** couvrent les modèles freezed, les widgets partagés, les
+services i18n, le router (redirects onboarding → splash → home / gates
+CGU & ban), les pages auth, le shell joueur, les compétitions, le
+bracket, le chat, l'anti-cheat (machine d'état recording, coordinateur
+forfait, overlay, détecteur de jeu, streaming Agora), les stats joueur
+et les helpers neufs (mapping d'erreurs, `pollStream`, wizard de
+compétition). `test/golden_path_test.dart` couvre les routes principales.
+
+Le dossier `integration_test/` est encore vide — les tests sur device
+physique (Android + jeu installé) restent obligatoires avant V1.0.
 
 ---
 
 ## Lints
 
 ```bash
-flutter analyze
+flutter analyze   # 0 issue
 ```
 
-Règles via `very_good_analysis` (`analysis_options.yaml`). `custom_lint`
-+ `riverpod_lint` désactivés temporairement (incompatibilité analyzer 7.x).
+Règles via `very_good_analysis` (`analysis_options.yaml`). Un script de
+garde `scripts/check_colors.{sh,ps1}` interdit les couleurs hardcodées
+hors allowlist. `custom_lint` + `riverpod_lint` désactivés temporairement
+(incompatibilité analyzer 7.x).
+
+---
+
+## CI
+
+GitHub Actions vert sur PR / push `main` : `flutter analyze` + `flutter
+test` (+ coverage codecov) + `build_runner` + garde-fous couleurs /
+espacement. Dependabot actif (pub hebdo, github-actions hebdo, gradle
+mensuel).
 
 ---
 
@@ -242,14 +255,14 @@ Ce projet est piloté avec **Claude Code** comme assistant. Les règles
 non-négociables :
 
 1. Avant de coder une phase, lire la section correspondante de
-   `ARENA_MASTER_PROMPT.md`.
+   `docs/ARENA_MASTER_PROMPT.md`.
 2. Pas de substitution de libs — la stack est imposée (cf. master).
 3. Code commenté en anglais, échanges en français.
 4. Validation phase par phase, sous-étapes courtes, demande de tests
    après chaque sous-étape.
 5. Si doute sur une API : `web_search` plutôt qu'inventer.
 
-Voir le master prompt section "Workflow Claude Code + Cursor" pour le
+Voir le master prompt section « Workflow Claude Code + Cursor » pour le
 détail des prompts à copier-coller.
 
 ---
@@ -262,15 +275,19 @@ Documents à préparer avant lancement V1.0 (Cameroun + 12 pays
 francophones) :
 
 - CGU + Privacy Policy (FR)
-- Conformité RGPD (suppression compte, export données)
+- Conformité RGPD — suppression de compte et export des données déjà
+  implémentés côté app (Edge Function `export-user-data` + cron
+  `cleanup-deleted-accounts`)
 - Mentions légales par pays
 - Régime fiscal (commission 12-15% imposable)
 
-Détails dans `ARENA_MASTER_PROMPT.md` — partie "Conformité légale".
+Détails dans `docs/ARENA_MASTER_PROMPT.md` — partie « Conformité légale ».
 
 ---
 
 ## Liens internes
 
-- [`ARENA_MASTER_PROMPT.md`](./ARENA_MASTER_PROMPT.md) — vision, architecture, roadmap, 54 écrans, 21 phases
-- [`ARENA_FLUTTER_PROMPT.md`](./ARENA_FLUTTER_PROMPT.md) — détails techniques, SQL complet, Edge Functions, Freezed, RLS
+- [`docs/ARENA_MASTER_PROMPT.md`](./docs/ARENA_MASTER_PROMPT.md) — vision, architecture, roadmap, 54 écrans, 21 phases
+- [`docs/ARENA_FLUTTER_PROMPT.md`](./docs/ARENA_FLUTTER_PROMPT.md) — détails techniques, SQL complet, Edge Functions, Freezed, RLS
+- [`docs/AUDIT_FOLLOWUP.md`](./docs/AUDIT_FOLLOWUP.md) — checklist de durcissement sécurité / perf
+- [`docs/ARENA_54_ECRANS.md`](./docs/ARENA_54_ECRANS.md) — inventaire des écrans
