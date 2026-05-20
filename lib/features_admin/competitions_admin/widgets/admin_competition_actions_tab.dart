@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:arena/core/router/admin_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/competition.dart';
@@ -62,6 +64,15 @@ class AdminCompetitionActionsTab extends ConsumerWidget {
               CompetitionStatus.registrationClosed,
             ),
           ),
+        if (competition.status == CompetitionStatus.completed) ...[
+          const SizedBox(height: ArenaSpacing.xs),
+          ArenaButton(
+            label: '🔄 RÉGÉNÉRER LA COMPÉTITION',
+            variant: ArenaButtonVariant.secondary,
+            fullWidth: true,
+            onPressed: () => _regenerate(context, ref),
+          ),
+        ],
         const SizedBox(height: ArenaSpacing.xs),
         ArenaButton(
           label: '🚫 ANNULER (refund all)',
@@ -87,6 +98,51 @@ class AdminCompetitionActionsTab extends ConsumerWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Statut → ${status.value}.')),
       );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Échec : $e')),
+      );
+    }
+  }
+
+  Future<void> _regenerate(BuildContext context, WidgetRef ref) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        backgroundColor: ArenaColors.carbon,
+        title: Text('Régénérer la compétition ?', style: ArenaText.h3),
+        content: Text(
+          'Une nouvelle compétition est créée avec la même configuration '
+          '(jeu, format, frais, récompenses…). Les inscriptions repartent '
+          'à zéro et la date de début est fixée à J+7 — modifiable ensuite. '
+          '« ${competition.name} » reste inchangée.',
+          style: ArenaText.bodyMuted,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(c).pop(false),
+            child: const Text('NON'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(c).pop(true),
+            child: const Text('RÉGÉNÉRER'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      final fresh = await ref
+          .read(adminCompetitionsRepositoryProvider)
+          .regenerate(competition.id);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('« ${fresh.name} » créée — inscriptions ouvertes.'),
+        ),
+      );
+      unawaited(context.push(AdminRoutes.competitionDetailPath(fresh.id)));
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

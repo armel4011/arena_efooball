@@ -91,6 +91,24 @@ class AdminCompetitionsRepository {
     return Competition.fromJson(row);
   }
 
+  /// Régénère une compétition `completed` : crée une NOUVELLE compétition
+  /// (inscriptions ouvertes, date à J+7) qui copie toute la configuration
+  /// de base. Inscriptions / matchs / brackets repartent de zéro.
+  ///
+  /// Passe par la RPC `regenerate_competition` (SECURITY DEFINER, gardée
+  /// par `is_admin()`). Renvoie la compétition fraîchement créée.
+  Future<Competition> regenerate(String competitionId) async {
+    final rows = await _client.rpc<dynamic>(
+      'regenerate_competition',
+      params: {'p_competition_id': competitionId},
+    );
+    final list = rows as List<dynamic>;
+    if (list.isEmpty) {
+      throw StateError('regenerate_competition returned no row');
+    }
+    return Competition.fromJson(list.first as Map<String, dynamic>);
+  }
+
   /// Returns the registered players for [competitionId] joined with
   /// their profile (username, country, avatar color, role) ordered by
   /// registration time. Powers the "Inscrits" tab of the admin

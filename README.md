@@ -74,7 +74,7 @@ Rollout progressif :
 
 ### 🔧 Backend déployé
 
-- **79 migrations SQL** — schéma Postgres complet, RLS sur toutes les
+- **80 migrations SQL** — schéma Postgres complet, RLS sur toutes les
   tables, triggers (auto-bracket, auto-finals, FCM dispatch, emails,
   stats, modération chat, 3-strikes), index, publication Realtime.
 - **14 Edge Functions** déployées :
@@ -145,7 +145,7 @@ lib/
 └── l10n/generated/          # ARB compilés (FR / EN / AR)
 
 supabase/
-├── migrations/              # 79 migrations SQL (schéma, RLS, triggers, index, crons)
+├── migrations/              # 80 migrations SQL (schéma, RLS, triggers, index, crons)
 ├── seeds/                   # Fixtures dev (dev_phase5_match_room.sql, dev_super_admin.sql)
 └── functions/               # 14 Edge Functions Deno + dossier _shared
 ```
