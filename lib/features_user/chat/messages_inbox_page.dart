@@ -865,7 +865,7 @@ class _UnreadBadge extends StatelessWidget {
       child: Text(
         label,
         style: ArenaText.small.copyWith(
-          color: Colors.white,
+          color: ArenaColors.bone,
           fontWeight: FontWeight.w700,
           fontSize: 11,
         ),
