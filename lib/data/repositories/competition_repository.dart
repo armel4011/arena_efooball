@@ -206,7 +206,7 @@ final competitionRankingProvider =
 /// cold-start avec session restaurée tardivement, la stream se crée
 /// alors que `auth.currentUser` est encore null et reste vide).
 final myRegisteredCompetitionIdsProvider =
-    StreamProvider<Set<String>>((ref) {
+    StreamProvider.autoDispose<Set<String>>((ref) {
   final session = ref.watch(currentSessionProvider);
   if (session == null) {
     return Stream.value(const <String>{});

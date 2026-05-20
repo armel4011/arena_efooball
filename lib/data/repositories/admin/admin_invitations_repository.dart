@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:arena/core/utils/poll_stream.dart';
 import 'package:arena/data/models/invitation_code.dart';
 import 'package:arena/data/models/user_role.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
@@ -21,14 +22,14 @@ class AdminInvitationsRepository {
 
   final SupabaseClient _client;
 
-  Stream<List<InvitationCode>> watchAll() {
-    return _client
+  /// One-shot fetch de tous les codes, plus récents en tête. Consommé
+  /// en polling : la création de code est manuelle et rare.
+  Future<List<InvitationCode>> listAll() async {
+    final rows = await _client
         .from(_table)
-        .stream(primaryKey: ['id'])
-        .order('created_at', ascending: false)
-        .map((rows) => [
-              for (final row in rows) InvitationCode.fromJson(row),
-            ],);
+        .select()
+        .order('created_at', ascending: false);
+    return [for (final row in rows) InvitationCode.fromJson(row)];
   }
 
   Future<InvitationCode> create({
@@ -100,6 +101,10 @@ final adminInvitationsRepositoryProvider =
   return AdminInvitationsRepository(ref.watch(supabaseClientProvider));
 });
 
-final adminInvitationsProvider = StreamProvider<List<InvitationCode>>((ref) {
-  return ref.watch(adminInvitationsRepositoryProvider).watchAll();
+/// Polling 300 s (Realtime dégradé) — les codes d'invitation sont créés
+/// manuellement et rarement.
+final adminInvitationsProvider =
+    StreamProvider.autoDispose<List<InvitationCode>>((ref) {
+  final repo = ref.watch(adminInvitationsRepositoryProvider);
+  return pollStream(const Duration(seconds: 300), repo.listAll);
 });

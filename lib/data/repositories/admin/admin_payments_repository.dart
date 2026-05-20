@@ -1,3 +1,4 @@
+import 'package:arena/core/utils/poll_stream.dart';
 import 'package:arena/data/repositories/payment_repository.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:flutter/foundation.dart';
@@ -38,48 +39,42 @@ class AdminPaymentsRepository {
 
   final SupabaseClient _client;
 
-  Stream<List<AdminPaymentRow>> watchPending() {
-    return _client
+  /// One-shot fetch des paiements en attente de validation, plus
+  /// anciens en tête. Consommé en polling (cf. provider) : le filtre
+  /// `status` est appliqué côté serveur — contrairement au `.stream()`
+  /// Realtime qui aurait ramené toute la table.
+  Future<List<AdminPaymentRow>> listPending() async {
+    final rows = await _client
         .from(_table)
-        .stream(primaryKey: ['id'])
-        .order('created_at')
-        .map((rows) {
-          final pending = rows
-              .where((r) => r['status'] == 'awaiting_admin')
-              .toList(growable: false);
-          // Realtime stream renvoie déjà les jointures — on les fait ici.
-          return [
-            for (final r in pending)
-              AdminPaymentRow(
-                payment: PaymentRecord.fromJson(r),
-                username: '—',
-                competitionName: '—',
-              ),
-          ];
-        })
-        .asyncMap(_enrich);
+        .select()
+        .eq('status', 'awaiting_admin')
+        .order('created_at');
+    return _enrich([
+      for (final r in rows)
+        AdminPaymentRow(
+          payment: PaymentRecord.fromJson(r),
+          username: '—',
+          competitionName: '—',
+        ),
+    ]);
   }
 
-  Stream<List<AdminPaymentRow>> watchHistory() {
-    return _client
+  /// One-shot fetch de l'historique (paiements clos : validés ou
+  /// rejetés), plus récents en tête. Filtre `status` côté serveur.
+  Future<List<AdminPaymentRow>> listHistory() async {
+    final rows = await _client
         .from(_table)
-        .stream(primaryKey: ['id'])
-        .order('updated_at', ascending: false)
-        .map((rows) {
-          final closed = rows.where((r) {
-            final s = r['status'] as String?;
-            return s == 'succeeded' || s == 'rejected';
-          }).toList(growable: false);
-          return [
-            for (final r in closed)
-              AdminPaymentRow(
-                payment: PaymentRecord.fromJson(r),
-                username: '—',
-                competitionName: '—',
-              ),
-          ];
-        })
-        .asyncMap(_enrich);
+        .select()
+        .inFilter('status', ['succeeded', 'rejected'])
+        .order('updated_at', ascending: false);
+    return _enrich([
+      for (final r in rows)
+        AdminPaymentRow(
+          payment: PaymentRecord.fromJson(r),
+          username: '—',
+          competitionName: '—',
+        ),
+    ]);
   }
 
   /// Joint profiles.username + competitions.name. La realtime stream
@@ -151,12 +146,16 @@ final adminPaymentsRepositoryProvider =
   return AdminPaymentsRepository(ref.watch(supabaseClientProvider));
 });
 
+/// Polling 120 s (Realtime dégradé) — le super-admin valide les
+/// paiements en minutes/heures, pas besoin d'updates instantanés.
 final adminPendingPaymentsProvider =
-    StreamProvider<List<AdminPaymentRow>>((ref) {
-  return ref.watch(adminPaymentsRepositoryProvider).watchPending();
+    StreamProvider.autoDispose<List<AdminPaymentRow>>((ref) {
+  final repo = ref.watch(adminPaymentsRepositoryProvider);
+  return pollStream(const Duration(seconds: 120), repo.listPending);
 });
 
 final adminPaymentsHistoryProvider =
-    StreamProvider<List<AdminPaymentRow>>((ref) {
-  return ref.watch(adminPaymentsRepositoryProvider).watchHistory();
+    StreamProvider.autoDispose<List<AdminPaymentRow>>((ref) {
+  final repo = ref.watch(adminPaymentsRepositoryProvider);
+  return pollStream(const Duration(seconds: 120), repo.listHistory);
 });

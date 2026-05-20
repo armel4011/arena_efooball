@@ -1,3 +1,4 @@
+import 'package:arena/core/utils/poll_stream.dart';
 import 'package:arena/data/models/dispute.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,21 +18,19 @@ class AdminDisputesRepository {
 
   final SupabaseClient _client;
 
-  /// Realtime stream of every dispute on the platform.
+  /// One-shot fetch de tous les litiges, plus récents en tête.
   ///
-  /// `status` filtering is client-side because Supabase `.stream()`
-  /// only takes one `.eq()` and we want both `open` and `escalated`
-  /// at the same time.
-  Stream<List<Dispute>> watchAll({bool openOnly = true}) {
-    return _client
+  /// Le filtre `status` est client-side (on veut `open` + `escalated`
+  /// ensemble). Consommé en polling plutôt qu'en Realtime : un litige
+  /// s'ouvre rarement, pas la peine d'un WebSocket dédié par admin.
+  Future<List<Dispute>> listAll({bool openOnly = true}) async {
+    final rows = await _client
         .from(_table)
-        .stream(primaryKey: ['id'])
-        .order('created_at', ascending: false)
-        .map((rows) {
-          final list = [for (final row in rows) Dispute.fromJson(row)];
-          if (!openOnly) return list;
-          return list.where((d) => d.isOpen).toList(growable: false);
-        });
+        .select()
+        .order('created_at', ascending: false);
+    final list = [for (final row in rows) Dispute.fromJson(row)];
+    if (!openOnly) return list;
+    return list.where((d) => d.isOpen).toList(growable: false);
   }
 
   Stream<Dispute?> watchById(String id) {
@@ -77,8 +76,12 @@ final adminDisputesRepositoryProvider =
   return AdminDisputesRepository(ref.watch(supabaseClientProvider));
 });
 
-final adminOpenDisputesProvider = StreamProvider<List<Dispute>>((ref) {
-  return ref.watch(adminDisputesRepositoryProvider).watchAll();
+/// Polling 120 s (Realtime dégradé) — un litige s'ouvre ~1×/jour, pas
+/// besoin d'un canal WebSocket dédié par admin connecté.
+final adminOpenDisputesProvider =
+    StreamProvider.autoDispose<List<Dispute>>((ref) {
+  final repo = ref.watch(adminDisputesRepositoryProvider);
+  return pollStream(const Duration(seconds: 120), repo.listAll);
 });
 
 final adminDisputeByMatchProvider =

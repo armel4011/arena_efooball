@@ -1,3 +1,4 @@
+import 'package:arena/core/utils/poll_stream.dart';
 import 'package:arena/data/models/payout.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,17 +21,16 @@ class AdminPayoutsRepository {
 
   final SupabaseClient _client;
 
-  /// Realtime stream of every payout grouped by status.
-  Stream<List<Payout>> watchAll({String? status}) {
-    return _client
+  /// One-shot fetch de tous les payouts, plus récents en tête,
+  /// optionnellement filtrés par [status]. Consommé en polling.
+  Future<List<Payout>> listAll({String? status}) async {
+    final rows = await _client
         .from(_table)
-        .stream(primaryKey: ['id'])
-        .order('created_at', ascending: false)
-        .map((rows) {
-          final list = [for (final row in rows) Payout.fromJson(row)];
-          if (status == null) return list;
-          return list.where((p) => p.status == status).toList(growable: false);
-        });
+        .select()
+        .order('created_at', ascending: false);
+    final list = [for (final row in rows) Payout.fromJson(row)];
+    if (status == null) return list;
+    return list.where((p) => p.status == status).toList(growable: false);
   }
 
   /// Admin validates a payout. Flips status to `validated`, stamps
@@ -70,12 +70,19 @@ final adminPayoutsRepositoryProvider =
   return AdminPayoutsRepository(ref.watch(supabaseClientProvider));
 });
 
-final adminPendingPayoutsProvider = StreamProvider<List<Payout>>((ref) {
-  return ref
-      .watch(adminPayoutsRepositoryProvider)
-      .watchAll(status: 'pending_admin_validation');
+/// Polling 300 s (Realtime dégradé) — un payout se traite en minutes
+/// à heures, les updates instantanés n'apportent rien.
+final adminPendingPayoutsProvider =
+    StreamProvider.autoDispose<List<Payout>>((ref) {
+  final repo = ref.watch(adminPayoutsRepositoryProvider);
+  return pollStream(
+    const Duration(seconds: 300),
+    () => repo.listAll(status: 'pending_admin_validation'),
+  );
 });
 
-final adminAllPayoutsProvider = StreamProvider<List<Payout>>((ref) {
-  return ref.watch(adminPayoutsRepositoryProvider).watchAll();
+final adminAllPayoutsProvider =
+    StreamProvider.autoDispose<List<Payout>>((ref) {
+  final repo = ref.watch(adminPayoutsRepositoryProvider);
+  return pollStream(const Duration(seconds: 300), repo.listAll);
 });
