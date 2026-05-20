@@ -115,18 +115,33 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   // Envoi FCM. On stamp `sent_at` même si l'envoi échoue (l'erreur sera
   // remontée à l'appelant du webhook) — pas de retry pour V1.
+  // Les appels entrants partent en message DATA-only haute priorité :
+  // le handler background de l'app se déclenche (même app tuée) et
+  // affiche la notification plein écran qui fait sonner l'appel.
+  const isCall = r.type === 'call_invite';
   try {
     await sendFcmNotification({
       fcmToken: profile.fcm_token,
       title: r.title,
       body: r.body ?? '',
-      data: {
-        notification_id: r.id,
-        notification_type: r.type,
-        // Aplatit `data.route` si présent — utilisé côté app pour
-        // router le tap (cf. ArenaNotification.route).
-        route: (r.data?.['route'] as string | undefined) ?? '',
-      },
+      dataOnly: isCall,
+      data: isCall
+        ? {
+            notification_type: 'call_invite',
+            call_id: (r.data?.['call_id'] as string | undefined) ?? '',
+            scope: (r.data?.['scope'] as string | undefined) ?? '',
+            scope_id: (r.data?.['scope_id'] as string | undefined) ?? '',
+            caller_id: (r.data?.['caller_id'] as string | undefined) ?? '',
+            caller_name:
+                (r.data?.['caller_name'] as string | undefined) ?? '',
+          }
+        : {
+            notification_id: r.id,
+            notification_type: r.type,
+            // Aplatit `data.route` si présent — utilisé côté app pour
+            // router le tap (cf. ArenaNotification.route).
+            route: (r.data?.['route'] as string | undefined) ?? '',
+          },
     });
   } catch (e) {
     return jsonResponse(

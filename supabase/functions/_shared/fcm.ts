@@ -97,6 +97,10 @@ export interface FcmPayload {
   title: string;
   body: string;
   data?: Record<string, string | number | boolean | null | undefined>;
+  /// `true` → message DATA-only (pas de bloc `notification`). Utilisé
+  /// pour les appels entrants : le handler background de l'app se
+  /// déclenche même app tuée et affiche lui-même la notif plein écran.
+  dataOnly?: boolean;
 }
 
 /// Envoie une notification push via FCM HTTP v1. Throws sur erreur réseau
@@ -116,6 +120,17 @@ export async function sendFcmNotification(opts: FcmPayload): Promise<void> {
     if (v !== undefined && v !== null) stringData[k] = String(v);
   }
 
+  const message: Record<string, unknown> = {
+    token: opts.fcmToken,
+    data: stringData,
+    android: { priority: 'HIGH' },
+  };
+  if (!opts.dataOnly) {
+    message.notification = { title: opts.title, body: opts.body };
+    message.android = { priority: 'HIGH', notification: { sound: 'default' } };
+    message.apns = { payload: { aps: { sound: 'default' } } };
+  }
+
   const sendUrl =
     `https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`;
   const res = await fetch(sendUrl, {
@@ -124,23 +139,7 @@ export async function sendFcmNotification(opts: FcmPayload): Promise<void> {
       Authorization: `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      message: {
-        token: opts.fcmToken,
-        notification: {
-          title: opts.title,
-          body: opts.body,
-        },
-        data: stringData,
-        android: {
-          priority: 'HIGH',
-          notification: { sound: 'default' },
-        },
-        apns: {
-          payload: { aps: { sound: 'default' } },
-        },
-      },
-    }),
+    body: JSON.stringify({ message }),
   });
   if (!res.ok) {
     const txt = await res.text();

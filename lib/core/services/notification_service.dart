@@ -8,6 +8,20 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+/// Canal de notification dédié aux appels entrants (Lot 3) — importance
+/// max, son de type sonnerie. Sert à la notification plein écran qui
+/// fait sonner l'appel même app fermée.
+const _callChannel = AndroidNotificationChannel(
+  'arena_calls',
+  'Appels entrants',
+  description: 'Sonnerie des appels audio entrants.',
+  importance: Importance.max,
+  audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
+);
+
+/// Id fixe de la notification d'appel entrant (une seule à la fois).
+const kIncomingCallNotificationId = 770001;
+
 /// FCM + in-app notifications glue (PHASE 10).
 ///
 /// What this owns:
@@ -152,10 +166,18 @@ class NotificationService {
         _local.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
     await android?.createNotificationChannel(_androidChannel);
+    await android?.createNotificationChannel(_callChannel);
+    // Appels entrants : la notif plein écran exige cette permission,
+    // restreinte sur Android 14+. Best-effort — la demande ouvre les
+    // réglages système, l'utilisateur reste libre de refuser.
+    await android?.requestFullScreenIntentPermission();
     _localReady = true;
   }
 
   Future<void> _handleForeground(RemoteMessage message) async {
+    // Appel entrant : l'écran de sonnerie est géré par l'écoute Realtime
+    // globale (`incomingCallProvider`) — pas de notification ici.
+    if (message.data['notification_type'] == 'call_invite') return;
     final notif = message.notification;
     final title = notif?.title ?? message.data['title'] as String? ?? 'ARENA';
     final body = notif?.body ?? message.data['body'] as String? ?? '';
@@ -209,4 +231,53 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   if (kDebugMode) {
     debugPrint('[notifs] background message ${message.messageId}');
   }
+  // Appel entrant (message DATA-only) : fait sonner même app tuée.
+  await showIncomingCallRing(message);
+}
+
+/// Affiche la notification plein écran « appel entrant » à partir d'un
+/// message FCM `call_invite`. Sûre à appeler depuis l'isolate background
+/// (initialise son propre plugin). No-op si ce n'est pas un appel.
+///
+/// `fullScreenIntent` fait surgir l'app par-dessus l'écran verrouillé ;
+/// au retour dans l'app, l'écoute Realtime affiche `IncomingCallScreen`
+/// (Décrocher / Refuser).
+@pragma('vm:entry-point')
+Future<void> showIncomingCallRing(RemoteMessage message) async {
+  if (message.data['notification_type'] != 'call_invite') return;
+  final raw = (message.data['caller_name'] as String?)?.trim();
+  final caller = (raw == null || raw.isEmpty) ? "Quelqu'un" : raw;
+
+  final plugin = FlutterLocalNotificationsPlugin();
+  await plugin.initialize(
+    const InitializationSettings(
+      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      iOS: DarwinInitializationSettings(),
+    ),
+  );
+  await plugin
+      .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>()
+      ?.createNotificationChannel(_callChannel);
+
+  await plugin.show(
+    kIncomingCallNotificationId,
+    'Appel entrant',
+    '$caller vous appelle',
+    NotificationDetails(
+      android: AndroidNotificationDetails(
+        _callChannel.id,
+        _callChannel.name,
+        channelDescription: _callChannel.description,
+        importance: Importance.max,
+        priority: Priority.max,
+        category: AndroidNotificationCategory.call,
+        fullScreenIntent: true,
+        ticker: 'Appel entrant',
+        icon: '@mipmap/ic_launcher',
+        audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
+      ),
+      iOS: const DarwinNotificationDetails(),
+    ),
+  );
 }
