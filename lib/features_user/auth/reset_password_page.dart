@@ -6,6 +6,7 @@ import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/auth/reset_password_code_page.dart' show ResetPasswordCodePage;
+import 'package:arena/features_user/auth/widgets/auth_error_banner.dart';
 import 'package:arena/features_user/auth/widgets/auth_failure_message.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -138,7 +139,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                       ),
                       if (errorMessage != null) ...[
                         const SizedBox(height: ArenaSpacing.sm),
-                        _ErrorBanner(message: errorMessage),
+                        AuthErrorBanner(message: errorMessage),
                       ],
                       const SizedBox(height: ArenaSpacing.lg),
                       ArenaButton(
@@ -210,40 +211,4 @@ class _SuccessView extends StatelessWidget {
 AuthFailure _asFailure(Object? error) {
   if (error is AuthFailure) return error;
   return UnknownAuthFailure(error);
-}
-
-class _ErrorBanner extends StatelessWidget {
-  const _ErrorBanner({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(ArenaSpacing.md),
-      decoration: BoxDecoration(
-        color: ArenaColors.danger.withValues(alpha: 0.12),
-        borderRadius: ArenaRadius.button,
-        border: Border.all(color: ArenaColors.danger.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.error_outline,
-            color: ArenaColors.danger,
-            size: 20,
-          ),
-          const SizedBox(width: ArenaSpacing.sm),
-          Expanded(
-            child: Text(
-              message,
-              style: ArenaTypography.bodySmall.copyWith(
-                color: ArenaColors.danger,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }

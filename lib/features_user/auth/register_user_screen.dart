@@ -10,6 +10,7 @@ import 'package:arena/features_shared/widgets/arena_stepper.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_shared/widgets/google_sign_in_button.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
+import 'package:arena/features_user/auth/widgets/auth_error_banner.dart';
 import 'package:arena/features_user/auth/widgets/auth_failure_message.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -445,7 +446,7 @@ class _ProfileStep extends StatelessWidget {
           ),
           if (errorMessage != null) ...[
             const SizedBox(height: ArenaSpacing.sm),
-            _ErrorBanner(message: errorMessage!),
+            AuthErrorBanner(message: errorMessage!),
           ],
           const SizedBox(height: ArenaSpacing.xl),
           ArenaButton(
@@ -679,37 +680,6 @@ class _OrDivider extends StatelessWidget {
         ),
         const Expanded(child: Divider(color: ArenaColors.border, height: 1)),
       ],
-    );
-  }
-}
-
-class _ErrorBanner extends StatelessWidget {
-  const _ErrorBanner({required this.message});
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(ArenaSpacing.md),
-      decoration: BoxDecoration(
-        color: ArenaColors.danger.withValues(alpha: 0.12),
-        borderRadius: ArenaRadius.button,
-        border: Border.all(color: ArenaColors.danger.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.error_outline, color: ArenaColors.danger, size: 20),
-          const SizedBox(width: ArenaSpacing.sm),
-          Expanded(
-            child: Text(
-              message,
-              style: ArenaTypography.bodySmall.copyWith(
-                color: ArenaColors.danger,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

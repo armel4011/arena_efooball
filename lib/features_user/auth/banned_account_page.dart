@@ -6,6 +6,7 @@ import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
+import 'package:arena/features_user/auth/widgets/auth_error_banner.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -43,7 +44,9 @@ class _BannedAccountPageState extends ConsumerState<BannedAccountPage> {
     if (userId == null) return;
     final text = _messageCtrl.text.trim();
     if (text.length < 10) {
-      setState(() => _error = 'Détaille ta requête (10 caractères minimum).');
+      setState(
+        () => _error = 'Détaillez votre requête (10 caractères minimum).',
+      );
       return;
     }
     setState(() {
@@ -57,7 +60,10 @@ class _BannedAccountPageState extends ConsumerState<BannedAccountPage> {
       _messageCtrl.clear();
       ref.invalidate(myReintegrationRequestProvider);
     } catch (e) {
-      setState(() => _error = 'Erreur : $e');
+      setState(
+        () => _error =
+            "Échec de l'envoi. Vérifiez votre connexion et réessayez.",
+      );
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -146,10 +152,7 @@ class _BannedAccountPageState extends ConsumerState<BannedAccountPage> {
         ),
         if (_error != null) ...[
           const SizedBox(height: ArenaSpacing.xs),
-          Text(
-            _error!,
-            style: ArenaText.small.copyWith(color: ArenaColors.neonRed),
-          ),
+          AuthErrorBanner(message: _error!),
         ],
         const SizedBox(height: ArenaSpacing.sm),
         ArenaButton(
