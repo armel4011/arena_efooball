@@ -217,12 +217,46 @@ Points traités dans cette passe :
   `supabase/functions/get-agora-call-token/index.ts`. README corrigé :
   13 → 14 Edge Functions.
 - [x] **Worktree obsolète** — `.claude/worktrees/lucid-mcnulty-5bf4c2/`
-  (2.7 Go) retiré (corbeille). La branche `claude/lucid-mcnulty-5bf4c2`
-  est **conservée** : elle porte 2 commits non mergés (`080a0ff`
-  perf realtime publication Phase 3/4, `2d9aee0` Sentry user context
-  Phase 4/4). À merger ou cherry-pick dans `main`, sinon supprimer la
-  branche.
+  (2.7 Go) retiré (corbeille). Sa branche `claude/lucid-mcnulty-5bf4c2`
+  portait 2 commits non mergés (`080a0ff` perf realtime publication
+  Phase 3/4, `2d9aee0` Sentry user context Phase 4/4) — **mergée dans
+  `main`** (commit de merge `9a77aa1`). La branche locale est conservée
+  (redondante, supprimable).
 - [x] **`sentry_flutter`** bumpé `^9.19.0` → `^9.20.0`.
+
+### Réconciliation des migrations (dérive registre ↔ dossier)
+
+Le registre distant `supabase_migrations.schema_migrations` (73 entrées)
+et `supabase/migrations/` avaient divergé : des migrations appliquées via
+MCP `apply_migration` n'avaient jamais été sauvegardées comme fichier.
+
+- [x] **13 migrations rapatriées** depuis `schema_migrations.statements`
+  (le SQL réellement appliqué) vers `supabase/migrations/`, nommées
+  `<version>_<name>.sql` :
+  `20260505184750_security_and_perf_hardening`,
+  `20260505185438_rls_policies_optimization`,
+  `20260510151601_fix_auto_publish_final_match_status_typo`,
+  `20260510152648_chat_messages_allow_room_code_type`,
+  `20260515212934_three_strikes_hardening_revoke_triggers`,
+  `20260518160707_competitions_auto_management_lot_a`,
+  `20260518162244_competitions_commission_xaf_lot_b`,
+  `20260518162642_super_admin_kpis_lot_b`,
+  `20260518163612_admin_filter_users_by_competition_lot_c`,
+  `20260518164644_referral_system_lot_d`,
+  `20260518170120_auto_bracket_on_update_a3`,
+  `20260518170158_profile_last_seen_at_b1`,
+  `20260518170817_admin_filter_users_multi_competition_c2`.
+  Dossier : 66 → **79 fichiers**.
+- [x] **Cas vérifiés OK** (fichier local présent, effet live sur la base,
+  juste non enregistré au registre — rien à faire) :
+  `realtime_drop_unused_tables`, `chat_media_storage_bucket`,
+  `fix_chat_media_storage_rls_name_shadow`.
+- [ ] **Dette résiduelle (process)** : les versions de fichiers locaux
+  ne correspondent toujours pas 1:1 aux versions du registre (numéros
+  d'application ≠ noms de fichiers). `harden_search_path_3_remaining_functions`
+  est enregistrée 2× (idempotente, sans effet). Avant tout `supabase db
+  push`/`reset` en CI : générer une baseline propre (`supabase db dump`)
+  ou faire un `migration repair`. Non bloquant — la base de prod est saine.
 
 ### Risque accepté — `is_blocked_pair` exposée à `authenticated`
 
