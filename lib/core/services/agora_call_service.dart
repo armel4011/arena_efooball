@@ -207,8 +207,18 @@ class _DefaultAgoraCallPlatform implements AgoraCallPlatform {
     final engine = createAgoraRtcEngine();
     await engine.initialize(RtcEngineContext(appId: appId));
     await engine.enableAudio();
-    // Audio-only V1.
-    await engine.setEnableSpeakerphone(true);
+    // Audio-only V1. Route par défaut sur le haut-parleur.
+    //
+    // ⚠️ NE PAS appeler `setEnableSpeakerphone` ici : avant tout
+    // `joinChannel`, Agora renvoie -3 (ERR_NOT_READY) et le wrapper
+    // throw `AgoraRtcException(-3)` → l'appel échouait AVANT même de
+    // rejoindre le canal. `setDefaultAudioRouteToSpeakerphone` est
+    // l'API prévue pour être appelée avant le join. Le toggle runtime
+    // (`toggleSpeaker`) utilise `setEnableSpeakerphone`, mais lui tourne
+    // une fois le canal joint, donc sans souci.
+    try {
+      await engine.setDefaultAudioRouteToSpeakerphone(true);
+    } catch (_) {/* swallow — route audio non critique pour l'appel */}
     return engine;
   }
 
