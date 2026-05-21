@@ -5,17 +5,20 @@ import 'package:arena/core/i18n/i18n_service.dart';
 import 'package:arena/core/i18n/supported_locale.dart';
 import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/services/bootstrap.dart';
+import 'package:arena/core/services/callkit_service.dart';
 import 'package:arena/core/services/deep_link_service.dart';
 import 'package:arena/core/services/notification_service.dart';
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/data/models/call_record.dart';
 import 'package:arena/data/repositories/call_repository.dart';
 import 'package:arena/data/repositories/notification_repository.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
-import 'package:arena/features_user/chat/incoming_call_screen.dart';
+import 'package:arena/features_user/chat/call_screen.dart';
 import 'package:arena/features_user/recording/overlay/recording_overlay.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_callkit_incoming/entities/entities.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 Future<void> main() async {
@@ -51,13 +54,23 @@ class _ArenaUserAppState extends ConsumerState<ArenaUserApp> {
   NotificationService? _notifications;
   String? _attachedUserId;
 
-  /// Dernier appel entrant déjà présenté — évite de re-pousser l'écran
-  /// quand le flux Realtime ré-émet la même ligne.
+  /// Dernier appel entrant présenté en UI d'appel native (CallKit) —
+  /// évite de relancer la sonnerie quand le flux Realtime ré-émet la
+  /// même ligne, et permet de refermer l'UI si l'appelant annule.
   String? _shownIncomingCallId;
+
+  /// Abonnement aux actions de l'UI d'appel native — Décrocher /
+  /// Refuser / timeout, déclenchées y compris depuis l'écran verrouillé.
+  StreamSubscription<CallEvent?>? _callkitSub;
 
   @override
   void initState() {
     super.initState();
+    // Écoute des actions de l'UI d'appel native dès le tout début : un
+    // décroché en démarrage à froid (app tuée, réveillée par CallKit)
+    // peut arriver avant même le premier frame.
+    _callkitSub = CallkitService.events.listen(_onCallkitEvent);
+    unawaited(CallkitService.ensureFullScreenIntentPermission());
     // Wire the deep link listener after the first frame so the router is
     // fully built. Supabase already hydrates the recovery session via its
     // own internal listener — we only forward navigation.
@@ -75,6 +88,7 @@ class _ArenaUserAppState extends ConsumerState<ArenaUserApp> {
   void dispose() {
     _deepLinkService?.dispose();
     _notifications?.detach();
+    unawaited(_callkitSub?.cancel());
     super.dispose();
   }
 
@@ -107,6 +121,121 @@ class _ArenaUserAppState extends ConsumerState<ArenaUserApp> {
     }
   }
 
+  /// Résout le nom de l'appelant puis présente l'UI d'appel native.
+  Future<void> _presentIncomingCall(CallRecord call) async {
+    String name;
+    try {
+      name = await ref.read(callRepositoryProvider).usernameOf(call.callerId);
+    } catch (_) {
+      name = 'Joueur';
+    }
+    await CallkitService.showIncoming(
+      callId: call.id,
+      callerName: name,
+      scope: call.scope,
+      scopeId: call.scopeId,
+      callerId: call.callerId,
+    );
+  }
+
+  /// Réagit aux actions de l'UI d'appel native (Décrocher / Refuser /
+  /// timeout) — vaut pour l'app au premier plan comme réveillée à froid.
+  void _onCallkitEvent(CallEvent? event) {
+    if (event == null) return;
+    final body = event.body;
+    if (body is! Map) return;
+    final callId = body['id'] as String?;
+    if (callId == null || callId.isEmpty) return;
+    final extra = body['extra'] is Map
+        ? Map<String, dynamic>.from(body['extra'] as Map)
+        : const <String, dynamic>{};
+    switch (event.event) {
+      case Event.actionCallAccept:
+        _shownIncomingCallId = null;
+        unawaited(_acceptCall(callId, extra));
+      case Event.actionCallDecline:
+        _shownIncomingCallId = null;
+        unawaited(_settleCall(callId, missed: false));
+      case Event.actionCallTimeout:
+        _shownIncomingCallId = null;
+        unawaited(_settleCall(callId, missed: true));
+      case _:
+        break;
+    }
+  }
+
+  /// Décroché : marque l'appel `accepted`, referme l'UI native puis
+  /// ouvre notre propre écran d'appel.
+  Future<void> _acceptCall(String callId, Map<String, dynamic> extra) async {
+    try {
+      await ref.read(callRepositoryProvider).accept(callId);
+    } catch (_) {/* on rejoint Agora même si l'update de statut échoue */}
+    // Notre `CallScreen` prend le relais : on referme l'UI CallKit pour
+    // ne pas laisser traîner sa notification « appel en cours ».
+    await CallkitService.end(callId);
+    final scope = extra['scope'] as String? ?? '';
+    final scopeId = extra['scope_id'] as String? ?? '';
+    final callerId = extra['caller_id'] as String? ?? '';
+    if (scope.isEmpty || scopeId.isEmpty || callerId.isEmpty) return;
+    final rawName = (extra['caller_name'] as String?)?.trim();
+    _openCallScreen(
+      callId: callId,
+      scope: scope,
+      scopeId: scopeId,
+      callerId: callerId,
+      peerName: (rawName == null || rawName.isEmpty) ? 'Joueur' : rawName,
+    );
+  }
+
+  /// Refus / sonnerie expirée : pose le statut terminal correspondant.
+  Future<void> _settleCall(String callId, {required bool missed}) async {
+    try {
+      final repo = ref.read(callRepositoryProvider);
+      await (missed ? repo.markMissed(callId) : repo.decline(callId));
+    } catch (_) {/* signalisation best-effort */}
+  }
+
+  /// Pousse [CallScreen] sur le navigator racine. En démarrage à froid
+  /// (décroché depuis l'écran verrouillé) le navigator peut ne pas être
+  /// encore monté — on réessaie alors au frame suivant.
+  void _openCallScreen({
+    required String callId,
+    required String scope,
+    required String scopeId,
+    required String callerId,
+    required String peerName,
+  }) {
+    final nav = ref
+        .read(userRouterProvider)
+        .routerDelegate
+        .navigatorKey
+        .currentState;
+    if (nav == null) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _openCallScreen(
+          callId: callId,
+          scope: scope,
+          scopeId: scopeId,
+          callerId: callerId,
+          peerName: peerName,
+        ),
+      );
+      return;
+    }
+    nav.push(
+      MaterialPageRoute<void>(
+        builder: (_) => CallScreen(
+          callId: callId,
+          scope: scope,
+          id: scopeId,
+          calleeId: callerId,
+          peerName: peerName,
+        ),
+        fullscreenDialog: true,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final locale = ref.watch(currentLocaleProvider);
@@ -116,22 +245,24 @@ class _ArenaUserAppState extends ConsumerState<ArenaUserApp> {
       ..listen(currentSessionProvider, (_, session) {
         _syncNotificationsWithSession(session?.user.id);
       })
-      // Appel entrant — fait surgir l'écran de sonnerie quel que soit
-      // l'écran courant (poussé sur le navigator racine du routeur).
+      // Appel entrant détecté en Realtime (app au premier plan) : on
+      // déclenche l'UI d'appel native — sonnerie en boucle + plein
+      // écran. L'app tuée passe, elle, par le handler FCM background.
       ..listen(incomingCallProvider, (_, asyncCall) {
         final call = asyncCall.value;
         if (call == null) {
-          _shownIncomingCallId = null;
+          // Plus d'appel en sonnerie (annulé, décroché, expiré) : on
+          // referme l'UI native restée éventuellement ouverte.
+          final shown = _shownIncomingCallId;
+          if (shown != null) {
+            _shownIncomingCallId = null;
+            unawaited(CallkitService.end(shown));
+          }
           return;
         }
         if (call.id == _shownIncomingCallId) return;
         _shownIncomingCallId = call.id;
-        router.routerDelegate.navigatorKey.currentState?.push(
-          MaterialPageRoute<void>(
-            builder: (_) => IncomingCallScreen(call: call),
-            fullscreenDialog: true,
-          ),
-        );
+        unawaited(_presentIncomingCall(call));
       });
 
     return MaterialApp.router(

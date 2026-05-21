@@ -12,8 +12,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// Deux entrées :
 ///   - APPELANT : ouvre l'écran avec `callId == null`. L'écran crée la
 ///     ligne `calls` (`placeCall`) → le destinataire reçoit la sonnerie.
-///   - DESTINATAIRE : ouvert depuis `IncomingCallScreen` après avoir
-///     décroché, avec un `callId` déjà accepté.
+///   - DESTINATAIRE : ouvert depuis l'UI d'appel native (CallKit) après
+///     avoir décroché, avec un `callId` déjà accepté.
 ///
 /// Dans les deux cas on rejoint ensuite le canal Agora RTC. L'audio ne
 /// circule qu'une fois les 2 pairs dans le canal — donc le destinataire

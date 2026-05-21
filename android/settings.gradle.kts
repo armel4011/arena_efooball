@@ -23,6 +23,10 @@ plugins {
     id("org.jetbrains.kotlin.android") version "2.2.20" apply false
     // PHASE 10 — Firebase Messaging (per-flavor google-services.json under app/src/{user,admin}).
     id("com.google.gms.google-services") version "4.4.4" apply false
+    // flutter_callkit_incoming épingle une toolchain Java 17 ; ce resolver
+    // laisse Gradle provisionner ce JDK quand la machine ne l'expose pas
+    // (sinon : « Cannot find a Java installation matching languageVersion=17 »).
+    id("org.gradle.toolchains.foojay-resolver-convention") version "0.9.0"
 }
 
 include(":app")

@@ -25,10 +25,11 @@
     <!-- Notifications (Android 13+ runtime + foreground service notif) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- Appel entrant : notification plein écran par-dessus l'écran
-         verrouillé (sonnerie d'appel — Lot 3). Sur Android 14+ cette
+    <!-- Appel entrant : UI d'appel native plein écran par-dessus l'écran
+         verrouillé (flutter_callkit_incoming). Sur Android 14+ cette
          permission est restreinte aux apps de type appel/alarme ;
-         flutter_local_notifications expose une demande runtime. -->
+         CallkitService.ensureFullScreenIntentPermission() la demande au
+         runtime. -->
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <!-- Vibration de la sonnerie d'appel entrant -->
     <uses-permission android:name="android.permission.VIBRATE" />
