@@ -1,0 +1,11 @@
+-- ════════════════════════════════════════════════════════════════════
+-- Durcissement — REVOKE EXECUTE sur la trigger function notify_incoming_call
+-- ════════════════════════════════════════════════════════════════════
+-- `notify_incoming_call()` (Lot 3 appels) est une fonction TRIGGER. Comme
+-- toute fonction du schéma `public`, PostgREST l'expose par défaut en RPC
+-- (`/rest/v1/rpc/notify_incoming_call`) — l'advisor sécurité Supabase la
+-- flague (lint 0028/0029). Une trigger function n'a aucune raison d'être
+-- appelable directement : on révoque EXECUTE, conformément au pattern déjà
+-- appliqué aux autres triggers du projet
+-- (cf. 20260515212934_three_strikes_hardening_revoke_triggers).
+revoke all on function public.notify_incoming_call() from public, anon, authenticated;

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:arena/core/services/notification_service.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/call_record.dart';
 import 'package:arena/data/repositories/call_repository.dart';
@@ -32,7 +33,13 @@ class IncomingCallScreen extends ConsumerStatefulWidget {
 
 class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen> {
   Timer? _ringTimer;
+  Timer? _timeoutTimer;
   bool _handled = false;
+
+  /// Au-delà de ce délai sans réponse, l'appel entrant est abandonné
+  /// (`missed`) — évite une sonnerie infinie si l'appelant ne raccroche
+  /// jamais (app tuée, donc aucun statut `cancelled`).
+  static const _kIncomingTimeout = Duration(seconds: 45);
 
   @override
   void initState() {
@@ -44,15 +51,23 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen> {
       HapticFeedback.heavyImpact();
       SystemSound.play(SystemSoundType.alert);
     });
+    _timeoutTimer = Timer(_kIncomingTimeout, _onTimeout);
+    // L'écran in-app prend le relais : la notif FCM plein écran (Lot 3)
+    // ferait double emploi et resterait sinon coincée dans le tray.
+    unawaited(dismissIncomingCallRing());
   }
 
   @override
   void dispose() {
     _ringTimer?.cancel();
+    _timeoutTimer?.cancel();
     super.dispose();
   }
 
-  void _stopRing() => _ringTimer?.cancel();
+  void _stopRing() {
+    _ringTimer?.cancel();
+    _timeoutTimer?.cancel();
+  }
 
   Future<void> _accept() async {
     if (_handled) return;
@@ -86,6 +101,19 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen> {
     final nav = Navigator.of(context);
     try {
       await ref.read(callRepositoryProvider).decline(widget.call.id);
+    } catch (_) {/* swallow */}
+    if (mounted) nav.pop();
+  }
+
+  /// Sonnerie trop longue sans réponse : on marque l'appel `missed` et
+  /// on ferme l'écran.
+  Future<void> _onTimeout() async {
+    if (_handled) return;
+    _handled = true;
+    _stopRing();
+    final nav = Navigator.of(context);
+    try {
+      await ref.read(callRepositoryProvider).markMissed(widget.call.id);
     } catch (_) {/* swallow */}
     if (mounted) nav.pop();
   }

@@ -281,3 +281,15 @@ Future<void> showIncomingCallRing(RemoteMessage message) async {
     ),
   );
 }
+
+/// Annule la notification plein écran « appel entrant » (Lot 3). À
+/// appeler dès que l'appel est pris en charge in-app (l'écran
+/// `IncomingCallScreen` surgit) : la sonnerie du tray ferait double
+/// emploi et resterait sinon affichée après décroché / refus / timeout.
+@pragma('vm:entry-point')
+Future<void> dismissIncomingCallRing() async {
+  try {
+    await FlutterLocalNotificationsPlugin()
+        .cancel(kIncomingCallNotificationId);
+  } catch (_) {/* plugin indisponible — rien à annuler */}
+}

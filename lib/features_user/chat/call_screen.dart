@@ -59,6 +59,12 @@ class _CallScreenState extends ConsumerState<CallScreen> {
   String? _override;
   bool _closing = false;
 
+  /// Côté appelant : coupe l'appel si le pair ne décroche pas à temps —
+  /// évite une « Sonnerie… » infinie quand l'app du pair est tuée et
+  /// n'envoie jamais de statut `declined`/`cancelled`.
+  Timer? _ringTimeout;
+  static const _kRingTimeout = Duration(seconds: 45);
+
   @override
   void initState() {
     super.initState();
@@ -87,14 +93,26 @@ class _CallScreenState extends ConsumerState<CallScreen> {
     }
     if (!mounted) return;
     setState(() => _callId = id);
+    // Appelant uniquement : arme le garde-fou « pas de réponse ». Côté
+    // destinataire (`callId` déjà fourni) l'appel est déjà accepté.
+    if (widget.callId == null) {
+      _ringTimeout = Timer(_kRingTimeout, _onRingTimeout);
+    }
     await _svc.startCall(scope: widget.scope, id: widget.id);
   }
 
   @override
   void dispose() {
+    _ringTimeout?.cancel();
     unawaited(_svc.hangup());
     final id = _callId;
-    if (id != null) unawaited(_callRepo.end(id));
+    // Ne clôt la ligne `calls` que si l'appel était encore vivant au
+    // moment où l'écran est quitté (retour arrière). Si `_override` est
+    // défini ou `_closing`, un statut terminal (declined/missed/ended) a
+    // déjà été posé — ne pas l'écraser avec `ended`.
+    if (id != null && !_closing && _override == null) {
+      unawaited(_callRepo.end(id));
+    }
     super.dispose();
   }
 
@@ -111,13 +129,28 @@ class _CallScreenState extends ConsumerState<CallScreen> {
     if (mounted) Navigator.of(context).pop();
   }
 
-  /// Réagit au statut signalé : le pair a refusé / raccroché / annulé.
+  /// Le pair n'a pas décroché dans le délai imparti : on clôt l'appel en
+  /// `missed` plutôt que de laisser sonner indéfiniment.
+  void _onRingTimeout() {
+    final id = _callId;
+    if (_closing || _override != null || id == null) return;
+    setState(() => _override = 'Pas de réponse.');
+    unawaited(_svc.hangup());
+    unawaited(_callRepo.markMissed(id));
+  }
+
+  /// Réagit au statut signalé : le pair a décroché / refusé / raccroché.
   void _onSignal(CallRecord? c) {
-    if (c == null || c.isLive || _closing || _override != null) return;
+    if (c == null) return;
+    // L'appel a quitté l'état sonnerie : le garde-fou n'a plus lieu d'être.
+    if (!c.isRinging) _ringTimeout?.cancel();
+    if (c.isLive || _closing || _override != null) return;
     setState(
-      () => _override = c.status == CallStatus.declined
-          ? 'Appel refusé.'
-          : 'Appel terminé.',
+      () => _override = switch (c.status) {
+        CallStatus.declined => 'Appel refusé.',
+        CallStatus.missed => 'Pas de réponse.',
+        _ => 'Appel terminé.',
+      },
     );
     unawaited(_svc.hangup());
   }
@@ -276,7 +309,7 @@ class _CallControl extends StatelessWidget {
             ),
             child: Icon(
               icon,
-              color: active ? ArenaColors.bone : ArenaColors.bone,
+              color: ArenaColors.bone,
               size: 26,
             ),
           ),
