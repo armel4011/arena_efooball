@@ -86,10 +86,13 @@
 		<string>ARENA accède à votre galerie pour vous permettre d'envoyer manuellement la vidéo de votre match en cas de litige.</string>
 		<key>NSPhotoLibraryAddUsageDescription</key>
 		<string>ARENA peut sauvegarder dans votre galerie la vidéo de votre match pour vos archives personnelles.</string>
-		<!-- PHASE 8.7 — Streaming Agora en arrière-plan (audio uniquement) -->
+		<!-- audio  : streaming Agora en arrière-plan (PHASE 8.7).
+		     voip   : réception des pushs PushKit pour les appels entrants
+		              même app en arrière-plan / tuée. -->
 		<key>UIBackgroundModes</key>
 		<array>
 			<string>audio</string>
+			<string>voip</string>
 		</array>
 		<key>UIStatusBarHidden</key>
 		<true/>

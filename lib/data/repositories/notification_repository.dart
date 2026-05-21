@@ -89,6 +89,36 @@ class NotificationRepository {
         .eq('id', userId);
   }
 
+  /// Saves the iOS PushKit VoIP token on the caller's profile. The
+  /// dispatch Edge Function routes `call_invite` pushes for iOS devices
+  /// through APNs VoIP (FCM cannot send VoIP pushes). Skips the write
+  /// when [token] is unchanged — same rationale as [saveFcmToken].
+  Future<void> saveVoipToken({
+    required String userId,
+    required String token,
+  }) async {
+    final current = await _client
+        .from(_profilesTable)
+        .select('voip_token')
+        .eq('id', userId)
+        .maybeSingle();
+
+    if (current != null && current['voip_token'] == token) return;
+
+    await _client
+        .from(_profilesTable)
+        .update({'voip_token': token})
+        .eq('id', userId);
+  }
+
+  /// Clears the VoIP token (logout, or PushKit invalidated it).
+  Future<void> clearVoipToken(String userId) async {
+    await _client
+        .from(_profilesTable)
+        .update({'voip_token': null})
+        .eq('id', userId);
+  }
+
   static int _byCreatedAtDesc(ArenaNotification a, ArenaNotification b) {
     final ad = a.createdAt;
     final bd = b.createdAt;

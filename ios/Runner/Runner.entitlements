@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Capability « Push Notifications » — requise par PushKit (VoIP) et
+	     par les notifications APNs. `development` ici ; Xcode bascule
+	     automatiquement sur `production` lors d'un archive App Store.
+
+	     IMPORTANT : ce fichier ne prend effet que si la cible Runner le
+	     référence (Build Settings → CODE_SIGN_ENTITLEMENTS). Activer la
+	     capability « Push Notifications » dans Xcode (onglet Signing &
+	     Capabilities) effectue ce câblage et enregistre l'App ID pour le
+	     push côté portail Apple Developer. -->
+	<key>aps-environment</key>
+	<string>development</string>
+</dict>
+</plist>

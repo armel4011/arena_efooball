@@ -9,19 +9,25 @@
 //     - `FIREBASE_SERVICE_ACCOUNT_JSON` : contenu du service account JSON
 //     - `WEBHOOK_SECRET`               : token partagé avec le webhook
 //     - `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` sont auto-injectés
+//     - `APNS_KEY_P8` / `APNS_KEY_ID` / `APNS_TEAM_ID` (optionnels) :
+//       activent le push VoIP iOS. Absents → la branche VoIP est inerte
+//       (cf. `_shared/apns.ts`).
 //
 // Flow :
-//   webhook payload → check auth → fetch profile.fcm_token → sign FCM →
-//   send → mark notifications.sent_at = now()
+//   webhook payload → check auth → fetch profile (fcm_token, voip_token)
+//   → appel iOS + voip_token + APNs configuré ? push VoIP APNs
+//                                       : sinon push FCM
+//   → mark notifications.sent_at = now()
 //
-// Échecs gracieux : si le user n'a pas de fcm_token (jamais ouvert l'app
-// sur mobile, OS notification permission refusée), on retourne 200 avec
+// Échecs gracieux : si le user n'a aucun token (jamais ouvert l'app sur
+// mobile, OS notification permission refusée), on retourne 200 avec
 // `no_token` plutôt que d'échouer — la ligne reste en `sent_at = null`
 // et la prochaine fois où l'app s'ouvre, le token est enregistré et
 // les notifs suivantes partent.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import { sendFcmNotification } from '../_shared/fcm.ts';
+import { readApnsConfig, sendApnsVoipPush } from '../_shared/apns.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -35,6 +41,21 @@ function jsonResponse(payload: unknown, status = 200): Response {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
+}
+
+/// Stampe `notifications.sent_at = now()` pour que l'app ne ré-affiche
+/// pas la notif en bandeau « non remis ». Best-effort — pas de retry V1.
+async function markSent(
+  sb: ReturnType<typeof createClient>,
+  id: string,
+): Promise<void> {
+  const { error } = await sb
+    .from('notifications')
+    .update({ sent_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error && Deno.env.get('ARENA_DEBUG') === '1') {
+    console.error('sent_at update failed:', error.message);
+  }
 }
 
 interface WebhookPayload {
@@ -96,10 +117,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  // Récupère le token FCM du destinataire.
+  // Récupère les tokens push du destinataire (FCM Android + VoIP iOS).
   const { data: profile, error: profileErr } = await sb
     .from('profiles')
-    .select('fcm_token')
+    .select('fcm_token, voip_token')
     .eq('id', r.user_id)
     .maybeSingle();
 
@@ -109,6 +130,47 @@ Deno.serve(async (req: Request): Promise<Response> => {
       500,
     );
   }
+  const isCall = r.type === 'call_invite';
+  const callId = (r.data?.['call_id'] as string | undefined) ?? '';
+  const callerName = (r.data?.['caller_name'] as string | undefined) ?? '';
+
+  // ─── iOS : appel entrant → push VoIP APNs ─────────────────────────
+  // PushKit réveille l'app (même tuée) et présente l'UI CallKit par-
+  // dessus le verrou. FCM ne peut pas livrer de push VoIP — d'où
+  // l'appel direct à APNs.
+  if (isCall && profile?.voip_token) {
+    const apns = readApnsConfig();
+    if (apns) {
+      try {
+        await sendApnsVoipPush(apns, {
+          deviceToken: profile.voip_token,
+          callId,
+          callerName,
+          extra: {
+            call_id: callId,
+            scope: (r.data?.['scope'] as string | undefined) ?? '',
+            scope_id: (r.data?.['scope_id'] as string | undefined) ?? '',
+            caller_id: (r.data?.['caller_id'] as string | undefined) ?? '',
+            caller_name: callerName,
+          },
+        });
+      } catch (e) {
+        return jsonResponse(
+          { error: 'apns_send_failed', detail: String(e) },
+          500,
+        );
+      }
+      await markSent(sb, r.id);
+      return jsonResponse({ ok: true, channel: 'voip' });
+    }
+    // APNs pas encore configuré (clé .p8 absente) : on retombe sur FCM
+    // si un fcm_token existe, sinon on skip juste en dessous.
+    if (Deno.env.get('ARENA_DEBUG') === '1') {
+      console.warn('voip_token présent mais APNs non configuré — fallback FCM');
+    }
+  }
+
+  // ─── Android (et fallback) : push FCM ─────────────────────────────
   if (!profile?.fcm_token) {
     return jsonResponse({ skipped: 'no_token' });
   }
@@ -117,8 +179,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   // remontée à l'appelant du webhook) — pas de retry pour V1.
   // Les appels entrants partent en message DATA-only haute priorité :
   // le handler background de l'app se déclenche (même app tuée) et
-  // affiche la notification plein écran qui fait sonner l'appel.
-  const isCall = r.type === 'call_invite';
+  // déclenche l'UI d'appel native (CallKit).
   try {
     await sendFcmNotification({
       fcmToken: profile.fcm_token,
@@ -128,12 +189,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
       data: isCall
         ? {
             notification_type: 'call_invite',
-            call_id: (r.data?.['call_id'] as string | undefined) ?? '',
+            call_id: callId,
             scope: (r.data?.['scope'] as string | undefined) ?? '',
             scope_id: (r.data?.['scope_id'] as string | undefined) ?? '',
             caller_id: (r.data?.['caller_id'] as string | undefined) ?? '',
-            caller_name:
-                (r.data?.['caller_name'] as string | undefined) ?? '',
+            caller_name: callerName,
           }
         : {
             notification_id: r.id,
@@ -150,15 +210,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
     );
   }
 
-  // Marque la notif comme envoyée pour que l'app n'essaye pas de la
-  // ré-afficher en bandeau "non remis".
-  const { error: updateErr } = await sb
-    .from('notifications')
-    .update({ sent_at: new Date().toISOString() })
-    .eq('id', r.id);
-  if (updateErr && Deno.env.get('ARENA_DEBUG') === '1') {
-    console.error('sent_at update failed:', updateErr.message);
-  }
-
+  await markSent(sb, r.id);
   return jsonResponse({ ok: true });
 });

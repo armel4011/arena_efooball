@@ -63,6 +63,11 @@ class _ArenaUserAppState extends ConsumerState<ArenaUserApp> {
   /// Refuser / timeout, déclenchées y compris depuis l'écran verrouillé.
   StreamSubscription<CallEvent?>? _callkitSub;
 
+  /// Dernier token PushKit VoIP (iOS) reçu du natif. Conservé en mémoire
+  /// car il peut arriver avant la connexion : on le persiste alors dès
+  /// qu'une session s'ouvre. `null` sur Android (jamais émis).
+  String? _voipToken;
+
   @override
   void initState() {
     super.initState();
@@ -100,14 +105,23 @@ class _ArenaUserAppState extends ConsumerState<ArenaUserApp> {
     final service = _notifications;
     if (service == null) return;
     if (userId == _attachedUserId) return;
+    final previousUserId = _attachedUserId;
     _attachedUserId = userId;
     if (userId != null) {
       // Lot B.1 — ping le serveur pour mettre à jour profiles.last_seen_at
       // (alimente le MAU/DAU du dashboard super-admin).
       unawaited(_pingHeartbeat());
       unawaited(service.attach(userId));
+      // Token VoIP reçu avant la connexion : on le persiste maintenant.
+      if (_voipToken != null) {
+        unawaited(_persistVoipToken(userId, _voipToken));
+      }
     } else {
       unawaited(service.detach(clearTokenOnServer: true));
+      // Déconnexion : on coupe aussi le push VoIP vers cet appareil.
+      if (previousUserId != null) {
+        unawaited(_persistVoipToken(previousUserId, null));
+      }
     }
   }
 
@@ -144,6 +158,14 @@ class _ArenaUserAppState extends ConsumerState<ArenaUserApp> {
     if (event == null) return;
     final body = event.body;
     if (body is! Map) return;
+
+    // Mise à jour du token PushKit VoIP (iOS) — ce body n'a pas d'`id`
+    // d'appel, il faut le traiter avant l'extraction ci-dessous.
+    if (event.event == Event.actionDidUpdateDevicePushTokenVoip) {
+      _onVoipTokenUpdated(body['deviceTokenVoIP'] as String?);
+      return;
+    }
+
     final callId = body['id'] as String?;
     if (callId == null || callId.isEmpty) return;
     final extra = body['extra'] is Map
@@ -193,6 +215,27 @@ class _ArenaUserAppState extends ConsumerState<ArenaUserApp> {
       final repo = ref.read(callRepositoryProvider);
       await (missed ? repo.markMissed(callId) : repo.decline(callId));
     } catch (_) {/* signalisation best-effort */}
+  }
+
+  /// Nouveau token PushKit VoIP (iOS). On le mémorise et — si une session
+  /// est ouverte — on le persiste pour que l'Edge Function puisse router
+  /// les appels iOS vers APNs. Un token vide = PushKit l'a invalidé.
+  void _onVoipTokenUpdated(String? token) {
+    _voipToken = (token == null || token.isEmpty) ? null : token;
+    final userId = _attachedUserId;
+    if (userId != null) unawaited(_persistVoipToken(userId, _voipToken));
+  }
+
+  /// Écrit (ou efface si [token] est `null`) le token VoIP sur le profil.
+  Future<void> _persistVoipToken(String userId, String? token) async {
+    try {
+      final repo = ref.read(notificationRepositoryProvider);
+      if (token == null || token.isEmpty) {
+        await repo.clearVoipToken(userId);
+      } else {
+        await repo.saveVoipToken(userId: userId, token: token);
+      }
+    } catch (_) {/* best-effort — réessayé au prochain événement/session */}
   }
 
   /// Pousse [CallScreen] sur le navigator racine. En démarrage à froid
