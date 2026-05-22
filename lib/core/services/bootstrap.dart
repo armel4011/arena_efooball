@@ -128,11 +128,16 @@ Future<void> _initSentry({required Flavor flavor}) async {
 /// pre-runApp). Le tag `role` peut être posé plus tard depuis
 /// `currentProfileProvider` si besoin.
 void _attachSentryUserBinder(SupabaseClient client) {
+  // RGPD : on ne pousse QUE l'id (UUID) sur le scope Sentry — surtout pas
+  // l'email, qui est une PII propagée hors de notre contrôle dès qu'un
+  // event part vers Sentry (audit sécu 2026-05-23). L'id suffit pour
+  // pivoter vers le profil côté équipe via le dashboard admin.
+  //
   // Push initial — couvre le cas d'une session déjà restaurée.
   final initial = client.auth.currentSession?.user;
   if (initial != null) {
     Sentry.configureScope((scope) {
-      scope.setUser(SentryUser(id: initial.id, email: initial.email));
+      scope.setUser(SentryUser(id: initial.id));
     });
   }
 
@@ -141,9 +146,7 @@ void _attachSentryUserBinder(SupabaseClient client) {
     final event = data.event;
     Sentry.configureScope((scope) {
       scope.setUser(
-        user == null
-            ? null
-            : SentryUser(id: user.id, email: user.email),
+        user == null ? null : SentryUser(id: user.id),
       );
     });
     Sentry.addBreadcrumb(
