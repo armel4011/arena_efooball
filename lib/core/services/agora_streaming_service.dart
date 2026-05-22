@@ -77,6 +77,11 @@ class AgoraStreamingService {
   final _stateController = StreamController<AgoraSessionState>.broadcast();
   AgoraSessionState _state = const AgoraIdle();
 
+  /// `true` pendant qu'un join est en cours — neutralise les appels
+  /// concurrents (double-tap « Démarrer », page de live ré-ouverte) qui
+  /// feraient rejeter le second joinChannel par Agora (err -17).
+  bool _joinInProgress = false;
+
   /// `null` until [_ensureEngine] runs — kept exposed so the UI can
   /// pass it to `AgoraVideoView` for rendering local + remote feeds.
   RtcEngine? _engine;
@@ -125,6 +130,32 @@ class AgoraStreamingService {
     required String matchId,
     required AgoraRole role,
   }) async {
+    // Garde anti-concurrence — deux joinChannel en parallèle (double-tap,
+    // page ré-ouverte) sont rejetés par Agora (ERR_JOIN_CHANNEL_REJECTED).
+    if (_joinInProgress) return;
+    _joinInProgress = true;
+    try {
+      // Une session déjà ouverte doit être quittée avant de rejoindre,
+      // sinon Agora rejette le nouveau joinChannel (err -17).
+      final existing = _engine;
+      if (existing != null &&
+          _state is! AgoraIdle &&
+          _state is! AgoraLeft) {
+        try {
+          await _platform.leaveChannel(existing);
+        } catch (_) {/* on tente le join malgré tout */}
+      }
+      await _doJoin(matchId: matchId, role: role);
+    } finally {
+      _joinInProgress = false;
+    }
+  }
+
+  Future<void> _doJoin({
+    required String matchId,
+    required AgoraRole role,
+  }) async {
+    debugPrint('[agora] join role=$role match=$matchId');
     _emit(AgoraJoining(channel: 'pending', role: role));
 
     AgoraToken token;
@@ -142,6 +173,9 @@ class AgoraStreamingService {
       rethrow;
     }
 
+    debugPrint(
+      '[agora] token ok channel=${token.channelName} uid=${token.uid}',
+    );
     _emit(AgoraJoining(channel: token.channelName, role: role));
 
     try {
@@ -222,6 +256,10 @@ abstract class AgoraEnginePlatform {
 }
 
 class _DefaultAgoraEnginePlatform implements AgoraEnginePlatform {
+  /// Handler du dernier join — retiré avant d'en réenregistrer un, sinon
+  /// les handlers s'accumulent à chaque rejoin (callbacks émis en double).
+  RtcEngineEventHandler? _handler;
+
   @override
   Future<RtcEngine> createAndInit({required String appId}) async {
     final engine = createAgoraRtcEngine();
@@ -241,33 +279,69 @@ class _DefaultAgoraEnginePlatform implements AgoraEnginePlatform {
     required VoidCallback onLocalJoined,
     required void Function(int remoteUid) onRemoteJoined,
   }) async {
-    engine.registerEventHandler(
-      RtcEngineEventHandler(
-        onJoinChannelSuccess: (connection, elapsed) => onLocalJoined(),
-        onUserJoined: (connection, remoteUid, elapsed) =>
-            onRemoteJoined(remoteUid),
+    final previous = _handler;
+    if (previous != null) {
+      engine.unregisterEventHandler(previous);
+    }
+    final handler = RtcEngineEventHandler(
+      onError: (err, msg) => debugPrint('[agora] error $err: $msg'),
+      onJoinChannelSuccess: (connection, elapsed) {
+        debugPrint('[agora] joinChannelSuccess');
+        onLocalJoined();
+      },
+      onUserJoined: (connection, remoteUid, elapsed) {
+        debugPrint('[agora] userJoined remoteUid=$remoteUid');
+        onRemoteJoined(remoteUid);
+      },
+      onUserOffline: (connection, remoteUid, reason) =>
+          debugPrint('[agora] userOffline remoteUid=$remoteUid'),
+      onLocalVideoStateChanged: (source, state, reason) => debugPrint(
+        '[agora] localVideo source=$source state=$state reason=$reason',
+      ),
+      onRemoteVideoStateChanged:
+          (connection, remoteUid, state, reason, elapsed) => debugPrint(
+        '[agora] remoteVideo uid=$remoteUid state=$state reason=$reason',
       ),
     );
+    _handler = handler;
+    engine.registerEventHandler(handler);
+    final isBroadcaster = role == AgoraRole.broadcaster;
     await engine.setClientRole(
-      role: role == AgoraRole.broadcaster
+      role: isBroadcaster
           ? ClientRoleType.clientRoleBroadcaster
           : ClientRoleType.clientRoleAudience,
     );
-    if (role == AgoraRole.broadcaster) {
-      await engine.startPreview();
+    if (isBroadcaster) {
+      // Le live diffuse l'ÉCRAN du téléphone (le gameplay), pas la
+      // caméra. `startScreenCapture` déclenche le dialogue système
+      // Android « Autoriser ARENA à diffuser l'écran ». `captureAudio`
+      // capte le son du jeu ; le micro n'est pas publié (choix produit).
+      debugPrint('[agora] startScreenCapture…');
+      await engine.startScreenCapture(
+        const ScreenCaptureParameters2(
+          captureVideo: true,
+          captureAudio: true,
+        ),
+      );
+      debugPrint('[agora] startScreenCapture OK');
     }
+    debugPrint('[agora] joinChannel($channelId)…');
     await engine.joinChannel(
       token: token,
       channelId: channelId,
       uid: uid,
       options: ChannelMediaOptions(
-        clientRoleType: role == AgoraRole.broadcaster
+        clientRoleType: isBroadcaster
             ? ClientRoleType.clientRoleBroadcaster
             : ClientRoleType.clientRoleAudience,
-        publishCameraTrack: role == AgoraRole.broadcaster,
-        publishMicrophoneTrack: role == AgoraRole.broadcaster,
-        autoSubscribeAudio: role == AgoraRole.audience,
-        autoSubscribeVideo: role == AgoraRole.audience,
+        // Broadcaster : publie le flux de capture d'écran (vidéo + son
+        // du jeu). La caméra et le micro restent volontairement coupés.
+        publishScreenCaptureVideo: isBroadcaster,
+        publishScreenCaptureAudio: isBroadcaster,
+        publishCameraTrack: false,
+        publishMicrophoneTrack: false,
+        autoSubscribeAudio: !isBroadcaster,
+        autoSubscribeVideo: !isBroadcaster,
       ),
     );
   }
@@ -275,12 +349,14 @@ class _DefaultAgoraEnginePlatform implements AgoraEnginePlatform {
   @override
   Future<void> leaveChannel(RtcEngine engine) async {
     await engine.leaveChannel();
-    await engine.stopPreview();
+    // Coupe la capture d'écran si on diffusait — sans effet côté audience.
+    await engine.stopScreenCapture();
   }
 
   @override
   Future<void> releaseEngine(RtcEngine engine) async {
     await engine.release();
+    _handler = null;
   }
 }
 
