@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:arena/core/services/agora_token_client.dart';
+import 'package:arena/core/services/native_lifecycle_events.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -364,6 +365,25 @@ final agoraStreamingServiceProvider = Provider<AgoraStreamingService>((ref) {
   final svc = AgoraStreamingService(
     tokenClient: ref.watch(agoraTokenClientProvider),
   );
-  ref.onDispose(svc.dispose);
+  // Quand le natif Android signale que MediaProjection est morte (user a
+  // tapé Stop sur la notif système, ou perm révoquée), on doit libérer
+  // Agora — sinon son AudioRecord retry en boucle (`AudioFlinger -22`)
+  // jusqu'à saturer le main thread et freezer l'overlay flottant.
+  final nativeEvents = ref.watch(nativeLifecycleEventsProvider);
+  final sub = nativeEvents.stream.listen((event) async {
+    if (event != NativeLifecycleEvent.mediaProjectionDied) return;
+    final state = svc.state;
+    // Pas de leave si on n'est pas connecté — évite un appel inutile au
+    // plugin Agora et un warning "engine not initialized".
+    if (state is AgoraIdle || state is AgoraLeft) return;
+    try {
+      await svc.leave();
+    } catch (e) {
+      debugPrint('[agora] leave on mediaProjectionDied failed: $e');
+    }
+  });
+  ref
+    ..onDispose(sub.cancel)
+    ..onDispose(svc.dispose);
   return svc;
 });

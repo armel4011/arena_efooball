@@ -73,6 +73,13 @@ class ArenaRecorderService : Service() {
         @Volatile
         private var pendingDrain: ((String?) -> Unit)? = null
 
+        // Fired when the MediaProjection dies (system "Stop" notif tap or
+        // permission revoked). Set by MainActivity once the Flutter engine
+        // is configured. Lets Dart libère Agora (qui détient un AudioRecord
+        // sur la même projection) — sinon boucle infinie AudioFlinger -22.
+        @Volatile
+        var onProjectionDied: (() -> Unit)? = null
+
         /**
          * Registers a callback that fires when the service finishes
          * stopping and the MP4 file is finalised. If the service
@@ -212,6 +219,10 @@ class ArenaRecorderService : Service() {
                 override fun onStop() {
                     Log.d(TAG, "MediaProjection.onStop — tearing down")
                     Handler(Looper.getMainLooper()).post {
+                        // Notify Dart first — Agora detains an AudioRecord
+                        // sur cette projection, sans leave() côté Dart son
+                        // thread interne retry en boucle (AudioFlinger -22).
+                        try { onProjectionDied?.invoke() } catch (_: Exception) {}
                         teardown()
                         stopForegroundCompat()
                         stopSelf()

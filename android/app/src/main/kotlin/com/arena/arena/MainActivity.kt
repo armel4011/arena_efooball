@@ -12,6 +12,7 @@ import android.provider.MediaStore
 import android.util.Log
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
 
@@ -32,10 +33,18 @@ class MainActivity : FlutterActivity() {
     private companion object {
         const val TAG = "ArenaNative"
         const val NATIVE_CHANNEL = "arena/native"
+        // EventChannel poussé Native → Dart pour signaler les évènements
+        // hors-flow (ex. MediaProjection arrêtée via la notif système).
+        const val NATIVE_EVENTS_CHANNEL = "arena/native/events"
         const val DOWNLOADS_SUBDIR = "ARENA"
         // request code for the MediaProjection permission dialog.
         const val RECORDING_PERMISSION_REQUEST = 0x4242
     }
+
+    // Sink courant de l'EventChannel — null quand aucun listener Dart
+    // n'est branché. Préservé entre les vies d'activité pour pouvoir
+    // pousser un évènement même si l'app est en background.
+    private var nativeEventSink: EventChannel.EventSink? = null
 
     // Pending state during the system MediaProjection dialog. The
     // Flutter call is async — we stash the result + the requested
@@ -126,6 +135,37 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+
+        EventChannel(flutterEngine.dartExecutor.binaryMessenger, NATIVE_EVENTS_CHANNEL)
+            .setStreamHandler(object : EventChannel.StreamHandler {
+                override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+                    nativeEventSink = events
+                }
+                override fun onCancel(arguments: Any?) {
+                    nativeEventSink = null
+                }
+            })
+
+        // Branche le callback de mort de MediaProjection vers l'EventChannel.
+        // Agora détient un AudioRecord sur la même projection ; sans signal
+        // Dart, son thread interne retry en boucle (AudioFlinger -22).
+        ArenaRecorderService.onProjectionDied = {
+            runOnUiThread {
+                try {
+                    nativeEventSink?.success(mapOf("event" to "media_projection_died"))
+                } catch (e: Exception) {
+                    Log.w(TAG, "nativeEventSink.success failed", e)
+                }
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        // Le service Kotlin peut survivre à l'activité — sans cleanup, son
+        // callback retient une ref vers une activité morte et fuit.
+        ArenaRecorderService.onProjectionDied = null
+        nativeEventSink = null
+        super.onDestroy()
     }
 
     // ──────────────────────────────────────────────────────────────
