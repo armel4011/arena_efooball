@@ -22,7 +22,7 @@
 // =============================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
-import { consumeBackupCode, verifyTotp } from "../_shared/totp.ts";
+import { consumeBackupCodeHashed, verifyTotp } from "../_shared/totp.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -49,7 +49,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!supabaseUrl || !anonKey || !serviceKey) {
+  const hmacKey = Deno.env.get("TOTP_BACKUP_HMAC_KEY");
+  if (!supabaseUrl || !anonKey || !serviceKey || !hmacKey) {
     return jsonResponse({ error: "server_misconfigured" }, 500);
   }
 
@@ -118,7 +119,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const stored = Array.isArray(profile.backup_codes)
       ? profile.backup_codes as string[]
       : [];
-    const result = consumeBackupCode(stored, code);
+    const result = await consumeBackupCodeHashed(stored, code, hmacKey);
     if (!result.matched) {
       return jsonResponse({ error: "invalid_code" }, 401);
     }

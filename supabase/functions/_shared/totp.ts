@@ -157,6 +157,13 @@ function timingSafeEqual(a: string, b: string): boolean {
 // ─────────────────────────────────────────────────────────────────────────────
 // Backup codes
 // ─────────────────────────────────────────────────────────────────────────────
+// Les codes sont générés en clair (40 bits d'entropie / code), retournés à
+// l'utilisateur UNE seule fois à la finalisation du setup, puis stockés en
+// DB sous forme de hash HMAC-SHA256 dérivé d'une clé secrète (env var
+// `TOTP_BACKUP_HMAC_KEY` côté EF). Cela rend le brute-force offline
+// impraticable même si la DB est compromise — l'attaquant aurait besoin
+// AUSSI de la clé HMAC pour reconstituer les hashes.
+// ─────────────────────────────────────────────────────────────────────────────
 const BACKUP_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // sans 0/O/1/I/L
 
 export function generateBackupCodes(count = 10, length = 8): string[] {
@@ -168,24 +175,86 @@ export function generateBackupCodes(count = 10, length = 8): string[] {
     for (let j = 0; j < length; j++) {
       code += BACKUP_ALPHABET[buf[j] % BACKUP_ALPHABET.length];
     }
-    // Format `XXXX-XXXX` pour la lisibilité.
     codes.push(`${code.slice(0, 4)}-${code.slice(4)}`);
   }
   return codes;
 }
 
+function hexFromBytes(bytes: Uint8Array): string {
+  let out = "";
+  for (const b of bytes) {
+    out += b.toString(16).padStart(2, "0");
+  }
+  return out;
+}
+
+function hexToBytes(hex: string): Uint8Array {
+  if (hex.length % 2 !== 0) {
+    throw new Error("invalid_hex_length");
+  }
+  const out = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < out.length; i++) {
+    out[i] = parseInt(hex.substr(i * 2, 2), 16);
+  }
+  return out;
+}
+
+function normalizeBackupCode(raw: string): string {
+  return raw.trim().toUpperCase();
+}
+
 /**
- * Compare un code backup proposé à la liste stockée. Si trouvé, retourne
- * la liste *sans* ce code (à re-écrire en DB pour single-use).
+ * Calcule HMAC-SHA256(hmacKey, normalize(code)) → hex 64 chars.
+ * `hmacKey` est attendu en hex (sortie de `openssl rand -hex 32`).
  */
-export function consumeBackupCode(
-  stored: string[],
+export async function hashBackupCode(
+  code: string,
+  hmacKey: string,
+): Promise<string> {
+  const keyBytes = hexToBytes(hmacKey);
+  const key = await crypto.subtle.importKey(
+    "raw",
+    keyBytes,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const msg = new TextEncoder().encode(normalizeBackupCode(code));
+  const sig = new Uint8Array(await crypto.subtle.sign("HMAC", key, msg));
+  return hexFromBytes(sig);
+}
+
+/**
+ * Hash en parallèle une liste de codes (au moment du setup).
+ */
+export async function hashBackupCodes(
+  codes: string[],
+  hmacKey: string,
+): Promise<string[]> {
+  return await Promise.all(codes.map((c) => hashBackupCode(c, hmacKey)));
+}
+
+/**
+ * Compare un code proposé à la liste de hashes stockés. Le code candidat
+ * est hashé puis comparé en constant-time. Si trouvé, retourne la liste
+ * *sans* ce hash (à re-écrire en DB pour single-use).
+ */
+export async function consumeBackupCodeHashed(
+  storedHashes: string[],
   proposed: string,
-): { matched: true; remaining: string[] } | { matched: false } {
-  const norm = proposed.trim().toUpperCase();
-  const idx = stored.findIndex((c) => c.toUpperCase() === norm);
-  if (idx < 0) return { matched: false };
-  const remaining = [...stored];
-  remaining.splice(idx, 1);
+  hmacKey: string,
+): Promise<
+  { matched: true; remaining: string[] } | { matched: false }
+> {
+  const candidate = await hashBackupCode(proposed, hmacKey);
+  let matchIdx = -1;
+  for (let i = 0; i < storedHashes.length; i++) {
+    if (timingSafeEqual(storedHashes[i], candidate)) {
+      matchIdx = i;
+    }
+  }
+  if (matchIdx < 0) return { matched: false };
+  const remaining = [...storedHashes];
+  remaining.splice(matchIdx, 1);
   return { matched: true, remaining };
 }
