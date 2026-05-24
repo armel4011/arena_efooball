@@ -143,6 +143,19 @@ class _RecordingOverlayButtonState extends State<RecordingOverlayButton> {
             color: ArenaColors.danger,
             onTap: () => _onMiniTap(RecordingOverlayMessages.askForfeitType),
           ),
+          // 5ᵉ mini "Live" en diagonale NE — visible seulement quand le
+          // main isolate signale que l'admin a flag ce match pour la
+          // diffusion (`liveAvailable` dans le tick payload). Tap → le
+          // coordinator stoppe le recording puis appelle joinAsBroadcaster
+          // (Android 14+ refuse 2 MediaProjection simultanées, cf. mémoire
+          // mediaprojection_constraints).
+          _MiniButton(
+            visible: _expanded && _tick.isLiveAvailable,
+            offset: const Offset(_miniRadius * 0.707, -_miniRadius * 0.707),
+            icon: Icons.live_tv,
+            color: ArenaColors.danger,
+            onTap: () => _onMiniTap(RecordingOverlayMessages.askGoLiveType),
+          ),
           // Main button stays on top so the cardinals don't capture
           // a touch aimed at the chrono.
           // HitTestBehavior.opaque is REQUIRED inside an overlay isolate:

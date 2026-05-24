@@ -18,6 +18,7 @@ enum OverlayAction {
   pause,
   forfeit,
   saveAndStop,
+  goLive,
   unknown,
 }
 
@@ -49,6 +50,11 @@ class RecordingOverlayController {
   // null while running. Set in pause(), cleared in resume() after rebasing
   // _startedAt so the next ticks resume from the same MM:SS.
   Duration? _pausedElapsed;
+  // Vrai quand l'admin a flag le match pour la diffusion live et que
+  // c'est self (vu côté Riverpod par MatchRecordingLifecycle qui pousse
+  // l'info via `setLiveAvailable`). Propagé dans chaque tick payload —
+  // l'overlay isolate affiche son 5ᵉ mini button "Live" en fonction.
+  bool _liveAvailable = false;
 
   /// Total length of a recording — must match `RecordingService.maxDuration`.
   /// Used by the overlay to flash a warning in the last 30 s.
@@ -56,6 +62,32 @@ class RecordingOverlayController {
 
   /// Stream of typed actions raised inside the overlay (long-press menu).
   Stream<OverlayAction> get actions => _actions.stream;
+
+  /// Bascule l'éligibilité streaming de la session courante. Appelé
+  /// depuis `MatchRecordingLifecycle` quand le provider
+  /// `matchStreamsByMatchProvider` détecte qu'une row stream
+  /// `is_public + is_active` ownée par self existe. L'overlay reçoit
+  /// le flag via le prochain tick et affiche/cache son 5ᵉ mini button.
+  // ignore: avoid_positional_boolean_parameters
+  void setLiveAvailable(bool value) {
+    if (_liveAvailable == value) return;
+    _liveAvailable = value;
+    // Push immédiat pour éviter d'attendre 1 s le prochain Timer tick.
+    final start = _startedAt;
+    if (start == null) return;
+    final elapsed = DateTime.now().difference(start);
+    final remaining = totalDuration - elapsed;
+    unawaited(
+      _platform.shareData(
+        RecordingOverlayMessages.tick(
+          elapsedSeconds: elapsed.inSeconds,
+          warning: remaining <= const Duration(seconds: 30),
+          paused: _pausedElapsed != null,
+          liveAvailable: _liveAvailable,
+        ),
+      ),
+    );
+  }
 
   /// Shows the floating button and starts the per-second tick.
   ///
@@ -87,6 +119,7 @@ class RecordingOverlayController {
     _tickTimer = null;
     _startedAt = null;
     _pausedElapsed = null;
+    _liveAvailable = false;
     await _listener?.cancel();
     _listener = null;
     await _portSub?.cancel();
@@ -185,6 +218,7 @@ class RecordingOverlayController {
         RecordingOverlayMessages.tick(
           elapsedSeconds: elapsed.inSeconds,
           warning: isWarning,
+          liveAvailable: _liveAvailable,
         ),
       );
     });
@@ -198,6 +232,7 @@ class RecordingOverlayController {
       RecordingOverlayMessages.askPauseType => OverlayAction.pause,
       RecordingOverlayMessages.askForfeitType => OverlayAction.forfeit,
       RecordingOverlayMessages.askSaveStopType => OverlayAction.saveAndStop,
+      RecordingOverlayMessages.askGoLiveType => OverlayAction.goLive,
       _ => OverlayAction.unknown,
     };
   }

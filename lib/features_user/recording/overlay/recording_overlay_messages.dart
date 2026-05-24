@@ -50,12 +50,26 @@ abstract final class RecordingOverlayMessages {
   /// MP4 to Download/ARENA/.
   static const String askSaveStopType = 'ask_save_stop';
 
+  /// `overlay → main` — l'utilisateur tape la 5ᵉ mini "Live" affichée
+  /// uniquement quand l'admin a flag ce match pour la diffusion.
+  /// Main stoppe d'abord le recording proprement (Android 14+ refuse
+  /// 2 MediaProjection simultanées, voir mémoire mediaprojection_
+  /// constraints), exporte le MP4 puis appelle joinAsBroadcaster.
+  static const String askGoLiveType = 'ask_go_live';
+
   /// Builds a tick payload. Kept as a free function so both ends
   /// agree on the JSON shape.
+  ///
+  /// `liveAvailable` propage l'éligibilité du match au streaming
+  /// (admin a flagué une row streams `is_public + is_active` ownée
+  /// par le user). L'overlay affiche/cache son 5ᵉ mini button "Live"
+  /// en fonction de ce flag — l'isolate overlay ne lit pas les
+  /// providers Riverpod du main directement.
   static Map<String, dynamic> tick({
     required int elapsedSeconds,
     required bool warning,
     bool paused = false,
+    bool liveAvailable = false,
   }) {
     final type = paused
         ? pausedType
@@ -65,6 +79,7 @@ abstract final class RecordingOverlayMessages {
     return {
       'type': type,
       'elapsed': elapsedSeconds,
+      'liveAvailable': liveAvailable,
     };
   }
 }
@@ -76,6 +91,7 @@ class OverlayTick {
     required this.elapsedSeconds,
     required this.isWarning,
     this.isPaused = false,
+    this.isLiveAvailable = false,
   });
 
   factory OverlayTick.fromMap(Object? raw) {
@@ -84,16 +100,19 @@ class OverlayTick {
     }
     final type = raw['type'];
     final elapsed = raw['elapsed'];
+    final liveAvailable = raw['liveAvailable'];
     return OverlayTick(
       elapsedSeconds: elapsed is int ? elapsed : 0,
       isWarning: type == RecordingOverlayMessages.warnType,
       isPaused: type == RecordingOverlayMessages.pausedType,
+      isLiveAvailable: liveAvailable == true,
     );
   }
 
   final int elapsedSeconds;
   final bool isWarning;
   final bool isPaused;
+  final bool isLiveAvailable;
 
   String get formatted {
     final m = (elapsedSeconds ~/ 60).toString().padLeft(2, '0');

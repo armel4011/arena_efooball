@@ -94,6 +94,13 @@ class MatchRecordingCoordinator {
   final _saveStopController = StreamController<String?>.broadcast();
   Stream<String?> get saveStopRequests => _saveStopController.stream;
 
+  // Fires quand l'overlay envoie `ask_go_live` (5ᵉ mini). Le
+  // coordinator a déjà fait stopCleanly() au moment où il push sur ce
+  // stream — il appartient au listener côté `MatchRecordingLifecycle`
+  // de récupérer le matchId et d'appeler `joinAsBroadcaster`.
+  final _goLiveController = StreamController<String>.broadcast();
+  Stream<String> get goLiveRequests => _goLiveController.stream;
+
   StreamSubscription<OverlayAction>? _actionsSub;
   Timer? _graceTimer;
 
@@ -185,6 +192,7 @@ class MatchRecordingCoordinator {
     await _stateController.close();
     await _focusController.close();
     await _saveStopController.close();
+    await _goLiveController.close();
   }
 
   // ─── Overlay action plumbing ───────────────────────────────────────────
@@ -221,6 +229,25 @@ class MatchRecordingCoordinator {
             debugPrint('[coordinator] saveAndStop failed: $e\n$st');
           }
           _saveStopController.add(null);
+        }
+      case OverlayAction.goLive:
+        // Bascule recording → live stream. Sur Android 14+ on ne peut
+        // pas tenir 2 MediaProjection simultanées (cf. mémoire
+        // mediaprojection_constraints) donc on stoppe d'abord le
+        // recording proprement puis on push le matchId au listener
+        // qui appellera `joinAsBroadcaster`.
+        await _bringToFront.bringArenaToFront();
+        final matchIdForLive = _matchId;
+        try {
+          await stopCleanly();
+        } catch (e, st) {
+          await Sentry.captureException(e, stackTrace: st);
+          if (kDebugMode) {
+            debugPrint('[coordinator] goLive stopCleanly failed: $e\n$st');
+          }
+        }
+        if (matchIdForLive != null && matchIdForLive.isNotEmpty) {
+          _goLiveController.add(matchIdForLive);
         }
       case OverlayAction.unknown:
         if (kDebugMode) {

@@ -1,13 +1,17 @@
 import 'dart:async';
 
+import 'package:arena/core/services/agora_streaming_service.dart';
 import 'package:arena/core/services/gallery_exporter.dart';
 import 'package:arena/core/services/match_recording_coordinator.dart';
 import 'package:arena/core/services/native_lifecycle_events.dart';
 import 'package:arena/core/services/permissions_service.dart';
+import 'package:arena/core/services/recording_overlay_controller.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/models/match_status.dart';
+import 'package:arena/data/models/match_stream.dart';
 import 'package:arena/data/repositories/match_repository.dart';
+import 'package:arena/data/repositories/match_stream_repository.dart';
 import 'package:arena/features_user/match_room/widgets/match_recording_actions_sheet.dart';
 import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform, kDebugMode, kIsWeb;
@@ -175,6 +179,37 @@ class _MatchRecordingLifecycleState
   /// 2 snackbars (saveAndStop déjà déclenché + transition CoordinatorStopped).
   String? _exportedPath;
 
+  /// Démarre Agora en broadcaster après que l'overlay a demandé "Live".
+  /// Le recording a déjà été stoppé par le coordinator (voir
+  /// `_onOverlayAction.goLive`), donc plus aucune MediaProjection
+  /// concurrente. Snackbar success / error pour informer le user.
+  Future<void> _goLive(String matchId) async {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    try {
+      await ref
+          .read(agoraStreamingServiceProvider)
+          .joinAsBroadcaster(matchId: matchId);
+      if (!mounted || messenger == null) return;
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Diffusion live démarrée.'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+    } catch (e, st) {
+      if (kDebugMode) {
+        debugPrint('[stream] goLive failed: $e\n$st');
+      }
+      if (!mounted || messenger == null) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Impossible de démarrer la diffusion : $e'),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
   /// Export auto vers `Téléchargements/ARENA/` dès que le coord transite
   /// vers `CoordinatorStopped` avec un path. Couvre tous les chemins de
   /// stop (notif système, auto-stop 25 min, terminal match status,
@@ -254,13 +289,37 @@ class _MatchRecordingLifecycleState
       return const SizedBox.shrink();
     }
 
-    // L'auto-start streaming Agora a été retiré (Android 14+ ne supporte
-    // pas 2 MediaProjection simultanées dans la même app — recording natif
-    // + screen share Agora se concurrencent et le système coupe l'une des
-    // deux après ~10 s). Le streaming reste disponible via le CTA manuel
-    // du `StartStreamingBanner` ; charge au user de choisir entre preuve
-    // anti-cheat (recording) et diffusion live (Agora) sur un match donné.
+    // Pas d'auto-start streaming (Android 14+ refuse 2 MediaProjection
+    // simultanées — cf. mémoire mediaprojection_constraints). En revanche
+    // on PROPAGE l'éligibilité streaming au controller overlay : si
+    // l'admin a flagué une row stream is_public + is_active ownée par
+    // self, le 5ᵉ mini "Live" devient visible sur le bouton flottant.
+    // Le tap sur ce mini déclenche `OverlayAction.goLive` côté
+    // coordinator : stopCleanly + push matchId via `goLiveRequests`,
+    // qu'on récupère ici pour appeler `joinAsBroadcaster`.
     ref
+      ..listen<AsyncValue<List<MatchStream>>>(
+        matchStreamsByMatchProvider(widget.match.id),
+        (_, next) {
+          final streams = next.valueOrNull;
+          final eligible = streams != null &&
+              streams.any(
+                (s) =>
+                    s.isPublic && s.isActive && s.playerId == widget.selfId,
+              );
+          ref
+              .read(recordingOverlayControllerProvider)
+              .setLiveAvailable(eligible);
+        },
+      )
+      ..listen<AsyncValue<String>>(
+        coordinatorGoLiveRequestsProvider,
+        (_, next) {
+          final matchId = next.valueOrNull;
+          if (matchId == null || matchId.isEmpty) return;
+          unawaited(_goLive(matchId));
+        },
+      )
       ..listen<AsyncValue<CoordinatorState>>(
         coordinatorStateProvider,
         (prev, next) {

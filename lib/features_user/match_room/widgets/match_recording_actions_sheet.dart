@@ -204,3 +204,11 @@ final coordinatorSaveStopRequestsProvider = StreamProvider<String?>((ref) {
   final coord = ref.watch(matchRecordingCoordinatorProvider);
   return coord.saveStopRequests;
 });
+
+/// Emits le matchId quand l'overlay envoie `ask_go_live` (5ᵉ mini) :
+/// le recording a déjà été stoppé par le coordinator, le listener
+/// dans `MatchRecordingLifecycle` doit appeler `joinAsBroadcaster`.
+final coordinatorGoLiveRequestsProvider = StreamProvider<String>((ref) {
+  final coord = ref.watch(matchRecordingCoordinatorProvider);
+  return coord.goLiveRequests;
+});
