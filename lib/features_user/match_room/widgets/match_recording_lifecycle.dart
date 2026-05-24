@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:arena/core/services/agora_streaming_service.dart';
 import 'package:arena/core/services/gallery_exporter.dart';
 import 'package:arena/core/services/match_recording_coordinator.dart';
 import 'package:arena/core/services/native_lifecycle_events.dart';
@@ -8,9 +7,7 @@ import 'package:arena/core/services/permissions_service.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/models/match_status.dart';
-import 'package:arena/data/models/match_stream.dart';
 import 'package:arena/data/repositories/match_repository.dart';
-import 'package:arena/data/repositories/match_stream_repository.dart';
 import 'package:arena/features_user/match_room/widgets/match_recording_actions_sheet.dart';
 import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform, kDebugMode, kIsWeb;
@@ -58,12 +55,6 @@ class _MatchRecordingLifecycleState
     extends ConsumerState<MatchRecordingLifecycle> {
   bool _startAttempted = false;
   String? _startError;
-
-  /// Vrai une fois qu'on a tenté de démarrer Agora pour ce match.
-  /// Anti-double-start si l'admin re-flippe la streams row entre temps.
-  /// Reset à false en cas d'échec — le banner StartStreamingBanner reste
-  /// dispo comme fallback retry.
-  bool _streamAutoStartAttempted = false;
 
   bool get _isPlayer =>
       widget.selfId != null &&
@@ -237,40 +228,6 @@ class _MatchRecordingLifecycleState
     );
   }
 
-  /// Démarre Agora en broadcaster si recording actif + streams row prête.
-  /// Idempotent — guard par `_streamAutoStartAttempted` + état du service
-  /// Agora. Reset le flag sur erreur pour laisser le banner servir de retry.
-  Future<void> _maybeAutoStartStream() async {
-    if (!_isAndroidNative) return;
-    if (!_isPlayer) return;
-    if (_streamAutoStartAttempted) return;
-
-    final coordState =
-        ref.read(coordinatorStateProvider).valueOrNull;
-    if (coordState is! CoordinatorRecording) return;
-
-    final streams =
-        ref.read(matchStreamsByMatchProvider(widget.match.id)).valueOrNull;
-    if (streams == null) return;
-    final mine = streams.where(
-      (s) => s.isPublic && s.isActive && s.playerId == widget.selfId,
-    );
-    if (mine.isEmpty) return;
-
-    _streamAutoStartAttempted = true;
-    try {
-      await ref.read(agoraStreamingServiceProvider).joinAsBroadcaster(
-            matchId: widget.match.id,
-          );
-    } catch (e, st) {
-      if (kDebugMode) {
-        debugPrint('[stream] auto-start failed: $e\n$st');
-      }
-      // Reset pour que le banner puisse servir de retry manuel.
-      if (mounted) _streamAutoStartAttempted = false;
-    }
-  }
-
   String _bundleErrorMessage(RecordingPermissionsBundle bundle) {
     final missing = <String>[];
     if (!bundle.microphone.isGranted) missing.add('micro');
@@ -297,24 +254,16 @@ class _MatchRecordingLifecycleState
       return const SizedBox.shrink();
     }
 
-    // Auto-démarre Agora dès que les 3 conditions sont remplies :
-    //   (1) coord = Recording (MediaProjection acceptée, capture active),
-    //   (2) une streams row est is_public + is_active + ownée par self
-    //       (l'admin a flagué le match pour la diffusion),
-    //   (3) on n'a pas encore tenté pour ce match.
-    // En cas d'échec on reset le flag pour que le banner StartStreamingBanner
-    // puisse servir de retry. Listen sur les 2 sources parce qu'on ne sait
-    // pas dans quel ordre les conditions deviennent vraies (l'admin peut
-    // flipper avant que le user entre, ou pendant que le user attend).
+    // L'auto-start streaming Agora a été retiré (Android 14+ ne supporte
+    // pas 2 MediaProjection simultanées dans la même app — recording natif
+    // + screen share Agora se concurrencent et le système coupe l'une des
+    // deux après ~10 s). Le streaming reste disponible via le CTA manuel
+    // du `StartStreamingBanner` ; charge au user de choisir entre preuve
+    // anti-cheat (recording) et diffusion live (Agora) sur un match donné.
     ref
-      ..listen<AsyncValue<List<MatchStream>>>(
-        matchStreamsByMatchProvider(widget.match.id),
-        (_, __) => _maybeAutoStartStream(),
-      )
       ..listen<AsyncValue<CoordinatorState>>(
         coordinatorStateProvider,
         (prev, next) {
-          _maybeAutoStartStream();
           _maybeAutoExportRecording(prev?.valueOrNull, next.valueOrNull);
         },
       )

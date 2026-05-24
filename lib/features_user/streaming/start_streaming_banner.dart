@@ -35,9 +35,9 @@ class StartStreamingBanner extends ConsumerWidget {
         final stream = publicStream.first;
         final isMine = myId != null && stream.playerId == myId;
 
-        // Cache le bouton "Démarrer" si Agora est déjà en train de
-        // joindre/joint le channel — sinon double-CTA confus pendant
-        // que l'auto-start de MatchRecordingLifecycle est en cours.
+        // Affiche "Tu diffuses ce match en direct" plutôt que "Démarrer"
+        // une fois qu'Agora a joint le channel. Empêche le user de
+        // re-tapper sur Démarrer (qui throw "already joined").
         final agoraState =
             ref.watch(agoraSessionStateProvider).valueOrNull;
         final alreadyStreaming =
