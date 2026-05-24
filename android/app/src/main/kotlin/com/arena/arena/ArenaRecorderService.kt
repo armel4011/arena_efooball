@@ -30,9 +30,10 @@ import java.io.File
  *   * 540p shorter dimension, aspect ratio preserved (so a 1080×2400
  *     portrait device produces ~ 544×1216, a 1920×1080 landscape
  *     game render produces 960×544),
- *   * 1200 kbps H.264 (≈225 MB for a 25-min match, sous le ceiling
- *     500 MB du bucket `match-recordings`),
- *   * 30 fps — fluidité suffisante pour relire un jeu d'eFootball
+ *   * 600 kbps H.264 (≈113 MB pour un match plein de 25 min, ~80 MB
+ *     pour 18 min — confortablement sous le ceiling 500 MB du bucket
+ *     `match-recordings` ET upload mobile money-friendly),
+ *   * 24 fps — fluidité suffisante pour relire un jeu d'eFootball
  *     ou FIFA Mobile et distinguer le score à l'écran.
  *
  * Lifecycle:
@@ -213,14 +214,13 @@ class ArenaRecorderService : Service() {
         recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
         recorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264)
         recorder.setVideoSize(outW, outH)
-        // 1.2 Mbps + 30 fps : qualité suffisante pour distinguer le
-        // score / les joueurs sur eFootball / FIFA Mobile sans
-        // dépasser ~225 MB par match de 25 min (ceiling bucket =
-        // 500 MB côté Supabase Storage). Précédente config
-        // 360p / 500 kbps / 24 fps était trop pixelisée pour servir
-        // de preuve anti-triche.
-        recorder.setVideoEncodingBitRate(1_200_000)
-        recorder.setVideoFrameRate(30)
+        // 600 kbps + 24 fps : compromis lisibilité / poids. 540p sans
+        // brouillard de macroblocks pour distinguer le HUD du jeu,
+        // ~113 MB max pour un match de 25 min, friendly pour upload
+        // sur réseau mobile money africain. Le précédent palier
+        // 1.2 Mbps / 30 fps donnait ~225 MB pour 25 min.
+        recorder.setVideoEncodingBitRate(600_000)
+        recorder.setVideoFrameRate(24)
         recorder.setOutputFile(outFile.absolutePath)
         recorder.prepare()
         mediaRecorder = recorder
