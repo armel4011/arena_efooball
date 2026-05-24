@@ -35,6 +35,14 @@ class StartStreamingBanner extends ConsumerWidget {
         final stream = publicStream.first;
         final isMine = myId != null && stream.playerId == myId;
 
+        // Cache le bouton "Démarrer" si Agora est déjà en train de
+        // joindre/joint le channel — sinon double-CTA confus pendant
+        // que l'auto-start de MatchRecordingLifecycle est en cours.
+        final agoraState =
+            ref.watch(agoraSessionStateProvider).valueOrNull;
+        final alreadyStreaming =
+            agoraState is AgoraJoining || agoraState is AgoraJoined;
+
         return Container(
           margin: const EdgeInsets.symmetric(
             horizontal: ArenaSpacing.md,
@@ -60,7 +68,9 @@ class StartStreamingBanner extends ConsumerWidget {
               Expanded(
                 child: Text(
                   isMine
-                      ? 'Ce match est sélectionné pour la diffusion live'
+                      ? (alreadyStreaming
+                          ? 'Tu diffuses ce match en direct'
+                          : 'Ce match est sélectionné pour la diffusion live')
                       : 'Match diffusé en direct',
                   style: ArenaText.body.copyWith(
                     color: ArenaColors.text,
@@ -68,7 +78,7 @@ class StartStreamingBanner extends ConsumerWidget {
                   ),
                 ),
               ),
-              if (isMine) ...[
+              if (isMine && !alreadyStreaming) ...[
                 const SizedBox(width: ArenaSpacing.sm),
                 ArenaButton(
                   label: 'Démarrer',

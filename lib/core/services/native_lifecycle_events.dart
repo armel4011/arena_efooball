@@ -53,3 +53,11 @@ final nativeLifecycleEventsProvider = Provider<NativeLifecycleEvents>((ref) {
   ref.onDispose(svc.dispose);
   return svc;
 });
+
+/// Wrapper StreamProvider pour pouvoir `ref.listen` les évènements
+/// natifs depuis un widget ConsumerStatefulWidget. Le service sous-jacent
+/// est déjà broadcast — pas de duplication d'écoute côté plugin natif.
+final nativeLifecycleEventsStreamProvider =
+    StreamProvider<NativeLifecycleEvent>((ref) {
+  return ref.watch(nativeLifecycleEventsProvider).stream;
+});

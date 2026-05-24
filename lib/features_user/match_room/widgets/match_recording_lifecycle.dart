@@ -1,10 +1,16 @@
+import 'dart:async';
+
+import 'package:arena/core/services/agora_streaming_service.dart';
 import 'package:arena/core/services/gallery_exporter.dart';
 import 'package:arena/core/services/match_recording_coordinator.dart';
+import 'package:arena/core/services/native_lifecycle_events.dart';
 import 'package:arena/core/services/permissions_service.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/models/match_status.dart';
+import 'package:arena/data/models/match_stream.dart';
 import 'package:arena/data/repositories/match_repository.dart';
+import 'package:arena/data/repositories/match_stream_repository.dart';
 import 'package:arena/features_user/match_room/widgets/match_recording_actions_sheet.dart';
 import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform, kDebugMode, kIsWeb;
@@ -52,6 +58,12 @@ class _MatchRecordingLifecycleState
     extends ConsumerState<MatchRecordingLifecycle> {
   bool _startAttempted = false;
   String? _startError;
+
+  /// Vrai une fois qu'on a tenté de démarrer Agora pour ce match.
+  /// Anti-double-start si l'admin re-flippe la streams row entre temps.
+  /// Reset à false en cas d'échec — le banner StartStreamingBanner reste
+  /// dispo comme fallback retry.
+  bool _streamAutoStartAttempted = false;
 
   bool get _isPlayer =>
       widget.selfId != null &&
@@ -168,6 +180,76 @@ class _MatchRecordingLifecycleState
     }
   }
 
+  /// Anti-double export — un seul export par session, sinon le user voit
+  /// 2 snackbars (saveAndStop déjà déclenché + transition CoordinatorStopped).
+  String? _exportedPath;
+
+  /// Export auto vers `Téléchargements/ARENA/` dès que le coord transite
+  /// vers `CoordinatorStopped` avec un path. Couvre tous les chemins de
+  /// stop (notif système, auto-stop 25 min, terminal match status,
+  /// forfait), pas seulement l'overlay "Enregistrer & arrêter".
+  void _maybeAutoExportRecording(
+    CoordinatorState? prev,
+    CoordinatorState? next,
+  ) {
+    if (next is! CoordinatorStopped) return;
+    final path = next.localRecordingPath;
+    if (path == null || path.isEmpty) return;
+    if (_exportedPath == path) return;
+    _exportedPath = path;
+    unawaited(_exportRecording(path));
+  }
+
+  Future<void> _exportRecording(String path) async {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final uri = await ref.read(galleryExporterProvider).saveVideoToGallery(path);
+    if (!mounted || messenger == null) return;
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          uri != null
+              ? 'Replay enregistré dans Téléchargements › ARENA'
+              : "Replay disponible dans le cache de l'app",
+        ),
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  /// Démarre Agora en broadcaster si recording actif + streams row prête.
+  /// Idempotent — guard par `_streamAutoStartAttempted` + état du service
+  /// Agora. Reset le flag sur erreur pour laisser le banner servir de retry.
+  Future<void> _maybeAutoStartStream() async {
+    if (!_isAndroidNative) return;
+    if (!_isPlayer) return;
+    if (_streamAutoStartAttempted) return;
+
+    final coordState =
+        ref.read(coordinatorStateProvider).valueOrNull;
+    if (coordState is! CoordinatorRecording) return;
+
+    final streams =
+        ref.read(matchStreamsByMatchProvider(widget.match.id)).valueOrNull;
+    if (streams == null) return;
+    final mine = streams.where(
+      (s) => s.isPublic && s.isActive && s.playerId == widget.selfId,
+    );
+    if (mine.isEmpty) return;
+
+    _streamAutoStartAttempted = true;
+    try {
+      await ref.read(agoraStreamingServiceProvider).joinAsBroadcaster(
+            matchId: widget.match.id,
+          );
+    } catch (e, st) {
+      if (kDebugMode) {
+        debugPrint('[stream] auto-start failed: $e\n$st');
+      }
+      // Reset pour que le banner puisse servir de retry manuel.
+      if (mounted) _streamAutoStartAttempted = false;
+    }
+  }
+
   String _bundleErrorMessage(RecordingPermissionsBundle bundle) {
     final missing = <String>[];
     if (!bundle.microphone.isGranted) missing.add('micro');
@@ -194,42 +276,52 @@ class _MatchRecordingLifecycleState
       return const SizedBox.shrink();
     }
 
-    // Open the actions sheet when the overlay sends a focusMain (tap on
-    // the floating button).
-    // Mini-button "Enregistrer et arrêter" — export MP4 + snackbar. The
-    // coordinator already called stopCleanly() before publishing on the
-    // stream, so we just hand the file path to the gallery exporter.
+    // Auto-démarre Agora dès que les 3 conditions sont remplies :
+    //   (1) coord = Recording (MediaProjection acceptée, capture active),
+    //   (2) une streams row est is_public + is_active + ownée par self
+    //       (l'admin a flagué le match pour la diffusion),
+    //   (3) on n'a pas encore tenté pour ce match.
+    // En cas d'échec on reset le flag pour que le banner StartStreamingBanner
+    // puisse servir de retry. Listen sur les 2 sources parce qu'on ne sait
+    // pas dans quel ordre les conditions deviennent vraies (l'admin peut
+    // flipper avant que le user entre, ou pendant que le user attend).
     ref
+      ..listen<AsyncValue<List<MatchStream>>>(
+        matchStreamsByMatchProvider(widget.match.id),
+        (_, __) => _maybeAutoStartStream(),
+      )
+      ..listen<AsyncValue<CoordinatorState>>(
+        coordinatorStateProvider,
+        (prev, next) {
+          _maybeAutoStartStream();
+          _maybeAutoExportRecording(prev?.valueOrNull, next.valueOrNull);
+        },
+      )
+      // MediaProjection morte (user a tapé Stop sur la notif système, ou
+      // perm révoquée). Le service Kotlin a déjà teardown — on doit juste
+      // propager au coord pour qu'il flippe son état + déclencher l'export.
+      ..listen<AsyncValue<NativeLifecycleEvent>>(
+        nativeLifecycleEventsStreamProvider,
+        (_, next) {
+          if (next.valueOrNull != NativeLifecycleEvent.mediaProjectionDied) {
+            return;
+          }
+          final coord = ref.read(matchRecordingCoordinatorProvider);
+          final s = coord.state;
+          if (s is CoordinatorRecording || s is CoordinatorPaused) {
+            unawaited(coord.stopCleanly());
+          }
+        },
+      )
+      // Open the actions sheet when the overlay sends a focusMain (tap on
+      // the floating button). L'export MP4 vers Téléchargements/ARENA est
+      // désormais déclenché par la transition CoordinatorRecording →
+      // CoordinatorStopped (`_maybeAutoExportRecording` ci-dessus), donc
+      // valable pour TOUS les chemins de stop : saveAndStop overlay, stop
+      // via notif système Android, auto-stop 25 min, match terminé.
       ..listen(coordinatorFocusRequestsProvider, (_, __) {
         if (!mounted) return;
         MatchRecordingActionsSheet.show(context);
-      })
-      ..listen(coordinatorSaveStopRequestsProvider, (_, next) async {
-        if (!mounted) return;
-        final localPath = next.value;
-        final messenger = ScaffoldMessenger.of(context);
-        if (localPath == null || localPath.isEmpty) {
-          messenger.showSnackBar(
-            const SnackBar(
-              content: Text('Arrêt OK — aucun fichier à exporter'),
-              duration: Duration(seconds: 3),
-            ),
-          );
-          return;
-        }
-        final uri = await ref
-            .read(galleryExporterProvider)
-            .saveVideoToGallery(localPath);
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              uri != null
-                  ? 'Replay enregistré dans Téléchargements › ARENA'
-                  : "Replay disponible dans le cache de l'app",
-            ),
-            duration: const Duration(seconds: 4),
-          ),
-        );
       });
 
     if (_startError != null) {

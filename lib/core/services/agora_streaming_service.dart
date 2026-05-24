@@ -361,6 +361,14 @@ class _DefaultAgoraEnginePlatform implements AgoraEnginePlatform {
   }
 }
 
+/// Stream l'état du service Agora vers Riverpod — utilisé par les UI
+/// qui doivent réagir au join/leave (ex. masquer le bouton "Démarrer"
+/// du banner live une fois la session établie).
+final agoraSessionStateProvider = StreamProvider<AgoraSessionState>((ref) {
+  final svc = ref.watch(agoraStreamingServiceProvider);
+  return svc.stateStream;
+});
+
 final agoraStreamingServiceProvider = Provider<AgoraStreamingService>((ref) {
   final svc = AgoraStreamingService(
     tokenClient: ref.watch(agoraTokenClientProvider),
