@@ -102,6 +102,14 @@ class MatchRecordingCoordinator {
   String? _playerId;
   String? _opponentId;
 
+  // Guard contre les `stopCleanly()` concurrents. Sans ça, l'overlay
+  // « Enregistrer et arrêter » et le listener `mediaProjectionDied`
+  // (déclenché par le teardown natif du recording lui-même) appellent
+  // tous les deux stop() en parallèle ; le 2ᵉ trouve `RecordingService`
+  // en état Stopping → retourne null → émet `CoordinatorStopped(path=null)`
+  // qui écrase l'émission valide du 1ᵉʳ.
+  Future<String?>? _stoppingInFlight;
+
   CoordinatorState get state => _state;
   Stream<CoordinatorState> get stateStream => _stateController.stream;
 
@@ -133,8 +141,25 @@ class MatchRecordingCoordinator {
   /// Normal stop — the match ended on its own (score validated, etc.).
   ///
   /// Returns the local path of the recorded file so the caller can
-  /// hand it to `RecordingUploader`.
+  /// hand it to `RecordingUploader`. Idempotent : un 2ᵉ appel concurrent
+  /// attend le résultat du 1ᵉʳ au lieu de relancer un stop() qui
+  /// retournerait null (RecordingService en état Stopping).
   Future<String?> stopCleanly() async {
+    final pending = _stoppingInFlight;
+    if (pending != null) return pending;
+    if (_state is! CoordinatorRecording && _state is! CoordinatorPaused) {
+      return null;
+    }
+    final future = _doStopCleanly();
+    _stoppingInFlight = future;
+    try {
+      return await future;
+    } finally {
+      _stoppingInFlight = null;
+    }
+  }
+
+  Future<String?> _doStopCleanly() async {
     final result = await _recording.stop();
     await _overlay.stop();
     _graceTimer?.cancel();

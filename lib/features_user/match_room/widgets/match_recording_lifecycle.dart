@@ -192,17 +192,38 @@ class _MatchRecordingLifecycleState
     CoordinatorState? prev,
     CoordinatorState? next,
   ) {
-    if (next is! CoordinatorStopped) return;
+    if (next is! CoordinatorStopped) {
+      if (kDebugMode) {
+        debugPrint('[recording] autoExport skip — state=${next.runtimeType}');
+      }
+      return;
+    }
     final path = next.localRecordingPath;
-    if (path == null || path.isEmpty) return;
-    if (_exportedPath == path) return;
+    if (path == null || path.isEmpty) {
+      if (kDebugMode) {
+        debugPrint('[recording] autoExport skip — Stopped reached but path=$path');
+      }
+      return;
+    }
+    if (_exportedPath == path) {
+      if (kDebugMode) {
+        debugPrint('[recording] autoExport skip — already exported $path');
+      }
+      return;
+    }
     _exportedPath = path;
+    if (kDebugMode) {
+      debugPrint('[recording] autoExport firing for $path');
+    }
     unawaited(_exportRecording(path));
   }
 
   Future<void> _exportRecording(String path) async {
     final messenger = ScaffoldMessenger.maybeOf(context);
     final uri = await ref.read(galleryExporterProvider).saveVideoToGallery(path);
+    if (kDebugMode) {
+      debugPrint('[recording] saveVideoToGallery uri=$uri mounted=$mounted');
+    }
     if (!mounted || messenger == null) return;
     messenger.showSnackBar(
       SnackBar(

@@ -1,6 +1,6 @@
-import 'package:arena/core/services/gallery_exporter.dart';
 import 'package:arena/core/services/match_recording_coordinator.dart';
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -32,7 +32,6 @@ class MatchRecordingActionsSheet extends ConsumerWidget {
     final asyncState = ref.watch(coordinatorStateProvider);
     final state = asyncState.value ?? const CoordinatorIdle();
     final coord = ref.read(matchRecordingCoordinatorProvider);
-    final gallery = ref.read(galleryExporterProvider);
 
     final isPaused = state is CoordinatorPaused;
     final isLive = state is CoordinatorRecording || state is CoordinatorPaused;
@@ -96,7 +95,7 @@ class MatchRecordingActionsSheet extends ConsumerWidget {
                 icon: Icons.save_alt,
                 color: ArenaColors.success,
                 label: 'Enregistrer et arrêter',
-                onTap: () => _onStopAndExport(context, coord, gallery),
+                onTap: () => _onStopAndExport(context, coord),
               ),
               _ActionTile(
                 icon: Icons.stop_circle_outlined,
@@ -127,28 +126,15 @@ class MatchRecordingActionsSheet extends ConsumerWidget {
   Future<void> _onStopAndExport(
     BuildContext context,
     MatchRecordingCoordinator coord,
-    GalleryExporter gallery,
   ) async {
-    final messenger = ScaffoldMessenger.of(context);
     Navigator.of(context).pop();
-    String? localPath;
     try {
-      localPath = await coord.stopCleanly();
-    } catch (e) {
-      debugPrint('[recording] stopAndExport stopCleanly failed: $e');
+      await coord.stopCleanly();
+    } catch (e, st) {
+      if (kDebugMode) {
+        debugPrint('[recording] stopAndExport stopCleanly failed: $e\n$st');
+      }
     }
-    if (localPath == null || localPath.isEmpty) return;
-    final uri = await gallery.saveVideoToGallery(localPath);
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          uri != null
-              ? 'Replay enregistré dans Téléchargements › ARENA'
-              : "Replay disponible dans le cache de l'app",
-        ),
-        duration: const Duration(seconds: 4),
-      ),
-    );
   }
 
   Color _stateDotColor(CoordinatorState s) => switch (s) {
