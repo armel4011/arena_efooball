@@ -8,6 +8,7 @@ import 'package:arena/data/repositories/match_stats_repository.dart';
 import 'package:arena/data/repositories/referral_repository.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_card.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/profile/avatar_palette.dart';
 import 'package:flutter/material.dart';
@@ -28,29 +29,31 @@ class PlayerProfilePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(currentProfileProvider);
 
-    return profileAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(ArenaSpacing.lg),
-          child: Text(
-            'Erreur: $e',
-            textAlign: TextAlign.center,
-            style: ArenaText.body.copyWith(color: ArenaColors.danger),
+    return ArenaScreenBackground(
+      child: profileAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(ArenaSpacing.lg),
+            child: Text(
+              'Erreur: $e',
+              textAlign: TextAlign.center,
+              style: ArenaText.body.copyWith(color: ArenaColors.danger),
+            ),
           ),
         ),
+        data: (profile) {
+          if (profile == null) {
+            return Center(
+              child: Text(
+                'Profil indisponible. Reconnecte-toi.',
+                style: ArenaText.bodyMuted,
+              ),
+            );
+          }
+          return _ProfileBody(profile: profile);
+        },
       ),
-      data: (profile) {
-        if (profile == null) {
-          return Center(
-            child: Text(
-              'Profil indisponible. Reconnecte-toi.',
-              style: ArenaText.bodyMuted,
-            ),
-          );
-        }
-        return _ProfileBody(profile: profile);
-      },
     );
   }
 }

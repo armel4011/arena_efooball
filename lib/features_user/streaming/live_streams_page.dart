@@ -4,6 +4,7 @@ import 'package:arena/data/repositories/match_stream_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
 import 'package:arena/features_shared/widgets/arena_card.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -26,33 +27,35 @@ class LiveStreamsPage extends ConsumerWidget {
     return Scaffold(
       backgroundColor: ArenaColors.void_,
       appBar: const ArenaAppBar(title: 'Lives en cours'),
-      body: streamsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(
-          child: Text(
-            'Erreur: $e',
-            style: ArenaText.body.copyWith(color: ArenaColors.danger),
+      body: ArenaScreenBackground(
+        child: streamsAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Center(
+            child: Text(
+              'Erreur: $e',
+              style: ArenaText.body.copyWith(color: ArenaColors.danger),
+            ),
           ),
-        ),
-        data: (streams) {
-          if (streams.isEmpty) {
-            return const EmptyState(
-              title: 'Aucun match en direct',
-              description:
-                  "Les diffusions live apparaissent ici dès qu'un admin "
-                  'sélectionne un match pour la diffusion.',
-              icon: Icons.live_tv_outlined,
+          data: (streams) {
+            if (streams.isEmpty) {
+              return const EmptyState(
+                title: 'Aucun match en direct',
+                description:
+                    "Les diffusions live apparaissent ici dès qu'un admin "
+                    'sélectionne un match pour la diffusion.',
+                icon: Icons.live_tv_outlined,
+              );
+            }
+            return ListView.separated(
+              padding: const EdgeInsets.all(ArenaSpacing.md),
+              itemCount: streams.length,
+              separatorBuilder: (_, __) =>
+                  const SizedBox(height: ArenaSpacing.sm),
+              itemBuilder: (context, index) =>
+                  _LiveStreamCard(stream: streams[index]),
             );
-          }
-          return ListView.separated(
-            padding: const EdgeInsets.all(ArenaSpacing.md),
-            itemCount: streams.length,
-            separatorBuilder: (_, __) =>
-                const SizedBox(height: ArenaSpacing.sm),
-            itemBuilder: (context, index) =>
-                _LiveStreamCard(stream: streams[index]),
-          );
-        },
+          },
+        ),
       ),
     );
   }

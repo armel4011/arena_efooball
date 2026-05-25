@@ -4,6 +4,7 @@ import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/models/match_status.dart';
 import 'package:arena/data/repositories/match_repository.dart';
 import 'package:arena/features_shared/widgets/arena_card.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:arena/features_shared/widgets/error_state.dart';
 import 'package:flutter/material.dart';
@@ -28,49 +29,51 @@ class BracketView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(competitionMatchesProvider(competitionId));
 
-    return async.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => ErrorState(
-        description: e.toString(),
-        onRetry: () =>
-            ref.invalidate(competitionMatchesProvider(competitionId)),
-      ),
-      data: (matches) {
-        if (matches.isEmpty) {
-          return const EmptyState(
-            icon: Icons.account_tree_outlined,
-            title: 'Bracket pas encore généré',
-            description: "Le bracket s'affichera ici dès que l'admin aura"
-                ' clôturé les inscriptions et lancé le tirage.',
-          );
-        }
+    return ArenaScreenBackground(
+      child: async.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => ErrorState(
+          description: e.toString(),
+          onRetry: () =>
+              ref.invalidate(competitionMatchesProvider(competitionId)),
+        ),
+        data: (matches) {
+          if (matches.isEmpty) {
+            return const EmptyState(
+              icon: Icons.account_tree_outlined,
+              title: 'Bracket pas encore généré',
+              description: "Le bracket s'affichera ici dès que l'admin aura"
+                  ' clôturé les inscriptions et lancé le tirage.',
+            );
+          }
 
-        final byRound = <int, List<ArenaMatch>>{};
-        for (final m in matches) {
-          final r = m.round ?? 0;
-          (byRound[r] ??= []).add(m);
-        }
-        final rounds = byRound.keys.toList()..sort();
+          final byRound = <int, List<ArenaMatch>>{};
+          for (final m in matches) {
+            final r = m.round ?? 0;
+            (byRound[r] ??= []).add(m);
+          }
+          final rounds = byRound.keys.toList()..sort();
 
-        return RefreshIndicator(
-          onRefresh: () async {
-            ref.invalidate(competitionMatchesProvider(competitionId));
-            await ref.read(competitionMatchesProvider(competitionId).future);
-          },
-          child: ListView.builder(
-            padding: const EdgeInsets.all(ArenaSpacing.lg),
-            itemCount: rounds.length,
-            itemBuilder: (context, i) {
-              final round = rounds[i];
-              final items = byRound[round]!;
-              return _RoundSection(
-                title: _roundLabel(round, rounds.length, items.length),
-                matches: items,
-              );
+          return RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(competitionMatchesProvider(competitionId));
+              await ref.read(competitionMatchesProvider(competitionId).future);
             },
-          ),
-        );
-      },
+            child: ListView.builder(
+              padding: const EdgeInsets.all(ArenaSpacing.lg),
+              itemCount: rounds.length,
+              itemBuilder: (context, i) {
+                final round = rounds[i];
+                final items = byRound[round]!;
+                return _RoundSection(
+                  title: _roundLabel(round, rounds.length, items.length),
+                  matches: items,
+                );
+              },
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -146,8 +149,7 @@ class _MatchRow extends StatelessWidget {
           _PlayerLine(
             playerId: match.player1Id,
             score: match.score1,
-            isWinner:
-                match.hasResult && match.winnerId == match.player1Id,
+            isWinner: match.hasResult && match.winnerId == match.player1Id,
           ),
           const SizedBox(height: 4),
           Text(
@@ -161,8 +163,7 @@ class _MatchRow extends StatelessWidget {
           _PlayerLine(
             playerId: match.player2Id,
             score: match.score2,
-            isWinner:
-                match.hasResult && match.winnerId == match.player2Id,
+            isWinner: match.hasResult && match.winnerId == match.player2Id,
           ),
         ],
       ),
@@ -216,9 +217,8 @@ class _PlayerLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pid = playerId;
-    final label = pid == null
-        ? 'À déterminer'
-        : 'Joueur ${pid.substring(0, 6)}…';
+    final label =
+        pid == null ? 'À déterminer' : 'Joueur ${pid.substring(0, 6)}…';
 
     return Row(
       children: [

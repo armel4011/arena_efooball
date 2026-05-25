@@ -1,5 +1,6 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
@@ -29,58 +30,60 @@ class AboutPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const ArenaAppBar(title: 'À propos'),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(ArenaSpacing.lg),
-          children: [
-            const SizedBox(height: ArenaSpacing.lg),
-            const Center(child: ArenaLogo(fontSize: 48, letterSpacing: 6))
-                .animate()
-                .fadeIn(duration: ArenaDurations.long)
-                .slideY(
-                  begin: -0.1,
-                  end: 0,
-                  curve: Curves.easeOutCubic,
+      body: ArenaScreenBackground(
+        child: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.all(ArenaSpacing.lg),
+            children: [
+              const SizedBox(height: ArenaSpacing.lg),
+              const Center(child: ArenaLogo(fontSize: 48, letterSpacing: 6))
+                  .animate()
+                  .fadeIn(duration: ArenaDurations.long)
+                  .slideY(
+                    begin: -0.1,
+                    end: 0,
+                    curve: Curves.easeOutCubic,
+                  ),
+              const SizedBox(height: 4),
+              Center(
+                child: Text(
+                  'e-sport panafricain',
+                  style: ArenaText.serifTagline,
                 ),
-            const SizedBox(height: 4),
-            Center(
-              child: Text(
-                'e-sport panafricain',
-                style: ArenaText.serifTagline,
               ),
-            ),
-            const SizedBox(height: ArenaSpacing.md),
-            Center(
-              child: Text(
-                'v$_version · build $_build',
-                style: ArenaText.monoSmall,
+              const SizedBox(height: ArenaSpacing.md),
+              Center(
+                child: Text(
+                  'v$_version · build $_build',
+                  style: ArenaText.monoSmall,
+                ),
               ),
-            ),
-            const SizedBox(height: ArenaSpacing.xl),
-            const _MissionCard()
-                .animate(delay: 150.ms)
-                .fadeIn(duration: ArenaDurations.medium),
-            const SizedBox(height: ArenaSpacing.lg),
-            Text('LIENS', style: ArenaText.inputLabel),
-            const SizedBox(height: ArenaSpacing.sm),
-            const _LinksCard(links: _links)
-                .animate(delay: 250.ms)
-                .fadeIn(duration: ArenaDurations.medium),
-            const SizedBox(height: ArenaSpacing.lg),
-            Center(
-              child: Text(
-                '© 2026 ARENA SAS',
-                style: ArenaText.small,
+              const SizedBox(height: ArenaSpacing.xl),
+              const _MissionCard()
+                  .animate(delay: 150.ms)
+                  .fadeIn(duration: ArenaDurations.medium),
+              const SizedBox(height: ArenaSpacing.lg),
+              Text('LIENS', style: ArenaText.inputLabel),
+              const SizedBox(height: ArenaSpacing.sm),
+              const _LinksCard(links: _links)
+                  .animate(delay: 250.ms)
+                  .fadeIn(duration: ArenaDurations.medium),
+              const SizedBox(height: ArenaSpacing.lg),
+              Center(
+                child: Text(
+                  '© 2026 ARENA SAS',
+                  style: ArenaText.small,
+                ),
               ),
-            ),
-            const SizedBox(height: 4),
-            Center(
-              child: Text(
-                'Made in Cameroun 🇨🇲',
-                style: ArenaText.small,
+              const SizedBox(height: 4),
+              Center(
+                child: Text(
+                  'Made in Cameroun 🇨🇲',
+                  style: ArenaText.small,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

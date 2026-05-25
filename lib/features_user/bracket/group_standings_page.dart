@@ -3,6 +3,7 @@ import 'package:arena/data/models/profile.dart';
 import 'package:arena/data/models/standings.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:arena/data/repositories/standings_repository.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:arena/features_shared/widgets/error_state.dart';
 import 'package:flutter/material.dart';
@@ -22,49 +23,52 @@ class GroupStandingsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(competitionStandingsProvider(competitionId));
 
-    return async.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => ErrorState(
-        description: e.toString(),
-        onRetry: () =>
-            ref.invalidate(competitionStandingsProvider(competitionId)),
-      ),
-      data: (buckets) {
-        if (buckets.isEmpty) {
-          return const EmptyState(
-            icon: Icons.table_chart_outlined,
-            title: 'Pas encore de classement',
-            description: "Le classement s'affichera dès que les premières"
-                ' rencontres seront jouées.',
+    return ArenaScreenBackground(
+      child: async.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => ErrorState(
+          description: e.toString(),
+          onRetry: () =>
+              ref.invalidate(competitionStandingsProvider(competitionId)),
+        ),
+        data: (buckets) {
+          if (buckets.isEmpty) {
+            return const EmptyState(
+              icon: Icons.table_chart_outlined,
+              title: 'Pas encore de classement',
+              description: "Le classement s'affichera dès que les premières"
+                  ' rencontres seront jouées.',
+            );
+          }
+          // Item 5 prompt 2026-05-19 — résout les profils des joueurs
+          // une fois pour toutes les groupes (un seul round-trip) au lieu
+          // d'afficher "Joueur abc123…" comme avant.
+          final ids = <String>{
+            for (final b in buckets)
+              for (final r in b.rows) r.profileId,
+          };
+          final key = (ids.toList()..sort()).join(',');
+          final peers = key.isEmpty
+              ? const <String, Profile>{}
+              : ref.watch(profilesByIdsProvider(key)).maybeWhen(
+                    data: (m) => m,
+                    orElse: () => const <String, Profile>{},
+                  );
+          return RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(competitionStandingsProvider(competitionId));
+              await ref
+                  .read(competitionStandingsProvider(competitionId).future);
+            },
+            child: ListView.builder(
+              padding: const EdgeInsets.all(ArenaSpacing.lg),
+              itemCount: buckets.length,
+              itemBuilder: (_, i) =>
+                  _GroupTable(bucket: buckets[i], peers: peers),
+            ),
           );
-        }
-        // Item 5 prompt 2026-05-19 — résout les profils des joueurs
-        // une fois pour toutes les groupes (un seul round-trip) au lieu
-        // d'afficher "Joueur abc123…" comme avant.
-        final ids = <String>{
-          for (final b in buckets) for (final r in b.rows) r.profileId,
-        };
-        final key = (ids.toList()..sort()).join(',');
-        final peers = key.isEmpty
-            ? const <String, Profile>{}
-            : ref.watch(profilesByIdsProvider(key)).maybeWhen(
-                  data: (m) => m,
-                  orElse: () => const <String, Profile>{},
-                );
-        return RefreshIndicator(
-          onRefresh: () async {
-            ref.invalidate(competitionStandingsProvider(competitionId));
-            await ref
-                .read(competitionStandingsProvider(competitionId).future);
-          },
-          child: ListView.builder(
-            padding: const EdgeInsets.all(ArenaSpacing.lg),
-            itemCount: buckets.length,
-            itemBuilder: (_, i) =>
-                _GroupTable(bucket: buckets[i], peers: peers),
-          ),
-        );
-      },
+        },
+      ),
     );
   }
 }
@@ -141,9 +145,7 @@ class _GroupTable extends StatelessWidget {
           Text(
             '$pos',
             style: ArenaTypography.labelLarge.copyWith(
-              color: isLeader
-                  ? ArenaColors.warning
-                  : ArenaColors.textMuted,
+              color: isLeader ? ArenaColors.warning : ArenaColors.textMuted,
               fontSize: 12,
             ),
           ),

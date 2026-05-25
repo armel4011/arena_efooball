@@ -4,6 +4,7 @@ import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_card.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/profile/avatar_palette.dart';
@@ -128,90 +129,91 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const ArenaAppBar(title: 'Modifier le profil'),
-      body: SafeArea(
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.all(ArenaSpacing.lg),
-            children: [
-              ArenaTextField(
-                label: "Nom d'utilisateur",
-                controller: _usernameCtrl,
-                maxLength: 20,
-                textInputAction: TextInputAction.next,
-                validator: (v) {
-                  final value = v?.trim() ?? '';
-                  if (value.length < 3) return 'Minimum 3 caractères';
-                  if (value.length > 20) return 'Maximum 20 caractères';
-                  return null;
-                },
-              ),
-              const SizedBox(height: ArenaSpacing.lg),
-              Text('COULEUR AVATAR', style: ArenaTypography.labelMedium),
-              const SizedBox(height: ArenaSpacing.sm),
-              _ColorPicker(
-                selected: _avatarColor,
-                onChanged: (v) => setState(() => _avatarColor = v),
-              ),
-              const SizedBox(height: ArenaSpacing.lg),
-              Text('PAYS', style: ArenaTypography.labelMedium),
-              const SizedBox(height: ArenaSpacing.sm),
-              ArenaCard(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: ArenaSpacing.md,
-                  vertical: 4,
+      body: ArenaScreenBackground(
+        child: SafeArea(
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              padding: const EdgeInsets.all(ArenaSpacing.lg),
+              children: [
+                ArenaTextField(
+                  label: "Nom d'utilisateur",
+                  controller: _usernameCtrl,
+                  maxLength: 20,
+                  textInputAction: TextInputAction.next,
+                  validator: (v) {
+                    final value = v?.trim() ?? '';
+                    if (value.length < 3) return 'Minimum 3 caractères';
+                    if (value.length > 20) return 'Maximum 20 caractères';
+                    return null;
+                  },
                 ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: _countryCode,
-                    isExpanded: true,
-                    dropdownColor: ArenaColors.surface,
-                    style: ArenaTypography.bodyMedium,
-                    items: [
-                      for (final c in kSupportedCountries)
-                        DropdownMenuItem(
-                          value: c.code,
-                          child: Text('${c.flag}  ${c.name}'),
-                        ),
-                    ],
-                    onChanged: (v) {
-                      if (v != null) setState(() => _countryCode = v);
-                    },
+                const SizedBox(height: ArenaSpacing.lg),
+                Text('COULEUR AVATAR', style: ArenaTypography.labelMedium),
+                const SizedBox(height: ArenaSpacing.sm),
+                _ColorPicker(
+                  selected: _avatarColor,
+                  onChanged: (v) => setState(() => _avatarColor = v),
+                ),
+                const SizedBox(height: ArenaSpacing.lg),
+                Text('PAYS', style: ArenaTypography.labelMedium),
+                const SizedBox(height: ArenaSpacing.sm),
+                ArenaCard(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: ArenaSpacing.md,
+                    vertical: 4,
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _countryCode,
+                      isExpanded: true,
+                      dropdownColor: ArenaColors.surface,
+                      style: ArenaTypography.bodyMedium,
+                      items: [
+                        for (final c in kSupportedCountries)
+                          DropdownMenuItem(
+                            value: c.code,
+                            child: Text('${c.flag}  ${c.name}'),
+                          ),
+                      ],
+                      onChanged: (v) {
+                        if (v != null) setState(() => _countryCode = v);
+                      },
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: ArenaSpacing.lg),
-              ArenaTextField(
-                label: 'WHATSAPP (${dialCodeFor(_countryCode)})',
-                hint: 'Ex. 07 07 07 07 07',
-                helper:
-                    'Le code pays ${dialCodeFor(_countryCode)} est ajouté'
-                    ' automatiquement.',
-                controller: _whatsappCtrl,
-                keyboardType: TextInputType.phone,
-                textInputAction: TextInputAction.done,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[\d\s]')),
+                const SizedBox(height: ArenaSpacing.lg),
+                ArenaTextField(
+                  label: 'WHATSAPP (${dialCodeFor(_countryCode)})',
+                  hint: 'Ex. 07 07 07 07 07',
+                  helper: 'Le code pays ${dialCodeFor(_countryCode)} est ajouté'
+                      ' automatiquement.',
+                  controller: _whatsappCtrl,
+                  keyboardType: TextInputType.phone,
+                  textInputAction: TextInputAction.done,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[\d\s]')),
+                  ],
+                  errorText: _isWhatsappValid ? null : 'Numéro invalide.',
+                ),
+                if (_error != null) ...[
+                  const SizedBox(height: ArenaSpacing.md),
+                  Text(
+                    _error!,
+                    style: ArenaTypography.bodySmall.copyWith(
+                      color: ArenaColors.danger,
+                    ),
+                  ),
                 ],
-                errorText: _isWhatsappValid ? null : 'Numéro invalide.',
-              ),
-              if (_error != null) ...[
-                const SizedBox(height: ArenaSpacing.md),
-                Text(
-                  _error!,
-                  style: ArenaTypography.bodySmall.copyWith(
-                    color: ArenaColors.danger,
-                  ),
+                const SizedBox(height: ArenaSpacing.xl),
+                ArenaButton(
+                  label: 'ENREGISTRER',
+                  isLoading: _saving,
+                  fullWidth: true,
+                  onPressed: _saving ? null : _save,
                 ),
               ],
-              const SizedBox(height: ArenaSpacing.xl),
-              ArenaButton(
-                label: 'ENREGISTRER',
-                isLoading: _saving,
-                fullWidth: true,
-                onPressed: _saving ? null : _save,
-              ),
-            ],
+            ),
           ),
         ),
       ),

@@ -5,6 +5,7 @@ import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_card.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:flutter/material.dart';
@@ -133,16 +134,18 @@ class _DeleteAccountPageState extends ConsumerState<DeleteAccountPage> {
                 }
               },
       ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(ArenaSpacing.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _StepIndicator(current: _step),
-              const SizedBox(height: ArenaSpacing.lg),
-              Expanded(child: _buildBody()),
-            ],
+      body: ArenaScreenBackground(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(ArenaSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _StepIndicator(current: _step),
+                const SizedBox(height: ArenaSpacing.lg),
+                Expanded(child: _buildBody()),
+              ],
+            ),
           ),
         ),
       ),
@@ -216,8 +219,11 @@ class _StepWarning extends StatelessWidget {
       children: [
         Row(
           children: [
-            const Icon(Icons.warning_amber_rounded,
-                color: ArenaColors.danger, size: 32,),
+            const Icon(
+              Icons.warning_amber_rounded,
+              color: ArenaColors.danger,
+              size: 32,
+            ),
             const SizedBox(width: ArenaSpacing.sm),
             Expanded(
               child: Text(
@@ -325,8 +331,11 @@ class _StepPending extends StatelessWidget {
     }
     return Column(
       children: [
-        const Icon(Icons.check_circle_outline,
-            size: 48, color: ArenaColors.success,),
+        const Icon(
+          Icons.check_circle_outline,
+          size: 48,
+          color: ArenaColors.success,
+        ),
         const SizedBox(height: ArenaSpacing.md),
         Text(
           'Aucun gain en attente',

@@ -5,6 +5,7 @@ import 'package:arena/data/repositories/export_user_data_repository.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_card.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/language_switcher.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:flutter/material.dart';
@@ -31,23 +32,25 @@ class SettingsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: const ArenaAppBar(title: 'Paramètres'),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(ArenaSpacing.lg),
-          children: const [
-            _SectionHeader(label: 'PRÉFÉRENCES'),
-            _PreferencesSection(),
-            SizedBox(height: ArenaSpacing.lg),
-            _SectionHeader(label: 'COMPTE'),
-            _AccountSection(),
-            SizedBox(height: ArenaSpacing.lg),
-            _SectionHeader(label: 'CONFIDENTIALITÉ'),
-            _PrivacySection(),
-            SizedBox(height: ArenaSpacing.lg),
-            _SectionHeader(label: 'AIDE & INFOS'),
-            _HelpSection(),
-            SizedBox(height: ArenaSpacing.xxl),
-          ],
+      body: ArenaScreenBackground(
+        child: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.all(ArenaSpacing.lg),
+            children: const [
+              _SectionHeader(label: 'PRÉFÉRENCES'),
+              _PreferencesSection(),
+              SizedBox(height: ArenaSpacing.lg),
+              _SectionHeader(label: 'COMPTE'),
+              _AccountSection(),
+              SizedBox(height: ArenaSpacing.lg),
+              _SectionHeader(label: 'CONFIDENTIALITÉ'),
+              _PrivacySection(),
+              SizedBox(height: ArenaSpacing.lg),
+              _SectionHeader(label: 'AIDE & INFOS'),
+              _HelpSection(),
+              SizedBox(height: ArenaSpacing.xxl),
+            ],
+          ),
         ),
       ),
     );
@@ -86,8 +89,10 @@ class _PreferencesSection extends ConsumerWidget {
           ),
           const _Divider(),
           ListTile(
-            leading: const Icon(Icons.payments_outlined,
-                color: ArenaColors.textMuted,),
+            leading: const Icon(
+              Icons.payments_outlined,
+              color: ArenaColors.textMuted,
+            ),
             title: const Text('Devise'),
             subtitle: Text(
               profile?.preferredCurrency ?? '—',
@@ -95,15 +100,20 @@ class _PreferencesSection extends ConsumerWidget {
                 color: ArenaColors.textMuted,
               ),
             ),
-            trailing: const Icon(Icons.lock_outline,
-                size: 16, color: ArenaColors.textFaint,),
+            trailing: const Icon(
+              Icons.lock_outline,
+              size: 16,
+              color: ArenaColors.textFaint,
+            ),
             // The currency is auto-derived from country in V1.0 — admins
             // will own the override flow in PHASE 11.
           ),
           const _Divider(),
           SwitchListTile(
-            secondary: const Icon(Icons.campaign_outlined,
-                color: ArenaColors.textMuted,),
+            secondary: const Icon(
+              Icons.campaign_outlined,
+              color: ArenaColors.textMuted,
+            ),
             title: const Text('Notifications marketing'),
             subtitle: Text(
               'Conseils, nouveaux tournois, promotions',
@@ -175,8 +185,11 @@ class _AccountSection extends ConsumerWidget {
                 color: ArenaColors.textMuted,
               ),
             ),
-            trailing: const Icon(Icons.lock_outline,
-                size: 16, color: ArenaColors.textFaint,),
+            trailing: const Icon(
+              Icons.lock_outline,
+              size: 16,
+              color: ArenaColors.textFaint,
+            ),
           ),
         ],
       ),
@@ -287,9 +300,8 @@ class _PrivacySectionState extends ConsumerState<_PrivacySection> {
     if (_exporting) return;
     setState(() => _exporting = true);
     try {
-      final result = await ref
-          .read(exportUserDataRepositoryProvider)
-          .exportToFile();
+      final result =
+          await ref.read(exportUserDataRepositoryProvider).exportToFile();
       if (!mounted) return;
       await Clipboard.setData(ClipboardData(text: result.filePath));
       if (!mounted) return;
@@ -322,46 +334,50 @@ class _PrivacySectionState extends ConsumerState<_PrivacySection> {
         ],
       ),
       child: ArenaCard(
-      padding: EdgeInsets.zero,
-      child: Column(
-        children: [
-          ListTile(
-            leading: _exporting
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.download_outlined,
-                    color: ArenaColors.textMuted,),
-            title: const Text('Télécharger mes données'),
-            subtitle: Text(
-              _exporting
-                  ? 'Export en cours…'
-                  : 'Génère un fichier JSON de toutes tes données',
-              style: ArenaTypography.bodySmall.copyWith(
-                color: ArenaColors.textMuted,
+        padding: EdgeInsets.zero,
+        child: Column(
+          children: [
+            ListTile(
+              leading: _exporting
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(
+                      Icons.download_outlined,
+                      color: ArenaColors.textMuted,
+                    ),
+              title: const Text('Télécharger mes données'),
+              subtitle: Text(
+                _exporting
+                    ? 'Export en cours…'
+                    : 'Génère un fichier JSON de toutes tes données',
+                style: ArenaTypography.bodySmall.copyWith(
+                  color: ArenaColors.textMuted,
+                ),
               ),
+              trailing: const Icon(
+                Icons.chevron_right,
+                color: ArenaColors.textFaint,
+              ),
+              enabled: !_exporting,
+              onTap: _runExport,
             ),
-            trailing: const Icon(Icons.chevron_right,
-                color: ArenaColors.textFaint,),
-            enabled: !_exporting,
-            onTap: _runExport,
-          ),
-          const _Divider(),
-          ListTile(
-            leading:
-                const Icon(Icons.delete_outline, color: ArenaColors.danger),
-            title: Text(
-              'Supprimer mon compte',
-              style: ArenaText.body.copyWith(color: ArenaColors.danger),
+            const _Divider(),
+            ListTile(
+              leading:
+                  const Icon(Icons.delete_outline, color: ArenaColors.danger),
+              title: Text(
+                'Supprimer mon compte',
+                style: ArenaText.body.copyWith(color: ArenaColors.danger),
+              ),
+              trailing:
+                  const Icon(Icons.chevron_right, color: ArenaColors.danger),
+              onTap: () => context.push(UserRoutes.profileDelete),
             ),
-            trailing:
-                const Icon(Icons.chevron_right, color: ArenaColors.danger),
-            onTap: () => context.push(UserRoutes.profileDelete),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }
@@ -395,8 +411,10 @@ class _ExportSuccessDialog extends StatelessWidget {
             for (final e in result.recordCounts.entries)
               Padding(
                 padding: const EdgeInsets.only(top: 2),
-                child: Text('· ${e.key}: ${e.value}',
-                    style: ArenaText.small,),
+                child: Text(
+                  '· ${e.key}: ${e.value}',
+                  style: ArenaText.small,
+                ),
               ),
           ],
         ],
