@@ -1,5 +1,6 @@
 import 'package:arena/core/router/router_refresh.dart';
 import 'package:arena/core/services/onboarding_service.dart';
+import 'package:arena/dev/design_showcase_page.dart';
 import 'package:arena/features/splash/splash_router.dart';
 import 'package:arena/features_shared/presentation/dev_preview_page.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
@@ -87,6 +88,7 @@ abstract final class UserRoutes {
   static const paymentHistory = '/payments/history';
   static const payoutKyc = '/payouts/kyc';
   static const devPreview = '/_dev/widgets';
+  static const devShowcase = '/dev/showcase';
   static const intro = '/intro';
 
   /// Builds the concrete `/competitions/<id>/register/confirm` URL.
@@ -156,6 +158,9 @@ final userRouterProvider = Provider<GoRouter>((ref) {
 
       // Always allow the dev preview during phases 1 → 11.
       if (loc == UserRoutes.devPreview) return null;
+      // Design system showcase (restyle premium 2026-05-25) — debug only,
+      // page non listée dans la navigation principale.
+      if (loc == UserRoutes.devShowcase) return null;
 
       // Reset password is reachable from a deep link even if no session
       // yet (Supabase hydrates a recovery session before we land here).
@@ -506,6 +511,11 @@ final userRouterProvider = Provider<GoRouter>((ref) {
         path: UserRoutes.devPreview,
         name: 'user.dev.preview',
         builder: (context, state) => const DevPreviewPage(),
+      ),
+      GoRoute(
+        path: UserRoutes.devShowcase,
+        name: 'user.dev.showcase',
+        builder: (context, state) => const DesignShowcasePage(),
       ),
     ],
   );

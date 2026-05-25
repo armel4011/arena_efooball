@@ -113,6 +113,35 @@ class ArenaColors {
   static const Color brandMtnMomo = Color(0xFFFFA500);     // jaune-orange MTN MoMo
   static const Color brandOrangeMoney = Color(0xFFFF6B00); // orange vif Orange Money
 
+  // ─── Premium accents (charte 2026-05-25) ─────────────────────────────────
+  // Tokens additionnels du design system « magazine sportif premium » —
+  // utilisés pour les highlights, les états d'accent et les game palettes
+  // étendues. Coexistent avec les tokens v1/v2 ; aucune valeur existante
+  // n'est modifiée pour ne pas casser le visuel des écrans déjà restylés.
+  static const Color acidGreen = Color(0xFFB8FF3D);  // highlight CTA secondaire
+  static const Color hotCoral = Color(0xFFFF6A1A);   // accent chaud
+  static const Color iceCyan = Color(0xFF18E8D4);    // accent froid (eFoot alt)
+  static const Color pearl = Color(0xFFB8B8C8);      // texte secondaire premium
+  static const Color graphite = Color(0xFF1F1F2A);   // surface élevée
+  static const Color steel = Color(0xFF2A2A38);      // bordure forte
+  static const Color blackPure = Color(0xFF0A0A0E);  // noir absolu (logos, photos)
+  static const Color gold = tierGold;                // alias officiel premium
+
+  // Companion shades pour les gradients m-btn-primary/danger du mockup
+  static const Color signalBlueDark = Color(0xFF2952CC);
+  static const Color neonRedDark = Color(0xFFCC2945);
+
+  // Glows (utilisables tels quels dans BoxShadow.color)
+  static const Color signalBlueGlow = Color(0x804C7AFF); // signalBlue @ 50 %
+  static const Color neonRedGlow = Color(0x80FF2D55);    // neonRed @ 50 %
+  static const Color acidGreenGlow = Color(0x66B8FF3D);  // acidGreen @ 40 %
+  static const Color hotCoralGlow = Color(0x66FF6A1A);   // hotCoral @ 40 %
+  static const Color iceCyanGlow = Color(0x6618E8D4);    // iceCyan @ 40 %
+  static const Color goldGlow = Color(0x66FFD700);       // gold @ 40 %
+
+  // Alias sémantique : LIVE indicator (= neonRed pulsant)
+  static const Color statusLive = neonRed;
+
   // ─── Stream moderation gradients (admin grille 6 slots) ─────────────────
   static const LinearGradient streamSlot1Gradient = LinearGradient(
     begin: Alignment.topLeft, end: Alignment.bottomRight,

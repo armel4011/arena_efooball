@@ -1,7 +1,7 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:flutter/material.dart';
 
-enum ArenaButtonVariant { primary, secondary, danger, ghost }
+enum ArenaButtonVariant { primary, secondary, danger, ghost, success }
 
 enum ArenaButtonSize { regular, large }
 
@@ -12,6 +12,7 @@ enum ArenaButtonSize { regular, large }
 /// - secondary → outlined neutral
 /// - danger    → destructive action (delete account, ban, etc.)
 /// - ghost     → tertiary, no background
+/// - success   → confirmation positive (paiement validé, KYC OK)
 class ArenaButton extends StatelessWidget {
   const ArenaButton({
     required this.label,
@@ -124,6 +125,7 @@ class ArenaButton extends StatelessWidget {
     return switch (variant) {
       ArenaButtonVariant.primary => scheme.primary,
       ArenaButtonVariant.danger => ArenaColors.danger,
+      ArenaButtonVariant.success => ArenaColors.statusOk,
       ArenaButtonVariant.secondary || ArenaButtonVariant.ghost => null,
     };
   }
@@ -131,7 +133,9 @@ class ArenaButton extends StatelessWidget {
   Color _backgroundColor(ColorScheme scheme) {
     if (_disabled) {
       return switch (variant) {
-        ArenaButtonVariant.primary || ArenaButtonVariant.danger =>
+        ArenaButtonVariant.primary ||
+        ArenaButtonVariant.danger ||
+        ArenaButtonVariant.success =>
           ArenaColors.surfaceLight,
         ArenaButtonVariant.secondary || ArenaButtonVariant.ghost =>
           Colors.transparent,
@@ -140,6 +144,7 @@ class ArenaButton extends StatelessWidget {
     return switch (variant) {
       ArenaButtonVariant.primary => scheme.primary,
       ArenaButtonVariant.danger => ArenaColors.danger,
+      ArenaButtonVariant.success => ArenaColors.statusOk,
       ArenaButtonVariant.secondary || ArenaButtonVariant.ghost =>
         Colors.transparent,
     };
@@ -148,7 +153,11 @@ class ArenaButton extends StatelessWidget {
   Color _foregroundColor(ColorScheme scheme) {
     if (_disabled) return ArenaColors.textFaint;
     return switch (variant) {
-      ArenaButtonVariant.primary || ArenaButtonVariant.danger => Colors.white,
+      ArenaButtonVariant.primary ||
+      ArenaButtonVariant.danger =>
+        Colors.white,
+      // Success = vert vif → texte foncé (void_) pour le contraste WCAG.
+      ArenaButtonVariant.success => ArenaColors.void_,
       ArenaButtonVariant.secondary => ArenaColors.text,
       ArenaButtonVariant.ghost => scheme.primary,
     };
@@ -161,6 +170,7 @@ class ArenaButton extends StatelessWidget {
         ),
       ArenaButtonVariant.primary ||
       ArenaButtonVariant.danger ||
+      ArenaButtonVariant.success ||
       ArenaButtonVariant.ghost =>
         null,
     };
