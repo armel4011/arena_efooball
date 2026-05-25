@@ -14,6 +14,7 @@ import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -39,29 +40,31 @@ class AdminBracketManagementPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final compAsync = ref.watch(competitionByIdProvider(competitionId));
-    final matchesAsync =
-        ref.watch(competitionMatchesProvider(competitionId));
+    final matchesAsync = ref.watch(competitionMatchesProvider(competitionId));
 
     return Scaffold(
       appBar: const ArenaAppBar(title: 'Gestion bracket'),
-      body: SafeArea(
-        child: compAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Padding(
-            padding: const EdgeInsets.all(ArenaSpacing.lg),
-            child: Text('Erreur : $e', style: ArenaText.bodyMuted),
+      body: ArenaScreenBackground(
+        accent: ArenaColors.neonRed,
+        child: SafeArea(
+          child: compAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Padding(
+              padding: const EdgeInsets.all(ArenaSpacing.lg),
+              child: Text('Erreur : $e', style: ArenaText.bodyMuted),
+            ),
+            data: (comp) {
+              if (comp == null) return const SizedBox.shrink();
+              return matchesAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) =>
+                    Text('Erreur : $e', style: ArenaText.bodyMuted),
+                data: (matches) => matches.isEmpty
+                    ? _EmptyState(competition: comp)
+                    : _BracketView(competition: comp, matches: matches),
+              );
+            },
           ),
-          data: (comp) {
-            if (comp == null) return const SizedBox.shrink();
-            return matchesAsync.when(
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Text('Erreur : $e', style: ArenaText.bodyMuted),
-              data: (matches) => matches.isEmpty
-                  ? _EmptyState(competition: comp)
-                  : _BracketView(competition: comp, matches: matches),
-            );
-          },
         ),
       ),
     );
@@ -134,7 +137,8 @@ class _EmptyStateState extends ConsumerState<_EmptyState> {
 
     // Pull the player list first so we can show how many slots we'll seed.
     final repo = ref.read(adminBracketRepositoryProvider);
-    final players = await repo.listConfirmedRegistrations(widget.competition.id);
+    final players =
+        await repo.listConfirmedRegistrations(widget.competition.id);
     if (!mounted) return;
     if (players.length < 2) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -410,10 +414,8 @@ class _MatchRow extends ConsumerWidget {
   }
 
   Future<void> _openVerdictDialog(BuildContext context, WidgetRef ref) async {
-    final p1Ctrl =
-        TextEditingController(text: '${match.score1 ?? 0}');
-    final p2Ctrl =
-        TextEditingController(text: '${match.score2 ?? 0}');
+    final p1Ctrl = TextEditingController(text: '${match.score1 ?? 0}');
+    final p2Ctrl = TextEditingController(text: '${match.score2 ?? 0}');
     final result = await showDialog<(int, int)?>(
       context: context,
       builder: (c) => AlertDialog(
@@ -505,11 +507,11 @@ class _MatchRow extends ConsumerWidget {
     try {
       await ref.read(adminMatchesRepositoryProvider).cancel(match.id);
       await ref.read(adminAuditLogRepositoryProvider).record(
-        adminId: adminId,
-        action: 'match_cancelled',
-        targetType: 'match',
-        targetId: match.id,
-      );
+            adminId: adminId,
+            action: 'match_cancelled',
+            targetType: 'match',
+            targetId: match.id,
+          );
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -539,8 +541,7 @@ class _PlayerRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label =
-        playerId == null ? 'TBD' : playerId!.substring(0, 8);
+    final label = playerId == null ? 'TBD' : playerId!.substring(0, 8);
     return Row(
       children: [
         ArenaAvatar(

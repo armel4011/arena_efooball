@@ -8,6 +8,7 @@ import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -45,57 +46,60 @@ class _AdminPayoutsPageState extends ConsumerState<AdminPayoutsPage> {
 
     return Scaffold(
       appBar: const ArenaAppBar(title: 'Payouts — validation'),
-      body: SafeArea(
-        child: payouts.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Padding(
-            padding: const EdgeInsets.all(ArenaSpacing.lg),
-            child: Text(
-              'Erreur de chargement : $e',
-              style: ArenaText.bodyMuted,
-            ),
-          ),
-          data: (list) => ListView(
-            padding: const EdgeInsets.all(ArenaSpacing.lg),
-            children: [
-              _Summary(
-                mode: _mode,
-                onModeChanged: (m) => setState(() => _mode = m),
-                payouts: list,
+      body: ArenaScreenBackground(
+        accent: ArenaColors.neonRed,
+        child: SafeArea(
+          child: payouts.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Padding(
+              padding: const EdgeInsets.all(ArenaSpacing.lg),
+              child: Text(
+                'Erreur de chargement : $e',
+                style: ArenaText.bodyMuted,
               ),
-              const SizedBox(height: ArenaSpacing.lg),
-              if (list.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.all(ArenaSpacing.lg),
-                  child: Text(
-                    '✅ Aucun payout en attente.',
-                    style: ArenaText.bodyMuted,
-                    textAlign: TextAlign.center,
-                  ),
-                )
-              else ...[
-                for (var i = 0; i < list.length; i++) ...[
-                  Text(
-                    'PAYOUT ${i + 1}/${list.length}',
-                    style: ArenaText.inputLabel,
-                  ),
-                  const SizedBox(height: ArenaSpacing.sm),
-                  _PayoutCard(payout: list[i]),
-                  const SizedBox(height: ArenaSpacing.md),
-                ],
-                if (_mode == _PayoutMode.batch) ...[
-                  Text('MODE BATCH', style: ArenaText.inputLabel),
-                  const SizedBox(height: ArenaSpacing.sm),
-                  _BatchCard(
-                    controller: _batchCtrl,
-                    payouts: list,
-                    onValidated: () {
-                      ref.invalidate(adminPendingPayoutsProvider);
-                    },
-                  ),
+            ),
+            data: (list) => ListView(
+              padding: const EdgeInsets.all(ArenaSpacing.lg),
+              children: [
+                _Summary(
+                  mode: _mode,
+                  onModeChanged: (m) => setState(() => _mode = m),
+                  payouts: list,
+                ),
+                const SizedBox(height: ArenaSpacing.lg),
+                if (list.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(ArenaSpacing.lg),
+                    child: Text(
+                      '✅ Aucun payout en attente.',
+                      style: ArenaText.bodyMuted,
+                      textAlign: TextAlign.center,
+                    ),
+                  )
+                else ...[
+                  for (var i = 0; i < list.length; i++) ...[
+                    Text(
+                      'PAYOUT ${i + 1}/${list.length}',
+                      style: ArenaText.inputLabel,
+                    ),
+                    const SizedBox(height: ArenaSpacing.sm),
+                    _PayoutCard(payout: list[i]),
+                    const SizedBox(height: ArenaSpacing.md),
+                  ],
+                  if (_mode == _PayoutMode.batch) ...[
+                    Text('MODE BATCH', style: ArenaText.inputLabel),
+                    const SizedBox(height: ArenaSpacing.sm),
+                    _BatchCard(
+                      controller: _batchCtrl,
+                      payouts: list,
+                      onValidated: () {
+                        ref.invalidate(adminPendingPayoutsProvider);
+                      },
+                    ),
+                  ],
                 ],
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -213,8 +217,8 @@ class _PayoutCard extends ConsumerWidget {
                   children: [
                     Text(
                       'User ${payout.userId.substring(0, 8)}',
-                      style: ArenaText.body
-                          .copyWith(fontWeight: FontWeight.w700),
+                      style:
+                          ArenaText.body.copyWith(fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -267,8 +271,7 @@ class _PayoutCard extends ConsumerWidget {
                     child: Text(
                       c.label,
                       style: ArenaText.body.copyWith(
-                        color:
-                            c.ok ? ArenaColors.bone : ArenaColors.neonRed,
+                        color: c.ok ? ArenaColors.bone : ArenaColors.neonRed,
                         fontWeight: c.ok ? null : FontWeight.w700,
                       ),
                     ),
@@ -572,8 +575,7 @@ class _BatchCard extends ConsumerWidget {
             label: '🔒 VALIDER ${eligible.length} PAYOUTS',
             variant: ArenaButtonVariant.danger,
             fullWidth: true,
-            onPressed:
-                enabled ? () => _runBatch(context, ref, eligible) : null,
+            onPressed: enabled ? () => _runBatch(context, ref, eligible) : null,
           ),
         ],
       ),

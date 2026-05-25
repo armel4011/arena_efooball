@@ -11,6 +11,7 @@ import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_filter_menu.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -66,96 +67,97 @@ class _SuperAdminUsersState extends ConsumerState<SuperAdminUsers> {
           ),
         ],
       ),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(ArenaSpacing.lg),
-          children: [
-            ArenaTextField(
-              controller: _searchCtrl,
-              hint: '🔍 Rechercher username, email…',
-              onChanged: (v) => setState(() {
-                final q = v.trim();
-                _filter = _filter.copyWith(
-                  searchQuery: q.isEmpty ? null : q,
-                  resetSearch: q.isEmpty,
-                );
-              }),
-            ),
-            const SizedBox(height: ArenaSpacing.md),
-            // ─── Filter menu déroulant (item 1 + 2) ────────────────
-            Row(
-              children: [
-                compsAsync.when(
-                  data: (comps) => ArenaFilterMenu(
-                    activeCount: _activeFilterCount(),
-                    sections: _buildSections(comps),
-                    initialSelection: _selectionFromFilter(),
-                    onApply: _applySelection,
-                  ),
-                  loading: () => const _LoadingFilterButton(),
-                  error: (_, __) => ArenaFilterMenu(
-                    activeCount: _activeFilterCount(),
-                    sections: _buildSections(const []),
-                    initialSelection: _selectionFromFilter(),
-                    onApply: _applySelection,
-                  ),
-                ),
-                const Spacer(),
-                if (_filter.hasAdvancedFilter ||
-                    _filter.countryCode != null ||
-                    _filter.filter != null)
-                  TextButton(
-                    onPressed: _resetAll,
-                    child: Text(
-                      'Réinitialiser',
-                      style: ArenaText.small.copyWith(
-                        color: ArenaColors.signalBlue,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: ArenaSpacing.sm),
-            // Badges compétitions actives (item 2/C.2 — multi)
-            if (_filter.competitionIds.isNotEmpty)
-              _ActiveCompetitionsBadges(
-                competitionIds: _filter.competitionIds,
-                comps: compsAsync.asData?.value ?? const [],
-                onClearOne: (id) => setState(() {
-                  final remaining = _filter.competitionIds
-                      .where((c) => c != id)
-                      .toList();
+      body: ArenaScreenBackground(
+        accent: ArenaColors.neonRed,
+        child: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.all(ArenaSpacing.lg),
+            children: [
+              ArenaTextField(
+                controller: _searchCtrl,
+                hint: '🔍 Rechercher username, email…',
+                onChanged: (v) => setState(() {
+                  final q = v.trim();
                   _filter = _filter.copyWith(
-                    competitionIds: remaining,
-                    resetCompetitionIds: remaining.isEmpty,
+                    searchQuery: q.isEmpty ? null : q,
+                    resetSearch: q.isEmpty,
                   );
                 }),
               ),
-            const SizedBox(height: ArenaSpacing.md),
-            users.when(
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
-              error: (e, _) =>
-                  Text('Erreur : $e', style: ArenaText.bodyMuted),
-              data: (list) => list.isEmpty
-                  ? Padding(
-                      padding: const EdgeInsets.all(ArenaSpacing.md),
-                      child: Text(
-                        'Aucun utilisateur pour ces filtres.',
-                        style: ArenaText.bodyMuted,
-                        textAlign: TextAlign.center,
-                      ),
-                    )
-                  : Column(
-                      children: [
-                        for (final u in list) ...[
-                          _UserCard(profile: u),
-                          const SizedBox(height: ArenaSpacing.sm),
-                        ],
-                      ],
+              const SizedBox(height: ArenaSpacing.md),
+              // ─── Filter menu déroulant (item 1 + 2) ────────────────
+              Row(
+                children: [
+                  compsAsync.when(
+                    data: (comps) => ArenaFilterMenu(
+                      activeCount: _activeFilterCount(),
+                      sections: _buildSections(comps),
+                      initialSelection: _selectionFromFilter(),
+                      onApply: _applySelection,
                     ),
-            ),
-          ],
+                    loading: () => const _LoadingFilterButton(),
+                    error: (_, __) => ArenaFilterMenu(
+                      activeCount: _activeFilterCount(),
+                      sections: _buildSections(const []),
+                      initialSelection: _selectionFromFilter(),
+                      onApply: _applySelection,
+                    ),
+                  ),
+                  const Spacer(),
+                  if (_filter.hasAdvancedFilter ||
+                      _filter.countryCode != null ||
+                      _filter.filter != null)
+                    TextButton(
+                      onPressed: _resetAll,
+                      child: Text(
+                        'Réinitialiser',
+                        style: ArenaText.small.copyWith(
+                          color: ArenaColors.signalBlue,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: ArenaSpacing.sm),
+              // Badges compétitions actives (item 2/C.2 — multi)
+              if (_filter.competitionIds.isNotEmpty)
+                _ActiveCompetitionsBadges(
+                  competitionIds: _filter.competitionIds,
+                  comps: compsAsync.asData?.value ?? const [],
+                  onClearOne: (id) => setState(() {
+                    final remaining =
+                        _filter.competitionIds.where((c) => c != id).toList();
+                    _filter = _filter.copyWith(
+                      competitionIds: remaining,
+                      resetCompetitionIds: remaining.isEmpty,
+                    );
+                  }),
+                ),
+              const SizedBox(height: ArenaSpacing.md),
+              users.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) =>
+                    Text('Erreur : $e', style: ArenaText.bodyMuted),
+                data: (list) => list.isEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.all(ArenaSpacing.md),
+                        child: Text(
+                          'Aucun utilisateur pour ces filtres.',
+                          style: ArenaText.bodyMuted,
+                          textAlign: TextAlign.center,
+                        ),
+                      )
+                    : Column(
+                        children: [
+                          for (final u in list) ...[
+                            _UserCard(profile: u),
+                            const SizedBox(height: ArenaSpacing.sm),
+                          ],
+                        ],
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -429,8 +431,8 @@ class _UserCard extends ConsumerWidget {
                   children: [
                     Text(
                       profile.username,
-                      style: ArenaText.body
-                          .copyWith(fontWeight: FontWeight.w700),
+                      style:
+                          ArenaText.body.copyWith(fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 2),
                     Text(profile.email, style: ArenaText.bodyMuted),

@@ -41,8 +41,7 @@ class WizardStepFees extends StatelessWidget {
     );
   }
 
-  int _referralQuota() =>
-      int.tryParse(referralQuotaCtrl.text.trim()) ?? 0;
+  int _referralQuota() => int.tryParse(referralQuotaCtrl.text.trim()) ?? 0;
 
   @override
   Widget build(BuildContext context) {
@@ -183,8 +182,7 @@ class WizardStepFees extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         decoration: BoxDecoration(
                           color: ArenaColors.carbon,
-                          borderRadius:
-                              BorderRadius.circular(ArenaRadius.md),
+                          borderRadius: BorderRadius.circular(ArenaRadius.md),
                           border: Border.all(color: ArenaColors.border),
                         ),
                         child: Text('amis', style: ArenaText.body),

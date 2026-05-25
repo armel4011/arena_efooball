@@ -119,7 +119,10 @@ class WizardStepFormat extends StatelessWidget {
           onChanged: onMatchIntervalChanged,
         ),
         const SizedBox(height: ArenaSpacing.md),
-        Text('Intervalles personnalisés par round', style: ArenaText.inputLabel),
+        Text(
+          'Intervalles personnalisés par round',
+          style: ArenaText.inputLabel,
+        ),
         const SizedBox(height: ArenaSpacing.xs),
         Text(
           'Liste de minutes séparées par virgules (1 par round). Ex. : '

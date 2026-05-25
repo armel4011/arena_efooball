@@ -7,6 +7,7 @@ import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -38,28 +39,31 @@ class _SuperAdminPaymentsValidationPageState
       length: 2,
       child: Scaffold(
         appBar: const ArenaAppBar(title: 'Validation paiements'),
-        body: SafeArea(
-          child: Column(
-            children: [
-              const TabBar(
-                labelColor: ArenaColors.bone,
-                unselectedLabelColor: ArenaColors.silver,
-                indicatorColor: ArenaColors.signalBlue,
-                indicatorWeight: 2,
-                tabs: [
-                  Tab(text: 'EN ATTENTE'),
-                  Tab(text: 'HISTORIQUE'),
-                ],
-              ),
-              Expanded(
-                child: TabBarView(
-                  children: [
-                    _PendingList(onValidate: _validate, onReject: _reject),
-                    const _HistoryList(),
+        body: ArenaScreenBackground(
+          accent: ArenaColors.neonRed,
+          child: SafeArea(
+            child: Column(
+              children: [
+                const TabBar(
+                  labelColor: ArenaColors.bone,
+                  unselectedLabelColor: ArenaColors.silver,
+                  indicatorColor: ArenaColors.signalBlue,
+                  indicatorWeight: 2,
+                  tabs: [
+                    Tab(text: 'EN ATTENTE'),
+                    Tab(text: 'HISTORIQUE'),
                   ],
                 ),
-              ),
-            ],
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      _PendingList(onValidate: _validate, onReject: _reject),
+                      const _HistoryList(),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -85,8 +89,7 @@ class _SuperAdminPaymentsValidationPageState
             child: const Text('Annuler'),
           ),
           TextButton(
-            style:
-                TextButton.styleFrom(foregroundColor: ArenaColors.statusOk),
+            style: TextButton.styleFrom(foregroundColor: ArenaColors.statusOk),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('VALIDER'),
           ),
@@ -151,8 +154,7 @@ class _SuperAdminPaymentsValidationPageState
               controller: reasonCtrl,
               maxLines: 3,
               decoration: const InputDecoration(
-                hintText:
-                    'Ex. montant incorrect, transaction introuvable…',
+                hintText: 'Ex. montant incorrect, transaction introuvable…',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -164,8 +166,7 @@ class _SuperAdminPaymentsValidationPageState
             child: const Text('Annuler'),
           ),
           TextButton(
-            style:
-                TextButton.styleFrom(foregroundColor: ArenaColors.neonRed),
+            style: TextButton.styleFrom(foregroundColor: ArenaColors.neonRed),
             onPressed: () {
               final r = reasonCtrl.text.trim();
               if (r.isEmpty) return;
@@ -248,8 +249,7 @@ class _PendingList extends ConsumerWidget {
         return ListView.separated(
           padding: const EdgeInsets.all(ArenaSpacing.lg),
           itemCount: list.length,
-          separatorBuilder: (_, __) =>
-              const SizedBox(height: ArenaSpacing.sm),
+          separatorBuilder: (_, __) => const SizedBox(height: ArenaSpacing.sm),
           itemBuilder: (_, i) => _PendingCard(
             row: list[i],
             onValidate: () => onValidate(list[i]),
@@ -294,8 +294,7 @@ class _PendingCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   row.username,
-                  style: ArenaText.body
-                      .copyWith(fontWeight: FontWeight.w700),
+                  style: ArenaText.body.copyWith(fontWeight: FontWeight.w700),
                 ),
               ),
               Container(
@@ -430,8 +429,7 @@ class _HistoryList extends ConsumerWidget {
         return ListView.separated(
           padding: const EdgeInsets.all(ArenaSpacing.lg),
           itemCount: list.length,
-          separatorBuilder: (_, __) =>
-              const SizedBox(height: ArenaSpacing.xs),
+          separatorBuilder: (_, __) => const SizedBox(height: ArenaSpacing.xs),
           itemBuilder: (_, i) => _HistoryCard(row: list[i]),
         );
       },
@@ -448,7 +446,11 @@ class _HistoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = row.payment;
     final (label, variant, color) = switch (p.status) {
-      'succeeded' => ('VALIDÉ', ArenaBadgeVariant.success, ArenaColors.statusOk),
+      'succeeded' => (
+          'VALIDÉ',
+          ArenaBadgeVariant.success,
+          ArenaColors.statusOk
+        ),
       'rejected' => ('REFUSÉ', ArenaBadgeVariant.danger, ArenaColors.neonRed),
       _ => ('—', ArenaBadgeVariant.info, ArenaColors.silver),
     };
@@ -467,8 +469,7 @@ class _HistoryCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   row.username,
-                  style: ArenaText.body
-                      .copyWith(fontWeight: FontWeight.w600),
+                  style: ArenaText.body.copyWith(fontWeight: FontWeight.w600),
                 ),
               ),
               ArenaBadge(label: label, variant: variant),

@@ -7,6 +7,7 @@ import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_filter_menu.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -144,193 +145,192 @@ class _SuperAdminBroadcastState extends ConsumerState<SuperAdminBroadcast> {
 
     return Scaffold(
       appBar: const ArenaAppBar(title: 'Notification broadcast'),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(ArenaSpacing.lg),
-          children: [
-            // ─── Filtres cible ──────────────────────────────────────
-            Text('🎯 CIBLE', style: ArenaText.h3),
-            const SizedBox(height: ArenaSpacing.sm),
-            ArenaTextField(
-              controller: _searchCtrl,
-              hint: '🔍 Username ou email (laisser vide pour tous)',
-              onChanged: (v) => setState(() {
-                final q = v.trim();
-                _filter = _filter.copyWith(
-                  searchQuery: q.isEmpty ? null : q,
-                  resetSearch: q.isEmpty,
-                );
-              }),
-            ),
-            const SizedBox(height: ArenaSpacing.sm),
-            Row(
-              children: [
-                compsAsync.when(
-                  data: (comps) => ArenaFilterMenu(
-                    activeCount: _activeFilterCount(),
-                    sections: _buildSections(comps),
-                    initialSelection: _selectionFromFilter(),
-                    onApply: _applySelection,
-                  ),
-                  loading: () => const _LoadingFilterButton(),
-                  error: (_, __) => ArenaFilterMenu(
-                    activeCount: _activeFilterCount(),
-                    sections: _buildSections(const []),
-                    initialSelection: _selectionFromFilter(),
-                    onApply: _applySelection,
-                  ),
-                ),
-                const Spacer(),
-                if (_activeFilterCount() > 0)
-                  TextButton(
-                    onPressed: () => setState(() {
-                      _filter = AdminUsersFilter(
-                        searchQuery: _filter.searchQuery,
-                      );
-                    }),
-                    child: Text(
-                      'Réinitialiser',
-                      style: ArenaText.small.copyWith(
-                        color: ArenaColors.signalBlue,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            if (_filter.competitionIds.isNotEmpty) ...[
+      body: ArenaScreenBackground(
+        accent: ArenaColors.neonRed,
+        child: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.all(ArenaSpacing.lg),
+            children: [
+              // ─── Filtres cible ──────────────────────────────────────
+              Text('🎯 CIBLE', style: ArenaText.h3),
               const SizedBox(height: ArenaSpacing.sm),
-              _ActiveCompetitionsBadges(
-                competitionIds: _filter.competitionIds,
-                comps: compsAsync.asData?.value ?? const [],
-                onClearOne: (id) => setState(() {
-                  final remaining = _filter.competitionIds
-                      .where((c) => c != id)
-                      .toList();
+              ArenaTextField(
+                controller: _searchCtrl,
+                hint: '🔍 Username ou email (laisser vide pour tous)',
+                onChanged: (v) => setState(() {
+                  final q = v.trim();
                   _filter = _filter.copyWith(
-                    competitionIds: remaining,
-                    resetCompetitionIds: remaining.isEmpty,
+                    searchQuery: q.isEmpty ? null : q,
+                    resetSearch: q.isEmpty,
                   );
                 }),
               ),
-            ],
-            const SizedBox(height: ArenaSpacing.md),
-
-            // ─── Compteur destinataires + bouton envoi ──────────────
-            usersAsync.when(
-              loading: () => _RecipientCard(
-                child: Row(
-                  children: [
-                    const SizedBox(
-                      height: 18,
-                      width: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+              const SizedBox(height: ArenaSpacing.sm),
+              Row(
+                children: [
+                  compsAsync.when(
+                    data: (comps) => ArenaFilterMenu(
+                      activeCount: _activeFilterCount(),
+                      sections: _buildSections(comps),
+                      initialSelection: _selectionFromFilter(),
+                      onApply: _applySelection,
                     ),
-                    const SizedBox(width: ArenaSpacing.sm),
-                    Text(
-                      'Calcul du nombre de destinataires…',
-                      style: ArenaText.bodyMuted,
+                    loading: () => const _LoadingFilterButton(),
+                    error: (_, __) => ArenaFilterMenu(
+                      activeCount: _activeFilterCount(),
+                      sections: _buildSections(const []),
+                      initialSelection: _selectionFromFilter(),
+                      onApply: _applySelection,
                     ),
-                  ],
-                ),
-              ),
-              error: (e, _) => _RecipientCard(
-                child: Text(
-                  'Erreur de filtre : $e',
-                  style: ArenaText.bodyMuted
-                      .copyWith(color: ArenaColors.neonRed),
-                ),
-              ),
-              data: (list) => _RecipientCard(
-                child: Row(
-                  children: [
-                    Icon(
-                      list.isEmpty ? Icons.warning_amber : Icons.group,
-                      color: list.isEmpty
-                          ? ArenaColors.statusWarn
-                          : ArenaColors.signalBlue,
-                    ),
-                    const SizedBox(width: ArenaSpacing.sm),
-                    Expanded(
+                  ),
+                  const Spacer(),
+                  if (_activeFilterCount() > 0)
+                    TextButton(
+                      onPressed: () => setState(() {
+                        _filter = AdminUsersFilter(
+                          searchQuery: _filter.searchQuery,
+                        );
+                      }),
                       child: Text(
-                        list.isEmpty
-                            ? 'Aucun destinataire — ajuste les filtres.'
-                            : '${list.length} destinataire(s) ciblé(s)',
-                        style: ArenaText.body,
+                        'Réinitialiser',
+                        style: ArenaText.small.copyWith(
+                          color: ArenaColors.signalBlue,
+                        ),
                       ),
                     ),
-                  ],
-                ),
+                ],
               ),
-            ),
-            const SizedBox(height: ArenaSpacing.lg),
-
-            // ─── Composition du message ─────────────────────────────
-            Text('📝 MESSAGE', style: ArenaText.h3),
-            const SizedBox(height: ArenaSpacing.sm),
-            ArenaTextField(
-              controller: _titleCtrl,
-              hint: 'Titre (visible dans la notification)',
-              maxLength: 60,
-            ),
-            const SizedBox(height: ArenaSpacing.sm),
-            ArenaTextField(
-              controller: _bodyCtrl,
-              hint: 'Corps du message',
-              minLines: 3,
-              maxLines: 6,
-            ),
-            const SizedBox(height: ArenaSpacing.sm),
-            ArenaTextField(
-              controller: _routeCtrl,
-              hint: 'Route deep-link (optionnel) — ex. /competitions',
-              helper:
-                  "Si défini, taper la notif redirige l'utilisateur sur"
-                  " cette page de l'app.",
-            ),
-            const SizedBox(height: ArenaSpacing.sm),
-            Text('Type', style: ArenaText.inputLabel),
-            const SizedBox(height: ArenaSpacing.xs),
-            Wrap(
-              spacing: ArenaSpacing.xs,
-              runSpacing: ArenaSpacing.xs,
-              children: [
-                for (final t in _typeOptions)
-                  _toggle(t, _notifType == t, () {
-                    setState(() => _notifType = t);
+              if (_filter.competitionIds.isNotEmpty) ...[
+                const SizedBox(height: ArenaSpacing.sm),
+                _ActiveCompetitionsBadges(
+                  competitionIds: _filter.competitionIds,
+                  comps: compsAsync.asData?.value ?? const [],
+                  onClearOne: (id) => setState(() {
+                    final remaining =
+                        _filter.competitionIds.where((c) => c != id).toList();
+                    _filter = _filter.copyWith(
+                      competitionIds: remaining,
+                      resetCompetitionIds: remaining.isEmpty,
+                    );
                   }),
-              ],
-            ),
-            const SizedBox(height: ArenaSpacing.lg),
-
-            // ─── Action ─────────────────────────────────────────────
-            ArenaButton(
-              label: _sending
-                  ? 'ENVOI EN COURS…'
-                  : '🚀 ENVOYER MAINTENANT',
-              fullWidth: true,
-              size: ArenaButtonSize.large,
-              isLoading: _sending,
-              onPressed: !_canSend
-                  ? null
-                  : () {
-                      usersAsync.whenData((list) {
-                        _send([for (final u in list) u.id]);
-                      });
-                    },
-            ),
-            if (_lastResult != null) ...[
-              const SizedBox(height: ArenaSpacing.sm),
-              Text(
-                _lastResult!,
-                style: ArenaText.body.copyWith(
-                  color: _lastResult!.startsWith('✓')
-                      ? ArenaColors.statusOk
-                      : ArenaColors.neonRed,
                 ),
-                textAlign: TextAlign.center,
+              ],
+              const SizedBox(height: ArenaSpacing.md),
+
+              // ─── Compteur destinataires + bouton envoi ──────────────
+              usersAsync.when(
+                loading: () => _RecipientCard(
+                  child: Row(
+                    children: [
+                      const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      const SizedBox(width: ArenaSpacing.sm),
+                      Text(
+                        'Calcul du nombre de destinataires…',
+                        style: ArenaText.bodyMuted,
+                      ),
+                    ],
+                  ),
+                ),
+                error: (e, _) => _RecipientCard(
+                  child: Text(
+                    'Erreur de filtre : $e',
+                    style: ArenaText.bodyMuted
+                        .copyWith(color: ArenaColors.neonRed),
+                  ),
+                ),
+                data: (list) => _RecipientCard(
+                  child: Row(
+                    children: [
+                      Icon(
+                        list.isEmpty ? Icons.warning_amber : Icons.group,
+                        color: list.isEmpty
+                            ? ArenaColors.statusWarn
+                            : ArenaColors.signalBlue,
+                      ),
+                      const SizedBox(width: ArenaSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          list.isEmpty
+                              ? 'Aucun destinataire — ajuste les filtres.'
+                              : '${list.length} destinataire(s) ciblé(s)',
+                          style: ArenaText.body,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
+              const SizedBox(height: ArenaSpacing.lg),
+
+              // ─── Composition du message ─────────────────────────────
+              Text('📝 MESSAGE', style: ArenaText.h3),
+              const SizedBox(height: ArenaSpacing.sm),
+              ArenaTextField(
+                controller: _titleCtrl,
+                hint: 'Titre (visible dans la notification)',
+                maxLength: 60,
+              ),
+              const SizedBox(height: ArenaSpacing.sm),
+              ArenaTextField(
+                controller: _bodyCtrl,
+                hint: 'Corps du message',
+                minLines: 3,
+                maxLines: 6,
+              ),
+              const SizedBox(height: ArenaSpacing.sm),
+              ArenaTextField(
+                controller: _routeCtrl,
+                hint: 'Route deep-link (optionnel) — ex. /competitions',
+                helper: "Si défini, taper la notif redirige l'utilisateur sur"
+                    " cette page de l'app.",
+              ),
+              const SizedBox(height: ArenaSpacing.sm),
+              Text('Type', style: ArenaText.inputLabel),
+              const SizedBox(height: ArenaSpacing.xs),
+              Wrap(
+                spacing: ArenaSpacing.xs,
+                runSpacing: ArenaSpacing.xs,
+                children: [
+                  for (final t in _typeOptions)
+                    _toggle(t, _notifType == t, () {
+                      setState(() => _notifType = t);
+                    }),
+                ],
+              ),
+              const SizedBox(height: ArenaSpacing.lg),
+
+              // ─── Action ─────────────────────────────────────────────
+              ArenaButton(
+                label: _sending ? 'ENVOI EN COURS…' : '🚀 ENVOYER MAINTENANT',
+                fullWidth: true,
+                size: ArenaButtonSize.large,
+                isLoading: _sending,
+                onPressed: !_canSend
+                    ? null
+                    : () {
+                        usersAsync.whenData((list) {
+                          _send([for (final u in list) u.id]);
+                        });
+                      },
+              ),
+              if (_lastResult != null) ...[
+                const SizedBox(height: ArenaSpacing.sm),
+                Text(
+                  _lastResult!,
+                  style: ArenaText.body.copyWith(
+                    color: _lastResult!.startsWith('✓')
+                        ? ArenaColors.statusOk
+                        : ArenaColors.neonRed,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

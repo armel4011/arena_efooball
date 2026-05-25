@@ -7,6 +7,7 @@ import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -95,121 +96,123 @@ class AdminDashboardPage extends ConsumerWidget {
           ),
         ],
       ),
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () async {
-            ref
-              ..invalidate(adminKpisProvider)
-              ..invalidate(adminAuditLogProvider);
-          },
-          child: ListView(
-            padding: const EdgeInsets.all(ArenaSpacing.lg),
-            physics: const AlwaysScrollableScrollPhysics(),
-            children: [
-              Text('KPIs LIVE', style: ArenaText.inputLabel),
-              const SizedBox(height: ArenaSpacing.sm),
-              _KpiGrid(kpis: kpis).animate().fadeIn(
-                    duration: ArenaDurations.medium,
-                  ),
-              const SizedBox(height: ArenaSpacing.md),
-              _PayoutsKpi(kpis: kpis).animate(delay: 100.ms).fadeIn(
-                    duration: ArenaDurations.medium,
-                  ),
-              const SizedBox(height: ArenaSpacing.lg),
-              Text('🚨 Alertes', style: ArenaText.h3),
-              const SizedBox(height: ArenaSpacing.sm),
-              _AlertCards(kpis: kpis)
-                  .animate(delay: 200.ms)
-                  .fadeIn(duration: ArenaDurations.medium),
-              const SizedBox(height: ArenaSpacing.lg),
-              Text('⚡ Quick actions', style: ArenaText.h3),
-              const SizedBox(height: ArenaSpacing.sm),
-              ArenaButton(
-                label: '+ NOUVELLE COMPÉTITION',
-                fullWidth: true,
-                onPressed: () =>
-                    context.push(AdminRoutes.competitionsCreate),
-              ),
-              const SizedBox(height: ArenaSpacing.xs),
-              ArenaButton(
-                label: '🏆 VOIR LES COMPÉTITIONS',
-                fullWidth: true,
-                variant: ArenaButtonVariant.secondary,
-                onPressed: () => context.push(AdminRoutes.competitions),
-              ),
-              const SizedBox(height: ArenaSpacing.xs),
-              ArenaButton(
-                label: '⚔ VOIR LES MATCHS',
-                fullWidth: true,
-                variant: ArenaButtonVariant.secondary,
-                onPressed: () => context.push(AdminRoutes.matches),
-              ),
-              const SizedBox(height: ArenaSpacing.xs),
-              ArenaButton(
-                label: '💰 VALIDER PAYOUTS',
-                fullWidth: true,
-                variant: ArenaButtonVariant.secondary,
-                onPressed: () => context.push(AdminRoutes.payouts),
-              ),
-              const SizedBox(height: ArenaSpacing.xs),
-              ArenaButton(
-                label: '📺 MODÉRATION STREAMS',
-                fullWidth: true,
-                variant: ArenaButtonVariant.secondary,
-                onPressed: () => context.push(AdminRoutes.streams),
-              ),
-              const SizedBox(height: ArenaSpacing.xs),
-              ArenaButton(
-                label: "📜 JOURNAL D'AUDIT",
-                fullWidth: true,
-                variant: ArenaButtonVariant.secondary,
-                onPressed: () => context.push(AdminRoutes.auditLog),
-              ),
-              if (isSuperAdmin) ...[
+      body: ArenaScreenBackground(
+        accent: ArenaColors.neonRed,
+        child: SafeArea(
+          child: RefreshIndicator(
+            onRefresh: () async {
+              ref
+                ..invalidate(adminKpisProvider)
+                ..invalidate(adminAuditLogProvider);
+            },
+            child: ListView(
+              padding: const EdgeInsets.all(ArenaSpacing.lg),
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                Text('KPIs LIVE', style: ArenaText.inputLabel),
+                const SizedBox(height: ArenaSpacing.sm),
+                _KpiGrid(kpis: kpis).animate().fadeIn(
+                      duration: ArenaDurations.medium,
+                    ),
+                const SizedBox(height: ArenaSpacing.md),
+                _PayoutsKpi(kpis: kpis).animate(delay: 100.ms).fadeIn(
+                      duration: ArenaDurations.medium,
+                    ),
                 const SizedBox(height: ArenaSpacing.lg),
-                Text('👑 Super-admin', style: ArenaText.h3),
+                Text('🚨 Alertes', style: ArenaText.h3),
+                const SizedBox(height: ArenaSpacing.sm),
+                _AlertCards(kpis: kpis)
+                    .animate(delay: 200.ms)
+                    .fadeIn(duration: ArenaDurations.medium),
+                const SizedBox(height: ArenaSpacing.lg),
+                Text('⚡ Quick actions', style: ArenaText.h3),
                 const SizedBox(height: ArenaSpacing.sm),
                 ArenaButton(
-                  label: 'DASHBOARD SUPER-ADMIN',
+                  label: '+ NOUVELLE COMPÉTITION',
                   fullWidth: true,
-                  variant: ArenaButtonVariant.secondary,
-                  onPressed: () => context.push(AdminRoutes.superDashboard),
+                  onPressed: () => context.push(AdminRoutes.competitionsCreate),
                 ),
                 const SizedBox(height: ArenaSpacing.xs),
                 ArenaButton(
-                  label: 'GESTION UTILISATEURS',
+                  label: '🏆 VOIR LES COMPÉTITIONS',
                   fullWidth: true,
                   variant: ArenaButtonVariant.secondary,
-                  onPressed: () => context.push(AdminRoutes.superUsers),
+                  onPressed: () => context.push(AdminRoutes.competitions),
                 ),
                 const SizedBox(height: ArenaSpacing.xs),
                 ArenaButton(
-                  label: 'INVITATIONS ADMIN',
+                  label: '⚔ VOIR LES MATCHS',
                   fullWidth: true,
                   variant: ArenaButtonVariant.secondary,
-                  onPressed: () => context.push(AdminRoutes.superInvitations),
+                  onPressed: () => context.push(AdminRoutes.matches),
                 ),
                 const SizedBox(height: ArenaSpacing.xs),
                 ArenaButton(
-                  label: '💸 VALIDER PAIEMENTS',
+                  label: '💰 VALIDER PAYOUTS',
                   fullWidth: true,
-                  variant: ArenaButtonVariant.primary,
-                  onPressed: () =>
-                      context.push(AdminRoutes.superPaymentsValidation),
+                  variant: ArenaButtonVariant.secondary,
+                  onPressed: () => context.push(AdminRoutes.payouts),
                 ),
                 const SizedBox(height: ArenaSpacing.xs),
                 ArenaButton(
-                  label: 'REVENUE PLATEFORME',
+                  label: '📺 MODÉRATION STREAMS',
                   fullWidth: true,
                   variant: ArenaButtonVariant.secondary,
-                  onPressed: () => context.push(AdminRoutes.superRevenue),
+                  onPressed: () => context.push(AdminRoutes.streams),
                 ),
+                const SizedBox(height: ArenaSpacing.xs),
+                ArenaButton(
+                  label: "📜 JOURNAL D'AUDIT",
+                  fullWidth: true,
+                  variant: ArenaButtonVariant.secondary,
+                  onPressed: () => context.push(AdminRoutes.auditLog),
+                ),
+                if (isSuperAdmin) ...[
+                  const SizedBox(height: ArenaSpacing.lg),
+                  Text('👑 Super-admin', style: ArenaText.h3),
+                  const SizedBox(height: ArenaSpacing.sm),
+                  ArenaButton(
+                    label: 'DASHBOARD SUPER-ADMIN',
+                    fullWidth: true,
+                    variant: ArenaButtonVariant.secondary,
+                    onPressed: () => context.push(AdminRoutes.superDashboard),
+                  ),
+                  const SizedBox(height: ArenaSpacing.xs),
+                  ArenaButton(
+                    label: 'GESTION UTILISATEURS',
+                    fullWidth: true,
+                    variant: ArenaButtonVariant.secondary,
+                    onPressed: () => context.push(AdminRoutes.superUsers),
+                  ),
+                  const SizedBox(height: ArenaSpacing.xs),
+                  ArenaButton(
+                    label: 'INVITATIONS ADMIN',
+                    fullWidth: true,
+                    variant: ArenaButtonVariant.secondary,
+                    onPressed: () => context.push(AdminRoutes.superInvitations),
+                  ),
+                  const SizedBox(height: ArenaSpacing.xs),
+                  ArenaButton(
+                    label: '💸 VALIDER PAIEMENTS',
+                    fullWidth: true,
+                    variant: ArenaButtonVariant.primary,
+                    onPressed: () =>
+                        context.push(AdminRoutes.superPaymentsValidation),
+                  ),
+                  const SizedBox(height: ArenaSpacing.xs),
+                  ArenaButton(
+                    label: 'REVENUE PLATEFORME',
+                    fullWidth: true,
+                    variant: ArenaButtonVariant.secondary,
+                    onPressed: () => context.push(AdminRoutes.superRevenue),
+                  ),
+                ],
+                const SizedBox(height: ArenaSpacing.lg),
+                Text('📜 Activité récente', style: ArenaText.h3),
+                const SizedBox(height: ArenaSpacing.sm),
+                _RecentActivity(entries: recent),
               ],
-              const SizedBox(height: ArenaSpacing.lg),
-              Text('📜 Activité récente', style: ArenaText.h3),
-              const SizedBox(height: ArenaSpacing.sm),
-              _RecentActivity(entries: recent),
-            ],
+            ),
           ),
         ),
       ),
@@ -395,7 +398,8 @@ class _AlertCards extends StatelessWidget {
           _AlertCard(
             decoration: arenaDangerCardDecoration(),
             icon: '⚠',
-            title: '$disputes ${disputes == 1 ? 'dispute ouverte' : 'disputes ouvertes'}',
+            title:
+                '$disputes ${disputes == 1 ? 'dispute ouverte' : 'disputes ouvertes'}',
             subtitle: "À traiter dans l'onglet Matchs",
             accent: ArenaColors.neonRed,
           ),
@@ -406,7 +410,8 @@ class _AlertCards extends StatelessWidget {
             decoration: arenaWarningCardDecoration(),
             icon: '⏱',
             title: 'Payouts en attente de validation',
-            subtitle: '$pendingPayouts ${pendingPayouts == 1 ? 'joueur concerné' : 'joueurs concernés'}',
+            subtitle:
+                '$pendingPayouts ${pendingPayouts == 1 ? 'joueur concerné' : 'joueurs concernés'}',
             accent: ArenaColors.statusWarn,
           ),
       ],

@@ -7,6 +7,7 @@ import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -54,54 +55,57 @@ class _AdminCompetitionsListPageState
           ),
         ],
       ),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(ArenaSpacing.lg),
-          children: [
-            Text('FILTRES', style: ArenaText.inputLabel),
-            const SizedBox(height: ArenaSpacing.sm),
-            _StatusChipsRow(
-              current: _statusFilter,
-              onTap: (s) => setState(() => _statusFilter = s),
-            ),
-            const SizedBox(height: ArenaSpacing.xs),
-            _GameChipsRow(
-              current: _gameFilter,
-              onTap: (g) => setState(() => _gameFilter = g),
-            ),
-            const SizedBox(height: ArenaSpacing.md),
-            list.when(
-              loading: () => const Padding(
-                padding: EdgeInsets.all(ArenaSpacing.lg),
-                child: Center(child: CircularProgressIndicator()),
+      body: ArenaScreenBackground(
+        accent: ArenaColors.neonRed,
+        child: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.all(ArenaSpacing.lg),
+            children: [
+              Text('FILTRES', style: ArenaText.inputLabel),
+              const SizedBox(height: ArenaSpacing.sm),
+              _StatusChipsRow(
+                current: _statusFilter,
+                onTap: (s) => setState(() => _statusFilter = s),
               ),
-              error: (e, _) => Padding(
-                padding: const EdgeInsets.all(ArenaSpacing.md),
-                child: Text(
-                  'Erreur de chargement : $e',
-                  style: ArenaText.bodyMuted,
+              const SizedBox(height: ArenaSpacing.xs),
+              _GameChipsRow(
+                current: _gameFilter,
+                onTap: (g) => setState(() => _gameFilter = g),
+              ),
+              const SizedBox(height: ArenaSpacing.md),
+              list.when(
+                loading: () => const Padding(
+                  padding: EdgeInsets.all(ArenaSpacing.lg),
+                  child: Center(child: CircularProgressIndicator()),
                 ),
-              ),
-              data: (comps) => comps.isEmpty
-                  ? Padding(
-                      padding: const EdgeInsets.all(ArenaSpacing.lg),
-                      child: Text(
-                        'Aucune compétition pour ce filtre.',
-                        style: ArenaText.bodyMuted,
-                        textAlign: TextAlign.center,
-                      ),
-                    )
-                  : Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        for (final c in comps) ...[
-                          _CompCard(competition: c),
-                          const SizedBox(height: ArenaSpacing.sm),
+                error: (e, _) => Padding(
+                  padding: const EdgeInsets.all(ArenaSpacing.md),
+                  child: Text(
+                    'Erreur de chargement : $e',
+                    style: ArenaText.bodyMuted,
+                  ),
+                ),
+                data: (comps) => comps.isEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.all(ArenaSpacing.lg),
+                        child: Text(
+                          'Aucune compétition pour ce filtre.',
+                          style: ArenaText.bodyMuted,
+                          textAlign: TextAlign.center,
+                        ),
+                      )
+                    : Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          for (final c in comps) ...[
+                            _CompCard(competition: c),
+                            const SizedBox(height: ArenaSpacing.sm),
+                          ],
                         ],
-                      ],
-                    ),
-            ),
-          ],
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -236,7 +240,8 @@ class _CompCard extends ConsumerWidget {
         : null;
 
     return InkWell(
-      onTap: () => context.push(AdminRoutes.competitionDetailPath(competition.id)),
+      onTap: () =>
+          context.push(AdminRoutes.competitionDetailPath(competition.id)),
       borderRadius: BorderRadius.circular(ArenaRadius.lg),
       child: Container(
         decoration: BoxDecoration(
@@ -255,80 +260,86 @@ class _CompCard extends ConsumerWidget {
                 child: Padding(
                   padding: const EdgeInsets.all(ArenaSpacing.md),
                   child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                ArenaBadge(label: visual.label, variant: visual.variant),
-                const Spacer(),
-                Text(
-                  '#${competition.id.substring(0, 6).toUpperCase()}',
-                  style: ArenaText.monoSmall,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          ArenaBadge(
+                            label: visual.label,
+                            variant: visual.variant,
+                          ),
+                          const Spacer(),
+                          Text(
+                            '#${competition.id.substring(0, 6).toUpperCase()}',
+                            style: ArenaText.monoSmall,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: ArenaSpacing.sm),
+                      Text(competition.name.toUpperCase(), style: ArenaText.h3),
+                      if (kvs.isNotEmpty)
+                        const SizedBox(height: ArenaSpacing.sm),
+                      for (final (k, v) in kvs)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(k, style: ArenaText.bodyMuted),
+                              ),
+                              Text(v, style: ArenaText.body),
+                            ],
+                          ),
+                        ),
+                      if (footerNote != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(footerNote, style: ArenaText.bodyMuted),
+                        ),
+                      if (showActions) ...[
+                        const SizedBox(height: ArenaSpacing.sm),
+                        ArenaButton(
+                          label: 'VOIR',
+                          variant: ArenaButtonVariant.secondary,
+                          fullWidth: true,
+                          onPressed: () => context.push(
+                            AdminRoutes.competitionDetailPath(competition.id),
+                          ),
+                        ),
+                        const SizedBox(height: ArenaSpacing.xs),
+                        ArenaButton(
+                          label: 'BRACKET',
+                          variant: ArenaButtonVariant.secondary,
+                          fullWidth: true,
+                          onPressed: () => context.push(
+                            AdminRoutes.bracketPath(competition.id),
+                          ),
+                        ),
+                        const SizedBox(height: ArenaSpacing.xs),
+                        ArenaButton(
+                          label: 'ANNULER',
+                          variant: ArenaButtonVariant.danger,
+                          fullWidth: true,
+                          onPressed: () => _confirmCancel(context, ref),
+                        ),
+                      ],
+                      if (isSuperAdmin) ...[
+                        const SizedBox(height: ArenaSpacing.xs),
+                        ArenaButton(
+                          label: '🗑 SUPPRIMER',
+                          variant: ArenaButtonVariant.danger,
+                          fullWidth: true,
+                          onPressed: () => _confirmDelete(context, ref),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
-              ],
-            ),
-            const SizedBox(height: ArenaSpacing.sm),
-            Text(competition.name.toUpperCase(), style: ArenaText.h3),
-            if (kvs.isNotEmpty) const SizedBox(height: ArenaSpacing.sm),
-            for (final (k, v) in kvs)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Row(
-                  children: [
-                    Expanded(child: Text(k, style: ArenaText.bodyMuted)),
-                    Text(v, style: ArenaText.body),
-                  ],
-                ),
-              ),
-            if (footerNote != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(footerNote, style: ArenaText.bodyMuted),
-              ),
-            if (showActions) ...[
-              const SizedBox(height: ArenaSpacing.sm),
-              ArenaButton(
-                label: 'VOIR',
-                variant: ArenaButtonVariant.secondary,
-                fullWidth: true,
-                onPressed: () => context.push(
-                  AdminRoutes.competitionDetailPath(competition.id),
-                ),
-              ),
-              const SizedBox(height: ArenaSpacing.xs),
-              ArenaButton(
-                label: 'BRACKET',
-                variant: ArenaButtonVariant.secondary,
-                fullWidth: true,
-                onPressed: () => context.push(
-                  AdminRoutes.bracketPath(competition.id),
-                ),
-              ),
-              const SizedBox(height: ArenaSpacing.xs),
-              ArenaButton(
-                label: 'ANNULER',
-                variant: ArenaButtonVariant.danger,
-                fullWidth: true,
-                onPressed: () => _confirmCancel(context, ref),
               ),
             ],
-            if (isSuperAdmin) ...[
-              const SizedBox(height: ArenaSpacing.xs),
-              ArenaButton(
-                label: '🗑 SUPPRIMER',
-                variant: ArenaButtonVariant.danger,
-                fullWidth: true,
-                onPressed: () => _confirmDelete(context, ref),
-              ),
-            ],
-                  ],
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
-        ),
     );
   }
 
@@ -474,14 +485,17 @@ _StatusVisual _visualFor(CompetitionStatus status) {
 
 List<(String, String)> _kvsFor(Competition c) {
   final fmt = NumberFormat('#,###', 'fr_FR');
-  final prize = fmt
-      .format(c.prizePoolLocal.round())
-      .replaceAll(',', ' ');
+  final prize = fmt.format(c.prizePoolLocal.round()).replaceAll(',', ' ');
   final out = <(String, String)>[
     ('Inscrits', '${c.currentPlayers}/${c.maxPlayers}'),
   ];
   if (c.prizePoolLocal > 0) {
-    out.add(('Récompense', '$prize ${c.prizePoolCurrency ?? c.registrationCurrency}'));
+    out.add(
+      (
+        'Récompense',
+        '$prize ${c.prizePoolCurrency ?? c.registrationCurrency}',
+      ),
+    );
   }
   if (c.status == CompetitionStatus.registrationOpen ||
       c.status == CompetitionStatus.draft) {

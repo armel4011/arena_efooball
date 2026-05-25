@@ -15,9 +15,8 @@ class AdminCompetitionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final gradient = _gradientFor(competition.game);
     final fmt = NumberFormat('#,###', 'fr_FR');
-    final pool = fmt
-        .format(competition.prizePoolLocal.round())
-        .replaceAll(',', ' ');
+    final pool =
+        fmt.format(competition.prizePoolLocal.round()).replaceAll(',', ' ');
 
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.md),

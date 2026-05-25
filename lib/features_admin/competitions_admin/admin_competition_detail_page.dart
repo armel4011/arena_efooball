@@ -7,6 +7,7 @@ import 'package:arena/features_admin/competitions_admin/widgets/admin_competitio
 import 'package:arena/features_admin/competitions_admin/widgets/admin_competition_ranking_tab.dart';
 import 'package:arena/features_admin/competitions_admin/widgets/admin_competition_registrants_tab.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -35,57 +36,61 @@ class AdminCompetitionDetailPage extends ConsumerWidget {
       length: 5,
       child: Scaffold(
         appBar: const ArenaAppBar(title: 'Compétition'),
-        body: SafeArea(
-          child: compAsync.when(
-            loading: () =>
-                const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Padding(
-              padding: const EdgeInsets.all(ArenaSpacing.lg),
-              child: Text('Erreur : $e', style: ArenaText.bodyMuted),
-            ),
-            data: (comp) {
-              if (comp == null) {
-                return Center(
-                  child: Text(
-                    'Compétition introuvable.',
-                    style: ArenaText.bodyMuted,
-                  ),
-                );
-              }
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  AdminCompetitionHeader(competition: comp),
-                  TabBar(
-                    isScrollable: true,
-                    labelStyle: ArenaText.button,
-                    unselectedLabelStyle: ArenaText.button,
-                    labelColor: ArenaColors.bone,
-                    unselectedLabelColor: ArenaColors.silver,
-                    indicatorColor: ArenaColors.signalBlue,
-                    indicatorWeight: 2,
-                    tabs: const [
-                      Tab(text: 'INFOS'),
-                      Tab(text: 'INSCRITS'),
-                      Tab(text: 'MATCHS'),
-                      Tab(text: 'CLASSEMENT'),
-                      Tab(text: 'ACTIONS'),
-                    ],
-                  ),
-                  Expanded(
-                    child: TabBarView(
-                      children: [
-                        AdminCompetitionInfosTab(competition: comp),
-                        AdminCompetitionRegistrantsTab(competitionId: comp.id),
-                        AdminCompetitionMatchesTab(competitionId: comp.id),
-                        AdminCompetitionRankingTab(competitionId: comp.id),
-                        AdminCompetitionActionsTab(competition: comp),
+        body: ArenaScreenBackground(
+          accent: ArenaColors.neonRed,
+          child: SafeArea(
+            child: compAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Padding(
+                padding: const EdgeInsets.all(ArenaSpacing.lg),
+                child: Text('Erreur : $e', style: ArenaText.bodyMuted),
+              ),
+              data: (comp) {
+                if (comp == null) {
+                  return Center(
+                    child: Text(
+                      'Compétition introuvable.',
+                      style: ArenaText.bodyMuted,
+                    ),
+                  );
+                }
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    AdminCompetitionHeader(competition: comp),
+                    TabBar(
+                      isScrollable: true,
+                      labelStyle: ArenaText.button,
+                      unselectedLabelStyle: ArenaText.button,
+                      labelColor: ArenaColors.bone,
+                      unselectedLabelColor: ArenaColors.silver,
+                      indicatorColor: ArenaColors.signalBlue,
+                      indicatorWeight: 2,
+                      tabs: const [
+                        Tab(text: 'INFOS'),
+                        Tab(text: 'INSCRITS'),
+                        Tab(text: 'MATCHS'),
+                        Tab(text: 'CLASSEMENT'),
+                        Tab(text: 'ACTIONS'),
                       ],
                     ),
-                  ),
-                ],
-              );
-            },
+                    Expanded(
+                      child: TabBarView(
+                        children: [
+                          AdminCompetitionInfosTab(competition: comp),
+                          AdminCompetitionRegistrantsTab(
+                            competitionId: comp.id,
+                          ),
+                          AdminCompetitionMatchesTab(competitionId: comp.id),
+                          AdminCompetitionRankingTab(competitionId: comp.id),
+                          AdminCompetitionActionsTab(competition: comp),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
         ),
       ),

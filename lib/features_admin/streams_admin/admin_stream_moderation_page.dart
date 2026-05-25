@@ -5,6 +5,7 @@ import 'package:arena/data/repositories/match_stream_repository.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -34,62 +35,65 @@ class AdminStreamModerationPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: const ArenaAppBar(title: 'Modération streams'),
-      body: SafeArea(
-        child: streams.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Padding(
-            padding: const EdgeInsets.all(ArenaSpacing.lg),
-            child: Text(
-              'Erreur de chargement : $e',
-              style: ArenaText.bodyMuted,
-            ),
-          ),
-          data: (list) => ListView(
-            padding: const EdgeInsets.all(ArenaSpacing.lg),
-            children: [
-              _SummaryCard(streams: list),
-              const SizedBox(height: ArenaSpacing.md),
-              if (list.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.all(ArenaSpacing.lg),
-                  child: Text(
-                    'Aucun stream public actif.',
-                    style: ArenaText.bodyMuted,
-                    textAlign: TextAlign.center,
-                  ),
-                )
-              else
-                GridView.count(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 2,
-                  childAspectRatio: 0.95,
-                  crossAxisSpacing: ArenaSpacing.xs,
-                  mainAxisSpacing: ArenaSpacing.xs,
-                  children: [
-                    for (var i = 0; i < list.length; i++)
-                      _StreamTile(
-                        stream: list[i],
-                        gradient: _gradients[i % _gradients.length],
-                      ),
-                    if (list.length < _capacity)
-                      _EmptySlot(
-                        used: list.length,
-                        total: _capacity,
-                      ),
-                  ],
-                ),
-              const SizedBox(height: ArenaSpacing.lg),
-              Container(
-                padding: const EdgeInsets.all(ArenaSpacing.md),
-                decoration: arenaWarningCardDecoration(),
-                child: Text(
-                  '⚠ Couper un stream est journalisé dans admin_audit_log '
-                  'avec ton ID admin.',
-                  style: ArenaText.body,
-                ),
+      body: ArenaScreenBackground(
+        accent: ArenaColors.neonRed,
+        child: SafeArea(
+          child: streams.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Padding(
+              padding: const EdgeInsets.all(ArenaSpacing.lg),
+              child: Text(
+                'Erreur de chargement : $e',
+                style: ArenaText.bodyMuted,
               ),
-            ],
+            ),
+            data: (list) => ListView(
+              padding: const EdgeInsets.all(ArenaSpacing.lg),
+              children: [
+                _SummaryCard(streams: list),
+                const SizedBox(height: ArenaSpacing.md),
+                if (list.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(ArenaSpacing.lg),
+                    child: Text(
+                      'Aucun stream public actif.',
+                      style: ArenaText.bodyMuted,
+                      textAlign: TextAlign.center,
+                    ),
+                  )
+                else
+                  GridView.count(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.95,
+                    crossAxisSpacing: ArenaSpacing.xs,
+                    mainAxisSpacing: ArenaSpacing.xs,
+                    children: [
+                      for (var i = 0; i < list.length; i++)
+                        _StreamTile(
+                          stream: list[i],
+                          gradient: _gradients[i % _gradients.length],
+                        ),
+                      if (list.length < _capacity)
+                        _EmptySlot(
+                          used: list.length,
+                          total: _capacity,
+                        ),
+                    ],
+                  ),
+                const SizedBox(height: ArenaSpacing.lg),
+                Container(
+                  padding: const EdgeInsets.all(ArenaSpacing.md),
+                  decoration: arenaWarningCardDecoration(),
+                  child: Text(
+                    '⚠ Couper un stream est journalisé dans admin_audit_log '
+                    'avec ton ID admin.',
+                    style: ArenaText.body,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

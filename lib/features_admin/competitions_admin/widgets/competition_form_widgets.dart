@@ -359,8 +359,7 @@ class PublishToggleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent =
-        publishNow ? ArenaColors.statusOk : ArenaColors.signalBlue;
+    final accent = publishNow ? ArenaColors.statusOk : ArenaColors.signalBlue;
     return InkWell(
       onTap: () => onChanged(!publishNow),
       borderRadius: BorderRadius.circular(ArenaRadius.lg),

@@ -53,8 +53,7 @@ class AdminCompetitionRegistrantsTab extends ConsumerWidget {
               ],
             );
           }
-          final confirmed =
-              list.where((r) => r.status == 'confirmed').length;
+          final confirmed = list.where((r) => r.status == 'confirmed').length;
           return ListView.separated(
             padding: const EdgeInsets.all(ArenaSpacing.lg),
             itemCount: list.length + 1,

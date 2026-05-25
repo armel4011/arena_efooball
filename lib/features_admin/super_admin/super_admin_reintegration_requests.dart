@@ -10,6 +10,7 @@ import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,52 +29,55 @@ class SuperAdminReintegrationRequests extends ConsumerWidget {
 
     return Scaffold(
       appBar: const ArenaAppBar(title: 'Arena Requête'),
-      body: SafeArea(
-        child: requests.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Padding(
-            padding: const EdgeInsets.all(ArenaSpacing.lg),
-            child: Text('Erreur : $e', style: ArenaText.bodyMuted),
-          ),
-          data: (list) {
-            if (list.isEmpty) {
-              return Padding(
-                padding: const EdgeInsets.all(ArenaSpacing.xl),
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.check_circle_outline,
-                        color: ArenaColors.statusOk,
-                        size: 48,
-                      ),
-                      const SizedBox(height: ArenaSpacing.sm),
-                      Text(
-                        'Aucune requête en attente',
-                        style: ArenaText.h3,
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Toutes les demandes de réintégration ont été '
-                        'traitées.',
-                        style: ArenaText.bodyMuted,
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }
-            return ListView.separated(
+      body: ArenaScreenBackground(
+        accent: ArenaColors.neonRed,
+        child: SafeArea(
+          child: requests.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Padding(
               padding: const EdgeInsets.all(ArenaSpacing.lg),
-              itemCount: list.length,
-              separatorBuilder: (_, __) =>
-                  const SizedBox(height: ArenaSpacing.sm),
-              itemBuilder: (_, i) => _RequestCard(request: list[i]),
-            );
-          },
+              child: Text('Erreur : $e', style: ArenaText.bodyMuted),
+            ),
+            data: (list) {
+              if (list.isEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.all(ArenaSpacing.xl),
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.check_circle_outline,
+                          color: ArenaColors.statusOk,
+                          size: 48,
+                        ),
+                        const SizedBox(height: ArenaSpacing.sm),
+                        Text(
+                          'Aucune requête en attente',
+                          style: ArenaText.h3,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Toutes les demandes de réintégration ont été '
+                          'traitées.',
+                          style: ArenaText.bodyMuted,
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+              return ListView.separated(
+                padding: const EdgeInsets.all(ArenaSpacing.lg),
+                itemCount: list.length,
+                separatorBuilder: (_, __) =>
+                    const SizedBox(height: ArenaSpacing.sm),
+                itemBuilder: (_, i) => _RequestCard(request: list[i]),
+              );
+            },
+          ),
         ),
       ),
     );
@@ -113,8 +117,7 @@ class _RequestCard extends ConsumerWidget {
                       Text('Utilisateur introuvable', style: ArenaText.body),
                   data: (p) => Text(
                     p?.username ?? '— inconnu —',
-                    style:
-                        ArenaText.body.copyWith(fontWeight: FontWeight.w700),
+                    style: ArenaText.body.copyWith(fontWeight: FontWeight.w700),
                   ),
                 ),
               ),

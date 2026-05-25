@@ -11,6 +11,7 @@ import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/prize_ranks.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_stepper.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:flutter/material.dart';
@@ -240,108 +241,110 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
       appBar: ArenaAppBar(
         title: _isEditing ? 'Modifier la compét.' : 'Nouvelle compét.',
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                ArenaSpacing.lg,
-                ArenaSpacing.lg,
-                ArenaSpacing.lg,
-                ArenaSpacing.sm,
+      body: ArenaScreenBackground(
+        accent: ArenaColors.neonRed,
+        child: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  ArenaSpacing.lg,
+                  ArenaSpacing.lg,
+                  ArenaSpacing.lg,
+                  ArenaSpacing.sm,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ArenaStepper(
+                      totalSteps: _stepCount,
+                      currentStep: _step,
+                    ),
+                    const SizedBox(height: ArenaSpacing.sm),
+                    Text(
+                      'Étape ${_step + 1} / $_stepCount — ${_stepTitle(_step)}',
+                      style: ArenaText.bodyMuted,
+                    ),
+                  ],
+                ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ArenaStepper(
-                    totalSteps: _stepCount,
-                    currentStep: _step,
-                  ),
-                  const SizedBox(height: ArenaSpacing.sm),
-                  Text(
-                    'Étape ${_step + 1} / $_stepCount — ${_stepTitle(_step)}',
-                    style: ArenaText.bodyMuted,
-                  ),
-                ],
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.all(ArenaSpacing.lg),
+                  children: [
+                    if (_step == 0) ..._buildInfosStep(),
+                    if (_step == 1)
+                      WizardStepFormat(
+                        format: _format,
+                        maxPlayers: _maxPlayers,
+                        autoGenerateBracket: _autoGenerateBracket,
+                        matchIntervalMinutes: _matchIntervalMinutes,
+                        roundIntervalsCtrl: _roundIntervalsCtrl,
+                        groupCountCtrl: _groupCountCtrl,
+                        qualifiersPerGroupCtrl: _qualifiersPerGroupCtrl,
+                        isEditing: _isEditing,
+                        onFormatChanged: (f) => setState(() => _format = f),
+                        onMaxPlayersChanged: (n) =>
+                            setState(() => _maxPlayers = n),
+                        onAutoGenerateChanged: (v) =>
+                            setState(() => _autoGenerateBracket = v),
+                        onMatchIntervalChanged: (m) =>
+                            setState(() => _matchIntervalMinutes = m),
+                        onChanged: () => setState(() {}),
+                      ),
+                    if (_step == 2) ..._buildPrizesStep(),
+                    if (_step == 3)
+                      WizardStepFees(
+                        entryFeeCtrl: _entryFeeCtrl,
+                        currency: _currency,
+                        commissionXafCtrl: _commissionXafCtrl,
+                        orangeMomoCtrl: _orangeMomoCtrl,
+                        mtnMomoCtrl: _mtnMomoCtrl,
+                        referralQuotaCtrl: _referralQuotaCtrl,
+                        isEditing: _isEditing,
+                        onChanged: () => setState(() {}),
+                        onCurrencyChanged: (c) => setState(() => _currency = c),
+                      ),
+                    if (_step == 4) ..._buildReviewStep(),
+                  ],
+                ),
               ),
-            ),
-            Expanded(
-              child: ListView(
+              Padding(
                 padding: const EdgeInsets.all(ArenaSpacing.lg),
-                children: [
-                  if (_step == 0) ..._buildInfosStep(),
-                  if (_step == 1)
-                    WizardStepFormat(
-                      format: _format,
-                      maxPlayers: _maxPlayers,
-                      autoGenerateBracket: _autoGenerateBracket,
-                      matchIntervalMinutes: _matchIntervalMinutes,
-                      roundIntervalsCtrl: _roundIntervalsCtrl,
-                      groupCountCtrl: _groupCountCtrl,
-                      qualifiersPerGroupCtrl: _qualifiersPerGroupCtrl,
-                      isEditing: _isEditing,
-                      onFormatChanged: (f) => setState(() => _format = f),
-                      onMaxPlayersChanged:
-                          (n) => setState(() => _maxPlayers = n),
-                      onAutoGenerateChanged:
-                          (v) => setState(() => _autoGenerateBracket = v),
-                      onMatchIntervalChanged:
-                          (m) => setState(() => _matchIntervalMinutes = m),
-                      onChanged: () => setState(() {}),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: ArenaButton(
+                        label: '← RETOUR',
+                        variant: ArenaButtonVariant.secondary,
+                        fullWidth: true,
+                        onPressed:
+                            _step > 0 ? () => setState(() => _step--) : null,
+                      ),
                     ),
-                  if (_step == 2) ..._buildPrizesStep(),
-                  if (_step == 3)
-                    WizardStepFees(
-                      entryFeeCtrl: _entryFeeCtrl,
-                      currency: _currency,
-                      commissionXafCtrl: _commissionXafCtrl,
-                      orangeMomoCtrl: _orangeMomoCtrl,
-                      mtnMomoCtrl: _mtnMomoCtrl,
-                      referralQuotaCtrl: _referralQuotaCtrl,
-                      isEditing: _isEditing,
-                      onChanged: () => setState(() {}),
-                      onCurrencyChanged:
-                          (c) => setState(() => _currency = c),
+                    const SizedBox(width: ArenaSpacing.xs),
+                    Expanded(
+                      child: ArenaButton(
+                        label: _step < _stepCount - 1
+                            ? 'SUIVANT →'
+                            : (_isEditing
+                                ? '💾 ENREGISTRER'
+                                : (_publishNow
+                                    ? '🚀 CRÉER & PUBLIER'
+                                    : '💾 SAUVER EN BROUILLON')),
+                        fullWidth: true,
+                        onPressed: !_canAdvance || _submitting
+                            ? null
+                            : (_step < _stepCount - 1
+                                ? () => setState(() => _step++)
+                                : _submit),
+                      ),
                     ),
-                  if (_step == 4) ..._buildReviewStep(),
-                ],
+                  ],
+                ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(ArenaSpacing.lg),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: ArenaButton(
-                      label: '← RETOUR',
-                      variant: ArenaButtonVariant.secondary,
-                      fullWidth: true,
-                      onPressed:
-                          _step > 0 ? () => setState(() => _step--) : null,
-                    ),
-                  ),
-                  const SizedBox(width: ArenaSpacing.xs),
-                  Expanded(
-                    child: ArenaButton(
-                      label: _step < _stepCount - 1
-                          ? 'SUIVANT →'
-                          : (_isEditing
-                              ? '💾 ENREGISTRER'
-                              : (_publishNow
-                                  ? '🚀 CRÉER & PUBLIER'
-                                  : '💾 SAUVER EN BROUILLON')),
-                      fullWidth: true,
-                      onPressed: !_canAdvance || _submitting
-                          ? null
-                          : (_step < _stepCount - 1
-                              ? () => setState(() => _step++)
-                              : _submit),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -562,7 +565,12 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
         pool > 0 ? (commissionXaf / pool * 100).clamp(0, 100) : 0;
 
     if (_isEditing) {
-      await _submitEdit(adminId, pool, commissionXaf, derivedCommissionPct.toDouble());
+      await _submitEdit(
+        adminId,
+        pool,
+        commissionXaf,
+        derivedCommissionPct.toDouble(),
+      );
       return;
     }
 
@@ -571,37 +579,36 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
         'admin.competition.create',
         _isEditing ? 'edit existing' : 'new from wizard',
         () => ref.read(adminCompetitionsRepositoryProvider).create({
-        'name': _nameCtrl.text.trim(),
-        'game': _game.value,
-        'format': _format.value,
-        'status': _publishNow ? 'registration_open' : 'draft',
-        'description':
-            _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
-        'start_date': _startDate!.toUtc().toIso8601String(),
-        'max_players': _maxPlayers,
-        'registration_fee': fee,
-        'registration_currency': _currency,
-        'commission_xaf': commissionXaf,
-        'commission_pct': derivedCommissionPct,
-        'prize_pool_local': pool,
-        'prize_pool_currency': _currency,
-        'prize_distribution': _prizeDistribution(),
-        'created_by': adminId,
-        'auto_generate_bracket': _autoGenerateBracket,
-        'match_interval_minutes': _matchIntervalMinutes,
-        'referral_quota': _referralQuota(),
-        'referral_activity_mode': 'any',
-        'round_intervals': _roundIntervals(),
-        'format_config': _formatConfig(),
-        if (fee > 0) 'orange_money_code': _orangeMomoCtrl.text.trim(),
-        if (fee > 0) 'mtn_momo_code': _mtnMomoCtrl.text.trim(),
-        'android_store_url':
-            _androidStoreUrlCtrl.text.trim().isEmpty
-                ? null
-                : _androidStoreUrlCtrl.text.trim(),
-        'ios_store_url': _iosStoreUrlCtrl.text.trim().isEmpty
-            ? null
-            : _iosStoreUrlCtrl.text.trim(),
+          'name': _nameCtrl.text.trim(),
+          'game': _game.value,
+          'format': _format.value,
+          'status': _publishNow ? 'registration_open' : 'draft',
+          'description':
+              _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
+          'start_date': _startDate!.toUtc().toIso8601String(),
+          'max_players': _maxPlayers,
+          'registration_fee': fee,
+          'registration_currency': _currency,
+          'commission_xaf': commissionXaf,
+          'commission_pct': derivedCommissionPct,
+          'prize_pool_local': pool,
+          'prize_pool_currency': _currency,
+          'prize_distribution': _prizeDistribution(),
+          'created_by': adminId,
+          'auto_generate_bracket': _autoGenerateBracket,
+          'match_interval_minutes': _matchIntervalMinutes,
+          'referral_quota': _referralQuota(),
+          'referral_activity_mode': 'any',
+          'round_intervals': _roundIntervals(),
+          'format_config': _formatConfig(),
+          if (fee > 0) 'orange_money_code': _orangeMomoCtrl.text.trim(),
+          if (fee > 0) 'mtn_momo_code': _mtnMomoCtrl.text.trim(),
+          'android_store_url': _androidStoreUrlCtrl.text.trim().isEmpty
+              ? null
+              : _androidStoreUrlCtrl.text.trim(),
+          'ios_store_url': _iosStoreUrlCtrl.text.trim().isEmpty
+              ? null
+              : _iosStoreUrlCtrl.text.trim(),
         }),
       );
       await ref.read(adminAuditLogRepositoryProvider).record(
@@ -664,10 +671,9 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
         'format_config': _formatConfig(),
         if (fee > 0) 'orange_money_code': _orangeMomoCtrl.text.trim(),
         if (fee > 0) 'mtn_momo_code': _mtnMomoCtrl.text.trim(),
-        'android_store_url':
-            _androidStoreUrlCtrl.text.trim().isEmpty
-                ? null
-                : _androidStoreUrlCtrl.text.trim(),
+        'android_store_url': _androidStoreUrlCtrl.text.trim().isEmpty
+            ? null
+            : _androidStoreUrlCtrl.text.trim(),
         'ios_store_url': _iosStoreUrlCtrl.text.trim().isEmpty
             ? null
             : _iosStoreUrlCtrl.text.trim(),
@@ -755,7 +761,8 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
   List<int>? _roundIntervals() {
     final raw = _roundIntervalsCtrl.text.trim();
     if (raw.isEmpty) return null;
-    final parts = raw.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty);
+    final parts =
+        raw.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty);
     final ints = <int>[];
     for (final p in parts) {
       final n = int.tryParse(p);

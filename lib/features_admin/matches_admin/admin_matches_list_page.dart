@@ -6,6 +6,7 @@ import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
 import 'package:arena/features_shared/widgets/arena_filter_menu.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -27,8 +28,7 @@ class AdminMatchesListPage extends ConsumerStatefulWidget {
       _AdminMatchesListPageState();
 }
 
-class _AdminMatchesListPageState
-    extends ConsumerState<AdminMatchesListPage> {
+class _AdminMatchesListPageState extends ConsumerState<AdminMatchesListPage> {
   _MatchesFilter _filter = _MatchesFilter.all;
 
   @override
@@ -49,68 +49,71 @@ class _AdminMatchesListPageState
           ),
         ],
       ),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(ArenaSpacing.lg),
-          children: [
-            Row(
-              children: [
-                ArenaFilterMenu(
-                  activeCount: _filter == _MatchesFilter.all ? 0 : 1,
-                  sections: _buildSections(),
-                  initialSelection: {
-                    'status': _filter == _MatchesFilter.all
-                        ? const []
-                        : [_filter.name],
-                  },
-                  onApply: _applySelection,
-                ),
-                const Spacer(),
-                if (_filter != _MatchesFilter.all)
-                  TextButton(
-                    onPressed: () =>
-                        setState(() => _filter = _MatchesFilter.all),
-                    child: Text(
-                      'Réinitialiser',
-                      style: ArenaText.small.copyWith(
-                        color: ArenaColors.signalBlue,
-                      ),
-                    ),
+      body: ArenaScreenBackground(
+        accent: ArenaColors.neonRed,
+        child: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.all(ArenaSpacing.lg),
+            children: [
+              Row(
+                children: [
+                  ArenaFilterMenu(
+                    activeCount: _filter == _MatchesFilter.all ? 0 : 1,
+                    sections: _buildSections(),
+                    initialSelection: {
+                      'status': _filter == _MatchesFilter.all
+                          ? const []
+                          : [_filter.name],
+                    },
+                    onApply: _applySelection,
                   ),
-              ],
-            ),
-            const SizedBox(height: ArenaSpacing.md),
-            list.when(
-              loading: () => const Padding(
-                padding: EdgeInsets.all(ArenaSpacing.lg),
-                child: Center(child: CircularProgressIndicator()),
-              ),
-              error: (e, _) => Padding(
-                padding: const EdgeInsets.all(ArenaSpacing.md),
-                child: Text(
-                  'Erreur de chargement : $e',
-                  style: ArenaText.bodyMuted,
-                ),
-              ),
-              data: (matches) => matches.isEmpty
-                  ? Padding(
-                      padding: const EdgeInsets.all(ArenaSpacing.lg),
+                  const Spacer(),
+                  if (_filter != _MatchesFilter.all)
+                    TextButton(
+                      onPressed: () =>
+                          setState(() => _filter = _MatchesFilter.all),
                       child: Text(
-                        'Aucun match pour ce filtre.',
-                        style: ArenaText.bodyMuted,
-                        textAlign: TextAlign.center,
+                        'Réinitialiser',
+                        style: ArenaText.small.copyWith(
+                          color: ArenaColors.signalBlue,
+                        ),
                       ),
-                    )
-                  : Column(
-                      children: [
-                        for (final m in matches) ...[
-                          _MatchCard(match: m),
-                          const SizedBox(height: ArenaSpacing.sm),
-                        ],
-                      ],
                     ),
-            ),
-          ],
+                ],
+              ),
+              const SizedBox(height: ArenaSpacing.md),
+              list.when(
+                loading: () => const Padding(
+                  padding: EdgeInsets.all(ArenaSpacing.lg),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+                error: (e, _) => Padding(
+                  padding: const EdgeInsets.all(ArenaSpacing.md),
+                  child: Text(
+                    'Erreur de chargement : $e',
+                    style: ArenaText.bodyMuted,
+                  ),
+                ),
+                data: (matches) => matches.isEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.all(ArenaSpacing.lg),
+                        child: Text(
+                          'Aucun match pour ce filtre.',
+                          style: ArenaText.bodyMuted,
+                          textAlign: TextAlign.center,
+                        ),
+                      )
+                    : Column(
+                        children: [
+                          for (final m in matches) ...[
+                            _MatchCard(match: m),
+                            const SizedBox(height: ArenaSpacing.sm),
+                          ],
+                        ],
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -2,6 +2,7 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/admin/super_admin_dashboard_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -30,63 +31,66 @@ class SuperAdminDashboard extends ConsumerWidget {
 
     return Scaffold(
       appBar: const ArenaAppBar(title: 'Super-admin', showBack: false),
-      body: SafeArea(
-        child: RefreshIndicator(
-          color: ArenaColors.signalBlue,
-          onRefresh: () async {
-            ref
-              ..invalidate(superAdminKpisProvider)
-              ..invalidate(superAdminTopPlayersProvider)
-              ..invalidate(superAdminCountryBreakdownProvider)
-              ..invalidate(superAdminMonthlySignupsProvider)
-              ..invalidate(superAdminMonthlyRevenueProvider);
-            await ref.read(superAdminKpisProvider.future);
-          },
-          child: ListView(
-            padding: const EdgeInsets.all(ArenaSpacing.lg),
-            children: [
-              Text(
-                'KPIs GLOBAUX · $monthLabel',
-                style: ArenaText.inputLabel.copyWith(color: _gold),
-              ),
-              const SizedBox(height: ArenaSpacing.sm),
-              _KpiRow(kpisAsync: kpisAsync),
-              const SizedBox(height: ArenaSpacing.sm),
-              _MarginCard(kpisAsync: kpisAsync),
-              const SizedBox(height: ArenaSpacing.lg),
-              Text('📈 Inscriptions / mois', style: ArenaText.h3),
-              const SizedBox(height: ArenaSpacing.sm),
-              _SignupsLineChart(async: signupsAsync),
-              const SizedBox(height: ArenaSpacing.lg),
-              Text('💰 Revenus / mois', style: ArenaText.h3),
-              const SizedBox(height: ArenaSpacing.sm),
-              _RevenueBarChart(async: monthlyRevenueAsync),
-              const SizedBox(height: ArenaSpacing.lg),
-              Text('🏆 Top 10 joueurs', style: ArenaText.h3),
-              const SizedBox(height: ArenaSpacing.sm),
-              _TopPlayers(async: topPlayersAsync),
-              const SizedBox(height: ArenaSpacing.lg),
-              Text('🌍 Répartition pays', style: ArenaText.h3),
-              const SizedBox(height: ArenaSpacing.sm),
-              _CountryBreakdown(async: countriesAsync),
-              const SizedBox(height: ArenaSpacing.lg),
-              Container(
-                padding: const EdgeInsets.all(ArenaSpacing.md),
-                decoration: arenaDangerCardDecoration(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('🚨 Alertes système', style: ArenaText.h3),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Sentry events surveillés via le dashboard externe '
-                      '(`sentry.io/arena`). Aucune intégration in-app V1.',
-                      style: ArenaText.bodyMuted,
-                    ),
-                  ],
+      body: ArenaScreenBackground(
+        accent: ArenaColors.neonRed,
+        child: SafeArea(
+          child: RefreshIndicator(
+            color: ArenaColors.signalBlue,
+            onRefresh: () async {
+              ref
+                ..invalidate(superAdminKpisProvider)
+                ..invalidate(superAdminTopPlayersProvider)
+                ..invalidate(superAdminCountryBreakdownProvider)
+                ..invalidate(superAdminMonthlySignupsProvider)
+                ..invalidate(superAdminMonthlyRevenueProvider);
+              await ref.read(superAdminKpisProvider.future);
+            },
+            child: ListView(
+              padding: const EdgeInsets.all(ArenaSpacing.lg),
+              children: [
+                Text(
+                  'KPIs GLOBAUX · $monthLabel',
+                  style: ArenaText.inputLabel.copyWith(color: _gold),
                 ),
-              ),
-            ],
+                const SizedBox(height: ArenaSpacing.sm),
+                _KpiRow(kpisAsync: kpisAsync),
+                const SizedBox(height: ArenaSpacing.sm),
+                _MarginCard(kpisAsync: kpisAsync),
+                const SizedBox(height: ArenaSpacing.lg),
+                Text('📈 Inscriptions / mois', style: ArenaText.h3),
+                const SizedBox(height: ArenaSpacing.sm),
+                _SignupsLineChart(async: signupsAsync),
+                const SizedBox(height: ArenaSpacing.lg),
+                Text('💰 Revenus / mois', style: ArenaText.h3),
+                const SizedBox(height: ArenaSpacing.sm),
+                _RevenueBarChart(async: monthlyRevenueAsync),
+                const SizedBox(height: ArenaSpacing.lg),
+                Text('🏆 Top 10 joueurs', style: ArenaText.h3),
+                const SizedBox(height: ArenaSpacing.sm),
+                _TopPlayers(async: topPlayersAsync),
+                const SizedBox(height: ArenaSpacing.lg),
+                Text('🌍 Répartition pays', style: ArenaText.h3),
+                const SizedBox(height: ArenaSpacing.sm),
+                _CountryBreakdown(async: countriesAsync),
+                const SizedBox(height: ArenaSpacing.lg),
+                Container(
+                  padding: const EdgeInsets.all(ArenaSpacing.md),
+                  decoration: arenaDangerCardDecoration(),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('🚨 Alertes système', style: ArenaText.h3),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Sentry events surveillés via le dashboard externe '
+                        '(`sentry.io/arena`). Aucune intégration in-app V1.',
+                        style: ArenaText.bodyMuted,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -228,9 +232,11 @@ class _SignupsLineChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return async.when(
-      loading: () => const _ChartFrame(child: Center(
-        child: CircularProgressIndicator(color: ArenaColors.signalBlue),
-      ),),
+      loading: () => const _ChartFrame(
+        child: Center(
+          child: CircularProgressIndicator(color: ArenaColors.signalBlue),
+        ),
+      ),
       error: (e, _) => _ChartFrame(
         child: Text(
           'Erreur : $e',
@@ -239,10 +245,12 @@ class _SignupsLineChart extends StatelessWidget {
       ),
       data: (rows) {
         if (rows.isEmpty) {
-          return _ChartFrame(child: Text(
-            'Aucune inscription sur la période.',
-            style: ArenaText.bodyMuted,
-          ),);
+          return _ChartFrame(
+            child: Text(
+              'Aucune inscription sur la période.',
+              style: ArenaText.bodyMuted,
+            ),
+          );
         }
         final maxY = rows.fold<double>(
           1,
@@ -326,19 +334,25 @@ class _RevenueBarChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return async.when(
-      loading: () => const _ChartFrame(child: Center(
-        child: CircularProgressIndicator(color: ArenaColors.statusOk),
-      ),),
+      loading: () => const _ChartFrame(
+        child: Center(
+          child: CircularProgressIndicator(color: ArenaColors.statusOk),
+        ),
+      ),
       error: (e, _) => _ChartFrame(
-        child: Text('Erreur : $e',
-            style: ArenaText.small.copyWith(color: ArenaColors.neonRed),),
+        child: Text(
+          'Erreur : $e',
+          style: ArenaText.small.copyWith(color: ArenaColors.neonRed),
+        ),
       ),
       data: (rows) {
         if (rows.isEmpty) {
-          return _ChartFrame(child: Text(
-            'Aucun revenu sur la période.',
-            style: ArenaText.bodyMuted,
-          ),);
+          return _ChartFrame(
+            child: Text(
+              'Aucun revenu sur la période.',
+              style: ArenaText.bodyMuted,
+            ),
+          );
         }
         final maxY = rows.fold<double>(
           1,
@@ -392,8 +406,9 @@ class _RevenueBarChart extends StatelessWidget {
                         toY: rows[i].revenueXaf,
                         color: ArenaColors.statusOk,
                         width: 8,
-                        borderRadius:
-                            const BorderRadius.vertical(top: Radius.circular(2)),
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(2),
+                        ),
                       ),
                     ],
                   ),

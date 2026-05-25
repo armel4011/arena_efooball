@@ -4,8 +4,10 @@ import 'package:arena/data/models/profile.dart';
 import 'package:arena/data/repositories/auth_failure.dart';
 import 'package:arena/data/repositories/auth_repository.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
-import 'package:arena/features_admin/auth_admin/invitation_redeem_screen.dart' show InvitationRedeemScreen;
-import 'package:arena/features_admin/auth_admin/widgets/totp_gate.dart' show TotpGate;
+import 'package:arena/features_admin/auth_admin/invitation_redeem_screen.dart'
+    show InvitationRedeemScreen;
+import 'package:arena/features_admin/auth_admin/widgets/totp_gate.dart'
+    show TotpGate;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -339,8 +341,7 @@ class AdminTotpSetupController extends AsyncNotifier<TotpSetupState> {
   Future<void> requestChallenge() async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      final challenge =
-          await ref.read(adminAuthRepositoryProvider).setupTotp();
+      final challenge = await ref.read(adminAuthRepositoryProvider).setupTotp();
       return TotpSetupState(challenge: challenge);
     });
   }

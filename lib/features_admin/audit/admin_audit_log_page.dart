@@ -2,6 +2,7 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/admin_audit_log.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -51,68 +52,73 @@ class _AdminAuditLogPageState extends ConsumerState<AdminAuditLogPage> {
   @override
   Widget build(BuildContext context) {
     final entries = ref.watch(
-      adminAuditLogProvider(AdminAuditLogFilter(
-        category: _category,
-        periodDays: _periodDays,
-        searchQuery: _searchQuery.isEmpty ? null : _searchQuery,
-      ),),
+      adminAuditLogProvider(
+        AdminAuditLogFilter(
+          category: _category,
+          periodDays: _periodDays,
+          searchQuery: _searchQuery.isEmpty ? null : _searchQuery,
+        ),
+      ),
     );
 
     return Scaffold(
       appBar: const ArenaAppBar(title: "Journal d'audit"),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(ArenaSpacing.lg),
-          children: [
-            ArenaTextField(
-              controller: _searchCtrl,
-              hint: '🔍 Rechercher action, admin, ressource…',
-              onChanged: (v) => setState(() => _searchQuery = v.trim()),
-            ),
-            const SizedBox(height: ArenaSpacing.md),
-            _ChipsRow(
-              labels: [for (final (_, l) in _categories) l],
-              currentIndex: _categories.indexWhere((e) => e.$1 == _category),
-              onTap: (i) => setState(() => _category = _categories[i].$1),
-            ),
-            const SizedBox(height: ArenaSpacing.xs),
-            _ChipsRow(
-              labels: [for (final (_, l) in _periods) l],
-              currentIndex: _periods.indexWhere((e) => e.$1 == _periodDays),
-              onTap: (i) => setState(() => _periodDays = _periods[i].$1),
-            ),
-            const SizedBox(height: ArenaSpacing.md),
-            entries.when(
-              loading: () => const Padding(
-                padding: EdgeInsets.all(ArenaSpacing.lg),
-                child: Center(child: CircularProgressIndicator()),
+      body: ArenaScreenBackground(
+        accent: ArenaColors.neonRed,
+        child: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.all(ArenaSpacing.lg),
+            children: [
+              ArenaTextField(
+                controller: _searchCtrl,
+                hint: '🔍 Rechercher action, admin, ressource…',
+                onChanged: (v) => setState(() => _searchQuery = v.trim()),
               ),
-              error: (e, _) => Padding(
-                padding: const EdgeInsets.all(ArenaSpacing.md),
-                child: Text(
-                  'Erreur de chargement : $e',
-                  style: ArenaText.bodyMuted,
+              const SizedBox(height: ArenaSpacing.md),
+              _ChipsRow(
+                labels: [for (final (_, l) in _categories) l],
+                currentIndex: _categories.indexWhere((e) => e.$1 == _category),
+                onTap: (i) => setState(() => _category = _categories[i].$1),
+              ),
+              const SizedBox(height: ArenaSpacing.xs),
+              _ChipsRow(
+                labels: [for (final (_, l) in _periods) l],
+                currentIndex: _periods.indexWhere((e) => e.$1 == _periodDays),
+                onTap: (i) => setState(() => _periodDays = _periods[i].$1),
+              ),
+              const SizedBox(height: ArenaSpacing.md),
+              entries.when(
+                loading: () => const Padding(
+                  padding: EdgeInsets.all(ArenaSpacing.lg),
+                  child: Center(child: CircularProgressIndicator()),
                 ),
-              ),
-              data: (rows) => rows.isEmpty
-                  ? Padding(
-                      padding: const EdgeInsets.all(ArenaSpacing.lg),
-                      child: Text(
-                        'Aucune entrée pour ce filtre.',
-                        style: ArenaText.bodyMuted,
-                        textAlign: TextAlign.center,
-                      ),
-                    )
-                  : Column(
-                      children: [
-                        for (final r in rows) ...[
-                          _LogCard(entry: r),
-                          const SizedBox(height: ArenaSpacing.sm),
+                error: (e, _) => Padding(
+                  padding: const EdgeInsets.all(ArenaSpacing.md),
+                  child: Text(
+                    'Erreur de chargement : $e',
+                    style: ArenaText.bodyMuted,
+                  ),
+                ),
+                data: (rows) => rows.isEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.all(ArenaSpacing.lg),
+                        child: Text(
+                          'Aucune entrée pour ce filtre.',
+                          style: ArenaText.bodyMuted,
+                          textAlign: TextAlign.center,
+                        ),
+                      )
+                    : Column(
+                        children: [
+                          for (final r in rows) ...[
+                            _LogCard(entry: r),
+                            const SizedBox(height: ArenaSpacing.sm),
+                          ],
                         ],
-                      ],
-                    ),
-            ),
-          ],
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -152,8 +158,7 @@ class _ChipsRow extends StatelessWidget {
                     color: i == currentIndex
                         ? ArenaColors.signalBlue.withValues(alpha: 0.15)
                         : ArenaColors.carbon,
-                    borderRadius:
-                        BorderRadius.circular(ArenaRadius.round),
+                    borderRadius: BorderRadius.circular(ArenaRadius.round),
                     border: Border.all(
                       color: i == currentIndex
                           ? ArenaColors.signalBlue
@@ -166,9 +171,8 @@ class _ChipsRow extends StatelessWidget {
                       color: i == currentIndex
                           ? ArenaColors.signalBlue
                           : ArenaColors.silver,
-                      fontWeight: i == currentIndex
-                          ? FontWeight.w600
-                          : FontWeight.w500,
+                      fontWeight:
+                          i == currentIndex ? FontWeight.w600 : FontWeight.w500,
                     ),
                   ),
                 ),
@@ -234,8 +238,8 @@ class _LogCard extends StatelessWidget {
                 if (entry.targetType != null && entry.targetId != null)
                   TextSpan(
                     text: '${entry.targetType}#${_shortId(entry.targetId!)}',
-                    style: ArenaText.mono
-                        .copyWith(color: ArenaColors.signalBlue),
+                    style:
+                        ArenaText.mono.copyWith(color: ArenaColors.signalBlue),
                   ),
               ],
             ),
@@ -267,15 +271,12 @@ class _LogCard extends StatelessWidget {
     );
   }
 
-  static String _shortId(String id) =>
-      id.length < 8 ? id : id.substring(0, 8);
+  static String _shortId(String id) => id.length < 8 ? id : id.substring(0, 8);
 
   static String _formatTime(DateTime? at) {
     if (at == null) return '';
     final now = DateTime.now();
-    if (now.year == at.year &&
-        now.month == at.month &&
-        now.day == at.day) {
+    if (now.year == at.year && now.month == at.month && now.day == at.day) {
       return DateFormat('HH:mm').format(at);
     }
     return DateFormat('dd/MM HH:mm').format(at);

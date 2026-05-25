@@ -8,6 +8,7 @@ import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_user/profile/avatar_palette.dart';
 import 'package:flutter/material.dart';
@@ -127,38 +128,41 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
 
     return Scaffold(
       appBar: const ArenaAppBar(title: 'Mon profil'),
-      body: SafeArea(
-        child: profileAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Padding(
-            padding: const EdgeInsets.all(ArenaSpacing.lg),
-            child: Text('Erreur : $e', style: ArenaText.bodyMuted),
-          ),
-          data: (profile) {
-            if (profile == null) {
-              return Center(
-                child: Text(
-                  'Profil introuvable.',
-                  style: ArenaText.bodyMuted,
-                ),
+      body: ArenaScreenBackground(
+        accent: ArenaColors.neonRed,
+        child: SafeArea(
+          child: profileAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Padding(
+              padding: const EdgeInsets.all(ArenaSpacing.lg),
+              child: Text('Erreur : $e', style: ArenaText.bodyMuted),
+            ),
+            data: (profile) {
+              if (profile == null) {
+                return Center(
+                  child: Text(
+                    'Profil introuvable.',
+                    style: ArenaText.bodyMuted,
+                  ),
+                );
+              }
+              _hydrate(profile);
+              return _ProfileForm(
+                formKey: _formKey,
+                profile: profile,
+                usernameCtrl: _usernameCtrl,
+                whatsappCtrl: _whatsappCtrl,
+                avatarColor: _avatarColor,
+                countryCode: _countryCode,
+                isWhatsappValid: _isWhatsappValid,
+                saving: _saving,
+                error: _error,
+                onAvatarChanged: (hex) => setState(() => _avatarColor = hex),
+                onCountryChanged: (code) => setState(() => _countryCode = code),
+                onSave: () => _save(profile),
               );
-            }
-            _hydrate(profile);
-            return _ProfileForm(
-              formKey: _formKey,
-              profile: profile,
-              usernameCtrl: _usernameCtrl,
-              whatsappCtrl: _whatsappCtrl,
-              avatarColor: _avatarColor,
-              countryCode: _countryCode,
-              isWhatsappValid: _isWhatsappValid,
-              saving: _saving,
-              error: _error,
-              onAvatarChanged: (hex) => setState(() => _avatarColor = hex),
-              onCountryChanged: (code) => setState(() => _countryCode = code),
-              onSave: () => _save(profile),
-            );
-          },
+            },
+          ),
         ),
       ),
     );
@@ -311,7 +315,8 @@ class _ProfileForm extends StatelessWidget {
           _ReadOnlyRow(label: 'Email', value: profile.email),
           _ReadOnlyRow(
             label: 'Rôle',
-            value: profile.role == UserRole.superAdmin ? 'Super-admin' : 'Admin',
+            value:
+                profile.role == UserRole.superAdmin ? 'Super-admin' : 'Admin',
           ),
           _ReadOnlyRow(
             label: '2FA (TOTP)',
@@ -418,9 +423,8 @@ class _AvatarPalette extends StatelessWidget {
                 color: AvatarPalette.colorFromHex(hex),
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: selected == hex
-                      ? ArenaColors.bone
-                      : ArenaColors.border,
+                  color:
+                      selected == hex ? ArenaColors.bone : ArenaColors.border,
                   width: selected == hex ? 2.5 : 1,
                 ),
               ),

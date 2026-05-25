@@ -5,6 +5,7 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/admin/super_admin_dashboard_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:csv/csv.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -42,55 +43,59 @@ class SuperAdminRevenue extends ConsumerWidget {
           ),
         ],
       ),
-      body: SafeArea(
-        child: RefreshIndicator(
-          color: ArenaColors.signalBlue,
-          onRefresh: () async {
-            ref
-              ..invalidate(superAdminRevenueBreakdownProvider)
-              ..invalidate(superAdminRevenuePerCompetitionProvider);
-            await ref.read(superAdminRevenueBreakdownProvider.future);
-          },
-          child: ListView(
-            padding: const EdgeInsets.all(ArenaSpacing.lg),
-            children: [
-              _PeriodChipsRow(
-                current: periodChoice,
-                onTap: (label) {
-                  ref.read(_selectedPeriodChipProvider.notifier).state = label;
-                  ref.read(selectedRevenuePeriodProvider.notifier).state =
-                      _resolvePeriod(label);
-                },
-              ),
-              const SizedBox(height: ArenaSpacing.md),
-              _RevenueHero(async: breakdownAsync),
-              const SizedBox(height: ArenaSpacing.lg),
-              Text('DÉCOMPOSITION', style: ArenaText.inputLabel),
-              const SizedBox(height: ArenaSpacing.sm),
-              _BreakdownCard(async: breakdownAsync),
-              const SizedBox(height: ArenaSpacing.sm),
-              breakdownAsync.maybeWhen(
-                data: (b) => Center(
-                  child: Text(
-                    'Marge ${b.marginPct.toStringAsFixed(1)}%',
-                    style: ArenaText.bodyMuted
-                        .copyWith(color: ArenaColors.statusOk),
-                  ),
+      body: ArenaScreenBackground(
+        accent: ArenaColors.neonRed,
+        child: SafeArea(
+          child: RefreshIndicator(
+            color: ArenaColors.signalBlue,
+            onRefresh: () async {
+              ref
+                ..invalidate(superAdminRevenueBreakdownProvider)
+                ..invalidate(superAdminRevenuePerCompetitionProvider);
+              await ref.read(superAdminRevenueBreakdownProvider.future);
+            },
+            child: ListView(
+              padding: const EdgeInsets.all(ArenaSpacing.lg),
+              children: [
+                _PeriodChipsRow(
+                  current: periodChoice,
+                  onTap: (label) {
+                    ref.read(_selectedPeriodChipProvider.notifier).state =
+                        label;
+                    ref.read(selectedRevenuePeriodProvider.notifier).state =
+                        _resolvePeriod(label);
+                  },
                 ),
-                orElse: () => const SizedBox.shrink(),
-              ),
-              const SizedBox(height: ArenaSpacing.lg),
-              Text('PAR COMPÉTITION', style: ArenaText.inputLabel),
-              const SizedBox(height: ArenaSpacing.sm),
-              _CompetitionsTable(async: perCompAsync),
-              const SizedBox(height: ArenaSpacing.lg),
-              ArenaButton(
-                label: '📥 EXPORT CSV (comptable)',
-                fullWidth: true,
-                size: ArenaButtonSize.large,
-                onPressed: () => _exportCsv(context, ref),
-              ),
-            ],
+                const SizedBox(height: ArenaSpacing.md),
+                _RevenueHero(async: breakdownAsync),
+                const SizedBox(height: ArenaSpacing.lg),
+                Text('DÉCOMPOSITION', style: ArenaText.inputLabel),
+                const SizedBox(height: ArenaSpacing.sm),
+                _BreakdownCard(async: breakdownAsync),
+                const SizedBox(height: ArenaSpacing.sm),
+                breakdownAsync.maybeWhen(
+                  data: (b) => Center(
+                    child: Text(
+                      'Marge ${b.marginPct.toStringAsFixed(1)}%',
+                      style: ArenaText.bodyMuted
+                          .copyWith(color: ArenaColors.statusOk),
+                    ),
+                  ),
+                  orElse: () => const SizedBox.shrink(),
+                ),
+                const SizedBox(height: ArenaSpacing.lg),
+                Text('PAR COMPÉTITION', style: ArenaText.inputLabel),
+                const SizedBox(height: ArenaSpacing.sm),
+                _CompetitionsTable(async: perCompAsync),
+                const SizedBox(height: ArenaSpacing.lg),
+                ArenaButton(
+                  label: '📥 EXPORT CSV (comptable)',
+                  fullWidth: true,
+                  size: ArenaButtonSize.large,
+                  onPressed: () => _exportCsv(context, ref),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -227,8 +232,7 @@ class _PeriodChipsRow extends StatelessWidget {
                     color: l == current
                         ? ArenaColors.signalBlue.withValues(alpha: 0.15)
                         : ArenaColors.carbon,
-                    borderRadius:
-                        BorderRadius.circular(ArenaRadius.round),
+                    borderRadius: BorderRadius.circular(ArenaRadius.round),
                     border: Border.all(
                       color: l == current
                           ? ArenaColors.signalBlue
@@ -241,9 +245,8 @@ class _PeriodChipsRow extends StatelessWidget {
                       color: l == current
                           ? ArenaColors.signalBlue
                           : ArenaColors.silver,
-                      fontWeight: l == current
-                          ? FontWeight.w600
-                          : FontWeight.w500,
+                      fontWeight:
+                          l == current ? FontWeight.w600 : FontWeight.w500,
                     ),
                   ),
                 ),
@@ -316,11 +319,7 @@ class _BreakdownCard extends StatelessWidget {
             _money(b.collectedXaf),
             _RowKind.neutral
           ),
-          (
-            '— Payouts versés',
-            '-${_money(b.payoutsXaf)}',
-            _RowKind.negative
-          ),
+          ('— Payouts versés', '-${_money(b.payoutsXaf)}', _RowKind.negative),
           (
             '— Frais processeur (V1 : 0)',
             '-${_money(b.processorFeesXaf)}',
@@ -404,8 +403,7 @@ class _BreakdownRow extends StatelessWidget {
             child: Text(
               label,
               style: ArenaText.body.copyWith(
-                fontWeight:
-                    kind == _RowKind.positive ? FontWeight.w700 : null,
+                fontWeight: kind == _RowKind.positive ? FontWeight.w700 : null,
               ),
             ),
           ),
@@ -413,8 +411,7 @@ class _BreakdownRow extends StatelessWidget {
             value,
             style: ArenaText.mono.copyWith(
               color: color,
-              fontWeight:
-                  kind == _RowKind.positive ? FontWeight.w700 : null,
+              fontWeight: kind == _RowKind.positive ? FontWeight.w700 : null,
               fontSize: kind == _RowKind.positive ? 14 : null,
             ),
           ),

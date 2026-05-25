@@ -14,13 +14,11 @@ class AdminCompetitionMatchesTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final matchesAsync =
-        ref.watch(competitionMatchesProvider(competitionId));
+    final matchesAsync = ref.watch(competitionMatchesProvider(competitionId));
 
     return matchesAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) =>
-          Padding(
+      error: (e, _) => Padding(
         padding: const EdgeInsets.all(ArenaSpacing.lg),
         child: Text('Erreur : $e', style: ArenaText.bodyMuted),
       ),
@@ -102,8 +100,7 @@ class _PlayerRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label =
-        playerId == null ? 'TBD' : playerId!.substring(0, 8);
+    final label = playerId == null ? 'TBD' : playerId!.substring(0, 8);
     return Row(
       children: [
         ArenaAvatar(

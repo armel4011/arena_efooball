@@ -12,6 +12,7 @@ import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -51,57 +52,62 @@ class _AdminDisputesPageState extends ConsumerState<AdminDisputesPage> {
       appBar: ArenaAppBar(
         title: 'Dispute · M-${widget.matchId.substring(0, 6)}',
       ),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(ArenaSpacing.lg),
-          children: [
-            dispute.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Text('Erreur : $e', style: ArenaText.bodyMuted),
-              data: (d) => d == null
-                  ? Text(
-                      'Aucune dispute ouverte pour ce match.',
-                      style: ArenaText.bodyMuted,
-                    )
-                  : _DisputeHeader(dispute: d),
-            ),
-            const SizedBox(height: ArenaSpacing.lg),
-            Text('SCORES SAISIS', style: ArenaText.inputLabel),
-            const SizedBox(height: ArenaSpacing.sm),
-            match.when(
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Text('Erreur : $e', style: ArenaText.bodyMuted),
-              data: (m) => m == null
-                  ? Text('Match introuvable.', style: ArenaText.bodyMuted)
-                  : _ScoresCard(match: m),
-            ),
-            const SizedBox(height: ArenaSpacing.lg),
-            Text(
-              '⚖ TRANCHER',
-              style: ArenaText.inputLabel.copyWith(color: ArenaColors.neonRed),
-            ),
-            const SizedBox(height: ArenaSpacing.sm),
-            match.maybeWhen(
-              data: (m) => m == null
-                  ? const SizedBox.shrink()
-                  : _VerdictButtons(
-                      match: m,
-                      dispute: dispute.valueOrNull,
-                      justificationController: _justificationCtrl,
-                    ),
-              orElse: () => const SizedBox.shrink(),
-            ),
-            const SizedBox(height: ArenaSpacing.lg),
-            Text('Justification (obligatoire)', style: ArenaText.inputLabel),
-            const SizedBox(height: ArenaSpacing.xs),
-            ArenaTextField(
-              controller: _justificationCtrl,
-              hint: 'Explique ta décision pour audit…',
-              minLines: 3,
-              maxLines: 5,
-            ),
-          ],
+      body: ArenaScreenBackground(
+        accent: ArenaColors.neonRed,
+        child: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.all(ArenaSpacing.lg),
+            children: [
+              dispute.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) =>
+                    Text('Erreur : $e', style: ArenaText.bodyMuted),
+                data: (d) => d == null
+                    ? Text(
+                        'Aucune dispute ouverte pour ce match.',
+                        style: ArenaText.bodyMuted,
+                      )
+                    : _DisputeHeader(dispute: d),
+              ),
+              const SizedBox(height: ArenaSpacing.lg),
+              Text('SCORES SAISIS', style: ArenaText.inputLabel),
+              const SizedBox(height: ArenaSpacing.sm),
+              match.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) =>
+                    Text('Erreur : $e', style: ArenaText.bodyMuted),
+                data: (m) => m == null
+                    ? Text('Match introuvable.', style: ArenaText.bodyMuted)
+                    : _ScoresCard(match: m),
+              ),
+              const SizedBox(height: ArenaSpacing.lg),
+              Text(
+                '⚖ TRANCHER',
+                style:
+                    ArenaText.inputLabel.copyWith(color: ArenaColors.neonRed),
+              ),
+              const SizedBox(height: ArenaSpacing.sm),
+              match.maybeWhen(
+                data: (m) => m == null
+                    ? const SizedBox.shrink()
+                    : _VerdictButtons(
+                        match: m,
+                        dispute: dispute.valueOrNull,
+                        justificationController: _justificationCtrl,
+                      ),
+                orElse: () => const SizedBox.shrink(),
+              ),
+              const SizedBox(height: ArenaSpacing.lg),
+              Text('Justification (obligatoire)', style: ArenaText.inputLabel),
+              const SizedBox(height: ArenaSpacing.xs),
+              ArenaTextField(
+                controller: _justificationCtrl,
+                hint: 'Explique ta décision pour audit…',
+                minLines: 3,
+                maxLines: 5,
+              ),
+            ],
+          ),
         ),
       ),
     );

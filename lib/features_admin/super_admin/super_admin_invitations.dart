@@ -7,6 +7,7 @@ import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -29,8 +30,7 @@ class SuperAdminInvitations extends ConsumerStatefulWidget {
       _SuperAdminInvitationsState();
 }
 
-class _SuperAdminInvitationsState
-    extends ConsumerState<SuperAdminInvitations> {
+class _SuperAdminInvitationsState extends ConsumerState<SuperAdminInvitations> {
   static const _gold = ArenaColors.tierGold;
   UserRole _role = UserRole.admin;
   _Expiration _expiration = _Expiration.thirtyDays;
@@ -48,49 +48,51 @@ class _SuperAdminInvitationsState
 
     return Scaffold(
       appBar: const ArenaAppBar(title: 'Invitations admin'),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(ArenaSpacing.lg),
-          children: [
-            Text('CODES', style: ArenaText.inputLabel),
-            const SizedBox(height: ArenaSpacing.sm),
-            codes.when(
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
-              error: (e, _) =>
-                  Text('Erreur : $e', style: ArenaText.bodyMuted),
-              data: (list) => list.isEmpty
-                  ? Padding(
-                      padding: const EdgeInsets.all(ArenaSpacing.md),
-                      child: Text(
-                        "Aucun code généré pour l'instant.",
-                        style: ArenaText.bodyMuted,
-                      ),
-                    )
-                  : Column(
-                      children: [
-                        for (final c in list) ...[
-                          _CodeCard(code: c),
-                          const SizedBox(height: ArenaSpacing.sm),
+      body: ArenaScreenBackground(
+        accent: ArenaColors.neonRed,
+        child: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.all(ArenaSpacing.lg),
+            children: [
+              Text('CODES', style: ArenaText.inputLabel),
+              const SizedBox(height: ArenaSpacing.sm),
+              codes.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) =>
+                    Text('Erreur : $e', style: ArenaText.bodyMuted),
+                data: (list) => list.isEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.all(ArenaSpacing.md),
+                        child: Text(
+                          "Aucun code généré pour l'instant.",
+                          style: ArenaText.bodyMuted,
+                        ),
+                      )
+                    : Column(
+                        children: [
+                          for (final c in list) ...[
+                            _CodeCard(code: c),
+                            const SizedBox(height: ArenaSpacing.sm),
+                          ],
                         ],
-                      ],
-                    ),
-            ),
-            const SizedBox(height: ArenaSpacing.lg),
-            Text(
-              '+ GÉNÉRER UN CODE',
-              style: ArenaText.inputLabel.copyWith(color: _gold),
-            ),
-            const SizedBox(height: ArenaSpacing.sm),
-            _GenerateCard(
-              role: _role,
-              expiration: _expiration,
-              emailCtrl: _emailCtrl,
-              onRoleChanged: (r) => setState(() => _role = r),
-              onExpirationChanged: (e) => setState(() => _expiration = e),
-              onSubmit: _submit,
-            ),
-          ],
+                      ),
+              ),
+              const SizedBox(height: ArenaSpacing.lg),
+              Text(
+                '+ GÉNÉRER UN CODE',
+                style: ArenaText.inputLabel.copyWith(color: _gold),
+              ),
+              const SizedBox(height: ArenaSpacing.sm),
+              _GenerateCard(
+                role: _role,
+                expiration: _expiration,
+                emailCtrl: _emailCtrl,
+                onRoleChanged: (r) => setState(() => _role = r),
+                onExpirationChanged: (e) => setState(() => _expiration = e),
+                onSubmit: _submit,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -283,7 +285,11 @@ class _CodeCard extends ConsumerWidget {
                         } catch (e) {
                           if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Échec : ${arenaErrorMessage(e)}')),
+                            SnackBar(
+                              content: Text(
+                                'Échec : ${arenaErrorMessage(e)}',
+                              ),
+                            ),
                           );
                         }
                       },
