@@ -2,9 +2,11 @@ import 'package:arena/core/router/admin_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/auth_failure.dart';
 import 'package:arena/features_admin/auth_admin/admin_auth_providers.dart';
-import 'package:arena/features_admin/auth_admin/totp_setup_screen.dart' show TotpSetupScreen;
+import 'package:arena/features_admin/auth_admin/totp_setup_screen.dart'
+    show TotpSetupScreen;
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_user/auth/widgets/auth_failure_message.dart';
 import 'package:flutter/material.dart';
@@ -81,7 +83,9 @@ class _InvitationRedeemScreenState
   }
 
   String? _validateConfirm(String? v) {
-    if (v != _passwordCtrl.text) return 'Les mots de passe ne correspondent pas';
+    if (v != _passwordCtrl.text) {
+      return 'Les mots de passe ne correspondent pas';
+    }
     return null;
   }
 
@@ -115,179 +119,181 @@ class _InvitationRedeemScreenState
   Widget build(BuildContext context) {
     final state = ref.watch(invitationRedeemControllerProvider);
     final isLoading = state.isLoading;
-    final errorMessage = state.hasError
-        ? authFailureToMessage(_asFailure(state.error))
-        : null;
+    final errorMessage =
+        state.hasError ? authFailureToMessage(_asFailure(state.error)) : null;
 
     return Scaffold(
       appBar: ArenaAppBar(
         title: 'Code invitation',
         onBack: () => context.go(AdminRoutes.splash),
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(ArenaSpacing.lg),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: ArenaSpacing.sm),
-                const Center(
-                  child: Text('🎟️', style: TextStyle(fontSize: 54)),
-                ),
-                const SizedBox(height: ArenaSpacing.md),
-                Center(
-                  child: Text(
-                    'DEVENIR ADMIN',
-                    style: ArenaTypography.displayMedium,
-                  ),
-                ),
-                const SizedBox(height: ArenaSpacing.sm),
-                Center(
-                  child: Text(
-                    "Saisis le code d'invitation reçu par email.",
-                    style: ArenaTypography.bodyMedium.copyWith(
-                      color: ArenaColors.textMuted,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                const SizedBox(height: ArenaSpacing.xl),
-                ArenaTextField(
-                  label: 'CODE INVITATION',
-                  hint: 'ARENA-XXXX-XXXX-XXXX',
-                  controller: _codeCtrl,
-                  textInputAction: TextInputAction.next,
-                  prefixIcon: Icons.confirmation_number_outlined,
-                  enabled: !isLoading,
-                  validator: _validateCode,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(
-                      RegExp(r'[A-Za-z0-9\-]'),
-                    ),
-                    LengthLimitingTextInputFormatter(19),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Format : ARENA-XXXX-XXXX-XXXX (auto-formaté)',
-                  style: ArenaText.small,
-                ),
-                const SizedBox(height: ArenaSpacing.md),
-                const _InvitationPreviewCard(
-                  role: 'Modérateur',
-                  sender: 'super@arena.app',
-                  expiresOn: '16/05/2026',
-                ),
-                const SizedBox(height: ArenaSpacing.md),
-                ArenaTextField(
-                  label: 'EMAIL',
-                  hint: 'admin@arena.app',
-                  controller: _emailCtrl,
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
-                  prefixIcon: Icons.email_outlined,
-                  enabled: !isLoading,
-                  validator: _validateEmail,
-                ),
-                const SizedBox(height: ArenaSpacing.md),
-                ArenaTextField(
-                  label: 'NOM AFFICHÉ',
-                  hint: 'Jean Admin',
-                  controller: _usernameCtrl,
-                  textInputAction: TextInputAction.next,
-                  prefixIcon: Icons.person_outline,
-                  enabled: !isLoading,
-                  validator: _validateUsername,
-                ),
-                const SizedBox(height: ArenaSpacing.md),
-                ArenaTextField(
-                  label: 'MOT DE PASSE',
-                  hint: 'Au moins 12 caractères',
-                  controller: _passwordCtrl,
-                  obscureText: _obscure1,
-                  textInputAction: TextInputAction.next,
-                  prefixIcon: Icons.lock_outline,
-                  enabled: !isLoading,
-                  validator: _validatePassword,
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _obscure1 ? Icons.visibility : Icons.visibility_off,
-                      color: ArenaColors.textMuted,
-                      size: 20,
-                    ),
-                    onPressed: () => setState(() => _obscure1 = !_obscure1),
-                  ),
-                ),
-                const SizedBox(height: ArenaSpacing.md),
-                ArenaTextField(
-                  label: 'CONFIRMER',
-                  hint: 'Retape ton mot de passe',
-                  controller: _confirmCtrl,
-                  obscureText: _obscure2,
-                  textInputAction: TextInputAction.done,
-                  prefixIcon: Icons.lock_outline,
-                  enabled: !isLoading,
-                  validator: _validateConfirm,
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _obscure2 ? Icons.visibility : Icons.visibility_off,
-                      color: ArenaColors.textMuted,
-                      size: 20,
-                    ),
-                    onPressed: () => setState(() => _obscure2 = !_obscure2),
-                  ),
-                ),
-                const SizedBox(height: ArenaSpacing.md),
-                CheckboxListTile(
-                  contentPadding: EdgeInsets.zero,
-                  controlAffinity: ListTileControlAffinity.leading,
-                  value: _cguChecked,
-                  onChanged: isLoading
-                      ? null
-                      : (v) => setState(() => _cguChecked = v ?? false),
-                  title: const Text(
-                    "J'accepte les CGU admin (responsabilité accrue,"
-                    ' audit, accès données joueurs).',
-                  ),
-                ),
-                if (errorMessage != null) ...[
+      body: ArenaScreenBackground(
+        accent: ArenaColors.neonRed,
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(ArenaSpacing.lg),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
                   const SizedBox(height: ArenaSpacing.sm),
-                  _ErrorBanner(message: errorMessage),
-                ],
-                const SizedBox(height: ArenaSpacing.lg),
-                ArenaButton(
-                  label: 'VALIDER LE CODE',
-                  fullWidth: true,
-                  size: ArenaButtonSize.large,
-                  isLoading: isLoading,
-                  onPressed: _cguChecked ? _submit : null,
-                ),
-                const SizedBox(height: ArenaSpacing.md),
-                Center(
-                  child: Wrap(
-                    alignment: WrapAlignment.center,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      Text(
-                        'Pas reçu de code ? ',
-                        style: ArenaText.bodyMuted,
+                  const Center(
+                    child: Text('🎟️', style: TextStyle(fontSize: 54)),
+                  ),
+                  const SizedBox(height: ArenaSpacing.md),
+                  Center(
+                    child: Text(
+                      'DEVENIR ADMIN',
+                      style: ArenaTypography.displayMedium,
+                    ),
+                  ),
+                  const SizedBox(height: ArenaSpacing.sm),
+                  Center(
+                    child: Text(
+                      "Saisis le code d'invitation reçu par email.",
+                      style: ArenaTypography.bodyMedium.copyWith(
+                        color: ArenaColors.textMuted,
                       ),
-                      GestureDetector(
-                        onTap: () => _showContactHint(context),
-                        child: Text(
-                          'Contacter le super-admin',
-                          style: ArenaText.bodyMuted.copyWith(
-                            color: ArenaColors.neonRed,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  const SizedBox(height: ArenaSpacing.xl),
+                  ArenaTextField(
+                    label: 'CODE INVITATION',
+                    hint: 'ARENA-XXXX-XXXX-XXXX',
+                    controller: _codeCtrl,
+                    textInputAction: TextInputAction.next,
+                    prefixIcon: Icons.confirmation_number_outlined,
+                    enabled: !isLoading,
+                    validator: _validateCode,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                        RegExp(r'[A-Za-z0-9\-]'),
                       ),
+                      LengthLimitingTextInputFormatter(19),
                     ],
                   ),
-                ),
-              ],
+                  const SizedBox(height: 6),
+                  Text(
+                    'Format : ARENA-XXXX-XXXX-XXXX (auto-formaté)',
+                    style: ArenaText.small,
+                  ),
+                  const SizedBox(height: ArenaSpacing.md),
+                  const _InvitationPreviewCard(
+                    role: 'Modérateur',
+                    sender: 'super@arena.app',
+                    expiresOn: '16/05/2026',
+                  ),
+                  const SizedBox(height: ArenaSpacing.md),
+                  ArenaTextField(
+                    label: 'EMAIL',
+                    hint: 'admin@arena.app',
+                    controller: _emailCtrl,
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
+                    prefixIcon: Icons.email_outlined,
+                    enabled: !isLoading,
+                    validator: _validateEmail,
+                  ),
+                  const SizedBox(height: ArenaSpacing.md),
+                  ArenaTextField(
+                    label: 'NOM AFFICHÉ',
+                    hint: 'Jean Admin',
+                    controller: _usernameCtrl,
+                    textInputAction: TextInputAction.next,
+                    prefixIcon: Icons.person_outline,
+                    enabled: !isLoading,
+                    validator: _validateUsername,
+                  ),
+                  const SizedBox(height: ArenaSpacing.md),
+                  ArenaTextField(
+                    label: 'MOT DE PASSE',
+                    hint: 'Au moins 12 caractères',
+                    controller: _passwordCtrl,
+                    obscureText: _obscure1,
+                    textInputAction: TextInputAction.next,
+                    prefixIcon: Icons.lock_outline,
+                    enabled: !isLoading,
+                    validator: _validatePassword,
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscure1 ? Icons.visibility : Icons.visibility_off,
+                        color: ArenaColors.textMuted,
+                        size: 20,
+                      ),
+                      onPressed: () => setState(() => _obscure1 = !_obscure1),
+                    ),
+                  ),
+                  const SizedBox(height: ArenaSpacing.md),
+                  ArenaTextField(
+                    label: 'CONFIRMER',
+                    hint: 'Retape ton mot de passe',
+                    controller: _confirmCtrl,
+                    obscureText: _obscure2,
+                    textInputAction: TextInputAction.done,
+                    prefixIcon: Icons.lock_outline,
+                    enabled: !isLoading,
+                    validator: _validateConfirm,
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscure2 ? Icons.visibility : Icons.visibility_off,
+                        color: ArenaColors.textMuted,
+                        size: 20,
+                      ),
+                      onPressed: () => setState(() => _obscure2 = !_obscure2),
+                    ),
+                  ),
+                  const SizedBox(height: ArenaSpacing.md),
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    value: _cguChecked,
+                    onChanged: isLoading
+                        ? null
+                        : (v) => setState(() => _cguChecked = v ?? false),
+                    title: const Text(
+                      "J'accepte les CGU admin (responsabilité accrue,"
+                      ' audit, accès données joueurs).',
+                    ),
+                  ),
+                  if (errorMessage != null) ...[
+                    const SizedBox(height: ArenaSpacing.sm),
+                    _ErrorBanner(message: errorMessage),
+                  ],
+                  const SizedBox(height: ArenaSpacing.lg),
+                  ArenaButton(
+                    label: 'VALIDER LE CODE',
+                    fullWidth: true,
+                    size: ArenaButtonSize.large,
+                    isLoading: isLoading,
+                    onPressed: _cguChecked ? _submit : null,
+                  ),
+                  const SizedBox(height: ArenaSpacing.md),
+                  Center(
+                    child: Wrap(
+                      alignment: WrapAlignment.center,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          'Pas reçu de code ? ',
+                          style: ArenaText.bodyMuted,
+                        ),
+                        GestureDetector(
+                          onTap: () => _showContactHint(context),
+                          child: Text(
+                            'Contacter le super-admin',
+                            style: ArenaText.bodyMuted.copyWith(
+                              color: ArenaColors.neonRed,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

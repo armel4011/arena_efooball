@@ -4,9 +4,11 @@ import 'package:arena/core/router/admin_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/auth_failure.dart';
 import 'package:arena/features_admin/auth_admin/admin_auth_providers.dart';
-import 'package:arena/features_admin/auth_admin/login_admin_screen.dart' show LoginAdminScreen;
+import 'package:arena/features_admin/auth_admin/login_admin_screen.dart'
+    show LoginAdminScreen;
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_user/auth/widgets/auth_failure_message.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -103,82 +105,83 @@ class _TotpVerifyScreenState extends ConsumerState<TotpVerifyScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(adminTotpVerifyControllerProvider);
     final isLoading = state.isLoading;
-    final errorMessage = state.hasError
-        ? authFailureToMessage(_asFailure(state.error))
-        : null;
+    final errorMessage =
+        state.hasError ? authFailureToMessage(_asFailure(state.error)) : null;
 
     return Scaffold(
       appBar: ArenaAppBar(
         title: 'Vérification 2FA',
         onBack: () => context.go(AdminRoutes.login),
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(ArenaSpacing.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: ArenaSpacing.md),
-              const Center(
-                child: Text('🔐', style: TextStyle(fontSize: 60)),
-              ),
-              const SizedBox(height: ArenaSpacing.md),
-              Center(
-                child: Text(
-                  'CODE À 6 CHIFFRES',
-                  style: ArenaTypography.displayMedium,
+      body: ArenaScreenBackground(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(ArenaSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: ArenaSpacing.md),
+                const Center(
+                  child: Text('🔐', style: TextStyle(fontSize: 60)),
                 ),
-              ),
-              const SizedBox(height: ArenaSpacing.sm),
-              Center(
-                child: Text(
-                  "Ouvre ton app d'authentification.",
-                  style: ArenaTypography.bodyMedium.copyWith(
-                    color: ArenaColors.textMuted,
+                const SizedBox(height: ArenaSpacing.md),
+                Center(
+                  child: Text(
+                    'CODE À 6 CHIFFRES',
+                    style: ArenaTypography.displayMedium,
                   ),
                 ),
-              ),
-              const SizedBox(height: ArenaSpacing.xl),
-              _TotpCellGrid(
-                controller: _codeCtrl,
-                focusNode: _codeFocus,
-                enabled: !isLoading,
-              ),
-              const SizedBox(height: ArenaSpacing.md),
-              _ExpiryCard(secondsLeft: _secondsLeft),
-              if (errorMessage != null) ...[
                 const SizedBox(height: ArenaSpacing.sm),
-                _ErrorBanner(message: errorMessage),
-              ],
-              const SizedBox(height: ArenaSpacing.lg),
-              ArenaButton(
-                label: 'VÉRIFIER',
-                fullWidth: true,
-                size: ArenaButtonSize.large,
-                isLoading: isLoading,
-                onPressed: _submit,
-              ),
-              const SizedBox(height: ArenaSpacing.md),
-              _AttemptsCard(attempts: _attempts),
-              const SizedBox(height: ArenaSpacing.sm),
-              Center(
-                child: TextButton(
-                  onPressed: isLoading ? null : _backupCodeStub,
-                  child: const Text('🔑 Utiliser un backup code'),
-                ),
-              ),
-              Center(
-                child: TextButton(
-                  onPressed: isLoading ? null : _lostDeviceStub,
+                Center(
                   child: Text(
-                    "😱 J'ai perdu mon device",
-                    style: ArenaText.small.copyWith(
-                      color: ArenaColors.silver,
+                    "Ouvre ton app d'authentification.",
+                    style: ArenaTypography.bodyMedium.copyWith(
+                      color: ArenaColors.textMuted,
                     ),
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: ArenaSpacing.xl),
+                _TotpCellGrid(
+                  controller: _codeCtrl,
+                  focusNode: _codeFocus,
+                  enabled: !isLoading,
+                ),
+                const SizedBox(height: ArenaSpacing.md),
+                _ExpiryCard(secondsLeft: _secondsLeft),
+                if (errorMessage != null) ...[
+                  const SizedBox(height: ArenaSpacing.sm),
+                  _ErrorBanner(message: errorMessage),
+                ],
+                const SizedBox(height: ArenaSpacing.lg),
+                ArenaButton(
+                  label: 'VÉRIFIER',
+                  fullWidth: true,
+                  size: ArenaButtonSize.large,
+                  isLoading: isLoading,
+                  onPressed: _submit,
+                ),
+                const SizedBox(height: ArenaSpacing.md),
+                _AttemptsCard(attempts: _attempts),
+                const SizedBox(height: ArenaSpacing.sm),
+                Center(
+                  child: TextButton(
+                    onPressed: isLoading ? null : _backupCodeStub,
+                    child: const Text('🔑 Utiliser un backup code'),
+                  ),
+                ),
+                Center(
+                  child: TextButton(
+                    onPressed: isLoading ? null : _lostDeviceStub,
+                    child: Text(
+                      "😱 J'ai perdu mon device",
+                      style: ArenaText.small.copyWith(
+                        color: ArenaColors.silver,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

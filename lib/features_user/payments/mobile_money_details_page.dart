@@ -5,6 +5,7 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/payment_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_user/payments/payment_method.dart';
 import 'package:flutter/material.dart';
@@ -79,86 +80,87 @@ class _MobileMoneyDetailsPageState
     final hasCode = widget.merchantCode.trim().isNotEmpty;
     return Scaffold(
       appBar: ArenaAppBar(title: method.label),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(ArenaSpacing.lg),
-          children: [
-            _Hero(method: method, amountXaf: widget.amountXaf)
-                .animate()
-                .fadeIn(duration: ArenaDurations.medium),
-            const SizedBox(height: ArenaSpacing.lg),
-            if (!hasCode) ...[
-              const _MissingCodeBanner(),
-              const SizedBox(height: ArenaSpacing.md),
-            ] else
-              _MerchantCodeCard(
-                method: method,
-                code: widget.merchantCode,
-                onCopy: () => _copyCode(context),
-                onDial: () => _dialPayment(context),
-              ),
-            const SizedBox(height: ArenaSpacing.lg),
-            Text('Pays', style: ArenaText.inputLabel),
-            const SizedBox(height: ArenaSpacing.xs),
-            ArenaTextField(
-              controller: _countryCtrl,
-              enabled: false,
-            ),
-            const SizedBox(height: ArenaSpacing.md),
-            Text(
-              'Ton numéro ${method.label}',
-              style: ArenaText.inputLabel,
-            ),
-            const SizedBox(height: ArenaSpacing.xs),
-            Text(
-              'Le numéro depuis lequel tu vas payer (utile au super-admin '
-              'pour retrouver ta transaction).',
-              style: ArenaText.small,
-            ),
-            const SizedBox(height: ArenaSpacing.xs),
-            Row(
-              children: [
-                _DialBox(label: widget.dialCode),
-                const SizedBox(width: ArenaSpacing.xs),
-                Expanded(
-                  child: ArenaTextField(
-                    controller: _phoneCtrl,
-                    hint: '6 78 45 12 42',
-                    keyboardType: TextInputType.phone,
-                    onChanged: (_) => setState(() {}),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp('[0-9 ]')),
-                      LengthLimitingTextInputFormatter(13),
-                    ],
-                  ),
+      body: ArenaScreenBackground(
+        child: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.all(ArenaSpacing.lg),
+            children: [
+              _Hero(method: method, amountXaf: widget.amountXaf)
+                  .animate()
+                  .fadeIn(duration: ArenaDurations.medium),
+              const SizedBox(height: ArenaSpacing.lg),
+              if (!hasCode) ...[
+                const _MissingCodeBanner(),
+                const SizedBox(height: ArenaSpacing.md),
+              ] else
+                _MerchantCodeCard(
+                  method: method,
+                  code: widget.merchantCode,
+                  onCopy: () => _copyCode(context),
+                  onDial: () => _dialPayment(context),
                 ),
-              ],
-            ),
-            if (_phoneValid) ...[
+              const SizedBox(height: ArenaSpacing.lg),
+              Text('Pays', style: ArenaText.inputLabel),
+              const SizedBox(height: ArenaSpacing.xs),
+              ArenaTextField(
+                controller: _countryCtrl,
+                enabled: false,
+              ),
+              const SizedBox(height: ArenaSpacing.md),
+              Text(
+                'Ton numéro ${method.label}',
+                style: ArenaText.inputLabel,
+              ),
               const SizedBox(height: ArenaSpacing.xs),
               Text(
-                '✓ Numéro valide ${method.label}',
-                style: ArenaText.bodyMuted
-                    .copyWith(color: ArenaColors.statusOk),
+                'Le numéro depuis lequel tu vas payer (utile au super-admin '
+                'pour retrouver ta transaction).',
+                style: ArenaText.small,
+              ),
+              const SizedBox(height: ArenaSpacing.xs),
+              Row(
+                children: [
+                  _DialBox(label: widget.dialCode),
+                  const SizedBox(width: ArenaSpacing.xs),
+                  Expanded(
+                    child: ArenaTextField(
+                      controller: _phoneCtrl,
+                      hint: '6 78 45 12 42',
+                      keyboardType: TextInputType.phone,
+                      onChanged: (_) => setState(() {}),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp('[0-9 ]')),
+                        LengthLimitingTextInputFormatter(13),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (_phoneValid) ...[
+                const SizedBox(height: ArenaSpacing.xs),
+                Text(
+                  '✓ Numéro valide ${method.label}',
+                  style:
+                      ArenaText.bodyMuted.copyWith(color: ArenaColors.statusOk),
+                ),
+              ],
+              const SizedBox(height: ArenaSpacing.lg),
+              const _Disclaimer().animate(delay: 100.ms).fadeIn(
+                    duration: ArenaDurations.medium,
+                  ),
+              const SizedBox(height: ArenaSpacing.xl),
+              ArenaButton(
+                label: _submitting
+                    ? 'ENVOI…'
+                    : "J'AI PAYÉ ${_formatXaf(widget.amountXaf)} XAF",
+                fullWidth: true,
+                size: ArenaButtonSize.large,
+                isLoading: _submitting,
+                onPressed:
+                    (_phoneValid && hasCode && !_submitting) ? _submit : null,
               ),
             ],
-            const SizedBox(height: ArenaSpacing.lg),
-            const _Disclaimer().animate(delay: 100.ms).fadeIn(
-                  duration: ArenaDurations.medium,
-                ),
-            const SizedBox(height: ArenaSpacing.xl),
-            ArenaButton(
-              label: _submitting
-                  ? 'ENVOI…'
-                  : "J'AI PAYÉ ${_formatXaf(widget.amountXaf)} XAF",
-              fullWidth: true,
-              size: ArenaButtonSize.large,
-              isLoading: _submitting,
-              onPressed: (_phoneValid && hasCode && !_submitting)
-                  ? _submit
-                  : null,
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -260,8 +262,10 @@ class _Hero extends StatelessWidget {
           const SizedBox(height: ArenaSpacing.sm),
           Text('Paiement ${method.label}', style: ArenaText.h3),
           const SizedBox(height: 2),
-          Text('Pour ${_formatXaf(amountXaf)} XAF',
-              style: ArenaText.bodyMuted,),
+          Text(
+            'Pour ${_formatXaf(amountXaf)} XAF',
+            style: ArenaText.bodyMuted,
+          ),
         ],
       ),
     );
@@ -428,10 +432,12 @@ class _Disclaimer extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('•  ',
-                      style: ArenaText.bodyMuted.copyWith(
-                        color: ArenaColors.statusWarn,
-                      ),),
+                  Text(
+                    '•  ',
+                    style: ArenaText.bodyMuted.copyWith(
+                      color: ArenaColors.statusWarn,
+                    ),
+                  ),
                   Expanded(child: Text(i, style: ArenaText.body)),
                 ],
               ),

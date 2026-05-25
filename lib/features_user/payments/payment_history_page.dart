@@ -3,6 +3,7 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/payment_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_user/payments/payment_method.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -26,27 +27,30 @@ class PaymentHistoryPage extends ConsumerWidget {
       length: 2,
       child: Scaffold(
         appBar: const ArenaAppBar(title: 'Historique'),
-        body: SafeArea(
-          child: Column(
-            children: [
-              const _HistoryTabs(),
-              Expanded(
-                child: TabBarView(
-                  children: [
-                    paymentsAsync.when(
-                      loading: () => const Center(
-                        child: CircularProgressIndicator(),
+        body: ArenaScreenBackground(
+          child: SafeArea(
+            child: Column(
+              children: [
+                const _HistoryTabs(),
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      paymentsAsync.when(
+                        loading: () => const Center(
+                          child: CircularProgressIndicator(),
+                        ),
+                        error: (e, _) => Center(
+                          child:
+                              Text('Erreur : $e', style: ArenaText.bodyMuted),
+                        ),
+                        data: (list) => _PaymentList(items: list),
                       ),
-                      error: (e, _) => Center(
-                        child: Text('Erreur : $e', style: ArenaText.bodyMuted),
-                      ),
-                      data: (list) => _PaymentList(items: list),
-                    ),
-                    _EmptyGains(),
-                  ],
+                      _EmptyGains(),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -142,9 +146,8 @@ class _TxCard extends StatelessWidget {
     final dateLabel = DateFormat('dd/MM HH:mm').format(
       payment.createdAt.toLocal(),
     );
-    final methodLabel = payment.payerMethod == 'ORANGE_MONEY'
-        ? 'Orange Money'
-        : 'MTN MoMo';
+    final methodLabel =
+        payment.payerMethod == 'ORANGE_MONEY' ? 'Orange Money' : 'MTN MoMo';
     final amount = NumberFormat('#,##0', 'fr_FR')
         .format(payment.amountLocal)
         .replaceAll(',', ' ');

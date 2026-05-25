@@ -1,6 +1,7 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_user/payments/payment_method.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -36,55 +37,57 @@ class _PaymentMethodPickerPageState extends State<PaymentMethodPickerPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const ArenaAppBar(title: 'Moyen de paiement'),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(ArenaSpacing.lg),
-          children: [
-            _AmountCard(
-              amountXaf: widget.amountXaf,
-              contextLabel: widget.contextLabel,
-            ).animate().fadeIn(duration: ArenaDurations.medium),
-            const SizedBox(height: ArenaSpacing.lg),
-            Text('📱 MOBILE MONEY', style: ArenaText.inputLabel),
-            const SizedBox(height: ArenaSpacing.sm),
-            for (final m in PaymentMethod.values)
-              Padding(
-                padding: const EdgeInsets.only(bottom: ArenaSpacing.sm),
-                child: _MethodTile(
-                  method: m,
-                  selected: _selected == m,
-                  onTap: () => setState(() => _selected = m),
+      body: ArenaScreenBackground(
+        child: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.all(ArenaSpacing.lg),
+            children: [
+              _AmountCard(
+                amountXaf: widget.amountXaf,
+                contextLabel: widget.contextLabel,
+              ).animate().fadeIn(duration: ArenaDurations.medium),
+              const SizedBox(height: ArenaSpacing.lg),
+              Text('📱 MOBILE MONEY', style: ArenaText.inputLabel),
+              const SizedBox(height: ArenaSpacing.sm),
+              for (final m in PaymentMethod.values)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: ArenaSpacing.sm),
+                  child: _MethodTile(
+                    method: m,
+                    selected: _selected == m,
+                    onTap: () => setState(() => _selected = m),
+                  ),
+                ),
+              const SizedBox(height: ArenaSpacing.md),
+              Container(
+                padding: const EdgeInsets.all(ArenaSpacing.md),
+                decoration: BoxDecoration(
+                  color: ArenaColors.carbon,
+                  borderRadius: BorderRadius.circular(ArenaRadius.md),
+                  border: Border.all(color: ArenaColors.border),
+                ),
+                child: Text(
+                  '₿ Crypto + Wave + Moov disponibles en V2 (passerelles '
+                  'automatiques CinetPay / NowPayments).',
+                  style: ArenaText.small,
                 ),
               ),
-            const SizedBox(height: ArenaSpacing.md),
-            Container(
-              padding: const EdgeInsets.all(ArenaSpacing.md),
-              decoration: BoxDecoration(
-                color: ArenaColors.carbon,
-                borderRadius: BorderRadius.circular(ArenaRadius.md),
-                border: Border.all(color: ArenaColors.border),
+              const SizedBox(height: ArenaSpacing.xl),
+              ArenaButton(
+                label: 'CONTINUER →',
+                fullWidth: true,
+                size: ArenaButtonSize.large,
+                onPressed: () {
+                  final cb = widget.onConfirm;
+                  if (cb != null) {
+                    cb(_selected);
+                  } else {
+                    Navigator.maybePop(context, _selected);
+                  }
+                },
               ),
-              child: Text(
-                '₿ Crypto + Wave + Moov disponibles en V2 (passerelles '
-                'automatiques CinetPay / NowPayments).',
-                style: ArenaText.small,
-              ),
-            ),
-            const SizedBox(height: ArenaSpacing.xl),
-            ArenaButton(
-              label: 'CONTINUER →',
-              fullWidth: true,
-              size: ArenaButtonSize.large,
-              onPressed: () {
-                final cb = widget.onConfirm;
-                if (cb != null) {
-                  cb(_selected);
-                } else {
-                  Navigator.maybePop(context, _selected);
-                }
-              },
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -168,8 +171,7 @@ class _MethodTile extends StatelessWidget {
                 children: [
                   Text(
                     method.label,
-                    style: ArenaText.body
-                        .copyWith(fontWeight: FontWeight.w600),
+                    style: ArenaText.body.copyWith(fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 2),
                   Text(method.countriesLine, style: ArenaText.bodyMuted),
@@ -184,8 +186,7 @@ class _MethodTile extends StatelessWidget {
                 shape: BoxShape.circle,
                 color: selected ? ArenaColors.signalBlue : Colors.transparent,
                 border: Border.all(
-                  color:
-                      selected ? ArenaColors.signalBlue : ArenaColors.border,
+                  color: selected ? ArenaColors.signalBlue : ArenaColors.border,
                 ),
               ),
               alignment: Alignment.center,

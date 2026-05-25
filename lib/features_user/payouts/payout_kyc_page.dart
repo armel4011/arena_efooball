@@ -1,6 +1,7 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_stepper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -41,57 +42,59 @@ class _PayoutKycPageState extends State<PayoutKycPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const ArenaAppBar(title: 'Vérification KYC'),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(ArenaSpacing.lg),
-          children: [
-            _PendingAmountCard(amountXaf: widget.pendingAmountXaf)
-                .animate()
-                .fadeIn(duration: ArenaDurations.medium),
-            const SizedBox(height: ArenaSpacing.lg),
-            ArenaStepper(totalSteps: _stepCount, currentStep: _step),
-            const SizedBox(height: ArenaSpacing.sm),
-            Text(
-              'Étape ${_step + 1} / $_stepCount — ${_stepTitles[_step]}',
-              style: ArenaText.bodyMuted,
-            ),
-            const SizedBox(height: ArenaSpacing.lg),
-            Text('DOCUMENTS ACCEPTÉS', style: ArenaText.inputLabel),
-            const SizedBox(height: ArenaSpacing.sm),
-            const _AcceptedDocs()
-                .animate(delay: 100.ms)
-                .fadeIn(duration: ArenaDurations.medium),
-            const SizedBox(height: ArenaSpacing.lg),
-            _CaptureCard(
-              captured: _captured,
-              onCapture: () => setState(() => _captured = true),
-              onRetake: () => setState(() => _captured = false),
-            ).animate(delay: 200.ms).fadeIn(
-                  duration: ArenaDurations.medium,
-                ),
-            const SizedBox(height: ArenaSpacing.md),
-            const _SecurityNote(),
-            const SizedBox(height: ArenaSpacing.xl),
-            ArenaButton(
-              label: _step == _stepCount - 1
-                  ? 'ENVOYER POUR VÉRIFICATION'
-                  : 'SUIVANT (recto requis)',
-              fullWidth: true,
-              size: ArenaButtonSize.large,
-              onPressed: _captured
-                  ? () {
-                      if (_step == _stepCount - 1) {
-                        Navigator.maybePop(context, true);
-                      } else {
-                        setState(() {
-                          _step++;
-                          _captured = false;
-                        });
+      body: ArenaScreenBackground(
+        child: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.all(ArenaSpacing.lg),
+            children: [
+              _PendingAmountCard(amountXaf: widget.pendingAmountXaf)
+                  .animate()
+                  .fadeIn(duration: ArenaDurations.medium),
+              const SizedBox(height: ArenaSpacing.lg),
+              ArenaStepper(totalSteps: _stepCount, currentStep: _step),
+              const SizedBox(height: ArenaSpacing.sm),
+              Text(
+                'Étape ${_step + 1} / $_stepCount — ${_stepTitles[_step]}',
+                style: ArenaText.bodyMuted,
+              ),
+              const SizedBox(height: ArenaSpacing.lg),
+              Text('DOCUMENTS ACCEPTÉS', style: ArenaText.inputLabel),
+              const SizedBox(height: ArenaSpacing.sm),
+              const _AcceptedDocs()
+                  .animate(delay: 100.ms)
+                  .fadeIn(duration: ArenaDurations.medium),
+              const SizedBox(height: ArenaSpacing.lg),
+              _CaptureCard(
+                captured: _captured,
+                onCapture: () => setState(() => _captured = true),
+                onRetake: () => setState(() => _captured = false),
+              ).animate(delay: 200.ms).fadeIn(
+                    duration: ArenaDurations.medium,
+                  ),
+              const SizedBox(height: ArenaSpacing.md),
+              const _SecurityNote(),
+              const SizedBox(height: ArenaSpacing.xl),
+              ArenaButton(
+                label: _step == _stepCount - 1
+                    ? 'ENVOYER POUR VÉRIFICATION'
+                    : 'SUIVANT (recto requis)',
+                fullWidth: true,
+                size: ArenaButtonSize.large,
+                onPressed: _captured
+                    ? () {
+                        if (_step == _stepCount - 1) {
+                          Navigator.maybePop(context, true);
+                        } else {
+                          setState(() {
+                            _step++;
+                            _captured = false;
+                          });
+                        }
                       }
-                    }
-                  : null,
-            ),
-          ],
+                    : null,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -154,8 +157,10 @@ class _AcceptedDocs extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  Text(_docs[i].$1,
-                      style: const TextStyle(fontSize: 18),),
+                  Text(
+                    _docs[i].$1,
+                    style: const TextStyle(fontSize: 18),
+                  ),
                   const SizedBox(width: ArenaSpacing.sm),
                   Expanded(
                     child: Text(_docs[i].$2, style: ArenaText.body),
@@ -188,8 +193,11 @@ class _CaptureCard extends StatelessWidget {
         decoration: arenaSuccessCardDecoration(),
         child: Column(
           children: [
-            const Icon(Icons.check_circle,
-                size: 48, color: ArenaColors.statusOk,),
+            const Icon(
+              Icons.check_circle,
+              size: 48,
+              color: ArenaColors.statusOk,
+            ),
             const SizedBox(height: ArenaSpacing.sm),
             Text('Photo capturée', style: ArenaText.h3),
             const SizedBox(height: ArenaSpacing.sm),

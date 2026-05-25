@@ -4,6 +4,7 @@ import 'package:arena/data/repositories/auth_failure.dart';
 import 'package:arena/features_admin/auth_admin/admin_auth_providers.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_user/auth/widgets/auth_failure_message.dart';
 import 'package:flutter/material.dart';
@@ -51,9 +52,8 @@ class _TotpSetupScreenState extends ConsumerState<TotpSetupScreen> {
     final state = ref.watch(adminTotpSetupControllerProvider);
     final isLoading = state.isLoading;
     final value = state.value;
-    final errorMessage = state.hasError
-        ? authFailureToMessage(_asFailure(state.error))
-        : null;
+    final errorMessage =
+        state.hasError ? authFailureToMessage(_asFailure(state.error)) : null;
 
     final challenge = value?.challenge;
     final backupCodes = value?.backupCodes;
@@ -61,34 +61,36 @@ class _TotpSetupScreenState extends ConsumerState<TotpSetupScreen> {
 
     return Scaffold(
       appBar: const ArenaAppBar(title: 'Configurer 2FA', showBack: false),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(ArenaSpacing.lg),
-          child: showBackup
-              ? _BackupCodesView(
-                  codes: backupCodes,
-                  acknowledged: _backupAcknowledged,
-                  onAck: (v) => setState(() => _backupAcknowledged = v),
-                  onContinue: _backupAcknowledged
-                      ? () => context.go(AdminRoutes.home)
-                      : null,
-                )
-              : _SetupView(
-                  challenge: challenge,
-                  isLoading: isLoading && challenge == null,
-                  isVerifying: isLoading && challenge != null,
-                  errorMessage: errorMessage,
-                  codeCtrl: _codeCtrl,
-                  onVerify: () {
-                    if (_codeCtrl.text.length != 6) return;
-                    ref
+      body: ArenaScreenBackground(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(ArenaSpacing.lg),
+            child: showBackup
+                ? _BackupCodesView(
+                    codes: backupCodes,
+                    acknowledged: _backupAcknowledged,
+                    onAck: (v) => setState(() => _backupAcknowledged = v),
+                    onContinue: _backupAcknowledged
+                        ? () => context.go(AdminRoutes.home)
+                        : null,
+                  )
+                : _SetupView(
+                    challenge: challenge,
+                    isLoading: isLoading && challenge == null,
+                    isVerifying: isLoading && challenge != null,
+                    errorMessage: errorMessage,
+                    codeCtrl: _codeCtrl,
+                    onVerify: () {
+                      if (_codeCtrl.text.length != 6) return;
+                      ref
+                          .read(adminTotpSetupControllerProvider.notifier)
+                          .verify(_codeCtrl.text);
+                    },
+                    onRetry: () => ref
                         .read(adminTotpSetupControllerProvider.notifier)
-                        .verify(_codeCtrl.text);
-                  },
-                  onRetry: () => ref
-                      .read(adminTotpSetupControllerProvider.notifier)
-                      .requestChallenge(),
-                ),
+                        .requestChallenge(),
+                  ),
+          ),
         ),
       ),
     );

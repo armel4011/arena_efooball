@@ -4,6 +4,7 @@ import 'package:arena/data/repositories/auth_failure.dart';
 import 'package:arena/features_admin/auth_admin/admin_auth_providers.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_user/auth/widgets/auth_failure_message.dart';
 import 'package:flutter/material.dart';
@@ -54,131 +55,133 @@ class _LoginAdminScreenState extends ConsumerState<LoginAdminScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(adminSignInControllerProvider);
     final isLoading = state.isLoading;
-    final errorMessage = state.hasError
-        ? authFailureToMessage(_asFailure(state.error))
-        : null;
+    final errorMessage =
+        state.hasError ? authFailureToMessage(_asFailure(state.error)) : null;
 
     return Scaffold(
       appBar: ArenaAppBar(
         title: 'Console admin',
         onBack: () => context.go(AdminRoutes.splash),
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(ArenaSpacing.lg),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: ArenaSpacing.lg),
-                const Center(
-                  child: Text(
-                    '🛡',
-                    style: TextStyle(fontSize: 54),
-                  ),
-                ),
-                const SizedBox(height: ArenaSpacing.md),
-                Center(
-                  child: Text(
-                    'CONSOLE ADMIN',
-                    style: ArenaTypography.displayMedium,
-                  ),
-                ),
-                const SizedBox(height: ArenaSpacing.sm),
-                Center(
-                  child: Text(
-                    'Accès restreint · Authentification 2FA',
-                    style: ArenaTypography.bodyMedium.copyWith(
-                      color: ArenaColors.textMuted,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: ArenaSpacing.xl),
-                ArenaTextField(
-                  label: 'EMAIL ADMIN',
-                  hint: 'admin@arena.app',
-                  controller: _emailCtrl,
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
-                  prefixIcon: Icons.email_outlined,
-                  enabled: !isLoading,
-                ),
-                const SizedBox(height: ArenaSpacing.md),
-                ArenaTextField(
-                  label: 'MOT DE PASSE',
-                  hint: '••••••••',
-                  controller: _passwordCtrl,
-                  obscureText: _obscure,
-                  textInputAction: TextInputAction.done,
-                  prefixIcon: Icons.lock_outline,
-                  enabled: !isLoading,
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _obscure ? Icons.visibility : Icons.visibility_off,
-                      color: ArenaColors.textMuted,
-                      size: 20,
-                    ),
-                    onPressed: () => setState(() => _obscure = !_obscure),
-                  ),
-                ),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: isLoading
-                        ? null
-                        : () => _showForgotPasswordHint(context),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
+      body: ArenaScreenBackground(
+        accent: ArenaColors.neonRed,
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(ArenaSpacing.lg),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: ArenaSpacing.lg),
+                  const Center(
                     child: Text(
-                      'Mot de passe oublié ?',
-                      style: ArenaText.small.copyWith(
-                        color: ArenaColors.neonRed,
-                        fontWeight: FontWeight.w600,
+                      '🛡',
+                      style: TextStyle(fontSize: 54),
+                    ),
+                  ),
+                  const SizedBox(height: ArenaSpacing.md),
+                  Center(
+                    child: Text(
+                      'CONSOLE ADMIN',
+                      style: ArenaTypography.displayMedium,
+                    ),
+                  ),
+                  const SizedBox(height: ArenaSpacing.sm),
+                  Center(
+                    child: Text(
+                      'Accès restreint · Authentification 2FA',
+                      style: ArenaTypography.bodyMedium.copyWith(
+                        color: ArenaColors.textMuted,
                       ),
                     ),
                   ),
-                ),
-                if (errorMessage != null) ...[
+                  const SizedBox(height: ArenaSpacing.xl),
+                  ArenaTextField(
+                    label: 'EMAIL ADMIN',
+                    hint: 'admin@arena.app',
+                    controller: _emailCtrl,
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
+                    prefixIcon: Icons.email_outlined,
+                    enabled: !isLoading,
+                  ),
+                  const SizedBox(height: ArenaSpacing.md),
+                  ArenaTextField(
+                    label: 'MOT DE PASSE',
+                    hint: '••••••••',
+                    controller: _passwordCtrl,
+                    obscureText: _obscure,
+                    textInputAction: TextInputAction.done,
+                    prefixIcon: Icons.lock_outline,
+                    enabled: !isLoading,
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscure ? Icons.visibility : Icons.visibility_off,
+                        color: ArenaColors.textMuted,
+                        size: 20,
+                      ),
+                      onPressed: () => setState(() => _obscure = !_obscure),
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: isLoading
+                          ? null
+                          : () => _showForgotPasswordHint(context),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: Text(
+                        'Mot de passe oublié ?',
+                        style: ArenaText.small.copyWith(
+                          color: ArenaColors.neonRed,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (errorMessage != null) ...[
+                    const SizedBox(height: ArenaSpacing.sm),
+                    _ErrorBanner(message: errorMessage),
+                  ],
                   const SizedBox(height: ArenaSpacing.sm),
-                  _ErrorBanner(message: errorMessage),
+                  ArenaButton(
+                    label: 'SE CONNECTER',
+                    fullWidth: true,
+                    size: ArenaButtonSize.large,
+                    isLoading: isLoading,
+                    onPressed: _submit,
+                  ),
+                  const SizedBox(height: ArenaSpacing.md),
+                  Center(
+                    child: TextButton(
+                      onPressed: isLoading
+                          ? null
+                          : () => context.go(AdminRoutes.invitation),
+                      child: const Text('Je suis invité (code admin)'),
+                    ),
+                  ),
+                  const SizedBox(height: ArenaSpacing.md),
+                  const _AdminWarningCard(
+                    text: '⚠ Toute tentative non autorisée est journalisée '
+                        'et signalée.',
+                  ),
+                  const SizedBox(height: ArenaSpacing.md),
+                  Center(
+                    child: Text(
+                      'Pas de Google/Apple sign-in · Sécurité max',
+                      style: ArenaText.small,
+                    ),
+                  ),
                 ],
-                const SizedBox(height: ArenaSpacing.sm),
-                ArenaButton(
-                  label: 'SE CONNECTER',
-                  fullWidth: true,
-                  size: ArenaButtonSize.large,
-                  isLoading: isLoading,
-                  onPressed: _submit,
-                ),
-                const SizedBox(height: ArenaSpacing.md),
-                Center(
-                  child: TextButton(
-                    onPressed: isLoading
-                        ? null
-                        : () => context.go(AdminRoutes.invitation),
-                    child: const Text('Je suis invité (code admin)'),
-                  ),
-                ),
-                const SizedBox(height: ArenaSpacing.md),
-                const _AdminWarningCard(
-                  text: '⚠ Toute tentative non autorisée est journalisée '
-                      'et signalée.',
-                ),
-                const SizedBox(height: ArenaSpacing.md),
-                Center(
-                  child: Text(
-                    'Pas de Google/Apple sign-in · Sécurité max',
-                    style: ArenaText.small,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),
