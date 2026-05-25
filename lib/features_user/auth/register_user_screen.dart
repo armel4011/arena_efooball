@@ -6,6 +6,7 @@ import 'package:arena/data/repositories/auth_failure.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_stepper.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_shared/widgets/google_sign_in_button.dart';
@@ -139,55 +140,58 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
         showBack: _step < 2 && !isLoading,
         onBack: _back,
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Visual stepper above the form so the user can read progress
-            // without parsing the AppBar copy. Locked to 3 steps per the
-            // master prompt; success page also rides on the last bar.
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                ArenaSpacing.lg,
-                ArenaSpacing.sm,
-                ArenaSpacing.lg,
-                0,
+      body: ArenaScreenBackground(
+        child: SafeArea(
+          child: Column(
+            children: [
+              // Visual stepper above the form so the user can read progress
+              // without parsing the AppBar copy. Locked to 3 steps per the
+              // master prompt; success page also rides on the last bar.
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  ArenaSpacing.lg,
+                  ArenaSpacing.sm,
+                  ArenaSpacing.lg,
+                  0,
+                ),
+                child: ArenaStepper(totalSteps: 3, currentStep: _step),
               ),
-              child: ArenaStepper(totalSteps: 3, currentStep: _step),
-            ),
-            Expanded(
-              child: switch (_step) {
-                0 => _AccountStep(
-                    emailCtrl: _emailCtrl,
-                    passwordCtrl: _passwordCtrl,
-                    passwordConfirmCtrl: _passwordConfirmCtrl,
-                    onNext: _next,
-                    onGoogle: _submitGoogle,
-                    googleLoading: googleState.isLoading,
-                    isLoading: isLoading,
-                  ),
-                1 => _ProfileStep(
-                  referralCodeCtrl: _referralCodeCtrl,
-                    usernameCtrl: _usernameCtrl,
-                    whatsappCtrl: _whatsappCtrl,
-                    countryCode: _countryCode,
-                    onCountry: (c) => setState(() => _countryCode = c),
-                    avatarColor: _avatarColor,
-                    onAvatarColor: (c) => setState(() => _avatarColor = c),
-                    initial: _initialFromUsername(),
-                    cgu: _cguAccepted,
-                    privacy: _privacyAccepted,
-                    marketing: _marketingAccepted,
-                    onCgu: (v) => setState(() => _cguAccepted = v),
-                    onPrivacy: (v) => setState(() => _privacyAccepted = v),
-                    onMarketing: (v) => setState(() => _marketingAccepted = v),
-                    errorMessage: errorMessage,
-                    onSubmit: _submit,
-                    isLoading: isLoading,
-                  ),
-                _ => const _SuccessStep(),
-              },
-            ),
-          ],
+              Expanded(
+                child: switch (_step) {
+                  0 => _AccountStep(
+                      emailCtrl: _emailCtrl,
+                      passwordCtrl: _passwordCtrl,
+                      passwordConfirmCtrl: _passwordConfirmCtrl,
+                      onNext: _next,
+                      onGoogle: _submitGoogle,
+                      googleLoading: googleState.isLoading,
+                      isLoading: isLoading,
+                    ),
+                  1 => _ProfileStep(
+                      referralCodeCtrl: _referralCodeCtrl,
+                      usernameCtrl: _usernameCtrl,
+                      whatsappCtrl: _whatsappCtrl,
+                      countryCode: _countryCode,
+                      onCountry: (c) => setState(() => _countryCode = c),
+                      avatarColor: _avatarColor,
+                      onAvatarColor: (c) => setState(() => _avatarColor = c),
+                      initial: _initialFromUsername(),
+                      cgu: _cguAccepted,
+                      privacy: _privacyAccepted,
+                      marketing: _marketingAccepted,
+                      onCgu: (v) => setState(() => _cguAccepted = v),
+                      onPrivacy: (v) => setState(() => _privacyAccepted = v),
+                      onMarketing: (v) =>
+                          setState(() => _marketingAccepted = v),
+                      errorMessage: errorMessage,
+                      onSubmit: _submit,
+                      isLoading: isLoading,
+                    ),
+                  _ => const _SuccessStep(),
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -270,9 +274,8 @@ class _AccountStep extends StatelessWidget {
             textInputAction: TextInputAction.next,
             prefixIcon: Icons.email_outlined,
             enabled: !isLoading,
-            errorText: emailCtrl.text.isEmpty
-                ? null
-                : _emailError(emailCtrl.text),
+            errorText:
+                emailCtrl.text.isEmpty ? null : _emailError(emailCtrl.text),
           ),
           const SizedBox(height: ArenaSpacing.md),
           ArenaTextField(
@@ -294,7 +297,8 @@ class _AccountStep extends StatelessWidget {
             textInputAction: TextInputAction.done,
             prefixIcon: Icons.lock_outline,
             enabled: !isLoading,
-            errorText: passwordConfirmCtrl.text.isEmpty ? null : _confirmError(),
+            errorText:
+                passwordConfirmCtrl.text.isEmpty ? null : _confirmError(),
           ),
           const SizedBox(height: ArenaSpacing.xl),
           ArenaButton(
@@ -415,8 +419,7 @@ class _ProfileStep extends StatelessWidget {
           ArenaTextField(
             label: 'CODE DE PARRAINAGE (OPTIONNEL)',
             hint: 'Ex. ARN-3F9A',
-            helper:
-                "Le code d'un ami ARENA. Te permet d'apparaître dans ses "
+            helper: "Le code d'un ami ARENA. Te permet d'apparaître dans ses "
                 "parrainages — laisser vide si tu n'en as pas.",
             controller: referralCodeCtrl,
             prefixIcon: Icons.group_outlined,
@@ -440,7 +443,8 @@ class _ProfileStep extends StatelessWidget {
             mandatory: true,
           ),
           _ConsentTile(
-            title: "J'accepte de recevoir les communications marketing (optionnel)",
+            title:
+                "J'accepte de recevoir les communications marketing (optionnel)",
             value: marketing,
             onChanged: isLoading ? null : onMarketing,
           ),

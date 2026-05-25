@@ -2,6 +2,7 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/auth_failure.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/auth/widgets/auth_error_banner.dart';
@@ -53,24 +54,25 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
   Widget build(BuildContext context) {
     final state = ref.watch(forgotPasswordControllerProvider);
     final isLoading = state.isLoading;
-    final errorMessage = state.hasError
-        ? authFailureToMessage(_asFailure(state.error))
-        : null;
+    final errorMessage =
+        state.hasError ? authFailureToMessage(_asFailure(state.error)) : null;
 
     return Scaffold(
       appBar: ArenaAppBar(
         title: '',
         onBack: isLoading ? null : () => context.goNamed('user.login'),
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(ArenaSpacing.lg),
-          child: _RequestForm(
-            formKey: _formKey,
-            emailCtrl: _emailCtrl,
-            isLoading: isLoading,
-            errorMessage: errorMessage,
-            onSubmit: _submit,
+      body: ArenaScreenBackground(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(ArenaSpacing.lg),
+            child: _RequestForm(
+              formKey: _formKey,
+              emailCtrl: _emailCtrl,
+              isLoading: isLoading,
+              errorMessage: errorMessage,
+              onSubmit: _submit,
+            ),
           ),
         ),
       ),

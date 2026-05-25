@@ -4,6 +4,7 @@ import 'package:arena/core/utils/supported_countries.dart';
 import 'package:arena/data/repositories/auth_failure.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/auth/widgets/auth_error_banner.dart';
@@ -81,16 +82,16 @@ class _CguAcceptancePageState extends ConsumerState<CguAcceptancePage> {
   Widget build(BuildContext context) {
     final state = ref.watch(acceptCguControllerProvider);
     final isLoading = state.isLoading;
-    final errorMessage = state.hasError
-        ? authFailureToMessage(_asFailure(state.error))
-        : null;
+    final errorMessage =
+        state.hasError ? authFailureToMessage(_asFailure(state.error)) : null;
 
     // Pré-remplir le pays avec celui déjà présent sur le profil SSO
     // (Google sign-in pose 'CI' par défaut, mais un compte legacy peut
     // avoir autre chose).
     final profile = ref.watch(currentProfileProvider).valueOrNull;
     if (profile != null && !_seededFromProfile) {
-      final inList = kSupportedCountries.any((c) => c.code == profile.countryCode);
+      final inList =
+          kSupportedCountries.any((c) => c.code == profile.countryCode);
       _countryCode = inList ? profile.countryCode : 'CM';
       _seededFromProfile = true;
     }
@@ -98,96 +99,100 @@ class _CguAcceptancePageState extends ConsumerState<CguAcceptancePage> {
     return Scaffold(
       // Pas de back — l'acceptation est obligatoire pour continuer.
       appBar: const ArenaAppBar(title: '', showBack: false),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(ArenaSpacing.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text('COMPLÈTE TON\nPROFIL', style: ArenaTypography.displayMedium),
-              const SizedBox(height: ArenaSpacing.sm),
-              Text(
-                'Quelques infos manquantes avant de pouvoir jouer.',
-                style: ArenaTypography.bodyMedium.copyWith(
-                  color: ArenaColors.textMuted,
+      body: ArenaScreenBackground(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(ArenaSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'COMPLÈTE TON\nPROFIL',
+                  style: ArenaTypography.displayMedium,
                 ),
-              ),
-              const SizedBox(height: ArenaSpacing.xl),
-              _CountryPicker(
-                selected: _countryCode,
-                onSelect: (v) => setState(() => _countryCode = v),
-                isLoading: isLoading,
-              ),
-              const SizedBox(height: ArenaSpacing.md),
-              ArenaTextField(
-                label: 'WHATSAPP (${dialCodeFor(_countryCode)})',
-                hint: 'Ex. 07 07 07 07 07',
-                helper:
-                    'Le code pays ${dialCodeFor(_countryCode)} est ajouté'
-                    ' automatiquement.',
-                controller: _whatsappCtrl,
-                keyboardType: TextInputType.phone,
-                textInputAction: TextInputAction.done,
-                prefixIcon: Icons.chat_outlined,
-                enabled: !isLoading,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[\d\s]')),
-                ],
-                errorText: _whatsappCtrl.text.isEmpty || _isWhatsappValid
-                    ? null
-                    : 'Numéro WhatsApp invalide.',
-              ),
-              const SizedBox(height: ArenaSpacing.lg),
-              _DocLink(
-                label: "Lire les Conditions Générales d'Utilisation",
-                onTap: () => _showDocPlaceholder(context, 'CGU'),
-              ),
-              const SizedBox(height: ArenaSpacing.sm),
-              _DocLink(
-                label: 'Lire la politique de confidentialité',
-                onTap: () => _showDocPlaceholder(context, 'Confidentialité'),
-              ),
-              const SizedBox(height: ArenaSpacing.lg),
-              _ConsentTile(
-                value: _cguChecked,
-                onChanged: isLoading
-                    ? null
-                    : (v) => setState(() => _cguChecked = v ?? false),
-                title: "J'accepte les CGU et la politique de confidentialité",
-                required: true,
-              ),
-              const SizedBox(height: ArenaSpacing.sm),
-              _ConsentTile(
-                value: _marketingChecked,
-                onChanged: isLoading
-                    ? null
-                    : (v) => setState(() => _marketingChecked = v ?? false),
-                title:
-                    "J'accepte de recevoir des informations sur les nouveaux"
-                    ' tournois (optionnel)',
-              ),
-              if (errorMessage != null) ...[
+                const SizedBox(height: ArenaSpacing.sm),
+                Text(
+                  'Quelques infos manquantes avant de pouvoir jouer.',
+                  style: ArenaTypography.bodyMedium.copyWith(
+                    color: ArenaColors.textMuted,
+                  ),
+                ),
+                const SizedBox(height: ArenaSpacing.xl),
+                _CountryPicker(
+                  selected: _countryCode,
+                  onSelect: (v) => setState(() => _countryCode = v),
+                  isLoading: isLoading,
+                ),
                 const SizedBox(height: ArenaSpacing.md),
-                AuthErrorBanner(message: errorMessage),
+                ArenaTextField(
+                  label: 'WHATSAPP (${dialCodeFor(_countryCode)})',
+                  hint: 'Ex. 07 07 07 07 07',
+                  helper: 'Le code pays ${dialCodeFor(_countryCode)} est ajouté'
+                      ' automatiquement.',
+                  controller: _whatsappCtrl,
+                  keyboardType: TextInputType.phone,
+                  textInputAction: TextInputAction.done,
+                  prefixIcon: Icons.chat_outlined,
+                  enabled: !isLoading,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[\d\s]')),
+                  ],
+                  errorText: _whatsappCtrl.text.isEmpty || _isWhatsappValid
+                      ? null
+                      : 'Numéro WhatsApp invalide.',
+                ),
+                const SizedBox(height: ArenaSpacing.lg),
+                _DocLink(
+                  label: "Lire les Conditions Générales d'Utilisation",
+                  onTap: () => _showDocPlaceholder(context, 'CGU'),
+                ),
+                const SizedBox(height: ArenaSpacing.sm),
+                _DocLink(
+                  label: 'Lire la politique de confidentialité',
+                  onTap: () => _showDocPlaceholder(context, 'Confidentialité'),
+                ),
+                const SizedBox(height: ArenaSpacing.lg),
+                _ConsentTile(
+                  value: _cguChecked,
+                  onChanged: isLoading
+                      ? null
+                      : (v) => setState(() => _cguChecked = v ?? false),
+                  title: "J'accepte les CGU et la politique de confidentialité",
+                  required: true,
+                ),
+                const SizedBox(height: ArenaSpacing.sm),
+                _ConsentTile(
+                  value: _marketingChecked,
+                  onChanged: isLoading
+                      ? null
+                      : (v) => setState(() => _marketingChecked = v ?? false),
+                  title:
+                      "J'accepte de recevoir des informations sur les nouveaux"
+                      ' tournois (optionnel)',
+                ),
+                if (errorMessage != null) ...[
+                  const SizedBox(height: ArenaSpacing.md),
+                  AuthErrorBanner(message: errorMessage),
+                ],
+                const SizedBox(height: ArenaSpacing.xl),
+                ArenaButton(
+                  label: 'CONTINUER',
+                  fullWidth: true,
+                  size: ArenaButtonSize.large,
+                  isLoading: isLoading,
+                  onPressed: _canSubmit ? _submit : null,
+                ),
+                const SizedBox(height: ArenaSpacing.md),
+                TextButton(
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          await ref.read(signOutProvider)();
+                        },
+                  child: const Text('Refuser et se déconnecter'),
+                ),
               ],
-              const SizedBox(height: ArenaSpacing.xl),
-              ArenaButton(
-                label: 'CONTINUER',
-                fullWidth: true,
-                size: ArenaButtonSize.large,
-                isLoading: isLoading,
-                onPressed: _canSubmit ? _submit : null,
-              ),
-              const SizedBox(height: ArenaSpacing.md),
-              TextButton(
-                onPressed: isLoading
-                    ? null
-                    : () async {
-                        await ref.read(signOutProvider)();
-                      },
-                child: const Text('Refuser et se déconnecter'),
-              ),
-            ],
+            ),
           ),
         ),
       ),
