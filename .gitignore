@@ -101,3 +101,10 @@ supabase/.temp/
 # lourds (~200 Mo), non versionnés ; à récupérer via le release GitHub.
 bin/
 
+# Référence locale du restyle premium (maquette HTML + CSS + mapping +
+# prompt master). Non versionnée car c'est de la doc one-shot pour
+# guider Claude Code pendant le restyle ; le résultat est dans lib/.
+_restyle_ref/
+
+# Site web statique (landing / downloads) — gestion séparée.
+site web/
