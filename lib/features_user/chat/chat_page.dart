@@ -12,6 +12,7 @@ import 'package:arena/data/repositories/chat_repository.dart';
 import 'package:arena/data/repositories/match_repository.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:arena/features_shared/widgets/error_state.dart';
@@ -192,7 +193,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       );
     } catch (e) {
       messenger.showSnackBar(
-        SnackBar(content: Text('Picker indisponible : ${arenaErrorMessage(e)}')),
+        SnackBar(
+          content: Text('Picker indisponible : ${arenaErrorMessage(e)}'),
+        ),
       );
       return;
     }
@@ -270,8 +273,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final newText = text.replaceRange(start, end, emoji.emoji);
     _inputCtrl
       ..text = newText
-      ..selection =
-          TextSelection.collapsed(offset: start + emoji.emoji.length);
+      ..selection = TextSelection.collapsed(offset: start + emoji.emoji.length);
   }
 
   Future<void> _confirmAndDeleteMessage(ChatMessage msg) async {
@@ -314,35 +316,37 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final opponentAsync = ref.watch(_opponentProvider(widget.matchId));
 
     return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            _ChatAppBar(
-              matchId: widget.matchId,
-              opponent: opponentAsync.valueOrNull,
-              peerTyping: _peerTyping,
-              peerOnline: _peerOnline,
-              onBack: () {
-                if (context.canPop()) {
-                  context.pop();
-                } else {
-                  context.go(UserRoutes.home);
-                }
-              },
-            ),
-            Expanded(
-              child: channelAsync.when(
-                loading: () =>
-                    const Center(child: CircularProgressIndicator()),
-                error: (e, _) => ErrorState(
-                  description: e.toString(),
-                  onRetry: () =>
-                      ref.invalidate(matchChannelProvider(widget.matchId)),
-                ),
-                data: _buildChannelBody,
+      body: ArenaScreenBackground(
+        child: SafeArea(
+          child: Column(
+            children: [
+              _ChatAppBar(
+                matchId: widget.matchId,
+                opponent: opponentAsync.valueOrNull,
+                peerTyping: _peerTyping,
+                peerOnline: _peerOnline,
+                onBack: () {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go(UserRoutes.home);
+                  }
+                },
               ),
-            ),
-          ],
+              Expanded(
+                child: channelAsync.when(
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (e, _) => ErrorState(
+                    description: e.toString(),
+                    onRetry: () =>
+                        ref.invalidate(matchChannelProvider(widget.matchId)),
+                  ),
+                  data: _buildChannelBody,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -401,9 +405,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                   return ChatBubble(
                     message: msg,
                     isSelf: isSelf,
-                    onLongPress: isSelf
-                        ? () => _confirmAndDeleteMessage(msg)
-                        : null,
+                    onLongPress:
+                        isSelf ? () => _confirmAndDeleteMessage(msg) : null,
                   );
                 },
               );
@@ -457,8 +460,7 @@ final _opponentProvider =
   if (selfId == null) return null;
   final match = await ref.watch(matchByIdProvider(matchId).future);
   if (match == null) return null;
-  final otherId =
-      match.player1Id == selfId ? match.player2Id : match.player1Id;
+  final otherId = match.player1Id == selfId ? match.player2Id : match.player1Id;
   if (otherId == null) return null;
   return ref.read(profileRepositoryProvider).getById(otherId);
 });
@@ -489,9 +491,8 @@ class _ChatAppBar extends StatelessWidget {
         : peerOnline
             ? 'en ligne'
             : 'hors ligne';
-    final subtitleColor = peerOnline
-        ? ArenaColors.statusOk
-        : ArenaColors.silver;
+    final subtitleColor =
+        peerOnline ? ArenaColors.statusOk : ArenaColors.silver;
 
     return Container(
       height: 56,

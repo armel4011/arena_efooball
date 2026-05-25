@@ -1,6 +1,7 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/match_repository.dart';
 import 'package:arena/data/repositories/match_stream_repository.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/home/widgets/active_competitions_section.dart';
 import 'package:arena/features_user/home/widgets/home_header.dart';
@@ -30,66 +31,68 @@ class HomePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(currentProfileProvider).valueOrNull;
 
-    return RefreshIndicator(
-      onRefresh: () async {
-        ref
-          ..invalidate(currentProfileProvider)
-          ..invalidate(myActiveMatchesProvider)
-          ..invalidate(activePublicStreamsProvider);
-        await ref.read(currentProfileProvider.future);
-      },
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.zero,
-        children: [
-          HomeHeader(profile: profile),
-          const PendingPaymentBanner(),
-          const SizedBox(height: ArenaSpacing.lg),
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: ArenaSpacing.lg,
+    return ArenaScreenBackground(
+      child: RefreshIndicator(
+        onRefresh: () async {
+          ref
+            ..invalidate(currentProfileProvider)
+            ..invalidate(myActiveMatchesProvider)
+            ..invalidate(activePublicStreamsProvider);
+          await ref.read(currentProfileProvider.future);
+        },
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.zero,
+          children: [
+            HomeHeader(profile: profile),
+            const PendingPaymentBanner(),
+            const SizedBox(height: ArenaSpacing.lg),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: ArenaSpacing.lg,
+              ),
+              child: Text('⚡ Prochains matchs', style: ArenaText.h3),
             ),
-            child: Text('⚡ Prochains matchs', style: ArenaText.h3),
-          ),
-          const SizedBox(height: ArenaSpacing.sm),
-          const UpcomingMatchesScroller(),
-          const SizedBox(height: ArenaSpacing.lg),
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: ArenaSpacing.lg,
+            const SizedBox(height: ArenaSpacing.sm),
+            const UpcomingMatchesScroller(),
+            const SizedBox(height: ArenaSpacing.lg),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: ArenaSpacing.lg,
+              ),
+              child: Text('🔴 Lives en cours', style: ArenaText.h3),
             ),
-            child: Text('🔴 Lives en cours', style: ArenaText.h3),
-          ),
-          const SizedBox(height: ArenaSpacing.sm),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: ArenaSpacing.lg),
-            child: LiveStreamsSection(),
-          ),
-          const SizedBox(height: ArenaSpacing.lg),
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: ArenaSpacing.lg,
+            const SizedBox(height: ArenaSpacing.sm),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: ArenaSpacing.lg),
+              child: LiveStreamsSection(),
             ),
-            child: Text('🏆 Compétitions actives', style: ArenaText.h3),
-          ),
-          const SizedBox(height: ArenaSpacing.sm),
-          const ActiveCompetitionsSection(),
-          const SizedBox(height: ArenaSpacing.lg),
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: ArenaSpacing.lg,
+            const SizedBox(height: ArenaSpacing.lg),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: ArenaSpacing.lg,
+              ),
+              child: Text('🏆 Compétitions actives', style: ArenaText.h3),
             ),
-            child: Text('📊 Tes stats', style: ArenaText.h3),
-          ),
-          const SizedBox(height: ArenaSpacing.sm),
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: ArenaSpacing.lg,
+            const SizedBox(height: ArenaSpacing.sm),
+            const ActiveCompetitionsSection(),
+            const SizedBox(height: ArenaSpacing.lg),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: ArenaSpacing.lg,
+              ),
+              child: Text('📊 Tes stats', style: ArenaText.h3),
             ),
-            child: StatGrid(profile: profile),
-          ),
-          const SizedBox(height: ArenaSpacing.xl),
-        ],
+            const SizedBox(height: ArenaSpacing.sm),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: ArenaSpacing.lg,
+              ),
+              child: StatGrid(profile: profile),
+            ),
+            const SizedBox(height: ArenaSpacing.xl),
+          ],
+        ),
       ),
     );
   }

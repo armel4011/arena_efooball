@@ -3,6 +3,7 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/repositories/match_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:arena/features_shared/widgets/error_state.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
@@ -98,23 +99,25 @@ class MatchRoomPage extends ConsumerWidget {
               ),
           ],
         ),
-        body: async.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => ErrorState(
-            description: e.toString(),
-            onRetry: () => widgetRef.invalidate(matchByIdProvider(matchId)),
+        body: ArenaScreenBackground(
+          child: async.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => ErrorState(
+              description: e.toString(),
+              onRetry: () => widgetRef.invalidate(matchByIdProvider(matchId)),
+            ),
+            data: (m) {
+              if (m == null) {
+                return const EmptyState(
+                  icon: Icons.search_off_outlined,
+                  title: 'Match introuvable',
+                  description: 'Le match a peut-être été annulé par un admin.',
+                );
+              }
+              final role = MatchRole.resolve(match: m, selfId: selfId);
+              return _MatchRoomBody(match: m, role: role, selfId: selfId);
+            },
           ),
-          data: (m) {
-            if (m == null) {
-              return const EmptyState(
-                icon: Icons.search_off_outlined,
-                title: 'Match introuvable',
-                description: 'Le match a peut-être été annulé par un admin.',
-              );
-            }
-            final role = MatchRole.resolve(match: m, selfId: selfId);
-            return _MatchRoomBody(match: m, role: role, selfId: selfId);
-          },
         ),
       ),
     );

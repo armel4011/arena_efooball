@@ -1,6 +1,7 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
@@ -38,61 +39,63 @@ class RecordingErrorPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const ArenaAppBar(title: 'Erreur enregistrement'),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(ArenaSpacing.lg),
-          children: [
-            const _ErrorIcon().animate().fadeIn(
-                  duration: ArenaDurations.medium,
-                ),
-            const SizedBox(height: ArenaSpacing.md),
-            Text(
-              'RECORDING IMPOSSIBLE',
-              textAlign: TextAlign.center,
-              style: ArenaText.h1.copyWith(color: ArenaColors.neonRed),
-            ),
-            const SizedBox(height: ArenaSpacing.sm),
-            Text(
-              'Sans recording, le match ne peut pas démarrer (anti-cheat).',
-              textAlign: TextAlign.center,
-              style: ArenaText.body,
-            ),
-            const SizedBox(height: ArenaSpacing.lg),
-            _CauseCard(cause: cause)
-                .animate(delay: 100.ms)
-                .fadeIn(duration: ArenaDurations.medium),
-            const SizedBox(height: ArenaSpacing.lg),
-            Text('SOLUTIONS', style: ArenaText.inputLabel),
-            const SizedBox(height: ArenaSpacing.sm),
-            const _SolutionsCard(solutions: _solutions)
-                .animate(delay: 200.ms)
-                .fadeIn(duration: ArenaDurations.medium),
-            const SizedBox(height: ArenaSpacing.xl),
-            ArenaButton(
-              label: '↻ RÉESSAYER',
-              fullWidth: true,
-              size: ArenaButtonSize.large,
-              onPressed: onRetry ?? () => Navigator.maybePop(context),
-            ),
-            const SizedBox(height: ArenaSpacing.sm),
-            ArenaButton(
-              label: '🏳 FORFAIT (perdre)',
-              variant: ArenaButtonVariant.danger,
-              fullWidth: true,
-              onPressed: onForfeit,
-            ),
-            const SizedBox(height: ArenaSpacing.lg),
-            Center(
-              child: TextButton(
-                onPressed: onContactSupport,
-                child: Text(
-                  'Contacter le support',
-                  style: ArenaText.body
-                      .copyWith(color: ArenaColors.signalBlue),
+      body: ArenaScreenBackground(
+        child: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.all(ArenaSpacing.lg),
+            children: [
+              const _ErrorIcon().animate().fadeIn(
+                    duration: ArenaDurations.medium,
+                  ),
+              const SizedBox(height: ArenaSpacing.md),
+              Text(
+                'RECORDING IMPOSSIBLE',
+                textAlign: TextAlign.center,
+                style: ArenaText.h1.copyWith(color: ArenaColors.neonRed),
+              ),
+              const SizedBox(height: ArenaSpacing.sm),
+              Text(
+                'Sans recording, le match ne peut pas démarrer (anti-cheat).',
+                textAlign: TextAlign.center,
+                style: ArenaText.body,
+              ),
+              const SizedBox(height: ArenaSpacing.lg),
+              _CauseCard(cause: cause)
+                  .animate(delay: 100.ms)
+                  .fadeIn(duration: ArenaDurations.medium),
+              const SizedBox(height: ArenaSpacing.lg),
+              Text('SOLUTIONS', style: ArenaText.inputLabel),
+              const SizedBox(height: ArenaSpacing.sm),
+              const _SolutionsCard(solutions: _solutions)
+                  .animate(delay: 200.ms)
+                  .fadeIn(duration: ArenaDurations.medium),
+              const SizedBox(height: ArenaSpacing.xl),
+              ArenaButton(
+                label: '↻ RÉESSAYER',
+                fullWidth: true,
+                size: ArenaButtonSize.large,
+                onPressed: onRetry ?? () => Navigator.maybePop(context),
+              ),
+              const SizedBox(height: ArenaSpacing.sm),
+              ArenaButton(
+                label: '🏳 FORFAIT (perdre)',
+                variant: ArenaButtonVariant.danger,
+                fullWidth: true,
+                onPressed: onForfeit,
+              ),
+              const SizedBox(height: ArenaSpacing.lg),
+              Center(
+                child: TextButton(
+                  onPressed: onContactSupport,
+                  child: Text(
+                    'Contacter le support',
+                    style:
+                        ArenaText.body.copyWith(color: ArenaColors.signalBlue),
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

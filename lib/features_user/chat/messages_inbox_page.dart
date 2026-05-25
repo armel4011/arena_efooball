@@ -12,6 +12,7 @@ import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -41,7 +42,7 @@ class MessagesInboxPage extends StatelessWidget {
         title: 'MESSAGES',
         actions: [InboxComposeAction()],
       ),
-      body: MessagesInboxBody(),
+      body: ArenaScreenBackground(child: MessagesInboxBody()),
     );
   }
 }
@@ -187,7 +188,8 @@ class _DirectTab extends ConsumerWidget {
               }
               final opponentIds = <String>{
                 for (final m in conversations)
-                  if (m.player1Id == me && m.player2Id != null) m.player2Id!
+                  if (m.player1Id == me && m.player2Id != null)
+                    m.player2Id!
                   else if (m.player2Id == me && m.player1Id != null)
                     m.player1Id!,
                 for (final fc in friendChannels) fc.peerId,
@@ -222,9 +224,8 @@ class _DirectTab extends ConsumerWidget {
                         ? conversations[i].player2Id
                         : conversations[i].player1Id],
                     highlighted: i == 0 && _isHot(conversations[i]),
-                    unread: unreadCounts[
-                            matchChannelMap[conversations[i].id]] ??
-                        0,
+                    unread:
+                        unreadCounts[matchChannelMap[conversations[i].id]] ?? 0,
                   ),
               ];
               return ListView.separated(
@@ -262,8 +263,7 @@ class _DirectTab extends ConsumerWidget {
                       direction: DismissDirection.endToStart,
                       background: Container(
                         alignment: Alignment.centerRight,
-                        padding:
-                            const EdgeInsets.only(right: ArenaSpacing.lg),
+                        padding: const EdgeInsets.only(right: ArenaSpacing.lg),
                         decoration: BoxDecoration(
                           color: ArenaColors.neonRed.withValues(alpha: 0.18),
                           borderRadius: BorderRadius.circular(14),
@@ -432,8 +432,7 @@ class _MatchThreadRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final opponentName = opponent?.username ?? 'En attente';
-    final initials =
-        opponentName.isEmpty ? '?' : opponentName[0].toUpperCase();
+    final initials = opponentName.isEmpty ? '?' : opponentName[0].toUpperCase();
     final color = _avatarFor(opponent?.avatarColor);
     final subtitle = _subtitleFor(match);
     final timeLabel = _timeLabelFor(match);
@@ -449,9 +448,7 @@ class _MatchThreadRow extends StatelessWidget {
             color: ArenaColors.carbon2,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: highlighted
-                  ? ArenaColors.signalBlue
-                  : ArenaColors.border,
+              color: highlighted ? ArenaColors.signalBlue : ArenaColors.border,
             ),
           ),
           child: Row(
@@ -487,9 +484,8 @@ class _MatchThreadRow extends StatelessWidget {
                     Text(
                       subtitle,
                       style: ArenaText.small.copyWith(
-                        color: highlighted
-                            ? ArenaColors.bone
-                            : ArenaColors.silver,
+                        color:
+                            highlighted ? ArenaColors.bone : ArenaColors.silver,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -580,8 +576,7 @@ class _CompetitionsTab extends ConsumerWidget {
             return const EmptyState(
               icon: Icons.emoji_events_outlined,
               title: 'Aucune compétition active',
-              description:
-                  'Les fils de discussion liés à tes compétitions '
+              description: 'Les fils de discussion liés à tes compétitions '
                   'apparaîtront ici dès que tu rejoindras un tournoi.',
             );
           }
@@ -597,8 +592,7 @@ class _CompetitionsTab extends ConsumerWidget {
                 return const EmptyState(
                   icon: Icons.hourglass_empty,
                   title: 'En attente',
-                  description:
-                      "Tu es inscrit mais les compétitions n'ont pas "
+                  description: "Tu es inscrit mais les compétitions n'ont pas "
                       'encore été chargées.',
                 );
               }

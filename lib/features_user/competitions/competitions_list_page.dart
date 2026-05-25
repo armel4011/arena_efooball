@@ -5,6 +5,7 @@ import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
 import 'package:arena/data/repositories/payment_repository.dart';
 import 'package:arena/features_shared/widgets/arena_filter_menu.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:arena/features_shared/widgets/error_state.dart';
 import 'package:arena/features_user/competitions/widgets/competition_filter_chips.dart';
@@ -41,101 +42,102 @@ class _CompetitionsListPageState extends ConsumerState<CompetitionsListPage> {
   Widget build(BuildContext context) {
     final async = ref.watch(competitionsListProvider(_game));
 
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            ArenaSpacing.lg,
-            ArenaSpacing.md,
-            ArenaSpacing.lg,
-            ArenaSpacing.sm,
-          ),
-          child: Row(
-            children: [
-              ArenaFilterMenu(
-                activeCount: _activeFilterCount(),
-                sections: _buildSections(),
-                initialSelection: _selectionSnapshot(),
-                onApply: _applySelection,
-              ),
-              const Spacer(),
-              if (_activeFilterCount() > 0)
-                TextButton(
-                  onPressed: _resetAll,
-                  child: Text(
-                    'Réinitialiser',
-                    style: ArenaText.small.copyWith(
-                      color: ArenaColors.signalBlue,
+    return ArenaScreenBackground(
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              ArenaSpacing.lg,
+              ArenaSpacing.md,
+              ArenaSpacing.lg,
+              ArenaSpacing.sm,
+            ),
+            child: Row(
+              children: [
+                ArenaFilterMenu(
+                  activeCount: _activeFilterCount(),
+                  sections: _buildSections(),
+                  initialSelection: _selectionSnapshot(),
+                  onApply: _applySelection,
+                ),
+                const Spacer(),
+                if (_activeFilterCount() > 0)
+                  TextButton(
+                    onPressed: _resetAll,
+                    child: Text(
+                      'Réinitialiser',
+                      style: ArenaText.small.copyWith(
+                        color: ArenaColors.signalBlue,
+                      ),
                     ),
                   ),
-                ),
-            ],
-          ),
-        ),
-        const Divider(height: 1, thickness: 1, color: ArenaColors.border),
-        Expanded(
-          child: async.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => ErrorState(
-              description: e.toString(),
-              onRetry: () => ref.invalidate(competitionsListProvider(_game)),
+              ],
             ),
-            data: (items) {
-              final filtered = items
-                  .where((c) => _bucket.matches(c.status))
-                  .where((c) => _pricing.matches(c))
-                  .toList();
-              if (filtered.isEmpty) {
-                return EmptyState(
-                  icon: Icons.sports_esports_outlined,
-                  title: _game == null
-                      ? 'Aucune compétition'
-                      : 'Aucune compétition sur ${_game!.label}',
-                  description: 'De nouveaux tournois sont publiés chaque'
-                      ' semaine. Reviens bientôt !',
-                );
-              }
-              final registeredIds =
-                  ref.watch(myRegisteredCompetitionIdsProvider).valueOrNull ??
-                      const <String>{};
-              final pendingByComp =
-                  ref.watch(myPendingPaymentByCompetitionProvider);
-              return RefreshIndicator(
-                onRefresh: () async {
-                  ref.invalidate(competitionsListProvider(_game));
-                  await ref
-                      .read(competitionsListProvider(_game).future);
-                },
-                child: ListView.separated(
-                  padding: const EdgeInsets.all(ArenaSpacing.lg),
-                  itemCount: filtered.length,
-                  separatorBuilder: (_, __) =>
-                      const SizedBox(height: ArenaSpacing.md),
-                  itemBuilder: (context, i) {
-                    final c = filtered[i];
-                    final isReg = registeredIds.contains(c.id);
-                    final pending = pendingByComp[c.id];
-                    return CompetitionListCard(
-                      competition: c,
-                      isRegistered: isReg,
-                      hasPendingPayment: pending != null,
-                      onTap: () => _onCardTap(
-                        context,
-                        c,
-                        registeredIds,
-                        pending,
-                      ),
-                      onRegister: !isReg && c.canRegister
-                          ? () => _onRegisterTap(context, c, pending)
-                          : null,
-                    );
-                  },
-                ),
-              );
-            },
           ),
-        ),
-      ],
+          const Divider(height: 1, thickness: 1, color: ArenaColors.border),
+          Expanded(
+            child: async.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => ErrorState(
+                description: e.toString(),
+                onRetry: () => ref.invalidate(competitionsListProvider(_game)),
+              ),
+              data: (items) {
+                final filtered = items
+                    .where((c) => _bucket.matches(c.status))
+                    .where((c) => _pricing.matches(c))
+                    .toList();
+                if (filtered.isEmpty) {
+                  return EmptyState(
+                    icon: Icons.sports_esports_outlined,
+                    title: _game == null
+                        ? 'Aucune compétition'
+                        : 'Aucune compétition sur ${_game!.label}',
+                    description: 'De nouveaux tournois sont publiés chaque'
+                        ' semaine. Reviens bientôt !',
+                  );
+                }
+                final registeredIds =
+                    ref.watch(myRegisteredCompetitionIdsProvider).valueOrNull ??
+                        const <String>{};
+                final pendingByComp =
+                    ref.watch(myPendingPaymentByCompetitionProvider);
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    ref.invalidate(competitionsListProvider(_game));
+                    await ref.read(competitionsListProvider(_game).future);
+                  },
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(ArenaSpacing.lg),
+                    itemCount: filtered.length,
+                    separatorBuilder: (_, __) =>
+                        const SizedBox(height: ArenaSpacing.md),
+                    itemBuilder: (context, i) {
+                      final c = filtered[i];
+                      final isReg = registeredIds.contains(c.id);
+                      final pending = pendingByComp[c.id];
+                      return CompetitionListCard(
+                        competition: c,
+                        isRegistered: isReg,
+                        hasPendingPayment: pending != null,
+                        onTap: () => _onCardTap(
+                          context,
+                          c,
+                          registeredIds,
+                          pending,
+                        ),
+                        onRegister: !isReg && c.canRegister
+                            ? () => _onRegisterTap(context, c, pending)
+                            : null,
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 

@@ -6,6 +6,7 @@ import 'package:arena/features_shared/prize_ranks.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_divider.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_user/competitions/widgets/referral_progress_card.dart';
 import 'package:arena/features_user/payments/payment_method.dart';
 import 'package:flutter/material.dart';
@@ -81,78 +82,78 @@ class _RegistrationConfirmPageState
 
     return Scaffold(
       appBar: const ArenaAppBar(title: 'Confirmer inscription'),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(ArenaSpacing.lg),
-          children: [
-            _CompetitionSummary(
-              name: widget.competitionName,
-              gameLabel: widget.gameLabel,
-              gameEmoji: widget.gameEmoji,
-              dateLabel: widget.dateLabel,
-              formatLabel: widget.formatLabel,
-              isFree: _isFree,
-            ).animate().fadeIn(duration: ArenaDurations.medium),
-            const SizedBox(height: ArenaSpacing.lg),
-            if (!_isFree) ...[
-              const _SectionLabel('Paiement'),
+      body: ArenaScreenBackground(
+        child: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.all(ArenaSpacing.lg),
+            children: [
+              _CompetitionSummary(
+                name: widget.competitionName,
+                gameLabel: widget.gameLabel,
+                gameEmoji: widget.gameEmoji,
+                dateLabel: widget.dateLabel,
+                formatLabel: widget.formatLabel,
+                isFree: _isFree,
+              ).animate().fadeIn(duration: ArenaDurations.medium),
+              const SizedBox(height: ArenaSpacing.lg),
+              if (!_isFree) ...[
+                const _SectionLabel('Paiement'),
+                const SizedBox(height: ArenaSpacing.sm),
+                _PaymentBreakdown(entryFeeXaf: widget.entryFeeXaf)
+                    .animate(delay: 100.ms)
+                    .fadeIn(duration: ArenaDurations.medium),
+                const SizedBox(height: ArenaSpacing.lg),
+              ],
+              const _SectionLabel('Récompense du tournoi'),
               const SizedBox(height: ArenaSpacing.sm),
-              _PaymentBreakdown(entryFeeXaf: widget.entryFeeXaf)
-                  .animate(delay: 100.ms)
-                  .fadeIn(duration: ArenaDurations.medium),
+              _PrizeDistribution(
+                totalXaf: widget.totalPrizeXaf,
+                distribution: widget.prizeDistribution,
+              ).animate(delay: 200.ms).fadeIn(duration: ArenaDurations.medium),
+              if (hasGating) ...[
+                const SizedBox(height: ArenaSpacing.lg),
+                ReferralProgressCard(
+                  competitionId: widget.competitionId,
+                  referralQuota: eligibility.target,
+                ),
+              ],
+              if (widget.androidStoreUrl != null ||
+                  widget.iosStoreUrl != null) ...[
+                const SizedBox(height: ArenaSpacing.lg),
+                const _SectionLabel('Télécharger le jeu'),
+                const SizedBox(height: ArenaSpacing.sm),
+                _StoreButtons(
+                  androidUrl: widget.androidStoreUrl,
+                  iosUrl: widget.iosStoreUrl,
+                ),
+              ],
               const SizedBox(height: ArenaSpacing.lg),
-            ],
-            const _SectionLabel('Récompense du tournoi'),
-            const SizedBox(height: ArenaSpacing.sm),
-            _PrizeDistribution(
-              totalXaf: widget.totalPrizeXaf,
-              distribution: widget.prizeDistribution,
-            )
-                .animate(delay: 200.ms)
-                .fadeIn(duration: ArenaDurations.medium),
-            if (hasGating) ...[
-              const SizedBox(height: ArenaSpacing.lg),
-              ReferralProgressCard(
-                competitionId: widget.competitionId,
-                referralQuota: eligibility.target,
+              _AckTile(
+                checked: _ack,
+                onChanged: (v) => setState(() => _ack = v),
+              ),
+              const SizedBox(height: ArenaSpacing.xl),
+              ArenaButton(
+                label: hasGating && !isEligible
+                    ? '👥 PARRAINAGES INSUFFISANTS'
+                    : _isFree
+                        ? "M'INSCRIRE GRATUITEMENT"
+                        : 'PROCÉDER AU PAIEMENT '
+                            '· ${_formatXaf(widget.entryFeeXaf)} XAF',
+                fullWidth: true,
+                size: ArenaButtonSize.large,
+                isLoading: _submitting,
+                onPressed: canSubmit ? _onSubmit : null,
+              ),
+              const SizedBox(height: ArenaSpacing.sm),
+              ArenaButton(
+                label: 'Annuler',
+                fullWidth: true,
+                variant: ArenaButtonVariant.ghost,
+                onPressed: () => Navigator.maybePop(context),
               ),
             ],
-            if (widget.androidStoreUrl != null ||
-                widget.iosStoreUrl != null) ...[
-              const SizedBox(height: ArenaSpacing.lg),
-              const _SectionLabel('Télécharger le jeu'),
-              const SizedBox(height: ArenaSpacing.sm),
-              _StoreButtons(
-                androidUrl: widget.androidStoreUrl,
-                iosUrl: widget.iosStoreUrl,
-              ),
-            ],
-            const SizedBox(height: ArenaSpacing.lg),
-            _AckTile(
-              checked: _ack,
-              onChanged: (v) => setState(() => _ack = v),
-            ),
-            const SizedBox(height: ArenaSpacing.xl),
-            ArenaButton(
-              label: hasGating && !isEligible
-                  ? '👥 PARRAINAGES INSUFFISANTS'
-                  : _isFree
-                      ? "M'INSCRIRE GRATUITEMENT"
-                      : 'PROCÉDER AU PAIEMENT '
-                          '· ${_formatXaf(widget.entryFeeXaf)} XAF',
-              fullWidth: true,
-              size: ArenaButtonSize.large,
-              isLoading: _submitting,
-              onPressed: canSubmit ? _onSubmit : null,
-            ),
-            const SizedBox(height: ArenaSpacing.sm),
-            ArenaButton(
-              label: 'Annuler',
-              fullWidth: true,
-              variant: ArenaButtonVariant.ghost,
-              onPressed: () => Navigator.maybePop(context),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -305,7 +306,10 @@ class _PaymentBreakdown extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _Row(label: "Frais d'inscription", value: '${_formatXaf(entryFeeXaf)} XAF'),
+          _Row(
+            label: "Frais d'inscription",
+            value: '${_formatXaf(entryFeeXaf)} XAF',
+          ),
           const ArenaDivider(),
           const _Row(label: 'Frais de service', value: 'Inclus'),
           const ArenaDivider(),
@@ -385,9 +389,7 @@ class _PrizeDistribution extends StatelessWidget {
             ),
           ),
           const SizedBox(height: ArenaSpacing.md),
-          for (var i = 0;
-              i < distribution.length && i < kMaxRewardedRanks;
-              i++)
+          for (var i = 0; i < distribution.length && i < kMaxRewardedRanks; i++)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Row(

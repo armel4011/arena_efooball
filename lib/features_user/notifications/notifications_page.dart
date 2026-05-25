@@ -5,6 +5,7 @@ import 'package:arena/data/models/arena_notification.dart';
 import 'package:arena/data/repositories/notification_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -49,15 +50,17 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
           ),
         ],
       ),
-      body: SafeArea(
-        child: userId == null
-            ? const _SignedOutPlaceholder()
-            : _NotificationsList(
-                userId: userId,
-                filter: _filter,
-                onFilterChanged: (v) => setState(() => _filter = v),
-                onTap: _onTap,
-              ),
+      body: ArenaScreenBackground(
+        child: SafeArea(
+          child: userId == null
+              ? const _SignedOutPlaceholder()
+              : _NotificationsList(
+                  userId: userId,
+                  filter: _filter,
+                  onFilterChanged: (v) => setState(() => _filter = v),
+                  onTap: _onTap,
+                ),
+        ),
       ),
     );
   }

@@ -5,6 +5,7 @@ import 'package:arena/data/repositories/match_stats_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:arena/features_shared/widgets/error_state.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
@@ -40,7 +41,9 @@ class _MatchHistoryPageState extends ConsumerState<MatchHistoryPage> {
     if (profile == null) {
       return const Scaffold(
         appBar: ArenaAppBar(title: 'Historique'),
-        body: Center(child: CircularProgressIndicator()),
+        body: ArenaScreenBackground(
+          child: Center(child: CircularProgressIndicator()),
+        ),
       );
     }
 
@@ -48,31 +51,34 @@ class _MatchHistoryPageState extends ConsumerState<MatchHistoryPage> {
 
     return Scaffold(
       appBar: const ArenaAppBar(title: 'Historique'),
-      body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: ArenaSpacing.sm),
-            _FilterChips(
-              current: _filter,
-              onChanged: (f) => setState(() => _filter = f),
-            ),
-            const SizedBox(height: ArenaSpacing.sm),
-            Expanded(
-              child: matchesAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, _) => ErrorState(
-                  description: 'Impossible de charger ton historique. '
-                      'Vérifie ta connexion.',
-                  onRetry: () =>
-                      ref.invalidate(playerMatchHistoryProvider(profile.id)),
-                ),
-                data: (matches) => _MatchList(
-                  matches: _applyFilter(matches, profile.id, _filter),
-                  selfId: profile.id,
+      body: ArenaScreenBackground(
+        child: SafeArea(
+          child: Column(
+            children: [
+              const SizedBox(height: ArenaSpacing.sm),
+              _FilterChips(
+                current: _filter,
+                onChanged: (f) => setState(() => _filter = f),
+              ),
+              const SizedBox(height: ArenaSpacing.sm),
+              Expanded(
+                child: matchesAsync.when(
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (err, _) => ErrorState(
+                    description: 'Impossible de charger ton historique. '
+                        'Vérifie ta connexion.',
+                    onRetry: () =>
+                        ref.invalidate(playerMatchHistoryProvider(profile.id)),
+                  ),
+                  data: (matches) => _MatchList(
+                    matches: _applyFilter(matches, profile.id, _filter),
+                    selfId: profile.id,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

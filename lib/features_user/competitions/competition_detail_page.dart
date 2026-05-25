@@ -7,6 +7,7 @@ import 'package:arena/features_shared/prize_ranks.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_card.dart';
+import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:arena/features_shared/widgets/error_state.dart';
 import 'package:arena/features_user/bracket/bracket_view_page.dart';
@@ -37,29 +38,31 @@ class CompetitionDetailPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: const ArenaAppBar(title: 'Compétition'),
-      body: async.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => ErrorState(
-          description: e.toString(),
-          onRetry: () =>
-              ref.invalidate(competitionByIdProvider(competitionId)),
+      body: ArenaScreenBackground(
+        child: async.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => ErrorState(
+            description: e.toString(),
+            onRetry: () =>
+                ref.invalidate(competitionByIdProvider(competitionId)),
+          ),
+          data: (c) {
+            if (c == null) {
+              return const EmptyState(
+                icon: Icons.search_off_outlined,
+                title: 'Compétition introuvable',
+                description: 'Elle a peut-être été supprimée par un admin.',
+              );
+            }
+            // Gate : sans inscription confirmée, on n'expose pas les
+            // détails (bracket, matches, etc.) — le joueur passe d'abord
+            // par la page Confirmer inscription.
+            if (!isRegistered) {
+              return _GatedDetailView(competition: c);
+            }
+            return _DetailBody(competition: c);
+          },
         ),
-        data: (c) {
-          if (c == null) {
-            return const EmptyState(
-              icon: Icons.search_off_outlined,
-              title: 'Compétition introuvable',
-              description: 'Elle a peut-être été supprimée par un admin.',
-            );
-          }
-          // Gate : sans inscription confirmée, on n'expose pas les
-          // détails (bracket, matches, etc.) — le joueur passe d'abord
-          // par la page Confirmer inscription.
-          if (!isRegistered) {
-            return _GatedDetailView(competition: c);
-          }
-          return _DetailBody(competition: c);
-        },
       ),
     );
   }
@@ -88,109 +91,111 @@ class _GatedDetailView extends ConsumerWidget {
         // Spacer non-scrollable qui clippait le bloc parrainage).
         padding: const EdgeInsets.all(ArenaSpacing.lg),
         children: [
-            Container(
-              padding: const EdgeInsets.all(ArenaSpacing.lg),
-              decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(ArenaRadius.lg),
-                border: Border.all(
-                  color: accent.withValues(alpha: 0.35),
+          Container(
+            padding: const EdgeInsets.all(ArenaSpacing.lg),
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(ArenaRadius.lg),
+              border: Border.all(
+                color: accent.withValues(alpha: 0.35),
+              ),
+            ),
+            child: Column(
+              children: [
+                Text('🔒', style: ArenaText.h1.copyWith(fontSize: 38)),
+                const SizedBox(height: ArenaSpacing.sm),
+                Text(
+                  'Inscris-toi pour accéder au détail',
+                  textAlign: TextAlign.center,
+                  style: ArenaText.h3,
                 ),
-              ),
-              child: Column(
-                children: [
-                  Text('🔒', style: ArenaText.h1.copyWith(fontSize: 38)),
-                  const SizedBox(height: ArenaSpacing.sm),
-                  Text(
-                    'Inscris-toi pour accéder au détail',
-                    textAlign: TextAlign.center,
-                    style: ArenaText.h3,
-                  ),
-                  const SizedBox(height: ArenaSpacing.xs),
-                  Text(
-                    'Bracket, matches en direct et chat 1-on-1 sont '
-                    'réservés aux joueurs inscrits.',
-                    textAlign: TextAlign.center,
-                    style: ArenaText.bodyMuted,
-                  ),
-                ],
-              ),
+                const SizedBox(height: ArenaSpacing.xs),
+                Text(
+                  'Bracket, matches en direct et chat 1-on-1 sont '
+                  'réservés aux joueurs inscrits.',
+                  textAlign: TextAlign.center,
+                  style: ArenaText.bodyMuted,
+                ),
+              ],
             ),
-            const SizedBox(height: ArenaSpacing.lg),
-            Container(
-              padding: const EdgeInsets.all(ArenaSpacing.lg),
-              decoration: BoxDecoration(
-                color: ArenaColors.carbon,
-                borderRadius: BorderRadius.circular(ArenaRadius.lg),
-                border: Border.all(color: ArenaColors.border),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(c.name, style: ArenaText.h2),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${_gameEmoji(c.game)} ${c.game.label} · '
-                    '${_formatLabelStatic(c.format)}',
-                    style: ArenaText.bodyMuted,
-                  ),
-                  const SizedBox(height: 4),
-                  Text('🗓 $dateLabel', style: ArenaText.bodyMuted),
-                  const SizedBox(height: ArenaSpacing.md),
-                  Center(
-                    child: Column(
-                      children: [
-                        if (isFree)
-                          Text(
-                            'GRATUIT',
-                            style: ArenaText.bigNumber.copyWith(
-                              color: accent,
-                              fontSize: 40,
-                              letterSpacing: 2,
-                            ),
-                          )
-                        else
-                          Text(
-                            _prizeFmt(c.prizePoolLocal,
-                                c.prizePoolCurrency ?? c.registrationCurrency,),
-                            style: ArenaText.bigNumber.copyWith(
-                              color: accent,
-                              fontSize: 32,
-                            ),
-                          ),
-                        const SizedBox(height: 2),
+          ),
+          const SizedBox(height: ArenaSpacing.lg),
+          Container(
+            padding: const EdgeInsets.all(ArenaSpacing.lg),
+            decoration: BoxDecoration(
+              color: ArenaColors.carbon,
+              borderRadius: BorderRadius.circular(ArenaRadius.lg),
+              border: Border.all(color: ArenaColors.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(c.name, style: ArenaText.h2),
+                const SizedBox(height: 4),
+                Text(
+                  '${_gameEmoji(c.game)} ${c.game.label} · '
+                  '${_formatLabelStatic(c.format)}',
+                  style: ArenaText.bodyMuted,
+                ),
+                const SizedBox(height: 4),
+                Text('🗓 $dateLabel', style: ArenaText.bodyMuted),
+                const SizedBox(height: ArenaSpacing.md),
+                Center(
+                  child: Column(
+                    children: [
+                      if (isFree)
                         Text(
-                          isFree ? 'Inscription libre' : 'À gagner',
-                          style: ArenaText.bodyMuted,
+                          'GRATUIT',
+                          style: ArenaText.bigNumber.copyWith(
+                            color: accent,
+                            fontSize: 40,
+                            letterSpacing: 2,
+                          ),
+                        )
+                      else
+                        Text(
+                          _prizeFmt(
+                            c.prizePoolLocal,
+                            c.prizePoolCurrency ?? c.registrationCurrency,
+                          ),
+                          style: ArenaText.bigNumber.copyWith(
+                            color: accent,
+                            fontSize: 32,
+                          ),
                         ),
-                      ],
-                    ),
+                      const SizedBox(height: 2),
+                      Text(
+                        isFree ? 'Inscription libre' : 'À gagner',
+                        style: ArenaText.bodyMuted,
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            // Lot D — gating parrainage : progression + code à partager
-            if (competition.referralQuota > 0) ...[
-              const SizedBox(height: ArenaSpacing.md),
-              ReferralProgressCard(
-                competitionId: competition.id,
-                referralQuota: competition.referralQuota,
-              ),
-            ],
-            const SizedBox(height: ArenaSpacing.lg),
-            Container(
-              padding: const EdgeInsets.all(ArenaSpacing.md),
-              decoration: BoxDecoration(
-                color: ArenaColors.carbon,
-                borderRadius: BorderRadius.circular(ArenaRadius.md),
-                border: Border.all(color: ArenaColors.border),
-              ),
-              child: Text(
-                '↩ Reviens à la liste des compétitions et tape le bouton '
-                '"S\'INSCRIRE" sur la carte pour rejoindre cette compétition.',
-                style: ArenaText.small,
-              ),
+          ),
+          // Lot D — gating parrainage : progression + code à partager
+          if (competition.referralQuota > 0) ...[
+            const SizedBox(height: ArenaSpacing.md),
+            ReferralProgressCard(
+              competitionId: competition.id,
+              referralQuota: competition.referralQuota,
             ),
+          ],
+          const SizedBox(height: ArenaSpacing.lg),
+          Container(
+            padding: const EdgeInsets.all(ArenaSpacing.md),
+            decoration: BoxDecoration(
+              color: ArenaColors.carbon,
+              borderRadius: BorderRadius.circular(ArenaRadius.md),
+              border: Border.all(color: ArenaColors.border),
+            ),
+            child: Text(
+              '↩ Reviens à la liste des compétitions et tape le bouton '
+              '"S\'INSCRIRE" sur la carte pour rejoindre cette compétition.',
+              style: ArenaText.small,
+            ),
+          ),
         ],
       ),
     );
@@ -436,7 +441,7 @@ class _InfosTab extends StatelessWidget {
                 _kv(
                   'Récompense',
                   '${_money(competition.prizePoolLocal)}'
-                  ' ${competition.prizePoolCurrency ?? competition.registrationCurrency}',
+                      ' ${competition.prizePoolCurrency ?? competition.registrationCurrency}',
                 ),
             ],
           ),
@@ -540,8 +545,7 @@ class _RankingTab extends ConsumerWidget {
         return RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(competitionRankingProvider(competition.id));
-            await ref
-                .read(competitionRankingProvider(competition.id).future);
+            await ref.read(competitionRankingProvider(competition.id).future);
           },
           child: ListView.separated(
             padding: const EdgeInsets.all(ArenaSpacing.lg),
@@ -569,10 +573,8 @@ class _RankingEntryRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final rank = entry.finalRank;
     final dist = competition.prizeDistribution;
-    final hasPrize = rank != null &&
-        rank >= 1 &&
-        rank <= dist.length &&
-        dist[rank - 1] > 0;
+    final hasPrize =
+        rank != null && rank >= 1 && rank <= dist.length && dist[rank - 1] > 0;
     // prize_distribution stocke directement les montants par rang.
     final prize = hasPrize ? dist[rank - 1] : null;
     final currency =
@@ -585,8 +587,7 @@ class _RankingEntryRow extends StatelessWidget {
       // Phase 13 — tap → /profile/u/<username> (profil public du joueur).
       onTap: entry.username.isEmpty
           ? null
-          : () =>
-              context.push(UserRoutes.publicProfilePath(entry.username)),
+          : () => context.push(UserRoutes.publicProfilePath(entry.username)),
       borderRadius: BorderRadius.circular(ArenaRadius.lg),
       child: Container(
         padding: const EdgeInsets.all(ArenaSpacing.md),
