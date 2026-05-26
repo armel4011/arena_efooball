@@ -13,6 +13,7 @@ import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
+import 'package:arena/features_shared/widgets/arena_bracket_tree.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
@@ -291,7 +292,15 @@ class _BracketView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Group by round.
+    // Single elim → arbre arborescent #20 ; autres formats (round-robin,
+    // groupes+KO) restent en liste verticale legacy car ce ne sont pas
+    // des arbres KO et l'arbre n'aurait pas de sens visuel.
+    final showTree = competition.format == TournamentFormat.singleElimination;
+
+    if (showTree)
+      return _BracketTreeView(competition: competition, matches: matches);
+
+    // ── Vue legacy : liste verticale groupée par round. ────────────
     final byRound = <int, List<ArenaMatch>>{};
     for (final m in matches) {
       byRound.putIfAbsent(m.round ?? 1, () => []).add(m);
@@ -328,6 +337,300 @@ class _BracketView extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+/// Vue arbre arborescent pour single-elim (maquette #20 admin) : header
+/// caption avec compteur + `ArenaBracketTree` (pinch-to-zoom). Tap sur
+/// une card ouvre un bottom-sheet d'actions admin (valider score /
+/// annuler) qui reproduit la logique de `_MatchRow` legacy mais sans
+/// les boutons inline (incompatibles avec la densité de l'arbre).
+class _BracketTreeView extends StatelessWidget {
+  const _BracketTreeView({required this.competition, required this.matches});
+
+  final Competition competition;
+  final List<ArenaMatch> matches;
+
+  @override
+  Widget build(BuildContext context) {
+    final players = <String>{
+      for (final m in matches) ...[
+        if (m.player1Id != null) m.player1Id!,
+        if (m.player2Id != null) m.player2Id!,
+      ],
+    };
+
+    return ListView(
+      padding: const EdgeInsets.symmetric(
+        horizontal: ArenaSpacing.md,
+        vertical: ArenaSpacing.md,
+      ),
+      children: [
+        Text(
+          '${competition.name} · ${matches.length} match${matches.length > 1 ? 's' : ''}',
+          textAlign: TextAlign.center,
+          style: ArenaText.bodyMuted,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'ÉLIMINATION DIRECTE · ${players.length} JOUEURS',
+          textAlign: TextAlign.center,
+          style: ArenaText.monoSmall.copyWith(
+            color: ArenaColors.silver,
+            letterSpacing: 1.5,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: ArenaSpacing.sm),
+        SizedBox(
+          height: _treeHeightFor(matches.length),
+          child: ArenaBracketTree(
+            matches: matches,
+            onTapMatch: (m) => _AdminMatchActionsSheet.show(context, m),
+          ),
+        ),
+        const SizedBox(height: ArenaSpacing.sm),
+        Text(
+          '↔ pince pour zoomer · touche un match pour les actions admin',
+          textAlign: TextAlign.center,
+          style: ArenaText.small.copyWith(color: ArenaColors.silver),
+        ),
+        const SizedBox(height: ArenaSpacing.md),
+        Container(
+          padding: const EdgeInsets.all(ArenaSpacing.md),
+          decoration: arenaWarningCardDecoration(),
+          child: Text(
+            '⚠ Toutes les actions sont auditées (admin_audit_log).',
+            style: ArenaText.body,
+          ),
+        ),
+      ],
+    );
+  }
+
+  static double _treeHeightFor(int matchCount) {
+    if (matchCount >= 15) return 460;
+    if (matchCount >= 7) return 320;
+    if (matchCount >= 3) return 220;
+    return 160;
+  }
+}
+
+/// Bottom-sheet d'actions admin pour un match (déclenchée par tap sur
+/// une card de l'arbre). Affiche le statut, les deux joueurs/scores, et
+/// 2 CTA (Valider score / Annuler) tant que le match n'est pas
+/// `completed`. La logique business est portée par `_AdminMatchActions`
+/// (Consumer) qui réutilise repo / audit log providers existants.
+class _AdminMatchActionsSheet extends StatelessWidget {
+  const _AdminMatchActionsSheet({required this.match});
+
+  final ArenaMatch match;
+
+  static Future<void> show(BuildContext context, ArenaMatch match) {
+    return showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: ArenaColors.carbon,
+      shape: const RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(ArenaRadius.lg)),
+      ),
+      builder: (_) => _AdminMatchActionsSheet(match: match),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isCompleted = match.status == MatchStatus.completed;
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(ArenaSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                ArenaBadge(
+                  label: _statusLabel(match.status),
+                  variant: _statusBadgeVariant(match.status),
+                ),
+                const Spacer(),
+                Text(
+                  'M-${match.id.substring(0, 6)}',
+                  style: ArenaText.monoSmall,
+                ),
+              ],
+            ),
+            const SizedBox(height: ArenaSpacing.md),
+            _PlayerRow(
+              playerId: match.player1Id,
+              score: match.score1,
+              color: ArenaAvatarColor.blue,
+            ),
+            const SizedBox(height: 6),
+            _PlayerRow(
+              playerId: match.player2Id,
+              score: match.score2,
+              color: ArenaAvatarColor.green,
+            ),
+            if (!isCompleted) ...[
+              const SizedBox(height: ArenaSpacing.lg),
+              _AdminMatchActions(match: match),
+            ] else ...[
+              const SizedBox(height: ArenaSpacing.md),
+              Text(
+                'Match validé — actions clôturées.',
+                style: ArenaText.small.copyWith(color: ArenaColors.silver),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Boutons d'action admin (Valider score / Annuler) pour le match
+/// courant. Extrait en `ConsumerWidget` pour accéder aux repositories
+/// sans porter le ref dans tous les ancêtres.
+class _AdminMatchActions extends ConsumerWidget {
+  const _AdminMatchActions({required this.match});
+
+  final ArenaMatch match;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Row(
+      children: [
+        Expanded(
+          child: ArenaButton(
+            label: '✅ VALIDER SCORE',
+            fullWidth: true,
+            onPressed: () => _openVerdictDialog(context, ref),
+          ),
+        ),
+        const SizedBox(width: ArenaSpacing.sm),
+        Expanded(
+          child: ArenaButton(
+            label: '🚫 ANNULER',
+            fullWidth: true,
+            variant: ArenaButtonVariant.danger,
+            onPressed: () async {
+              await _cancel(context, ref);
+              if (context.mounted) Navigator.of(context).pop();
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _openVerdictDialog(BuildContext context, WidgetRef ref) async {
+    final p1Ctrl = TextEditingController(text: '${match.score1 ?? 0}');
+    final p2Ctrl = TextEditingController(text: '${match.score2 ?? 0}');
+    final result = await showDialog<(int, int)?>(
+      context: context,
+      builder: (c) => AlertDialog(
+        backgroundColor: ArenaColors.carbon,
+        title: Text('Valider le score', style: ArenaText.h3),
+        content: Row(
+          children: [
+            Expanded(
+              child: ArenaTextField(
+                controller: p1Ctrl,
+                hint: 'J1',
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: ArenaSpacing.sm),
+              child: Text('-'),
+            ),
+            Expanded(
+              child: ArenaTextField(
+                controller: p2Ctrl,
+                hint: 'J2',
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(c).pop(),
+            child: const Text('ANNULER'),
+          ),
+          TextButton(
+            onPressed: () {
+              final s1 = int.tryParse(p1Ctrl.text);
+              final s2 = int.tryParse(p2Ctrl.text);
+              if (s1 == null || s2 == null) return;
+              Navigator.of(c).pop((s1, s2));
+            },
+            child: const Text('VALIDER'),
+          ),
+        ],
+      ),
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      p1Ctrl.dispose();
+      p2Ctrl.dispose();
+    });
+    if (result == null) return;
+    final (s1, s2) = result;
+    final adminId = ref.read(currentSessionProvider)?.user.id;
+    if (adminId == null) return;
+    final winnerId = s1 > s2
+        ? match.player1Id
+        : s2 > s1
+            ? match.player2Id
+            : null;
+    try {
+      await ref.read(adminMatchesRepositoryProvider).setVerdict(
+            matchId: match.id,
+            scoreP1: s1,
+            scoreP2: s2,
+            winnerId: winnerId,
+          );
+      await ref.read(adminAuditLogRepositoryProvider).record(
+        adminId: adminId,
+        action: 'match_verdict',
+        targetType: 'match',
+        targetId: match.id,
+        afterState: {
+          'score1': s1,
+          'score2': s2,
+          'winner_id': winnerId,
+        },
+      );
+      if (context.mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Échec : ${arenaErrorMessage(e)}')),
+      );
+    }
+  }
+
+  Future<void> _cancel(BuildContext context, WidgetRef ref) async {
+    final adminId = ref.read(currentSessionProvider)?.user.id;
+    if (adminId == null) return;
+    try {
+      await ref.read(adminMatchesRepositoryProvider).cancel(match.id);
+      await ref.read(adminAuditLogRepositoryProvider).record(
+            adminId: adminId,
+            action: 'match_cancelled',
+            targetType: 'match',
+            targetId: match.id,
+          );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Échec : ${arenaErrorMessage(e)}')),
+      );
+    }
   }
 }
 
