@@ -7,6 +7,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 /// FCM + in-app notifications glue (PHASE 10).
@@ -164,24 +165,80 @@ class NotificationService {
     final title = notif?.title ?? message.data['title'] as String? ?? 'ARENA';
     final body = notif?.body ?? message.data['body'] as String? ?? '';
     final route = message.data['route'] as String?;
+    // FCM v1 expose l'URL via `android.notification.image` qui remonte
+    // dans `notif.android?.imageUrl`. En foreground l'OS ne rend pas
+    // automatiquement la notif — il faut télécharger l'image et la
+    // passer en BigPictureStyle à flutter_local_notifications.
+    final imageUrl = notif?.android?.imageUrl ??
+        message.data['image_url'] as String? ??
+        notif?.apple?.imageUrl;
+    final bigPicturePath = imageUrl == null
+        ? null
+        : await _downloadImageToCache(imageUrl);
+
+    final androidDetails = AndroidNotificationDetails(
+      _androidChannel.id,
+      _androidChannel.name,
+      channelDescription: _androidChannel.description,
+      importance: Importance.high,
+      priority: Priority.high,
+      icon: '@mipmap/ic_launcher',
+      styleInformation: bigPicturePath == null
+          ? null
+          : BigPictureStyleInformation(
+              FilePathAndroidBitmap(bigPicturePath),
+              contentTitle: title,
+              summaryText: body,
+              hideExpandedLargeIcon: true,
+            ),
+      largeIcon: bigPicturePath == null
+          ? null
+          : FilePathAndroidBitmap(bigPicturePath),
+    );
 
     await _local.show(
       message.hashCode,
       title,
       body,
       NotificationDetails(
-        android: AndroidNotificationDetails(
-          _androidChannel.id,
-          _androidChannel.name,
-          channelDescription: _androidChannel.description,
-          importance: Importance.high,
-          priority: Priority.high,
-          icon: '@mipmap/ic_launcher',
-        ),
+        android: androidDetails,
         iOS: const DarwinNotificationDetails(),
       ),
       payload: route,
     );
+  }
+
+  /// Télécharge [url] dans le cache temporaire et retourne le chemin
+  /// local — `BigPictureStyleInformation` exige un fichier sur disque
+  /// (pas une URL). Renvoie `null` si le download échoue (auquel cas
+  /// l'appelant tombe sur une notif texte seule sans planter).
+  Future<String?> _downloadImageToCache(String url) async {
+    try {
+      final uri = Uri.parse(url);
+      final client = HttpClient()..connectionTimeout = const Duration(seconds: 8);
+      final req = await client.getUrl(uri);
+      final res = await req.close();
+      if (res.statusCode != 200) {
+        client.close();
+        return null;
+      }
+      final bytes = await res.fold<List<int>>(
+        <int>[],
+        (acc, chunk) => acc..addAll(chunk),
+      );
+      client.close();
+      final dir = await getTemporaryDirectory();
+      final name =
+          'notif_${DateTime.now().millisecondsSinceEpoch}_${uri.pathSegments.isEmpty ? "img" : uri.pathSegments.last}';
+      final file = File('${dir.path}/$name');
+      await file.writeAsBytes(bytes, flush: true);
+      return file.path;
+    } catch (e, st) {
+      if (kDebugMode) {
+        debugPrint('[notifs] image download failed for $url: $e\n$st');
+      }
+      return null;
+    }
   }
 
   void _handleTap(RemoteMessage message) {
