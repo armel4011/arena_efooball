@@ -127,8 +127,27 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    final profile = ref.watch(currentProfileProvider).valueOrNull;
+    final initial = (profile?.username.isNotEmpty ?? false)
+        ? profile!.username[0].toUpperCase()
+        : '?';
+    final avatarColor = AvatarPalette.colorFromHex(_avatarColor);
+
     return Scaffold(
-      appBar: const ArenaAppBar(title: 'Modifier le profil'),
+      appBar: ArenaAppBar(
+        title: 'MODIFIER',
+        actions: [
+          IconButton(
+            icon: const Icon(
+              Icons.check,
+              color: ArenaColors.statusOk,
+              size: 22,
+            ),
+            tooltip: 'Enregistrer',
+            onPressed: _saving ? null : _save,
+          ),
+        ],
+      ),
       body: ArenaScreenBackground(
         child: SafeArea(
           child: Form(
@@ -136,8 +155,49 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
             child: ListView(
               padding: const EdgeInsets.all(ArenaSpacing.lg),
               children: [
+                // Avatar preview centré — reflète en live le _avatarColor
+                // sélectionné dans le _ColorPicker. La maquette montre un
+                // lien "Change avatar ›" en signalBlue ; on remappe ce lien
+                // sur la section couleur en dessous (scroll au lieu de
+                // bottom-sheet pour rester simple en V1).
+                Center(
+                  child: Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: avatarColor,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: avatarColor.withValues(alpha: 0.55),
+                          blurRadius: 28,
+                          spreadRadius: -2,
+                        ),
+                      ],
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      initial,
+                      style: ArenaText.h1.copyWith(
+                        color: ArenaColors.bone,
+                        fontSize: 34,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Center(
+                  child: Text(
+                    'Couleur modifiable ci-dessous',
+                    style: ArenaText.small.copyWith(
+                      color: ArenaColors.signalBlue,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: ArenaSpacing.lg),
+                const _Caption("NOM D'UTILISATEUR"),
+                const SizedBox(height: ArenaSpacing.xs),
                 ArenaTextField(
-                  label: "Nom d'utilisateur",
                   controller: _usernameCtrl,
                   maxLength: 20,
                   textInputAction: TextInputAction.next,
@@ -149,15 +209,8 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                   },
                 ),
                 const SizedBox(height: ArenaSpacing.lg),
-                Text('COULEUR AVATAR', style: ArenaTypography.labelMedium),
-                const SizedBox(height: ArenaSpacing.sm),
-                _ColorPicker(
-                  selected: _avatarColor,
-                  onChanged: (v) => setState(() => _avatarColor = v),
-                ),
-                const SizedBox(height: ArenaSpacing.lg),
-                Text('PAYS', style: ArenaTypography.labelMedium),
-                const SizedBox(height: ArenaSpacing.sm),
+                const _Caption('PAYS'),
+                const SizedBox(height: ArenaSpacing.xs),
                 ArenaCard(
                   padding: const EdgeInsets.symmetric(
                     horizontal: ArenaSpacing.md,
@@ -183,8 +236,16 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                   ),
                 ),
                 const SizedBox(height: ArenaSpacing.lg),
+                const _Caption('COULEUR AVATAR'),
+                const SizedBox(height: ArenaSpacing.xs),
+                _ColorPicker(
+                  selected: _avatarColor,
+                  onChanged: (v) => setState(() => _avatarColor = v),
+                ),
+                const SizedBox(height: ArenaSpacing.lg),
+                _Caption('WHATSAPP (${dialCodeFor(_countryCode)})'),
+                const SizedBox(height: ArenaSpacing.xs),
                 ArenaTextField(
-                  label: 'WHATSAPP (${dialCodeFor(_countryCode)})',
                   hint: 'Ex. 07 07 07 07 07',
                   helper: 'Le code pays ${dialCodeFor(_countryCode)} est ajouté'
                       ' automatiquement.',
@@ -216,6 +277,27 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Caption mono small au-dessus de chaque champ — reproduit
+/// `m-text-caption` de la maquette #25 (USERNAME / COUNTRY / AVATAR
+/// COLOR / BIO).
+class _Caption extends StatelessWidget {
+  const _Caption(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label,
+      style: ArenaText.monoSmall.copyWith(
+        color: ArenaColors.silver,
+        letterSpacing: 1.5,
+        fontWeight: FontWeight.w700,
       ),
     );
   }

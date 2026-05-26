@@ -29,14 +29,14 @@ class AboutPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const ArenaAppBar(title: 'À propos'),
+      appBar: const ArenaAppBar(title: 'À PROPOS'),
       body: ArenaScreenBackground(
         child: SafeArea(
           child: ListView(
             padding: const EdgeInsets.all(ArenaSpacing.lg),
             children: [
               const SizedBox(height: ArenaSpacing.lg),
-              const Center(child: ArenaLogo(fontSize: 48, letterSpacing: 6))
+              const Center(child: ArenaLogo(fontSize: 56, letterSpacing: 8))
                   .animate()
                   .fadeIn(duration: ArenaDurations.long)
                   .slideY(
@@ -44,42 +44,72 @@ class AboutPage extends StatelessWidget {
                     end: 0,
                     curve: Curves.easeOutCubic,
                   ),
-              const SizedBox(height: 4),
-              Center(
-                child: Text(
-                  'e-sport panafricain',
-                  style: ArenaText.serifTagline,
-                ),
-              ),
-              const SizedBox(height: ArenaSpacing.md),
+              const SizedBox(height: 6),
               Center(
                 child: Text(
                   'v$_version · build $_build',
-                  style: ArenaText.monoSmall,
+                  style: ArenaText.monoSmall.copyWith(
+                    color: ArenaColors.silver,
+                    letterSpacing: 1.5,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
-              const SizedBox(height: ArenaSpacing.xl),
+              const SizedBox(height: 4),
+              Center(
+                child: Text(
+                  'Made in Cameroon 🇨🇲',
+                  style: ArenaText.serifAccent.copyWith(
+                    color: ArenaColors.iceCyan,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+              const SizedBox(height: ArenaSpacing.lg),
+              const Divider(color: ArenaColors.border, height: 1),
+              const SizedBox(height: ArenaSpacing.lg),
               const _MissionCard()
                   .animate(delay: 150.ms)
                   .fadeIn(duration: ArenaDurations.medium),
               const SizedBox(height: ArenaSpacing.lg),
-              Text('LIENS', style: ArenaText.inputLabel),
+              Text(
+                'LIENS',
+                style: ArenaText.monoSmall.copyWith(
+                  color: ArenaColors.silver,
+                  letterSpacing: 1.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               const SizedBox(height: ArenaSpacing.sm),
               const _LinksCard(links: _links)
                   .animate(delay: 250.ms)
                   .fadeIn(duration: ArenaDurations.medium),
-              const SizedBox(height: ArenaSpacing.lg),
+              const SizedBox(height: ArenaSpacing.xl),
               Center(
                 child: Text(
-                  '© 2026 ARENA SAS',
-                  style: ArenaText.small,
+                  'Built with',
+                  style: ArenaText.serifAccent.copyWith(
+                    color: ArenaColors.pearl,
+                    fontSize: 14,
+                  ),
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               Center(
                 child: Text(
-                  'Made in Cameroun 🇨🇲',
-                  style: ArenaText.small,
+                  'FLUTTER · SUPABASE · AGORA',
+                  style: ArenaText.monoSmall.copyWith(
+                    color: ArenaColors.silver,
+                    letterSpacing: 1.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Center(
+                child: Text(
+                  '© 2026 ARENA',
+                  style: ArenaText.small.copyWith(color: ArenaColors.silver),
                 ),
               ),
             ],

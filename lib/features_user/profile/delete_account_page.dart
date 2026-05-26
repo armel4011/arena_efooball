@@ -118,11 +118,19 @@ class _DeleteAccountPageState extends ConsumerState<DeleteAccountPage> {
     }
   }
 
+  static const _stepLabels = <String>[
+    'AVERTISSEMENT',
+    'GAINS EN ATTENTE',
+    'CONFIRMATION',
+    'TERMINÉ',
+  ];
+
   @override
   Widget build(BuildContext context) {
+    final stepNum = (_step + 1).toString().padLeft(2, '0');
     return Scaffold(
       appBar: ArenaAppBar(
-        title: 'Supprimer mon compte',
+        title: 'SUPPRIMER',
         showBack: _step != 3,
         onBack: _step == 3
             ? null
@@ -142,6 +150,17 @@ class _DeleteAccountPageState extends ConsumerState<DeleteAccountPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _StepIndicator(current: _step),
+                const SizedBox(height: ArenaSpacing.sm),
+                // Caption mono rouge "ÉTAPE 03/04 · CONFIRMATION"
+                // (maquette #27 `m-text-caption color: var(--neon-red)`).
+                Text(
+                  'ÉTAPE $stepNum/04 · ${_stepLabels[_step]}',
+                  style: ArenaText.monoSmall.copyWith(
+                    color: ArenaColors.neonRed,
+                    letterSpacing: 1.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 const SizedBox(height: ArenaSpacing.lg),
                 Expanded(child: _buildBody()),
               ],

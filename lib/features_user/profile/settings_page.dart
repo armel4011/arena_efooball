@@ -31,23 +31,31 @@ class SettingsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      appBar: const ArenaAppBar(title: 'Paramètres'),
+      appBar: const ArenaAppBar(title: 'PARAMÈTRES'),
       body: ArenaScreenBackground(
         child: SafeArea(
           child: ListView(
             padding: const EdgeInsets.all(ArenaSpacing.lg),
             children: const [
-              _SectionHeader(label: 'PRÉFÉRENCES'),
+              _SectionHeader(
+                label: 'PRÉFÉRENCES',
+                accent: ArenaColors.signalBlue,
+              ),
               _PreferencesSection(),
               SizedBox(height: ArenaSpacing.lg),
-              _SectionHeader(label: 'COMPTE'),
+              _SectionHeader(label: 'COMPTE', accent: ArenaColors.signalBlue),
               _AccountSection(),
               SizedBox(height: ArenaSpacing.lg),
-              _SectionHeader(label: 'CONFIDENTIALITÉ'),
+              _SectionHeader(
+                label: 'CONFIDENTIALITÉ',
+                accent: ArenaColors.neonRed,
+              ),
               _PrivacySection(),
               SizedBox(height: ArenaSpacing.lg),
-              _SectionHeader(label: 'AIDE & INFOS'),
+              _SectionHeader(label: 'AIDE & INFOS', accent: ArenaColors.silver),
               _HelpSection(),
+              SizedBox(height: ArenaSpacing.lg),
+              _VersionFooter(),
               SizedBox(height: ArenaSpacing.xxl),
             ],
           ),
@@ -57,15 +65,44 @@ class SettingsPage extends ConsumerWidget {
   }
 }
 
+/// Section header — caption mono small avec couleur accent par section
+/// (reproduit `m-text-caption` de la maquette : `PREFERENCES` signalBlue,
+/// `PRIVACY` neonRed, etc.).
 class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.label});
+  const _SectionHeader({required this.label, required this.accent});
+
   final String label;
+  final Color accent;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: ArenaSpacing.sm),
-      child: Text(label, style: ArenaTypography.labelMedium),
+      child: Text(
+        label,
+        style: ArenaText.monoSmall.copyWith(
+          color: accent,
+          letterSpacing: 1.5,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+/// Footer version "v1.0.0 (build N)" — caché en bas de la page, copie
+/// la maquette `m-text-tiny text-align: center`. La version reelle est
+/// hardcoded en V1 (lecture pubspec.yaml = code generation au build).
+class _VersionFooter extends StatelessWidget {
+  const _VersionFooter();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Text(
+        'v1.0.0 · build 12',
+        style: ArenaText.small.copyWith(color: ArenaColors.silver),
+      ),
     );
   }
 }
@@ -467,8 +504,10 @@ class _HelpSection extends ConsumerWidget {
           ),
           const _Divider(),
           ListTile(
-            leading:
-                const Icon(Icons.info_outline, color: ArenaColors.textMuted),
+            leading: const Icon(
+              Icons.info_outline,
+              color: ArenaColors.textMuted,
+            ),
             title: const Text('À propos'),
             subtitle: Text(
               'ARENA V1.0 — Plateforme de tournois e-sport mobile',
@@ -476,6 +515,8 @@ class _HelpSection extends ConsumerWidget {
                 color: ArenaColors.textMuted,
               ),
             ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(UserRoutes.about),
           ),
         ],
       ),

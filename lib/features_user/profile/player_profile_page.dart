@@ -86,13 +86,31 @@ class _ProfileBody extends ConsumerWidget {
         children: [
           _Header(profile: profile),
           const SizedBox(height: ArenaSpacing.lg),
+          _StatsRow(stats: statsAsync),
+          const SizedBox(height: ArenaSpacing.lg),
+          Text(
+            '🏆 SUCCÈS',
+            style: ArenaText.monoSmall.copyWith(
+              color: ArenaColors.silver,
+              letterSpacing: 1.5,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: ArenaSpacing.sm),
+          _AchievementsRow(stats: statsAsync),
+          const SizedBox(height: ArenaSpacing.lg),
           const _FriendsSection(),
           const SizedBox(height: ArenaSpacing.lg),
           const _ReferralBadgeCard(),
           const SizedBox(height: ArenaSpacing.lg),
-          _StatsCard(stats: statsAsync),
-          const SizedBox(height: ArenaSpacing.lg),
-          Text('MATCHS RÉCENTS', style: ArenaTypography.labelMedium),
+          Text(
+            'MATCHS RÉCENTS',
+            style: ArenaText.monoSmall.copyWith(
+              color: ArenaColors.silver,
+              letterSpacing: 1.5,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: ArenaSpacing.sm),
           _RecentMatches(playerId: profile.id, asyncMatches: recentAsync),
           const SizedBox(height: ArenaSpacing.xl),
@@ -117,6 +135,11 @@ class _ProfileBody extends ConsumerWidget {
   }
 }
 
+/// Header centré façon maquette #24 — avatar XL avec glow couleur du
+/// profil + username display Bebas 26px uppercase + sous-titre
+/// "🇨🇲 ${country} · Inscrit en ${month year}" + tier badge gradient.
+/// Le bouton "modifier" est posé en overlay top-right pour rester
+/// visible même sans AppBar (la page est embeddée dans MainLayout).
 class _Header extends StatelessWidget {
   const _Header({required this.profile});
 
@@ -127,176 +150,249 @@ class _Header extends StatelessWidget {
     final color = AvatarPalette.colorFromHex(profile.avatarColor);
     final initial =
         profile.username.isEmpty ? '?' : profile.username[0].toUpperCase();
+    final country = _countryLabel(profile.countryCode);
+    final joinedAt = _joinedLabel(profile.createdAt);
 
-    return ArenaCard(
-      child: Row(
-        children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: color.withValues(alpha: 0.55),
-                  blurRadius: 28,
-                  spreadRadius: -2,
-                ),
-              ],
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.18),
-                width: 1.5,
-              ),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              initial,
-              style: ArenaTypography.headlineLarge.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          const SizedBox(width: ArenaSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(profile.username, style: ArenaTypography.headlineMedium),
-                const SizedBox(height: 2),
-                Text(
-                  '${profile.countryCode} • ${profile.email}',
-                  style: ArenaTypography.bodySmall.copyWith(
-                    color: ArenaColors.textMuted,
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Column(
+          children: [
+            Container(
+              width: 86,
+              height: 86,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.6),
+                    blurRadius: 36,
+                    spreadRadius: -2,
                   ),
-                  overflow: TextOverflow.ellipsis,
+                ],
+                border: Border.all(
+                  color: ArenaColors.bone.withValues(alpha: 0.18),
+                  width: 1.5,
                 ),
-              ],
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                initial,
+                style: ArenaText.h1.copyWith(
+                  color: ArenaColors.bone,
+                  fontSize: 38,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.edit_outlined),
+            const SizedBox(height: ArenaSpacing.sm),
+            Text(
+              profile.username.toUpperCase(),
+              style: ArenaText.h1.copyWith(
+                color: ArenaColors.bone,
+                fontSize: 26,
+                letterSpacing: 2,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              '$country · Inscrit en $joinedAt',
+              style: ArenaText.small.copyWith(color: ArenaColors.silver),
+            ),
+            const SizedBox(height: 8),
+            const _TierBadge(label: '🥉 BRONZE'),
+          ],
+        ),
+        Positioned(
+          top: 0,
+          right: 0,
+          child: IconButton(
+            icon: const Icon(
+              Icons.edit_outlined,
+              color: ArenaColors.silver,
+              size: 20,
+            ),
             tooltip: 'Modifier',
             onPressed: () => context.push(UserRoutes.profileEdit),
           ),
+        ),
+      ],
+    );
+  }
+
+  static String _countryLabel(String code) {
+    // L'API stocke un ISO 2 ; on prefixe d'un emoji drapeau pour matcher
+    // la maquette `🇨🇲 Cameroon`. Le label long n'est pas mappé en V1
+    // (l'utilisateur le voit dans EditProfilePage de toute façon).
+    if (code.length < 2) return '🌍 $code';
+    final flag = String.fromCharCodes(
+      code.toUpperCase().codeUnits.map((c) => 0x1F1E6 + (c - 0x41)),
+    );
+    return '$flag $code';
+  }
+
+  static String _joinedLabel(DateTime? at) {
+    if (at == null) return '—';
+    const months = [
+      'janv.',
+      'févr.',
+      'mars',
+      'avril',
+      'mai',
+      'juin',
+      'juil.',
+      'août',
+      'sept.',
+      'oct.',
+      'nov.',
+      'déc.',
+    ];
+    return '${months[at.month - 1]} ${at.year}';
+  }
+}
+
+/// Tier badge gradient gold→hotCoral — placeholder visuel pour V1 (le
+/// vrai tier sera dérivé de `profile.stats.elo` ou similaire en V1.5).
+class _TierBadge extends StatelessWidget {
+  const _TierBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [ArenaColors.tierGoldWarm, ArenaColors.hotCoral],
+        ),
+        borderRadius: BorderRadius.circular(ArenaRadius.round),
+        boxShadow: [
+          BoxShadow(
+            color: ArenaColors.tierGoldWarm.withValues(alpha: 0.35),
+            blurRadius: 14,
+            spreadRadius: -2,
+          ),
         ],
+      ),
+      child: Text(
+        label,
+        style: ArenaText.badge.copyWith(
+          color: ArenaColors.bone,
+          letterSpacing: 1.2,
+        ),
       ),
     );
   }
 }
 
-class _StatsCard extends StatelessWidget {
-  const _StatsCard({required this.stats});
+/// Ligne de 3 stats compactes (Victoires / Défaites / Taux victoires) —
+/// reproduit `.m-row gap:6px` + 3 `m-card` de la maquette. La 3e card
+/// (winrate) est en glow signalBlue pour la mettre en valeur.
+class _StatsRow extends StatelessWidget {
+  const _StatsRow({required this.stats});
 
   final AsyncValue<PlayerStats> stats;
 
   @override
   Widget build(BuildContext context) {
     return stats.when(
-      loading: () => const ArenaCard(
-        child: SizedBox(
-          height: 96,
-          child: Center(child: CircularProgressIndicator()),
-        ),
+      loading: () => const SizedBox(
+        height: 80,
+        child: Center(child: CircularProgressIndicator()),
       ),
-      error: (e, _) => ArenaCard(
-        child: Text(
-          'Stats indisponibles ($e)',
-          style: ArenaText.body.copyWith(color: ArenaColors.danger),
-        ),
+      error: (e, _) => Text(
+        'Stats indisponibles ($e)',
+        style: ArenaText.body.copyWith(color: ArenaColors.danger),
       ),
-      data: (s) => DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: ArenaRadius.card,
-          boxShadow: [
-            BoxShadow(
-              color: ArenaColors.primary.withValues(alpha: 0.22),
-              blurRadius: 36,
-              spreadRadius: -8,
-              offset: const Offset(0, 10),
+      data: (s) {
+        final pct =
+            s.totalMatches == 0 ? '—' : '${(s.winRatio * 100).round()}%';
+        return Row(
+          children: [
+            Expanded(
+              child: _MiniStatCard(
+                value: '${s.wins}',
+                label: 'Victoires',
+                color: ArenaColors.statusOk,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: _MiniStatCard(
+                value: '${s.losses}',
+                label: 'Défaites',
+                color: ArenaColors.neonRed,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: _MiniStatCard(
+                value: pct,
+                label: 'Win rate',
+                color: ArenaColors.signalBlue,
+                glow: true,
+              ),
             ),
           ],
-        ),
-        child: ArenaCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('STATS', style: ArenaTypography.labelMedium),
-              const SizedBox(height: ArenaSpacing.sm),
-              Row(
-                children: [
-                  _StatTile(
-                    label: 'V',
-                    value: '${s.wins}',
-                    color: ArenaColors.success,
-                  ),
-                  _StatTile(
-                    label: 'D',
-                    value: '${s.losses}',
-                    color: ArenaColors.danger,
-                  ),
-                  _StatTile(
-                    label: 'N',
-                    value: '${s.draws}',
-                    color: ArenaColors.textMuted,
-                  ),
-                ],
-              ),
-              const SizedBox(height: ArenaSpacing.md),
-              _RatioRow(ratio: s.winRatio, totalMatches: s.totalMatches),
-              const SizedBox(height: ArenaSpacing.md),
-              Row(
-                children: [
-                  Expanded(
-                    child: _GoalLine(
-                      label: 'Buts marqués',
-                      value: s.goalsScored,
-                      color: ArenaColors.success,
-                    ),
-                  ),
-                  Expanded(
-                    child: _GoalLine(
-                      label: 'Buts encaissés',
-                      value: s.goalsConceded,
-                      color: ArenaColors.danger,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
 
-class _StatTile extends StatelessWidget {
-  const _StatTile({
-    required this.label,
+class _MiniStatCard extends StatelessWidget {
+  const _MiniStatCard({
     required this.value,
+    required this.label,
     required this.color,
+    this.glow = false,
   });
 
-  final String label;
   final String value;
+  final String label;
   final Color color;
+  final bool glow;
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      decoration: BoxDecoration(
+        color: ArenaColors.carbon,
+        borderRadius: BorderRadius.circular(ArenaRadius.lg),
+        border: Border.all(
+          color: glow ? color : ArenaColors.border,
+        ),
+        boxShadow: glow
+            ? [
+                BoxShadow(
+                  color: color.withValues(alpha: 0.25),
+                  blurRadius: 18,
+                  spreadRadius: -4,
+                ),
+              ]
+            : null,
+      ),
       child: Column(
         children: [
           Text(
             value,
-            style: ArenaTypography.displayMedium.copyWith(color: color),
+            style: ArenaText.mono.copyWith(
+              color: color,
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+            ),
           ),
+          const SizedBox(height: 2),
           Text(
             label,
-            style: ArenaTypography.labelMedium.copyWith(
-              color: ArenaColors.textMuted,
-            ),
+            style: ArenaText.small.copyWith(color: ArenaColors.silver),
           ),
         ],
       ),
@@ -304,76 +400,81 @@ class _StatTile extends StatelessWidget {
   }
 }
 
-class _RatioRow extends StatelessWidget {
-  const _RatioRow({required this.ratio, required this.totalMatches});
+/// Row de squares 36×36 — reproduit `🏆 ACHIEVEMENTS` de la maquette.
+/// V1 : les badges sont dérivés des stats du joueur (1 match terminé →
+/// 🎮, 1ère victoire → 🥇, série de 3 victoires → 🔥, 10+ matches → ⚡),
+/// les slots restants sont des placeholders gris.
+class _AchievementsRow extends StatelessWidget {
+  const _AchievementsRow({required this.stats});
 
-  final double ratio;
-  final int totalMatches;
+  final AsyncValue<PlayerStats> stats;
 
   @override
   Widget build(BuildContext context) {
-    final pct = (ratio * 100).round();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    final s = stats.valueOrNull;
+    final played = s?.totalMatches ?? 0;
+    final wins = s?.wins ?? 0;
+    final unlocked = <(String, List<Color>)>[
+      if (played >= 1) ('🎮', [ArenaColors.signalBlue, ArenaColors.iceCyan]),
+      if (wins >= 1)
+        ('🥇', [ArenaColors.tierGoldWarm, ArenaColors.tierGoldDeep]),
+      if (wins >= 3) ('🔥', [ArenaColors.statusOk, ArenaColors.gameFifa]),
+      if (played >= 10) ('⚡', [ArenaColors.neonRed, ArenaColors.hotCoral]),
+    ];
+    final slots = List<(String, List<Color>)?>.filled(5, null);
+    for (var i = 0; i < unlocked.length && i < 5; i++) {
+      slots[i] = unlocked[i];
+    }
+
+    return Row(
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Taux de victoire',
-              style: ArenaTypography.bodySmall.copyWith(
-                color: ArenaColors.textMuted,
-              ),
-            ),
-            Text(
-              totalMatches == 0 ? '—' : '$pct% ($totalMatches matchs)',
-              style: ArenaTypography.labelMedium,
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(
-            value: ratio,
-            minHeight: 6,
-            backgroundColor: ArenaColors.surfaceLight,
-            valueColor: const AlwaysStoppedAnimation(ArenaColors.success),
-          ),
-        ),
+        for (var i = 0; i < slots.length; i++) ...[
+          _AchievementBadge(badge: slots[i]),
+          if (i < slots.length - 1) const SizedBox(width: 6),
+        ],
       ],
     );
   }
 }
 
-class _GoalLine extends StatelessWidget {
-  const _GoalLine({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
+class _AchievementBadge extends StatelessWidget {
+  const _AchievementBadge({required this.badge});
 
-  final String label;
-  final int value;
-  final Color color;
+  final (String, List<Color>)? badge;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: ArenaTypography.bodySmall.copyWith(
-            color: ArenaColors.textMuted,
+    if (badge == null) {
+      return Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: ArenaColors.bone.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(10),
+        ),
+      );
+    }
+    final (emoji, colors) = badge!;
+    return Container(
+      width: 36,
+      height: 36,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: colors,
+        ),
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: colors.first.withValues(alpha: 0.3),
+            blurRadius: 12,
+            spreadRadius: -2,
           ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          '$value',
-          style: ArenaTypography.headlineMedium.copyWith(color: color),
-        ),
-      ],
+        ],
+      ),
+      child: Text(emoji, style: const TextStyle(fontSize: 18)),
     );
   }
 }
