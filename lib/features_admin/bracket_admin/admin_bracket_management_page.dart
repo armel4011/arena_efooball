@@ -45,7 +45,7 @@ class AdminBracketManagementPage extends ConsumerWidget {
     final matchesAsync = ref.watch(competitionMatchesProvider(competitionId));
 
     return Scaffold(
-      appBar: const ArenaAppBar(title: 'Gestion bracket'),
+      appBar: const ArenaAppBar(title: 'BRACKET'),
       body: ArenaScreenBackground(
         accent: ArenaColors.neonRed,
         child: SafeArea(

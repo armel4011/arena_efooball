@@ -35,7 +35,7 @@ class AdminCompetitionDetailPage extends ConsumerWidget {
     return DefaultTabController(
       length: 5,
       child: Scaffold(
-        appBar: const ArenaAppBar(title: 'Compétition'),
+        appBar: const ArenaAppBar(title: 'TOURNOI'),
         body: ArenaScreenBackground(
           accent: ArenaColors.neonRed,
           child: SafeArea(

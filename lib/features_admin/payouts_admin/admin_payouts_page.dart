@@ -45,7 +45,7 @@ class _AdminPayoutsPageState extends ConsumerState<AdminPayoutsPage> {
     final payouts = ref.watch(adminPendingPayoutsProvider);
 
     return Scaffold(
-      appBar: const ArenaAppBar(title: 'Payouts — validation'),
+      appBar: const ArenaAppBar(title: 'PAYOUTS ⚠'),
       body: ArenaScreenBackground(
         accent: ArenaColors.neonRed,
         child: SafeArea(

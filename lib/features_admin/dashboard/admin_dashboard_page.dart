@@ -40,7 +40,7 @@ class AdminDashboardPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: ArenaAppBar(
-        title: 'Dashboard',
+        title: '🛡 CONTROL',
         showBack: false,
         actions: [
           IconButton(
@@ -109,7 +109,14 @@ class AdminDashboardPage extends ConsumerWidget {
               padding: const EdgeInsets.all(ArenaSpacing.lg),
               physics: const AlwaysScrollableScrollPhysics(),
               children: [
-                Text('KPIs LIVE', style: ArenaText.inputLabel),
+                Text(
+                  '⚡ KPIs LIVE',
+                  style: ArenaText.monoSmall.copyWith(
+                    color: ArenaColors.neonRed,
+                    letterSpacing: 1.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 const SizedBox(height: ArenaSpacing.sm),
                 _KpiGrid(kpis: kpis).animate().fadeIn(
                       duration: ArenaDurations.medium,
@@ -119,13 +126,27 @@ class AdminDashboardPage extends ConsumerWidget {
                       duration: ArenaDurations.medium,
                     ),
                 const SizedBox(height: ArenaSpacing.lg),
-                Text('🚨 Alertes', style: ArenaText.h3),
+                Text(
+                  '🚨 ALERTES',
+                  style: ArenaText.monoSmall.copyWith(
+                    color: ArenaColors.neonRed,
+                    letterSpacing: 1.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 const SizedBox(height: ArenaSpacing.sm),
                 _AlertCards(kpis: kpis)
                     .animate(delay: 200.ms)
                     .fadeIn(duration: ArenaDurations.medium),
                 const SizedBox(height: ArenaSpacing.lg),
-                Text('⚡ Quick actions', style: ArenaText.h3),
+                Text(
+                  '⚡ ACTIONS RAPIDES',
+                  style: ArenaText.monoSmall.copyWith(
+                    color: ArenaColors.silver,
+                    letterSpacing: 1.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 const SizedBox(height: ArenaSpacing.sm),
                 ArenaButton(
                   label: '+ NOUVELLE COMPÉTITION',
@@ -169,7 +190,14 @@ class AdminDashboardPage extends ConsumerWidget {
                 ),
                 if (isSuperAdmin) ...[
                   const SizedBox(height: ArenaSpacing.lg),
-                  Text('👑 Super-admin', style: ArenaText.h3),
+                  Text(
+                    '👑 SUPER-ADMIN',
+                    style: ArenaText.monoSmall.copyWith(
+                      color: ArenaColors.tierGoldWarm,
+                      letterSpacing: 1.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   const SizedBox(height: ArenaSpacing.sm),
                   ArenaButton(
                     label: 'DASHBOARD SUPER-ADMIN',
@@ -208,7 +236,14 @@ class AdminDashboardPage extends ConsumerWidget {
                   ),
                 ],
                 const SizedBox(height: ArenaSpacing.lg),
-                Text('📜 Activité récente', style: ArenaText.h3),
+                Text(
+                  '📜 ACTIVITÉ RÉCENTE',
+                  style: ArenaText.monoSmall.copyWith(
+                    color: ArenaColors.silver,
+                    letterSpacing: 1.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 const SizedBox(height: ArenaSpacing.sm),
                 _RecentActivity(entries: recent),
               ],

@@ -43,7 +43,7 @@ class _AdminCompetitionsListPageState
 
     return Scaffold(
       appBar: ArenaAppBar(
-        title: 'Compétitions',
+        title: 'TOURNOIS',
         actions: [
           IconButton(
             icon: const Icon(

@@ -41,7 +41,7 @@ class _AdminMatchesListPageState extends ConsumerState<AdminMatchesListPage> {
 
     return Scaffold(
       appBar: ArenaAppBar(
-        title: 'Tous les matchs',
+        title: 'MATCHS',
         actions: [
           IconButton(
             icon: const Icon(Icons.search, color: ArenaColors.silver),

@@ -50,7 +50,7 @@ class _AdminDisputesPageState extends ConsumerState<AdminDisputesPage> {
 
     return Scaffold(
       appBar: ArenaAppBar(
-        title: 'Dispute · M-${widget.matchId.substring(0, 6)}',
+        title: 'LITIGE · M-${widget.matchId.substring(0, 6).toUpperCase()}',
       ),
       body: ArenaScreenBackground(
         accent: ArenaColors.neonRed,

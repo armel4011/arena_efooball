@@ -239,7 +239,7 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: ArenaAppBar(
-        title: _isEditing ? 'Modifier la compét.' : 'Nouvelle compét.',
+        title: _isEditing ? 'MODIFIER' : 'CRÉER',
       ),
       body: ArenaScreenBackground(
         accent: ArenaColors.neonRed,

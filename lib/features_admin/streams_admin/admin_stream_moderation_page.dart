@@ -34,7 +34,7 @@ class AdminStreamModerationPage extends ConsumerWidget {
     final streams = ref.watch(activePublicStreamsProvider);
 
     return Scaffold(
-      appBar: const ArenaAppBar(title: 'Modération streams'),
+      appBar: const ArenaAppBar(title: '🔴 STREAMS'),
       body: ArenaScreenBackground(
         accent: ArenaColors.neonRed,
         child: SafeArea(
