@@ -17,6 +17,7 @@ import 'package:arena/features_admin/matches_admin/admin_matches_list_page.dart'
 import 'package:arena/features_admin/payouts_admin/admin_payouts_page.dart';
 import 'package:arena/features_admin/profile_admin/admin_profile_page.dart';
 import 'package:arena/features_admin/streams_admin/admin_stream_moderation_page.dart';
+import 'package:arena/features_admin/streams_admin/admin_watch_stream_page.dart';
 import 'package:arena/features_admin/super_admin/super_admin_broadcast.dart';
 import 'package:arena/features_admin/super_admin/super_admin_dashboard.dart';
 import 'package:arena/features_admin/super_admin/super_admin_invitations.dart';
@@ -53,6 +54,7 @@ abstract final class AdminRoutes {
   static const matches = '/matches';
   static const bracket = '/competitions/:id/bracket';
   static const streams = '/streams';
+  static const streamWatch = '/streams/watch/:matchId';
   static const payouts = '/payouts';
   static const disputes = '/disputes/:matchId';
   static const auditLog = '/audit';
@@ -91,6 +93,9 @@ abstract final class AdminRoutes {
 
   /// Builds the concrete `/disputes/<matchId>` URL.
   static String disputePath(String matchId) => '/disputes/$matchId';
+
+  /// Builds the concrete `/streams/watch/<matchId>` URL.
+  static String streamWatchPath(String matchId) => '/streams/watch/$matchId';
 }
 
 final adminRouterProvider = Provider<GoRouter>((ref) {
@@ -220,6 +225,13 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
         path: AdminRoutes.streams,
         name: 'admin.streams',
         builder: (context, state) => const AdminStreamModerationPage(),
+      ),
+      GoRoute(
+        path: AdminRoutes.streamWatch,
+        name: 'admin.streamWatch',
+        builder: (context, state) => AdminWatchStreamPage(
+          matchId: state.pathParameters['matchId'] ?? '',
+        ),
       ),
       GoRoute(
         path: AdminRoutes.payouts,

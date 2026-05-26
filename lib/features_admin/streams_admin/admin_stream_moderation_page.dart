@@ -1,4 +1,5 @@
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
+import 'package:arena/core/router/admin_router.dart';
 import 'package:arena/core/services/agora_multi_streaming_service.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/match_stream.dart';
@@ -11,6 +12,7 @@ import 'package:arena/features_shared/widgets/arena_badge.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 /// PHASE 11 · A12 — multi-stream moderation grid avec vraies vidéos
 /// live (multiplex via [AgoraMultiStreamingService] + `joinChannelEx`).
@@ -176,7 +178,9 @@ class _StreamTile extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           GestureDetector(
-            onTap: () => ref
+            onTap: () =>
+                context.push(AdminRoutes.streamWatchPath(stream.matchId)),
+            onLongPress: () => ref
                 .read(agoraMultiStreamingServiceProvider)
                 .focusAudio(stream.matchId),
             child: SizedBox(
