@@ -21,24 +21,73 @@ class LiveStreamsSection extends ConsumerWidget {
       loading: () => const _LiveLoadingCard(),
       error: (e, _) => HomeErrorRow(message: 'Erreur : $e'),
       data: (streams) {
-        if (streams.isEmpty) {
-          return Container(
-            height: 80,
-            decoration: BoxDecoration(
-              color: ArenaColors.carbon,
-              borderRadius: BorderRadius.circular(ArenaRadius.lg),
-              border: Border.all(color: ArenaColors.border),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              'Aucun live en cours.',
-              style: ArenaText.bodyMuted,
-            ),
-          );
-        }
-        final top = streams.first;
-        return _LiveStreamCard(stream: top, allCount: streams.length);
+        final preview = streams.isEmpty
+            ? Container(
+                height: 80,
+                decoration: BoxDecoration(
+                  color: ArenaColors.carbon,
+                  borderRadius: BorderRadius.circular(ArenaRadius.lg),
+                  border: Border.all(color: ArenaColors.border),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  'Aucun live en cours.',
+                  style: ArenaText.bodyMuted,
+                ),
+              )
+            : _LiveStreamCard(stream: streams.first, allCount: streams.length);
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            preview,
+            const SizedBox(height: 6),
+            _SeeAllLivesLink(count: streams.length),
+          ],
+        );
       },
+    );
+  }
+}
+
+/// Petit lien "Voir tous les lives (N) →" sous la card preview.
+/// Mène vers `/streams` (LiveStreamsPage) qui affiche la liste complète.
+/// Toujours visible (même à 0 stream) pour garantir l'accès à la liste.
+class _SeeAllLivesLink extends StatelessWidget {
+  const _SeeAllLivesLink({required this.count});
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerRight,
+      child: InkWell(
+        onTap: () => context.push(UserRoutes.liveStreams),
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                count == 0
+                    ? 'Voir tous les lives'
+                    : 'Voir tous les lives ($count)',
+                style: ArenaText.small.copyWith(
+                  color: ArenaColors.signalBlue,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(width: 4),
+              const Icon(
+                Icons.arrow_forward,
+                size: 14,
+                color: ArenaColors.signalBlue,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

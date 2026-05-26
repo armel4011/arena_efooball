@@ -1,3 +1,4 @@
+import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/services/match_viewers_service.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/match_stream.dart';
@@ -128,7 +129,7 @@ class _LiveStreamCard extends ConsumerWidget {
     final viewers = viewerAsync.maybeWhen(data: (n) => n, orElse: () => 0);
 
     return GestureDetector(
-      onTap: () => context.go('/streams/watch/${stream.matchId}'),
+      onTap: () => context.push(UserRoutes.watchStreamPath(stream.matchId)),
       child: Container(
         constraints: BoxConstraints(minHeight: hero ? 180 : 120),
         decoration: BoxDecoration(
