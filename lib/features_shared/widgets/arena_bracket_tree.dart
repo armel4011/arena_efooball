@@ -61,7 +61,7 @@ class ArenaBracketTree extends StatelessWidget {
   // cards sont compactes pour tenir un bracket 16 sans scroll vertical.
   static const double _columnWidth = 78;
   static const double _columnGap = 18;
-  static const double _matchHeight = 38;
+  static const double _matchHeight = 42;
   static const double _matchGap = 6;
   static const double _connectorPad = 4;
 
