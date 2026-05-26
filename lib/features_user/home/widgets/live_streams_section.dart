@@ -8,9 +8,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-/// Section "Lives en cours" : affiche le stream public le plus récent,
-/// avec un compteur "+N autres" si plusieurs sont actifs.
-/// Source : `activePublicStreamsProvider`.
+/// Section "LIVE NOW" : affiche le stream public le plus récent dans une
+/// card hero (gradient game-themed) + compteur `+N autres` si plusieurs.
+/// Le lien "View all" vers `/streams` est placé directement dans la
+/// caption de section côté `home_page.dart`. Source :
+/// `activePublicStreamsProvider`.
 class LiveStreamsSection extends ConsumerWidget {
   const LiveStreamsSection({super.key});
 
@@ -21,119 +23,58 @@ class LiveStreamsSection extends ConsumerWidget {
       loading: () => const _LiveLoadingCard(),
       error: (e, _) => HomeErrorRow(message: 'Erreur : $e'),
       data: (streams) {
-        final preview = streams.isEmpty
-            ? Container(
-                height: 80,
-                decoration: BoxDecoration(
-                  color: ArenaColors.carbon,
-                  borderRadius: BorderRadius.circular(ArenaRadius.lg),
-                  border: Border.all(color: ArenaColors.border),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  'Aucun live en cours.',
-                  style: ArenaText.bodyMuted,
-                ),
-              )
-            : _LiveStreamCard(stream: streams.first, allCount: streams.length);
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            preview,
-            const SizedBox(height: 6),
-            _SeeAllLivesLink(count: streams.length),
-          ],
+        if (streams.isEmpty) return const _LiveEmptyCard();
+        return _LiveStreamCard(
+          stream: streams.first,
+          allCount: streams.length,
         );
       },
     );
   }
 }
 
-/// Petit lien "Voir tous les lives (N) →" sous la card preview.
-/// Mène vers `/streams` (LiveStreamsPage) qui affiche la liste complète.
-/// Toujours visible (même à 0 stream) pour garantir l'accès à la liste.
-class _SeeAllLivesLink extends StatelessWidget {
-  const _SeeAllLivesLink({required this.count});
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerRight,
-      child: InkWell(
-        onTap: () => context.push(UserRoutes.liveStreams),
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                count == 0
-                    ? 'Voir tous les lives'
-                    : 'Voir tous les lives ($count)',
-                style: ArenaText.small.copyWith(
-                  color: ArenaColors.signalBlue,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(width: 4),
-              const Icon(
-                Icons.arrow_forward,
-                size: 14,
-                color: ArenaColors.signalBlue,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _LiveLoadingCard extends StatelessWidget {
-  const _LiveLoadingCard();
-  @override
-  Widget build(BuildContext context) => Container(
-        height: 80,
-        decoration: BoxDecoration(
-          color: ArenaColors.carbon,
-          borderRadius: BorderRadius.circular(ArenaRadius.lg),
-          border: Border.all(color: ArenaColors.border),
-        ),
-        alignment: Alignment.center,
-        child: const CircularProgressIndicator(strokeWidth: 2),
-      );
-}
-
+/// Card hero pour le stream le plus récent — reproduit `.m-card` de la
+/// maquette : gradient game-themed cyclique (eFoot / FIFA / FC / signal)
+/// déterministe via `hash(matchId)`, badge LIVE pulsant top-left,
+/// compteur `+N autres` éventuel, et titre + caption bottom over scrim.
 class _LiveStreamCard extends StatelessWidget {
   const _LiveStreamCard({required this.stream, required this.allCount});
 
   final MatchStream stream;
   final int allCount;
 
+  static const _palettes = <LinearGradient>[
+    ArenaColors.bannerFifa, // vert eFootball mock
+    ArenaColors.bannerFc, // orange FIFA
+    LinearGradient(
+      colors: [Color(0xFF6A11CB), Color(0xFF2575FC)],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    ), // violet FC Mobile
+    ArenaColors.bannerEfoot, // bleu signal fallback
+  ];
+
   @override
   Widget build(BuildContext context) {
     final matchId = stream.matchId;
+    final gradient = _palettes[matchId.hashCode.abs() % _palettes.length];
+
     return InkWell(
       onTap: () => context.push(UserRoutes.watchStreamPath(matchId)),
       borderRadius: BorderRadius.circular(ArenaRadius.lg),
       child: Container(
-        height: 80,
+        height: 110,
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(ArenaRadius.lg),
         ),
         child: Stack(
           children: [
-            const Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: ArenaColors.bannerFifa,
-                ),
-              ),
+            Positioned.fill(
+              child:
+                  DecoratedBox(decoration: BoxDecoration(gradient: gradient)),
             ),
+            // Scrim sombre bottom→top pour lisibilité du titre.
             Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
@@ -142,15 +83,16 @@ class _LiveStreamCard extends StatelessWidget {
                     end: Alignment.bottomCenter,
                     colors: [
                       Colors.transparent,
-                      ArenaColors.void_.withValues(alpha: 0.55),
+                      ArenaColors.void_.withValues(alpha: 0.65),
                     ],
                   ),
                 ),
               ),
             ),
+            // Badges top-left : LIVE pulsant + éventuel "+N autres".
             Positioned(
-              top: 8,
-              left: 8,
+              top: 10,
+              left: 10,
               child: Row(
                 children: [
                   const ArenaBadge(
@@ -158,10 +100,10 @@ class _LiveStreamCard extends StatelessWidget {
                     variant: ArenaBadgeVariant.live,
                   ),
                   if (allCount > 1) ...[
-                    const SizedBox(width: 4),
+                    const SizedBox(width: 6),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 7,
+                        horizontal: 8,
                         vertical: 3,
                       ),
                       decoration: BoxDecoration(
@@ -170,26 +112,42 @@ class _LiveStreamCard extends StatelessWidget {
                       ),
                       child: Text(
                         '+${allCount - 1} autres',
-                        style:
-                            ArenaText.badge.copyWith(color: ArenaColors.bone),
+                        style: ArenaText.badge.copyWith(
+                          color: ArenaColors.bone,
+                        ),
                       ),
                     ),
                   ],
                 ],
               ),
             ),
+            // Titre + sous-titre bottom-left over scrim.
             Positioned(
-              bottom: 8,
-              left: 8,
-              right: 8,
-              child: Text(
-                'Match #${stream.matchId.substring(0, 8)} • Tape pour regarder',
-                style: ArenaText.body.copyWith(
-                  color: ArenaColors.bone,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                ),
-                overflow: TextOverflow.ellipsis,
+              bottom: 12,
+              left: 12,
+              right: 12,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'MATCH N°${matchId.substring(0, matchId.length > 8 ? 8 : matchId.length).toUpperCase()}',
+                    style: ArenaText.h3.copyWith(
+                      color: ArenaColors.bone,
+                      fontSize: 15,
+                      letterSpacing: 1,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Tape pour regarder en direct',
+                    style: ArenaText.small.copyWith(
+                      color: ArenaColors.bone.withValues(alpha: 0.85),
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
             ),
           ],
@@ -197,4 +155,56 @@ class _LiveStreamCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// État loading : card grise 110px (même hauteur que la hero) avec
+/// progress indicator centré, pour éviter un saut de layout au resolve.
+class _LiveLoadingCard extends StatelessWidget {
+  const _LiveLoadingCard();
+  @override
+  Widget build(BuildContext context) => Container(
+        height: 110,
+        decoration: BoxDecoration(
+          color: ArenaColors.carbon,
+          borderRadius: BorderRadius.circular(ArenaRadius.lg),
+          border: Border.all(color: ArenaColors.border),
+        ),
+        alignment: Alignment.center,
+        child: const SizedBox(
+          width: 22,
+          height: 22,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+}
+
+/// État empty : "Aucun live en cours" centré, icône TV éteinte —
+/// préserve la hauteur hero pour éviter un reflow.
+class _LiveEmptyCard extends StatelessWidget {
+  const _LiveEmptyCard();
+  @override
+  Widget build(BuildContext context) => Container(
+        height: 110,
+        decoration: BoxDecoration(
+          color: ArenaColors.carbon,
+          borderRadius: BorderRadius.circular(ArenaRadius.lg),
+          border: Border.all(color: ArenaColors.border),
+        ),
+        alignment: Alignment.center,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.tv_off_outlined,
+              color: ArenaColors.silver,
+              size: 20,
+            ),
+            const SizedBox(width: ArenaSpacing.sm),
+            Text(
+              'Aucun live en cours',
+              style: ArenaText.bodyMuted,
+            ),
+          ],
+        ),
+      );
 }

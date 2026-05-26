@@ -3,6 +3,7 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
+import 'package:arena/features_shared/widgets/arena_badge.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -11,8 +12,11 @@ import 'package:go_router/go_router.dart';
 /// actives sur la home. `null` = "Tous".
 final homeGameFilterProvider = StateProvider<GameType?>((_) => null);
 
-/// Section "Compétitions actives" : 3 chips de filtre par jeu +
-/// jusqu'à 3 cards de compétitions en `registrationOpen`/`ongoing`.
+/// Section "★ ACTIVE TOURNAMENTS" — chips de filtre par jeu + jusqu'à
+/// 3 banners game-themed (gradient eFoot/FIFA/FC) pour les compétitions
+/// en `registrationOpen` / `ongoing`. Reproduit `.m-banner-efoot/fifa/fc`
+/// de la maquette : gradient corner-to-corner, badge OUVERT/EN COURS/
+/// BIENTÔT translucide sur fond couleur, meta blanche en mono.
 class ActiveCompetitionsSection extends ConsumerWidget {
   const ActiveCompetitionsSection({super.key});
 
@@ -62,7 +66,7 @@ class ActiveCompetitionsSection extends ConsumerWidget {
               return Column(
                 children: [
                   for (final c in active) ...[
-                    _CompetitionCard(competition: c),
+                    _CompetitionBanner(competition: c),
                     const SizedBox(height: ArenaSpacing.sm),
                   ],
                 ],
@@ -96,9 +100,8 @@ class _GameFilterChips extends ConsumerWidget {
             _Chip(
               label: items[i].$1,
               selected: items[i].$2 == current,
-              onTap: () => ref
-                  .read(homeGameFilterProvider.notifier)
-                  .state = items[i].$2,
+              onTap: () =>
+                  ref.read(homeGameFilterProvider.notifier).state = items[i].$2,
             ),
             if (i < items.length - 1) const SizedBox(width: ArenaSpacing.xs),
           ],
@@ -134,8 +137,7 @@ class _Chip extends StatelessWidget {
               : ArenaColors.carbon,
           borderRadius: BorderRadius.circular(ArenaRadius.round),
           border: Border.all(
-            color:
-                selected ? ArenaColors.signalBlue : ArenaColors.border,
+            color: selected ? ArenaColors.signalBlue : ArenaColors.border,
           ),
         ),
         child: Text(
@@ -150,65 +152,148 @@ class _Chip extends StatelessWidget {
   }
 }
 
-class _CompetitionCard extends StatelessWidget {
-  const _CompetitionCard({required this.competition});
+/// Banner premium d'une compétition active — gradient game-themed
+/// (eFoot/FIFA/FC) avec titre Bebas-like en bone, badge statut
+/// (OUVERT/EN COURS) translucide à droite, et meta bottom (joueurs · fee ·
+/// démarrage) en mono blanc semi-transparent.
+class _CompetitionBanner extends StatelessWidget {
+  const _CompetitionBanner({required this.competition});
   final Competition competition;
 
   @override
   Widget build(BuildContext context) {
     final c = competition;
-    final emoji = switch (c.game) {
-      GameType.efootball => '⚽',
-      GameType.fifaMobile => '🎮',
-      GameType.eaSportsFc => '🎯',
-    };
+    final gradient = _gradientFor(c.game);
+    final (statusLabel, statusColor) = _statusChip(c.status);
     final daysToStart = c.startDate.difference(DateTime.now()).inDays;
     final startLabel = daysToStart > 0
-        ? 'Démarre dans ${daysToStart}j'
+        ? 'Dans ${daysToStart}j'
         : daysToStart == 0
-            ? "Démarre aujourd'hui"
+            ? "Aujourd'hui"
             : 'En cours';
     final fee = c.registrationFee.round();
-    final feeLabel =
-        fee == 0 ? 'Gratuit' : '$fee ${c.registrationCurrency}';
+    final feeLabel = fee == 0 ? 'Gratuit' : '$fee ${c.registrationCurrency}';
+    final players = '${c.currentPlayers}/${c.maxPlayers}';
 
     return InkWell(
       onTap: () => context.push(UserRoutes.competitionPath(c.id)),
       borderRadius: BorderRadius.circular(ArenaRadius.lg),
       child: Container(
-        padding: const EdgeInsets.all(ArenaSpacing.md),
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: ArenaColors.carbon,
+          gradient: gradient,
           borderRadius: BorderRadius.circular(ArenaRadius.lg),
-          border: Border.all(color: ArenaColors.border),
         ),
-        child: Row(
+        padding: const EdgeInsets.all(ArenaSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(emoji, style: const TextStyle(fontSize: 24)),
-            const SizedBox(width: ArenaSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
                     c.name,
-                    style: ArenaText.body
-                        .copyWith(fontWeight: FontWeight.w700),
+                    style: ArenaText.h3.copyWith(
+                      color: ArenaColors.bone,
+                      fontSize: 15,
+                      letterSpacing: 0.5,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${c.currentPlayers}/${c.maxPlayers} • $feeLabel • $startLabel',
-                    style: ArenaText.bodyMuted,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(width: ArenaSpacing.xs),
+                _StatusPill(label: statusLabel, accent: statusColor),
+              ],
             ),
-            const Icon(Icons.chevron_right, color: ArenaColors.silver),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                _MetaText(text: '$players joueurs'),
+                const _MetaDot(),
+                _MetaText(text: startLabel),
+                const Spacer(),
+                Text(
+                  feeLabel,
+                  style: ArenaText.mono.copyWith(
+                    color: ArenaColors.bone,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
     );
   }
+
+  static LinearGradient _gradientFor(GameType game) => switch (game) {
+        GameType.efootball => ArenaColors.bannerEfoot,
+        GameType.fifaMobile => ArenaColors.bannerFifa,
+        GameType.eaSportsFc => ArenaColors.bannerFc,
+      };
+
+  static (String, ArenaBadgeVariant) _statusChip(CompetitionStatus s) =>
+      switch (s) {
+        CompetitionStatus.registrationOpen => (
+            'OUVERT',
+            ArenaBadgeVariant.success
+          ),
+        CompetitionStatus.ongoing => ('EN COURS', ArenaBadgeVariant.info),
+        _ => ('BIENTÔT', ArenaBadgeVariant.warn),
+      };
+}
+
+/// Pill statut (OUVERT/EN COURS/BIENTÔT) — fond bone @ 25 % translucide qui marche
+/// sur n'importe quel gradient, texte bone bold. `accent` est conservé
+/// pour usage futur (border colorée) sans changer le rendu actuel.
+class _StatusPill extends StatelessWidget {
+  const _StatusPill({required this.label, required this.accent});
+  final String label;
+  final ArenaBadgeVariant accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: ArenaColors.bone.withValues(alpha: 0.25),
+        borderRadius: BorderRadius.circular(ArenaRadius.round),
+      ),
+      child: Text(
+        label,
+        style: ArenaText.badge.copyWith(
+          color: ArenaColors.bone,
+          letterSpacing: 0.8,
+        ),
+      ),
+    );
+  }
+}
+
+class _MetaText extends StatelessWidget {
+  const _MetaText({required this.text});
+  final String text;
+  @override
+  Widget build(BuildContext context) => Text(
+        text,
+        style: ArenaText.small.copyWith(
+          color: ArenaColors.bone.withValues(alpha: 0.85),
+        ),
+      );
+}
+
+class _MetaDot extends StatelessWidget {
+  const _MetaDot();
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        child: Text(
+          '·',
+          style: ArenaText.small.copyWith(
+            color: ArenaColors.bone.withValues(alpha: 0.7),
+          ),
+        ),
+      );
 }

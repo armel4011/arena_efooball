@@ -1,3 +1,4 @@
+import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/match_repository.dart';
 import 'package:arena/data/repositories/match_stream_repository.dart';
@@ -11,19 +12,23 @@ import 'package:arena/features_user/home/widgets/stat_grid.dart';
 import 'package:arena/features_user/home/widgets/upcoming_matches_section.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-/// User dashboard.
+/// User dashboard — écran #9 de `arena_premium_reference.html`.
 ///
-/// Maps to screen #9 of `arena_v2.html`. Sections (top → bottom) :
-/// 1. Header — avatar, username + tier badge, search + notif bell.
-/// 2. ⚡ Prochains matchs — horizontal scroller (réel : `myActiveMatchesProvider`).
-/// 3. 🔴 Lives en cours — `activePublicStreamsProvider` top item ou empty.
-/// 4. 🏆 Compétitions actives — filter chips fonctionnels + comp cards.
-/// 5. 📊 Tes stats — 3-col grid (matchs / V-D-N / win-rate).
+/// Sections (top→bottom) :
+/// 1. `HomeHeader` — avatar, username + tier, search + notif bell.
+/// 2. ⚡ NEXT MATCH — scroller horizontal (`myActiveMatchesProvider`),
+///    1er match en hero card glow.
+/// 3. ● LIVE NOW (caption rouge pulsante + lien View all) —
+///    `activePublicStreamsProvider` top item, gradient game-themed.
+/// 4. ★ ACTIVE TOURNAMENTS (caption gold) — filter chips + 3 banners
+///    game-themed (eFoot / FIFA / FC).
+/// 5. 📊 YOUR STATS — grille 3-col (`profile.stats`).
 ///
-/// Chaque section a été extraite dans `widgets/` (PR 2026-05-17,
-/// refacto P1 audit followup) pour garder ce fichier sous la barre
-/// des 200 lignes.
+/// Captions stylisées : `_SectionCaption` reproduit `m-text-caption`
+/// de la maquette (uppercase, mono small, color marker) + dot pulsant
+/// optionnel pour le marqueur LIVE.
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
@@ -47,50 +52,174 @@ class HomePage extends ConsumerWidget {
             HomeHeader(profile: profile),
             const PendingPaymentBanner(),
             const SizedBox(height: ArenaSpacing.lg),
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: ArenaSpacing.lg,
-              ),
-              child: Text('⚡ Prochains matchs', style: ArenaText.h3),
+            const _SectionCaption(
+              label: '⚡ PROCHAIN MATCH',
+              color: ArenaColors.signalBlue,
             ),
             const SizedBox(height: ArenaSpacing.sm),
             const UpcomingMatchesScroller(),
-            const SizedBox(height: ArenaSpacing.lg),
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: ArenaSpacing.lg,
+            const SizedBox(height: ArenaSpacing.xl),
+            _SectionCaption(
+              label: 'EN DIRECT',
+              color: ArenaColors.neonRed,
+              showDot: true,
+              trailing: _ViewAllLink(
+                onTap: () => context.push(UserRoutes.liveStreams),
               ),
-              child: Text('🔴 Lives en cours', style: ArenaText.h3),
             ),
             const SizedBox(height: ArenaSpacing.sm),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: ArenaSpacing.lg),
               child: LiveStreamsSection(),
             ),
-            const SizedBox(height: ArenaSpacing.lg),
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: ArenaSpacing.lg,
-              ),
-              child: Text('🏆 Compétitions actives', style: ArenaText.h3),
+            const SizedBox(height: ArenaSpacing.xl),
+            const _SectionCaption(
+              label: '★ TOURNOIS ACTIFS',
+              color: ArenaColors.gold,
             ),
             const SizedBox(height: ArenaSpacing.sm),
             const ActiveCompetitionsSection(),
-            const SizedBox(height: ArenaSpacing.lg),
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: ArenaSpacing.lg,
-              ),
-              child: Text('📊 Tes stats', style: ArenaText.h3),
+            const SizedBox(height: ArenaSpacing.xl),
+            const _SectionCaption(
+              label: '📊 TES STATS',
+              color: ArenaColors.silver,
             ),
             const SizedBox(height: ArenaSpacing.sm),
             Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: ArenaSpacing.lg,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: ArenaSpacing.lg),
               child: StatGrid(profile: profile),
             ),
             const SizedBox(height: ArenaSpacing.xl),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Caption uppercase coloré qui démarque chaque section de la home.
+/// Reproduit `.m-text-caption` de la maquette : mono small, letter-spacing
+/// 1.5, color marker (signalBlue / neonRed / gold / silver). `showDot`
+/// active un point pulsant 1.5s (utilisé uniquement pour le marqueur LIVE
+/// rouge), `trailing` accueille typiquement un `_ViewAllLink`.
+class _SectionCaption extends StatelessWidget {
+  const _SectionCaption({
+    required this.label,
+    required this.color,
+    this.showDot = false,
+    this.trailing,
+  });
+  final String label;
+  final Color color;
+  final bool showDot;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: ArenaSpacing.lg),
+      child: Row(
+        children: [
+          if (showDot) ...[
+            _PulsingDot(color: color),
+            const SizedBox(width: 6),
+          ],
+          Text(
+            label,
+            style: ArenaText.monoSmall.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.5,
+            ),
+          ),
+          if (trailing != null) ...[const Spacer(), trailing!],
+        ],
+      ),
+    );
+  }
+}
+
+/// Point pulsant 1.5s — opacity 0.5→1.0 avec glow proportionnel. Sert
+/// d'indicateur LIVE animé en tête de la caption "LIVE NOW".
+class _PulsingDot extends StatefulWidget {
+  const _PulsingDot({required this.color});
+  final Color color;
+  @override
+  State<_PulsingDot> createState() => _PulsingDotState();
+}
+
+class _PulsingDotState extends State<_PulsingDot>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (_, __) {
+        final t = 0.5 + 0.5 * _ctrl.value;
+        return Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: widget.color.withValues(alpha: t),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: widget.color.withValues(alpha: t * 0.6),
+                blurRadius: 8,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Lien "View all →" en fin de caption — mono small silver pour rester
+/// discret, tap déclenche la nav vers la liste complète.
+class _ViewAllLink extends StatelessWidget {
+  const _ViewAllLink({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Tout voir',
+              style: ArenaText.monoSmall.copyWith(
+                color: ArenaColors.silver,
+                letterSpacing: 1,
+              ),
+            ),
+            const SizedBox(width: 3),
+            const Icon(
+              Icons.arrow_forward,
+              size: 11,
+              color: ArenaColors.silver,
+            ),
           ],
         ),
       ),
