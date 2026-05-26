@@ -69,6 +69,7 @@ interface WebhookPayload {
     title: string;
     body: string | null;
     data: Record<string, unknown> | null;
+    image_url: string | null;
     sent_at: string | null;
     created_at: string;
   };
@@ -186,6 +187,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       title: r.title,
       body: r.body ?? '',
       dataOnly: isCall,
+      imageUrl: isCall ? undefined : (r.image_url ?? undefined),
       data: isCall
         ? {
             notification_type: 'call_invite',

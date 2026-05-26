@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_users_repository.dart';
@@ -11,6 +13,8 @@ import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
 
 /// PHASE 12.5 — Écran super-admin pour envoyer une notification ciblée.
 ///
@@ -36,6 +40,9 @@ class _SuperAdminBroadcastState extends ConsumerState<SuperAdminBroadcast> {
   String _notifType = 'system';
   bool _sending = false;
   String? _lastResult;
+  File? _pickedImage;
+  String? _uploadedImageUrl;
+  bool _uploadingImage = false;
 
   static const _typeOptions = <String>[
     'system',
@@ -74,6 +81,58 @@ class _SuperAdminBroadcastState extends ConsumerState<SuperAdminBroadcast> {
       _bodyCtrl.text.trim().isNotEmpty &&
       !_sending;
 
+  Future<void> _pickAndUploadImage() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1920,
+      maxHeight: 1080,
+      imageQuality: 85,
+    );
+    if (picked == null) return;
+    if (!mounted) return;
+    setState(() {
+      _pickedImage = File(picked.path);
+      _uploadingImage = true;
+      _uploadedImageUrl = null;
+    });
+    try {
+      final client = ref.read(supabaseClientProvider);
+      final ext = picked.path.split('.').last.toLowerCase();
+      final path =
+          'broadcast/${DateTime.now().millisecondsSinceEpoch}-${picked.name}';
+      await client.storage.from('notification_images').upload(
+            path,
+            File(picked.path),
+            fileOptions: FileOptions(
+              contentType: 'image/$ext',
+              upsert: false,
+            ),
+          );
+      final url =
+          client.storage.from('notification_images').getPublicUrl(path);
+      if (!mounted) return;
+      setState(() {
+        _uploadingImage = false;
+        _uploadedImageUrl = url;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _uploadingImage = false;
+        _pickedImage = null;
+        _lastResult = '✗ Upload image échoué : $e';
+      });
+    }
+  }
+
+  void _clearImage() {
+    setState(() {
+      _pickedImage = null;
+      _uploadedImageUrl = null;
+    });
+  }
+
   Future<void> _send(List<String> userIds) async {
     if (userIds.isEmpty) return;
     final adminId = ref.read(currentSessionProvider)?.user.id;
@@ -94,6 +153,7 @@ class _SuperAdminBroadcastState extends ConsumerState<SuperAdminBroadcast> {
 
     final client = ref.read(supabaseClientProvider);
     final route = _routeCtrl.text.trim();
+    final imageUrl = _uploadedImageUrl;
     final rows = [
       for (final uid in userIds)
         {
@@ -101,6 +161,7 @@ class _SuperAdminBroadcastState extends ConsumerState<SuperAdminBroadcast> {
           'type': _notifType,
           'title': _titleCtrl.text.trim(),
           'body': _bodyCtrl.text.trim(),
+          if (imageUrl != null) 'image_url': imageUrl,
           'data': route.isEmpty ? <String, dynamic>{} : {'route': route},
         },
     ];
@@ -118,6 +179,7 @@ class _SuperAdminBroadcastState extends ConsumerState<SuperAdminBroadcast> {
           'type': _notifType,
           'title': _titleCtrl.text.trim(),
           'has_route': route.isNotEmpty,
+          'has_image': imageUrl != null,
           'competition_ids': _filter.competitionIds,
         },
       );
@@ -128,6 +190,8 @@ class _SuperAdminBroadcastState extends ConsumerState<SuperAdminBroadcast> {
         _titleCtrl.clear();
         _bodyCtrl.clear();
         _routeCtrl.clear();
+        _pickedImage = null;
+        _uploadedImageUrl = null;
       });
     } catch (e) {
       if (!mounted) return;
@@ -287,6 +351,16 @@ class _SuperAdminBroadcastState extends ConsumerState<SuperAdminBroadcast> {
                 hint: 'Route deep-link (optionnel) — ex. /competitions',
                 helper: "Si défini, taper la notif redirige l'utilisateur sur"
                     " cette page de l'app.",
+              ),
+              const SizedBox(height: ArenaSpacing.md),
+              Text('🖼 IMAGE (optionnel)', style: ArenaText.h3),
+              const SizedBox(height: ArenaSpacing.sm),
+              _ImagePickerCard(
+                pickedImage: _pickedImage,
+                uploadedUrl: _uploadedImageUrl,
+                uploading: _uploadingImage,
+                onPick: _pickAndUploadImage,
+                onClear: _clearImage,
               ),
               const SizedBox(height: ArenaSpacing.sm),
               Text('Type', style: ArenaText.inputLabel),
@@ -594,6 +668,118 @@ class _RecipientCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(ArenaRadius.md),
       ),
       child: child,
+    );
+  }
+}
+
+class _ImagePickerCard extends StatelessWidget {
+  const _ImagePickerCard({
+    required this.pickedImage,
+    required this.uploadedUrl,
+    required this.uploading,
+    required this.onPick,
+    required this.onClear,
+  });
+
+  final File? pickedImage;
+  final String? uploadedUrl;
+  final bool uploading;
+  final VoidCallback onPick;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    if (pickedImage == null) {
+      return InkWell(
+        onTap: onPick,
+        borderRadius: BorderRadius.circular(ArenaRadius.md),
+        child: Container(
+          padding: const EdgeInsets.all(ArenaSpacing.lg),
+          decoration: BoxDecoration(
+            color: ArenaColors.carbon,
+            border: Border.all(
+              color: ArenaColors.silverDim,
+              style: BorderStyle.solid,
+              width: 1.5,
+            ),
+            borderRadius: BorderRadius.circular(ArenaRadius.md),
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.add_photo_alternate_outlined,
+                color: ArenaColors.silver,
+              ),
+              const SizedBox(width: ArenaSpacing.sm),
+              Expanded(
+                child: Text(
+                  'Ajouter une image (PNG / JPG / WebP · 5 MB max)',
+                  style: ArenaText.bodyMuted,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    return Container(
+      padding: const EdgeInsets.all(ArenaSpacing.sm),
+      decoration: BoxDecoration(
+        color: ArenaColors.carbon,
+        border: Border.all(color: ArenaColors.border),
+        borderRadius: BorderRadius.circular(ArenaRadius.md),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(ArenaRadius.sm),
+            child: Image.file(
+              pickedImage!,
+              height: 140,
+              fit: BoxFit.cover,
+            ),
+          ),
+          const SizedBox(height: ArenaSpacing.sm),
+          Row(
+            children: [
+              Icon(
+                uploading
+                    ? Icons.cloud_upload_outlined
+                    : (uploadedUrl != null
+                        ? Icons.check_circle
+                        : Icons.error_outline),
+                color: uploading
+                    ? ArenaColors.silver
+                    : (uploadedUrl != null
+                        ? ArenaColors.statusOk
+                        : ArenaColors.neonRed),
+                size: 18,
+              ),
+              const SizedBox(width: ArenaSpacing.xs),
+              Expanded(
+                child: Text(
+                  uploading
+                      ? 'Upload en cours…'
+                      : (uploadedUrl != null
+                          ? 'Image prête à envoyer'
+                          : "Échec d'upload"),
+                  style: ArenaText.small,
+                ),
+              ),
+              TextButton(
+                onPressed: uploading ? null : onClear,
+                child: Text(
+                  'Retirer',
+                  style: ArenaText.small.copyWith(
+                    color: ArenaColors.neonRed,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

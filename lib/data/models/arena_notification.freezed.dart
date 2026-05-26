@@ -25,6 +25,7 @@ mixin _$ArenaNotification {
   String get type => throw _privateConstructorUsedError;
   String get title => throw _privateConstructorUsedError;
   String? get body => throw _privateConstructorUsedError;
+  String? get imageUrl => throw _privateConstructorUsedError;
   Map<String, dynamic> get data => throw _privateConstructorUsedError;
   DateTime? get readAt => throw _privateConstructorUsedError;
   DateTime? get sentAt => throw _privateConstructorUsedError;
@@ -52,6 +53,7 @@ abstract class $ArenaNotificationCopyWith<$Res> {
       String type,
       String title,
       String? body,
+      String? imageUrl,
       Map<String, dynamic> data,
       DateTime? readAt,
       DateTime? sentAt,
@@ -78,6 +80,7 @@ class _$ArenaNotificationCopyWithImpl<$Res, $Val extends ArenaNotification>
     Object? type = null,
     Object? title = null,
     Object? body = freezed,
+    Object? imageUrl = freezed,
     Object? data = null,
     Object? readAt = freezed,
     Object? sentAt = freezed,
@@ -103,6 +106,10 @@ class _$ArenaNotificationCopyWithImpl<$Res, $Val extends ArenaNotification>
       body: freezed == body
           ? _value.body
           : body // ignore: cast_nullable_to_non_nullable
+              as String?,
+      imageUrl: freezed == imageUrl
+          ? _value.imageUrl
+          : imageUrl // ignore: cast_nullable_to_non_nullable
               as String?,
       data: null == data
           ? _value.data
@@ -138,6 +145,7 @@ abstract class _$$ArenaNotificationImplCopyWith<$Res>
       String type,
       String title,
       String? body,
+      String? imageUrl,
       Map<String, dynamic> data,
       DateTime? readAt,
       DateTime? sentAt,
@@ -162,6 +170,7 @@ class __$$ArenaNotificationImplCopyWithImpl<$Res>
     Object? type = null,
     Object? title = null,
     Object? body = freezed,
+    Object? imageUrl = freezed,
     Object? data = null,
     Object? readAt = freezed,
     Object? sentAt = freezed,
@@ -187,6 +196,10 @@ class __$$ArenaNotificationImplCopyWithImpl<$Res>
       body: freezed == body
           ? _value.body
           : body // ignore: cast_nullable_to_non_nullable
+              as String?,
+      imageUrl: freezed == imageUrl
+          ? _value.imageUrl
+          : imageUrl // ignore: cast_nullable_to_non_nullable
               as String?,
       data: null == data
           ? _value._data
@@ -217,6 +230,7 @@ class _$ArenaNotificationImpl extends _ArenaNotification {
       required this.type,
       required this.title,
       this.body,
+      this.imageUrl,
       final Map<String, dynamic> data = const <String, dynamic>{},
       this.readAt,
       this.sentAt,
@@ -237,6 +251,8 @@ class _$ArenaNotificationImpl extends _ArenaNotification {
   final String title;
   @override
   final String? body;
+  @override
+  final String? imageUrl;
   final Map<String, dynamic> _data;
   @override
   @JsonKey()
@@ -255,7 +271,7 @@ class _$ArenaNotificationImpl extends _ArenaNotification {
 
   @override
   String toString() {
-    return 'ArenaNotification(id: $id, userId: $userId, type: $type, title: $title, body: $body, data: $data, readAt: $readAt, sentAt: $sentAt, createdAt: $createdAt)';
+    return 'ArenaNotification(id: $id, userId: $userId, type: $type, title: $title, body: $body, imageUrl: $imageUrl, data: $data, readAt: $readAt, sentAt: $sentAt, createdAt: $createdAt)';
   }
 
   @override
@@ -268,6 +284,8 @@ class _$ArenaNotificationImpl extends _ArenaNotification {
             (identical(other.type, type) || other.type == type) &&
             (identical(other.title, title) || other.title == title) &&
             (identical(other.body, body) || other.body == body) &&
+            (identical(other.imageUrl, imageUrl) ||
+                other.imageUrl == imageUrl) &&
             const DeepCollectionEquality().equals(other._data, _data) &&
             (identical(other.readAt, readAt) || other.readAt == readAt) &&
             (identical(other.sentAt, sentAt) || other.sentAt == sentAt) &&
@@ -277,8 +295,18 @@ class _$ArenaNotificationImpl extends _ArenaNotification {
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, id, userId, type, title, body,
-      const DeepCollectionEquality().hash(_data), readAt, sentAt, createdAt);
+  int get hashCode => Object.hash(
+      runtimeType,
+      id,
+      userId,
+      type,
+      title,
+      body,
+      imageUrl,
+      const DeepCollectionEquality().hash(_data),
+      readAt,
+      sentAt,
+      createdAt);
 
   /// Create a copy of ArenaNotification
   /// with the given fields replaced by the non-null parameter values.
@@ -304,6 +332,7 @@ abstract class _ArenaNotification extends ArenaNotification {
       required final String type,
       required final String title,
       final String? body,
+      final String? imageUrl,
       final Map<String, dynamic> data,
       final DateTime? readAt,
       final DateTime? sentAt,
@@ -323,6 +352,8 @@ abstract class _ArenaNotification extends ArenaNotification {
   String get title;
   @override
   String? get body;
+  @override
+  String? get imageUrl;
   @override
   Map<String, dynamic> get data;
   @override

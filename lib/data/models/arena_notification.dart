@@ -18,6 +18,7 @@ sealed class ArenaNotification with _$ArenaNotification {
     required String type,
     required String title,
     String? body,
+    String? imageUrl,
     @Default(<String, dynamic>{}) Map<String, dynamic> data,
     DateTime? readAt,
     DateTime? sentAt,

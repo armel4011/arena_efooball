@@ -14,6 +14,7 @@ _$ArenaNotificationImpl _$$ArenaNotificationImplFromJson(
       type: json['type'] as String,
       title: json['title'] as String,
       body: json['body'] as String?,
+      imageUrl: json['image_url'] as String?,
       data: json['data'] as Map<String, dynamic>? ?? const <String, dynamic>{},
       readAt: json['read_at'] == null
           ? null
@@ -34,6 +35,7 @@ Map<String, dynamic> _$$ArenaNotificationImplToJson(
       'type': instance.type,
       'title': instance.title,
       if (instance.body case final value?) 'body': value,
+      if (instance.imageUrl case final value?) 'image_url': value,
       'data': instance.data,
       if (instance.readAt?.toIso8601String() case final value?)
         'read_at': value,

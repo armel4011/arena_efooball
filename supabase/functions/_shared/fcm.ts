@@ -101,6 +101,12 @@ export interface FcmPayload {
   /// pour les appels entrants : le handler background de l'app se
   /// déclenche même app tuée et affiche lui-même la notif plein écran.
   dataOnly?: boolean;
+  /// URL publique d'une image à afficher dans la notif. Mappée sur
+  /// `notification.image` (FCM v1 commun à Android/Web) + sur
+  /// `android.notification.image` pour le big-picture style + sur
+  /// `apns.fcm_options.image` pour iOS (NSE auto si l'app a un
+  /// Notification Service Extension).
+  imageUrl?: string;
 }
 
 /// Envoie une notification push via FCM HTTP v1. Throws sur erreur réseau
@@ -126,9 +132,25 @@ export async function sendFcmNotification(opts: FcmPayload): Promise<void> {
     android: { priority: 'HIGH' },
   };
   if (!opts.dataOnly) {
-    message.notification = { title: opts.title, body: opts.body };
-    message.android = { priority: 'HIGH', notification: { sound: 'default' } };
-    message.apns = { payload: { aps: { sound: 'default' } } };
+    const notif: Record<string, string> = {
+      title: opts.title,
+      body: opts.body,
+    };
+    if (opts.imageUrl) notif.image = opts.imageUrl;
+    message.notification = notif;
+    const androidNotif: Record<string, string> = { sound: 'default' };
+    if (opts.imageUrl) androidNotif.image = opts.imageUrl;
+    message.android = {
+      priority: 'HIGH',
+      notification: androidNotif,
+    };
+    const apns: Record<string, unknown> = {
+      payload: { aps: { sound: 'default' } },
+    };
+    if (opts.imageUrl) {
+      apns.fcm_options = { image: opts.imageUrl };
+    }
+    message.apns = apns;
   }
 
   const sendUrl =
