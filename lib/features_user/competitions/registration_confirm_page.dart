@@ -466,9 +466,15 @@ class _Row extends StatelessWidget {
 }
 
 /// Répartition des gains — total en `bigNumber` vert au centre, puis
-/// une row de cards rangs (jusqu'à `kMaxRewardedRanks`) reproduisant la
-/// maquette `m-row gap:6px` + `m-card flex:1 align-items:center`. Chaque
-/// rang a sa couleur dédiée (gold/silver/hotCoral/pearl).
+/// **tous** les rangs récompensés affichés dans une grille de cards
+/// (4 colonnes, multi-lignes si > 4). Reproduit la maquette `m-row gap:
+/// 6px` + `m-card flex:1 align-items:center` mais wrap automatiquement
+/// pour supporter les compétitions à 8 / 16 / 32 / 64 rangs (max
+/// `kMaxRewardedRanks` configurable côté admin).
+///
+/// Palette : podium (tierGoldWarm / silver / hotCoral) sur les 3
+/// premiers, puis pearl pour le reste — distingue visuellement le
+/// podium sans saturer les rangs de fond de classement.
 class _PrizeDistribution extends StatelessWidget {
   const _PrizeDistribution({
     required this.totalXaf,
@@ -482,12 +488,27 @@ class _PrizeDistribution extends StatelessWidget {
   /// affichées, y compris celles à 0.
   final List<int> distribution;
 
-  static const _rankColors = <Color>[
-    ArenaColors.tierGoldWarm,
-    ArenaColors.silver,
-    ArenaColors.hotCoral,
-    ArenaColors.pearl,
-  ];
+  /// Couleur dédiée par rang. Les 3 premiers ont leur métal dédié,
+  /// les suivants utilisent `pearl` (texte secondaire premium).
+  static Color _colorForRank(int position) {
+    switch (position) {
+      case 0:
+        return ArenaColors.tierGoldWarm;
+      case 1:
+        return ArenaColors.silver;
+      case 2:
+        return ArenaColors.hotCoral;
+      default:
+        return ArenaColors.pearl;
+    }
+  }
+
+  // Layout : 4 colonnes fixes, peu importe le nombre de rangs. Le
+  // LayoutBuilder calcule la largeur exacte de chaque card pour
+  // respecter le spacing 6 px entre colonnes — évite le débordement
+  // horizontal qu'aurait un Row avec >4 enfants.
+  static const _columns = 4;
+  static const _gap = 6.0;
 
   @override
   Widget build(BuildContext context) {
@@ -513,20 +534,35 @@ class _PrizeDistribution extends StatelessWidget {
               ),
             ),
           ),
+          const SizedBox(height: 2),
+          Center(
+            child: Text(
+              ranks <= 1 ? '1 rang récompensé' : '$ranks rangs récompensés',
+              style: ArenaText.small.copyWith(color: ArenaColors.silver),
+            ),
+          ),
           const SizedBox(height: ArenaSpacing.md),
-          Row(
-            children: [
-              for (var i = 0; i < ranks; i++) ...[
-                Expanded(
-                  child: _RankCard(
-                    emoji: prizeRankEmoji(i),
-                    amount: distribution[i],
-                    color: _rankColors[i.clamp(0, _rankColors.length - 1)],
-                  ),
-                ),
-                if (i < ranks - 1) const SizedBox(width: 6),
-              ],
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final cardWidth =
+                  (constraints.maxWidth - _gap * (_columns - 1)) / _columns;
+              return Wrap(
+                spacing: _gap,
+                runSpacing: _gap,
+                children: [
+                  for (var i = 0; i < ranks; i++)
+                    SizedBox(
+                      width: cardWidth,
+                      child: _RankCard(
+                        emoji: prizeRankEmoji(i),
+                        rankNumber: i + 1,
+                        amount: distribution[i],
+                        color: _colorForRank(i),
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -534,21 +570,26 @@ class _PrizeDistribution extends StatelessWidget {
   }
 }
 
-/// Mini card par rang — emoji 🥇/🥈/🥉/4️⃣ + montant en mono. Fond et
-/// border colorés selon `color` (gold/silver/hotCoral/pearl).
+/// Mini card par rang — emoji 🥇/🥈/🥉/🏅 + indicateur `Nᵉ` (à partir
+/// du 4ᵉ, l'emoji 🏅 ne discrimine plus le rang exact) + montant en
+/// mono. Fond et border colorés selon `color` (gold/silver/hotCoral/
+/// pearl).
 class _RankCard extends StatelessWidget {
   const _RankCard({
     required this.emoji,
+    required this.rankNumber,
     required this.amount,
     required this.color,
   });
 
   final String emoji;
+  final int rankNumber;
   final int amount;
   final Color color;
 
   @override
   Widget build(BuildContext context) {
+    final showRankNumber = rankNumber > 3;
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
       decoration: BoxDecoration(
@@ -557,8 +598,20 @@ class _RankCard extends StatelessWidget {
         border: Border.all(color: color.withValues(alpha: 0.35)),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Text(emoji, style: const TextStyle(fontSize: 20)),
+          if (showRankNumber) ...[
+            const SizedBox(height: 2),
+            Text(
+              prizeRankLabel(rankNumber - 1),
+              style: ArenaText.mono.copyWith(
+                color: color,
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
           const SizedBox(height: 4),
           Text(
             _formatXaf(amount),
