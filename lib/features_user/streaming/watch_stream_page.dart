@@ -2,7 +2,9 @@ import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:arena/core/services/agora_streaming_service.dart';
 import 'package:arena/core/services/match_viewers_service.dart';
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/data/models/profile.dart';
 import 'package:arena/data/models/stream_comment.dart';
+import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:arena/data/repositories/stream_comment_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -334,6 +336,22 @@ class _SpectatorChatState extends ConsumerState<_SpectatorChat> {
                   WidgetsBinding.instance.addPostFrameCallback(
                     (_) => _scrollToBottom(),
                   );
+                  // Charge les profils des auteurs pour afficher le vrai
+                  // pseudo (au lieu de l'id tronqué). joinedIds = clé
+                  // stable Riverpod, cache automatique le temps que la
+                  // liste de comments soit inchangée.
+                  final ids = {
+                    for (final c in comments)
+                      if (c.authorId != null) c.authorId!,
+                  };
+                  final joinedIds = (ids.toList()..sort()).join(',');
+                  final profilesAsync = ref.watch(
+                    profilesByIdsProvider(joinedIds),
+                  );
+                  final profiles = profilesAsync.maybeWhen(
+                    data: (m) => m,
+                    orElse: () => const <String, Profile>{},
+                  );
                   return ListView.builder(
                     controller: _scrollCtrl,
                     padding: EdgeInsets.zero,
@@ -342,7 +360,11 @@ class _SpectatorChatState extends ConsumerState<_SpectatorChat> {
                       final c = comments[index];
                       return Padding(
                         padding: const EdgeInsets.symmetric(vertical: 3),
-                        child: _CommentRow(comment: c),
+                        child: _CommentRow(
+                          comment: c,
+                          authorProfile:
+                              c.authorId == null ? null : profiles[c.authorId!],
+                        ),
                       );
                     },
                   );
@@ -363,18 +385,28 @@ class _SpectatorChatState extends ConsumerState<_SpectatorChat> {
   }
 }
 
-/// Ligne d'un message — préfixe "Fan_XXXX:" coloré (gradient via hash)
-/// + corps du message en `pearl`.
+/// Ligne d'un message — préfixe `username:` coloré (couleur déterministe
+/// par hash de l'authorId) + corps en `pearl`. Le username vient de
+/// [profilesByIdsProvider] joiné par le parent ; on retombe sur l'id
+/// tronqué (`Fan_XXXX`) si le profil n'est pas encore chargé, et sur
+/// `anon` si l'auteur a été soft-deleted (author_id null).
 class _CommentRow extends StatelessWidget {
-  const _CommentRow({required this.comment});
+  const _CommentRow({required this.comment, this.authorProfile});
   final StreamComment comment;
+  final Profile? authorProfile;
 
   @override
   Widget build(BuildContext context) {
-    final author = comment.authorId ?? 'anon';
-    final color = _palette[author.hashCode.abs() % _palette.length];
-    final tag =
-        author.length > 4 ? 'Fan_${author.substring(0, 4)}' : 'Fan_$author';
+    final authorId = comment.authorId;
+    final username = authorProfile?.username;
+    // Couleur basée sur authorId (stable même si username arrive async).
+    final color = authorId == null
+        ? ArenaColors.silver
+        : _palette[authorId.hashCode.abs() % _palette.length];
+    final tag = username ??
+        (authorId == null
+            ? 'anon'
+            : 'Fan_${authorId.substring(0, authorId.length > 4 ? 4 : authorId.length)}');
     return RichText(
       text: TextSpan(
         style: ArenaText.small.copyWith(color: ArenaColors.pearl),
@@ -415,10 +447,10 @@ class _ChatInput extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
         color: ArenaColors.bone.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(24),
       ),
       child: Row(
         children: [
@@ -426,13 +458,13 @@ class _ChatInput extends StatelessWidget {
             child: TextField(
               controller: controller,
               enabled: !sending,
-              style: ArenaText.small.copyWith(color: ArenaColors.bone),
+              style: ArenaText.body.copyWith(color: ArenaColors.bone),
               decoration: InputDecoration(
                 hintText: 'Envoie un message…',
-                hintStyle: ArenaText.small.copyWith(color: ArenaColors.silver),
+                hintStyle: ArenaText.body.copyWith(color: ArenaColors.silver),
                 border: InputBorder.none,
                 isCollapsed: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
               ),
               maxLength: 500,
               maxLengthEnforcement: MaxLengthEnforcement.enforced,
