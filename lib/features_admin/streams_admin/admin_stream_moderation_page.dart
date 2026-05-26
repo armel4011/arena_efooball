@@ -1,7 +1,10 @@
+import 'package:agora_rtc_engine/agora_rtc_engine.dart';
+import 'package:arena/core/services/agora_multi_streaming_service.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/match_stream.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/match_stream_repository.dart';
+import 'package:arena/features_admin/streams_admin/admin_multi_stream_controller.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
@@ -9,15 +12,17 @@ import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// PHASE 11 · A12 — multi-stream moderation grid.
+/// PHASE 11 · A12 — multi-stream moderation grid avec vraies vidéos
+/// live (multiplex via [AgoraMultiStreamingService] + `joinChannelEx`).
 ///
-/// Reads live public streams via [activePublicStreamsProvider]
-/// (realtime). The cap is informational (V1.0 won't enforce a hard
-/// max); the kill switch flips `streams.is_public = false` so the
-/// stream drops out of the user-facing `LiveStreamsPage` immediately.
-/// Every cut is appended to the audit log.
+/// Reads live public streams via [activePublicStreamsProvider]. Pour
+/// chaque match actif, [adminMultiStreamStatesProvider] join un canal
+/// audience en parallèle et émet l'uid distant dès qu'il arrive — la
+/// tuile affiche alors `AgoraVideoView`. L'audio est mute par défaut
+/// (4 streams = bouillie) ; tap sur une tuile = focus audio (mute tous
+/// les autres). Retap = mute global.
 ///
-/// Maps to screen A12 of `arena_v2.html`.
+/// Le kill switch flip `streams.is_public = false`, audit log inchangé.
 class AdminStreamModerationPage extends ConsumerWidget {
   const AdminStreamModerationPage({super.key});
 
@@ -32,6 +37,8 @@ class AdminStreamModerationPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final streams = ref.watch(activePublicStreamsProvider);
+    final tiles =
+        ref.watch(adminMultiStreamStatesProvider).value ?? const {};
 
     return Scaffold(
       appBar: const ArenaAppBar(title: '🔴 STREAMS'),
@@ -74,6 +81,7 @@ class AdminStreamModerationPage extends ConsumerWidget {
                         _StreamTile(
                           stream: list[i],
                           gradient: _gradients[i % _gradients.length],
+                          tileState: tiles[list[i].matchId],
                         ),
                       if (list.length < _capacity)
                         _EmptySlot(
@@ -88,7 +96,7 @@ class AdminStreamModerationPage extends ConsumerWidget {
                   decoration: arenaWarningCardDecoration(),
                   child: Text(
                     '⚠ Couper un stream est journalisé dans admin_audit_log '
-                    'avec ton ID admin.',
+                    'avec ton ID admin. Tap une tuile = focus audio.',
                     style: ArenaText.body,
                   ),
                 ),
@@ -137,50 +145,100 @@ class _SummaryCard extends StatelessWidget {
 }
 
 class _StreamTile extends ConsumerWidget {
-  const _StreamTile({required this.stream, required this.gradient});
+  const _StreamTile({
+    required this.stream,
+    required this.gradient,
+    required this.tileState,
+  });
 
   final MatchStream stream;
   final LinearGradient gradient;
+  final MultiTileState? tileState;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final ts = tileState;
+    final audioFocused = ts is MultiTileJoined && ts.audioFocused;
+
     return Container(
       decoration: BoxDecoration(
         color: ArenaColors.carbon,
         borderRadius: BorderRadius.circular(ArenaRadius.lg),
-        border: Border.all(color: ArenaColors.border),
+        border: Border.all(
+          color: audioFocused
+              ? ArenaColors.signalBlue
+              : ArenaColors.border,
+          width: audioFocused ? 2 : 1,
+        ),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Stack(
-            children: [
-              Container(
-                height: 80,
-                decoration: BoxDecoration(gradient: gradient),
-              ),
-              const Positioned(
-                top: 4,
-                left: 4,
-                child: ArenaBadge(
-                  label: 'LIVE',
-                  variant: ArenaBadgeVariant.live,
-                ),
-              ),
-              Positioned(
-                bottom: 4,
-                left: 4,
-                child: Text(
-                  'M-${stream.matchId.substring(0, 6)}',
-                  style: ArenaText.body.copyWith(
-                    color: ArenaColors.bone,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w700,
+          GestureDetector(
+            onTap: () => ref
+                .read(agoraMultiStreamingServiceProvider)
+                .focusAudio(stream.matchId),
+            child: SizedBox(
+              height: 110,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  _TileMedia(state: ts, gradient: gradient),
+                  const Positioned(
+                    top: 4,
+                    left: 4,
+                    child: ArenaBadge(
+                      label: 'LIVE',
+                      variant: ArenaBadgeVariant.live,
+                    ),
                   ),
-                ),
+                  Positioned(
+                    top: 4,
+                    right: 4,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: ArenaColors.blackPure.withValues(alpha: 0.6),
+                        shape: BoxShape.circle,
+                      ),
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: Icon(
+                          audioFocused ? Icons.volume_up : Icons.volume_off,
+                          size: 14,
+                          color: audioFocused
+                              ? ArenaColors.signalBlue
+                              : ArenaColors.silver,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 4,
+                    left: 4,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: ArenaColors.blackPure.withValues(alpha: 0.6),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                      child: Text(
+                        'M-${stream.matchId.substring(0, 6)}',
+                        style: ArenaText.body.copyWith(
+                          color: ArenaColors.bone,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
           Padding(
             padding: const EdgeInsets.all(6),
@@ -255,6 +313,50 @@ class _StreamTile extends ConsumerWidget {
         SnackBar(content: Text('Échec : $e')),
       );
     }
+  }
+}
+
+class _TileMedia extends ConsumerWidget {
+  const _TileMedia({required this.state, required this.gradient});
+
+  final MultiTileState? state;
+  final LinearGradient gradient;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = state;
+    if (s is MultiTileJoined && s.remoteUid != null) {
+      final engine = ref.watch(agoraMultiStreamingServiceProvider).engine;
+      if (engine != null) {
+        return AgoraVideoView(
+          controller: VideoViewController.remote(
+            rtcEngine: engine,
+            canvas: VideoCanvas(uid: s.remoteUid),
+            connection: s.connection,
+          ),
+        );
+      }
+    }
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        DecoratedBox(decoration: BoxDecoration(gradient: gradient)),
+        Center(
+          child: switch (s) {
+            MultiTileFailed() => Icon(
+                Icons.error_outline,
+                size: 20,
+                color: ArenaColors.bone.withValues(alpha: 0.7),
+              ),
+            _ => const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+          },
+        ),
+      ],
+    );
   }
 }
 
