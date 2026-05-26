@@ -47,7 +47,7 @@ class _SuperAdminUsersState extends ConsumerState<SuperAdminUsers> {
 
     return Scaffold(
       appBar: ArenaAppBar(
-        title: 'Utilisateurs',
+        title: 'UTILISATEURS',
         actions: [
           IconButton(
             icon: const Icon(

@@ -29,7 +29,7 @@ class SuperAdminRevenue extends ConsumerWidget {
 
     return Scaffold(
       appBar: ArenaAppBar(
-        title: 'Revenus & compta',
+        title: 'REVENUS',
         actions: [
           TextButton(
             onPressed: () => _exportCsv(context, ref),

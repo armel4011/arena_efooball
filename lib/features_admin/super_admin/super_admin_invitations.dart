@@ -47,7 +47,7 @@ class _SuperAdminInvitationsState extends ConsumerState<SuperAdminInvitations> {
     final codes = ref.watch(adminInvitationsProvider);
 
     return Scaffold(
-      appBar: const ArenaAppBar(title: 'Invitations admin'),
+      appBar: const ArenaAppBar(title: 'INVITATIONS'),
       body: ArenaScreenBackground(
         accent: ArenaColors.neonRed,
         child: SafeArea(

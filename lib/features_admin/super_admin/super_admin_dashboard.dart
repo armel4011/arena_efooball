@@ -30,7 +30,7 @@ class SuperAdminDashboard extends ConsumerWidget {
         DateFormat('LLLL yyyy', 'fr_FR').format(DateTime.now()).toUpperCase();
 
     return Scaffold(
-      appBar: const ArenaAppBar(title: 'Super-admin', showBack: false),
+      appBar: const ArenaAppBar(title: '👑 GOD MODE', showBack: false),
       body: ArenaScreenBackground(
         accent: ArenaColors.neonRed,
         child: SafeArea(
