@@ -439,6 +439,15 @@ class _UserCard extends ConsumerWidget {
                   ],
                 ),
               ),
+              IconButton(
+                tooltip: 'Envoyer un message',
+                icon: const Icon(
+                  Icons.chat_bubble_outline,
+                  color: ArenaColors.signalBlue,
+                ),
+                onPressed: () =>
+                    context.go(AdminRoutes.superChatThreadPath(profile.id)),
+              ),
               if (permaBanned)
                 const ArenaBadge(
                   label: 'BANNI À VIE',
