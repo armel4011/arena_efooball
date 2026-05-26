@@ -189,14 +189,21 @@ class _ArenaUserAppState extends ConsumerState<ArenaUserApp> {
   /// Décroché : marque l'appel `accepted`, referme l'UI native puis
   /// ouvre notre propre écran d'appel.
   Future<void> _acceptCall(String callId, Map<String, dynamic> extra) async {
+    final scope = extra['scope'] as String? ?? '';
+    final scopeId = extra['scope_id'] as String? ?? '';
+    await CallkitService.end(callId);
+    // F3 - rappel match T-5 min : ce n'est pas un vrai appel, juste une
+    // sonnerie de rappel. Tap "Décrocher" = ouvrir la page du match,
+    // pas de joinChannel Agora, pas de markAccepted en DB.
+    if (scope == 'match_reminder') {
+      if (scopeId.isNotEmpty) {
+        ref.read(userRouterProvider).go('/match/$scopeId');
+      }
+      return;
+    }
     try {
       await ref.read(callRepositoryProvider).accept(callId);
     } catch (_) {/* on rejoint Agora même si l'update de statut échoue */}
-    // Notre `CallScreen` prend le relais : on referme l'UI CallKit pour
-    // ne pas laisser traîner sa notification « appel en cours ».
-    await CallkitService.end(callId);
-    final scope = extra['scope'] as String? ?? '';
-    final scopeId = extra['scope_id'] as String? ?? '';
     final callerId = extra['caller_id'] as String? ?? '';
     if (scope.isEmpty || scopeId.isEmpty || callerId.isEmpty) return;
     final rawName = (extra['caller_name'] as String?)?.trim();
