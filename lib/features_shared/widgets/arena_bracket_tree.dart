@@ -32,6 +32,7 @@ class ArenaBracketTree extends StatelessWidget {
   const ArenaBracketTree({
     required this.matches,
     this.onTapMatch,
+    this.usernamesByPlayerId = const {},
     this.maxScale = 3,
     super.key,
   });
@@ -44,6 +45,12 @@ class ArenaBracketTree extends StatelessWidget {
   /// Callback de tap sur une card. `null` pour mode read-only (pas
   /// d'`InkWell`, pas de feedback ripple).
   final ValueChanged<ArenaMatch>? onTapMatch;
+
+  /// Resolution `playerId -> username` pour afficher le vrai pseudo
+  /// dans les cards. Vide par défaut : fallback sur `P-XXXX` (id
+  /// tronqué). Pour résoudre les usernames, le caller doit watcher
+  /// `profilesByIdsProvider` et construire cette map.
+  final Map<String, String> usernamesByPlayerId;
 
   /// Plafond du zoom in (`InteractiveViewer.maxScale`). 3× couvre un
   /// bracket 32 joueurs (5 rounds) sur un écran 5".
@@ -126,6 +133,7 @@ class ArenaBracketTree extends StatelessWidget {
                   style: _styleForRound(rounds[i], rounds.last),
                   matchHeight: _matchHeight,
                   onTapMatch: onTapMatch,
+                  usernamesByPlayerId: usernamesByPlayerId,
                 ),
               ),
           ],
@@ -150,12 +158,14 @@ class _RoundColumn extends StatelessWidget {
     required this.style,
     required this.matchHeight,
     required this.onTapMatch,
+    required this.usernamesByPlayerId,
   });
 
   final List<ArenaMatch> matches;
   final _RoundStyle style;
   final double matchHeight;
   final ValueChanged<ArenaMatch>? onTapMatch;
+  final Map<String, String> usernamesByPlayerId;
 
   @override
   Widget build(BuildContext context) {
@@ -169,6 +179,7 @@ class _RoundColumn extends StatelessWidget {
               match: m,
               style: style,
               onTap: onTapMatch == null ? null : () => onTapMatch!(m),
+              usernamesByPlayerId: usernamesByPlayerId,
             ),
           ),
       ],
@@ -181,17 +192,19 @@ class _MatchCard extends StatelessWidget {
     required this.match,
     required this.style,
     required this.onTap,
+    required this.usernamesByPlayerId,
   });
 
   final ArenaMatch match;
   final _RoundStyle style;
   final VoidCallback? onTap;
+  final Map<String, String> usernamesByPlayerId;
 
   @override
   Widget build(BuildContext context) {
     final (bg, border, fg, isGradient) = _palette(style);
-    final p1 = _shortLabel(match.player1Id);
-    final p2 = _shortLabel(match.player2Id);
+    final p1 = _label(match.player1Id, usernamesByPlayerId);
+    final p2 = _label(match.player2Id, usernamesByPlayerId);
     final winner = match.winnerId;
     final p1Win = winner != null && winner == match.player1Id;
     final p2Win = winner != null && winner == match.player2Id;
@@ -246,11 +259,18 @@ class _MatchCard extends StatelessWidget {
     );
   }
 
-  /// Tronque l'`uuid` du joueur en `P-XXXX` pour rester compact (la
-  /// résolution vers le `username` réel reste à brancher via un
-  /// `profilesByIdsProvider` — V1 affiche les ids tronqués).
-  static String _shortLabel(String? playerId) {
+  /// Label affiché dans la card du match : prioritise le username réel
+  /// (résolu via `usernamesByPlayerId`, alimenté par `profilesByIdsProvider`
+  /// côté caller), retombe sur `P-XXXX` (id tronqué) tant que le profil
+  /// n'est pas chargé, et `—` quand le slot n'a pas de joueur (le
+  /// vainqueur du round précédent n'a pas encore cascadé).
+  static String _label(
+    String? playerId,
+    Map<String, String> usernamesByPlayerId,
+  ) {
     if (playerId == null || playerId.isEmpty) return '—';
+    final username = usernamesByPlayerId[playerId];
+    if (username != null && username.isNotEmpty) return username;
     final short = playerId.length > 4 ? playerId.substring(0, 4) : playerId;
     return 'P-${short.toUpperCase()}';
   }

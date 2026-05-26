@@ -1,6 +1,7 @@
 import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/match_repository.dart';
+import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:arena/features_shared/widgets/arena_bracket_tree.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
@@ -49,19 +50,34 @@ class BracketView extends ConsumerWidget {
             );
           }
 
-          // Compte les joueurs distincts pour la caption haut. On
-          // utilise un Set pour dédupliquer (un même joueur n'apparaît
-          // qu'une seule fois en R1 par construction d'un bracket).
+          // Compte les joueurs distincts pour la caption haut + la
+          // résolution des usernames. Set pour dédupliquer (un même
+          // joueur n'apparaît qu'une seule fois en R1 par construction
+          // d'un bracket).
           final players = <String>{
             for (final m in matches) ...[
               if (m.player1Id != null) m.player1Id!,
               if (m.player2Id != null) m.player2Id!,
             ],
           };
+          // Resolution username -> joueur via profilesByIdsProvider (clé
+          // = ids triés + joinés). Tant que le futur n'est pas resolu,
+          // `profiles` est vide → fallback `P-XXXX` dans la card.
+          final joinedIds = (players.toList()..sort()).join(',');
+          final profilesAsync = ref.watch(profilesByIdsProvider(joinedIds));
+          final usernames = profilesAsync.maybeWhen(
+            data: (m) => {
+              for (final e in m.entries)
+                if (e.value.username.isNotEmpty) e.key: e.value.username,
+            },
+            orElse: () => const <String, String>{},
+          );
 
           return RefreshIndicator(
             onRefresh: () async {
-              ref.invalidate(competitionMatchesProvider(competitionId));
+              ref
+                ..invalidate(competitionMatchesProvider(competitionId))
+                ..invalidate(profilesByIdsProvider(joinedIds));
               await ref.read(competitionMatchesProvider(competitionId).future);
             },
             child: ListView(
@@ -76,6 +92,7 @@ class BracketView extends ConsumerWidget {
                   height: _treeHeightFor(matches.length),
                   child: ArenaBracketTree(
                     matches: matches,
+                    usernamesByPlayerId: usernames,
                     onTapMatch: (m) => context.push(UserRoutes.matchPath(m.id)),
                   ),
                 ),

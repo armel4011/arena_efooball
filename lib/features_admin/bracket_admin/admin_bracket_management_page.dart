@@ -9,6 +9,7 @@ import 'package:arena/data/repositories/admin/admin_bracket_repository.dart';
 import 'package:arena/data/repositories/admin/admin_matches_repository.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
 import 'package:arena/data/repositories/match_repository.dart';
+import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
@@ -297,8 +298,9 @@ class _BracketView extends StatelessWidget {
     // des arbres KO et l'arbre n'aurait pas de sens visuel.
     final showTree = competition.format == TournamentFormat.singleElimination;
 
-    if (showTree)
+    if (showTree) {
       return _BracketTreeView(competition: competition, matches: matches);
+    }
 
     // ── Vue legacy : liste verticale groupée par round. ────────────
     final byRound = <int, List<ArenaMatch>>{};
@@ -345,20 +347,32 @@ class _BracketView extends StatelessWidget {
 /// une card ouvre un bottom-sheet d'actions admin (valider score /
 /// annuler) qui reproduit la logique de `_MatchRow` legacy mais sans
 /// les boutons inline (incompatibles avec la densité de l'arbre).
-class _BracketTreeView extends StatelessWidget {
+///
+/// `ConsumerWidget` pour pouvoir watcher `profilesByIdsProvider` et
+/// afficher le vrai username dans les cards (fallback `P-XXXX`).
+class _BracketTreeView extends ConsumerWidget {
   const _BracketTreeView({required this.competition, required this.matches});
 
   final Competition competition;
   final List<ArenaMatch> matches;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final players = <String>{
       for (final m in matches) ...[
         if (m.player1Id != null) m.player1Id!,
         if (m.player2Id != null) m.player2Id!,
       ],
     };
+    final joinedIds = (players.toList()..sort()).join(',');
+    final profilesAsync = ref.watch(profilesByIdsProvider(joinedIds));
+    final usernames = profilesAsync.maybeWhen(
+      data: (m) => {
+        for (final e in m.entries)
+          if (e.value.username.isNotEmpty) e.key: e.value.username,
+      },
+      orElse: () => const <String, String>{},
+    );
 
     return ListView(
       padding: const EdgeInsets.symmetric(
@@ -386,6 +400,7 @@ class _BracketTreeView extends StatelessWidget {
           height: _treeHeightFor(matches.length),
           child: ArenaBracketTree(
             matches: matches,
+            usernamesByPlayerId: usernames,
             onTapMatch: (m) => _AdminMatchActionsSheet.show(context, m),
           ),
         ),
