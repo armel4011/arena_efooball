@@ -32,6 +32,7 @@ import 'package:arena/features_user/payments/payment_processing_page.dart';
 import 'package:arena/features_user/payments/payment_success_page.dart';
 import 'package:arena/features_user/payouts/payout_kyc_page.dart';
 import 'package:arena/features_user/profile/about_page.dart';
+import 'package:arena/features_user/profile/admin_messages_page.dart';
 import 'package:arena/features_user/profile/delete_account_page.dart';
 import 'package:arena/features_user/profile/edit_profile_page.dart';
 import 'package:arena/features_user/profile/friends_page.dart';
@@ -78,6 +79,7 @@ abstract final class UserRoutes {
   static const settings = '/settings';
   static const messagesInbox = '/messages';
   static const notifications = '/notifications';
+  static const adminMessages = '/admin-messages';
   static const about = '/about';
   static const recordingError = '/recording/error';
   static const matchInProgressPreview = '/recording/preview';
@@ -417,6 +419,11 @@ final userRouterProvider = Provider<GoRouter>((ref) {
         path: UserRoutes.notifications,
         name: 'user.notifications',
         builder: (context, state) => const NotificationsPage(),
+      ),
+      GoRoute(
+        path: UserRoutes.adminMessages,
+        name: 'user.adminMessages',
+        builder: (context, state) => const AdminMessagesPage(),
       ),
       GoRoute(
         path: UserRoutes.about,

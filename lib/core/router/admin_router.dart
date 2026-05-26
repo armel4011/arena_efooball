@@ -18,6 +18,7 @@ import 'package:arena/features_admin/payouts_admin/admin_payouts_page.dart';
 import 'package:arena/features_admin/profile_admin/admin_profile_page.dart';
 import 'package:arena/features_admin/streams_admin/admin_stream_moderation_page.dart';
 import 'package:arena/features_admin/streams_admin/admin_watch_stream_page.dart';
+import 'package:arena/features_admin/super_admin/admin_chat_thread_page.dart';
 import 'package:arena/features_admin/super_admin/super_admin_broadcast.dart';
 import 'package:arena/features_admin/super_admin/super_admin_dashboard.dart';
 import 'package:arena/features_admin/super_admin/super_admin_invitations.dart';
@@ -68,6 +69,7 @@ abstract final class AdminRoutes {
   static const superPaymentsValidation = '/super/payments';
   static const superBroadcast = '/super/broadcast';
   static const superReintegration = '/super/reintegration';
+  static const superChatThread = '/super/messages/:userId';
 
   static const devPreview = '/_dev/widgets';
   static const intro = '/intro';
@@ -96,6 +98,9 @@ abstract final class AdminRoutes {
 
   /// Builds the concrete `/streams/watch/<matchId>` URL.
   static String streamWatchPath(String matchId) => '/streams/watch/$matchId';
+
+  /// Builds the concrete `/super/messages/<userId>` URL.
+  static String superChatThreadPath(String userId) => '/super/messages/$userId';
 }
 
 final adminRouterProvider = Provider<GoRouter>((ref) {
@@ -291,6 +296,13 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
         name: 'admin.superReintegration',
         builder: (context, state) =>
             const SuperAdminReintegrationRequests(),
+      ),
+      GoRoute(
+        path: AdminRoutes.superChatThread,
+        name: 'admin.superChatThread',
+        builder: (context, state) => AdminChatThreadPage(
+          userId: state.pathParameters['userId'] ?? '',
+        ),
       ),
       GoRoute(
         path: AdminRoutes.devPreview,
