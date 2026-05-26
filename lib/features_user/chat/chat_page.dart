@@ -643,7 +643,6 @@ class ChatBubble extends ConsumerWidget {
 
     final isDeleted = message.deletedAt != null;
     final hasMedia = !isDeleted && message.mediaUrl != null;
-    final scheme = Theme.of(context).colorScheme;
 
     return GestureDetector(
       onLongPress: isDeleted ? null : onLongPress,
@@ -662,7 +661,21 @@ class ChatBubble extends ConsumerWidget {
                     vertical: ArenaSpacing.sm,
                   ),
             decoration: BoxDecoration(
-              color: isSelf ? scheme.primary : ArenaColors.carbon2,
+              // Reproduit la maquette #16 :
+              // * self → gradient signalBlue → signalBlueDark + shadow
+              //   signalBlueGlow, coin bottom-right "queue" (4 px).
+              // * peer → bone @ 6 % translucide, coin bottom-left "queue".
+              gradient: isSelf
+                  ? const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        ArenaColors.signalBlue,
+                        ArenaColors.signalBlueDark,
+                      ],
+                    )
+                  : null,
+              color: isSelf ? null : ArenaColors.bone.withValues(alpha: 0.06),
               borderRadius: BorderRadius.only(
                 topLeft: const Radius.circular(16),
                 topRight: const Radius.circular(16),
@@ -670,12 +683,12 @@ class ChatBubble extends ConsumerWidget {
                 bottomRight: Radius.circular(isSelf ? 4 : 16),
               ),
               boxShadow: isSelf && !hasMedia
-                  ? [
+                  ? const [
                       BoxShadow(
-                        color: scheme.primary.withValues(alpha: 0.45),
+                        color: ArenaColors.signalBlueGlow,
                         blurRadius: 18,
                         spreadRadius: -2,
-                        offset: const Offset(0, 4),
+                        offset: Offset(0, 4),
                       ),
                     ]
                   : null,
@@ -688,7 +701,7 @@ class ChatBubble extends ConsumerWidget {
                     'Message supprimé',
                     style: ArenaText.body.copyWith(
                       color: isSelf
-                          ? Colors.white.withValues(alpha: 0.6)
+                          ? ArenaColors.bone.withValues(alpha: 0.7)
                           : ArenaColors.silver,
                       fontStyle: FontStyle.italic,
                     ),
@@ -712,7 +725,7 @@ class ChatBubble extends ConsumerWidget {
                       child: Text(
                         message.content,
                         style: ArenaText.body.copyWith(
-                          color: isSelf ? Colors.white : ArenaColors.bone,
+                          color: ArenaColors.bone,
                         ),
                       ),
                     ),
@@ -728,7 +741,7 @@ class ChatBubble extends ConsumerWidget {
                     _formatTimestamp(message.createdAt, isSelf: isSelf),
                     style: ArenaText.small.copyWith(
                       color: isSelf
-                          ? Colors.white.withValues(alpha: 0.75)
+                          ? ArenaColors.bone.withValues(alpha: 0.75)
                           : ArenaColors.silver,
                       fontSize: 9,
                     ),
@@ -923,7 +936,6 @@ class ChatMessageInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: ArenaSpacing.sm,
@@ -967,9 +979,9 @@ class ChatMessageInput extends StatelessWidget {
               shape: BoxShape.circle,
               boxShadow: sending
                   ? null
-                  : [
+                  : const [
                       BoxShadow(
-                        color: primary.withValues(alpha: 0.55),
+                        color: ArenaColors.signalBlueGlow,
                         blurRadius: 20,
                         spreadRadius: -2,
                       ),
@@ -977,6 +989,10 @@ class ChatMessageInput extends StatelessWidget {
             ),
             child: IconButton.filled(
               onPressed: sending ? null : onSend,
+              style: IconButton.styleFrom(
+                backgroundColor: ArenaColors.signalBlue,
+                foregroundColor: ArenaColors.bone,
+              ),
               icon: sending
                   ? const SizedBox(
                       width: 18,

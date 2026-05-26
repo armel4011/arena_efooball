@@ -4,7 +4,6 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/arena_notification.dart';
 import 'package:arena/data/repositories/notification_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
-import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:flutter/material.dart';
@@ -311,6 +310,11 @@ class _Chip extends StatelessWidget {
   }
 }
 
+/// Card d'une notification — reproduit la maquette #19 : icon-box 36×36
+/// arrondie avec fond `accent @ 20 %` à gauche, titre + corps + timestamp
+/// au centre, dot signalBlue à droite si unread. La card elle-même prend
+/// une teinte `accent @ 6-10 %` (warning/success/info) selon le `type`
+/// pour distinguer la catégorie au coup d'œil.
 class _NotificationCard extends StatelessWidget {
   const _NotificationCard({required this.notif, required this.onTap});
 
@@ -320,26 +324,32 @@ class _NotificationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final visual = _visualFor(notif);
+    final tint = notif.isUnread ? 0.12 : 0.06;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(ArenaRadius.lg),
       child: Container(
         padding: const EdgeInsets.all(ArenaSpacing.md),
-        decoration: notif.isUnread
-            ? arenaGlowCardDecoration()
-            : BoxDecoration(
-                color: ArenaColors.carbon,
-                borderRadius: BorderRadius.circular(ArenaRadius.lg),
-                border: Border.all(color: ArenaColors.border),
-              ),
+        decoration: BoxDecoration(
+          color: visual.color.withValues(alpha: tint),
+          borderRadius: BorderRadius.circular(ArenaRadius.lg),
+          border: Border.all(
+            color: visual.color.withValues(alpha: notif.isUnread ? 0.45 : 0.2),
+          ),
+          boxShadow: notif.isUnread
+              ? [
+                  BoxShadow(
+                    color: visual.color.withValues(alpha: 0.18),
+                    blurRadius: 14,
+                    spreadRadius: -4,
+                  ),
+                ]
+              : null,
+        ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ArenaAvatar(
-              initials: visual.emoji,
-              color: visual.color,
-              size: ArenaAvatarSize.sm,
-            ),
+            _NotifIconBox(emoji: visual.emoji, accent: visual.color),
             const SizedBox(width: ArenaSpacing.sm),
             Expanded(
               child: Column(
@@ -348,20 +358,27 @@ class _NotificationCard extends StatelessWidget {
                   Text(
                     notif.title,
                     style: ArenaText.body.copyWith(
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
                     ),
                   ),
                   if ((notif.body ?? '').isNotEmpty) ...[
                     const SizedBox(height: 2),
-                    Text(notif.body!, style: ArenaText.bodyMuted),
+                    Text(
+                      notif.body!,
+                      style: ArenaText.small.copyWith(
+                        color: ArenaColors.silver,
+                      ),
+                    ),
                   ],
                   const SizedBox(height: ArenaSpacing.xs),
                   Text(
                     _formatTimestamp(notif.createdAt),
                     style: ArenaText.small.copyWith(
-                      color: notif.isUnread
-                          ? ArenaColors.signalBlue
-                          : ArenaColors.silverDim,
+                      color:
+                          notif.isUnread ? visual.color : ArenaColors.silverDim,
+                      fontWeight:
+                          notif.isUnread ? FontWeight.w600 : FontWeight.w500,
                     ),
                   ),
                 ],
@@ -372,9 +389,15 @@ class _NotificationCard extends StatelessWidget {
                 width: 8,
                 height: 8,
                 margin: const EdgeInsets.only(top: 4),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: ArenaColors.signalBlue,
                   shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: ArenaColors.signalBlue.withValues(alpha: 0.6),
+                      blurRadius: 6,
+                    ),
+                  ],
                 ),
               ),
           ],
@@ -384,32 +407,60 @@ class _NotificationCard extends StatelessWidget {
   }
 }
 
+/// Square arrondi 36×36 px (`m-card` mini de la maquette) avec emoji
+/// 18 px centré sur fond `accent @ 20 %`.
+class _NotifIconBox extends StatelessWidget {
+  const _NotifIconBox({required this.emoji, required this.accent});
+
+  final String emoji;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 36,
+      height: 36,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(emoji, style: const TextStyle(fontSize: 18)),
+    );
+  }
+}
+
 class _NotifVisual {
   const _NotifVisual({required this.emoji, required this.color});
   final String emoji;
-  final ArenaAvatarColor color;
+  final Color color;
 }
 
+/// Mappe chaque type de notif à son couple (emoji, couleur accent). Les
+/// couleurs suivent la sémantique des cards de la maquette : warning
+/// (gold) pour les rappels temps, success (vert) pour les
+/// gains/validations, info (signalBlue) pour les nouveautés, neonRed
+/// pour les litiges.
 _NotifVisual _visualFor(ArenaNotification n) {
   switch (n.type) {
     case 'match_starting':
-      return const _NotifVisual(emoji: '⚽', color: ArenaAvatarColor.red);
+      return const _NotifVisual(emoji: '⏰', color: ArenaColors.statusWarn);
     case 'match_score_to_validate':
     case 'match_finished':
-      return const _NotifVisual(emoji: '✅', color: ArenaAvatarColor.green);
+      return const _NotifVisual(emoji: '✅', color: ArenaColors.statusOk);
     case 'stream_live':
-      return const _NotifVisual(emoji: '📺', color: ArenaAvatarColor.purple);
+      return const _NotifVisual(emoji: '📺', color: ArenaColors.signalBlue);
     case 'competition_starting':
-      return const _NotifVisual(emoji: '🏆', color: ArenaAvatarColor.orange);
+      return const _NotifVisual(emoji: '🏆', color: ArenaColors.tierGoldWarm);
     case 'payout_received':
     case 'payment_completed':
-      return const _NotifVisual(emoji: '💰', color: ArenaAvatarColor.green);
+      return const _NotifVisual(emoji: '💰', color: ArenaColors.statusOk);
     case 'dispute_opened':
-      return const _NotifVisual(emoji: '⚠️', color: ArenaAvatarColor.orange);
+      return const _NotifVisual(emoji: '⚠️', color: ArenaColors.neonRed);
     case 'chat_message':
-      return const _NotifVisual(emoji: '💬', color: ArenaAvatarColor.blue);
+      return const _NotifVisual(emoji: '💬', color: ArenaColors.signalBlue);
     default:
-      return const _NotifVisual(emoji: '🔔', color: ArenaAvatarColor.blue);
+      return const _NotifVisual(emoji: '🔔', color: ArenaColors.silver);
   }
 }
 

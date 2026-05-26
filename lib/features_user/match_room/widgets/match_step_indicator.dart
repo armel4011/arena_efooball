@@ -73,11 +73,18 @@ class StepLabel extends StatelessWidget {
 
   final MatchStep step;
 
+  /// Reproduit la maquette #13 : `ÉTAPE 01/04 · CODE ROOM` en mono small
+  /// signalBlue avec letter-spacing pour donner du caractère "console".
   @override
   Widget build(BuildContext context) {
+    final n = step.number.toString().padLeft(2, '0');
     return Text(
-      'Étape ${step.number} / 4 — ${step.label}',
-      style: ArenaText.small.copyWith(color: ArenaColors.silver),
+      'ÉTAPE $n/04 · ${step.label.toUpperCase()}',
+      style: ArenaText.monoSmall.copyWith(
+        color: ArenaColors.signalBlue,
+        letterSpacing: 1.5,
+        fontWeight: FontWeight.w700,
+      ),
     );
   }
 }

@@ -15,15 +15,29 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-/// Final inscription confirmation before payment (PHASE 4 + 11bis).
+/// Page #12 — `RegistrationConfirmPage` (`/competitions/:id/register/confirm`).
 ///
-/// Deux flow possibles :
-///   • Compétition **gratuite** (`registration_fee = 0`) → INSERT direct
-///     dans `competition_registrations` (RLS self-insert) + retour HOME.
-///   • Compétition **payante** → routing vers P1 PaymentMethodPicker
-///     puis P2 avec le code marchand correspondant.
+/// Recree from scratch en suivant `arena_premium_reference.html` (ecran
+/// #12 CHECKOUT) tout en preservant les 2 flows existants :
+/// * Compétition **gratuite** (`entryFeeXaf == 0`) → INSERT direct dans
+///   `competition_registrations` via RLS self-insert + retour HOME.
+/// * Compétition **payante** → routing P1 PaymentMethodPicker puis P2
+///   PaymentMomoDetails avec le code marchand correspondant.
 ///
-/// Maps to screen #12 of `arena_v2.html`.
+/// Layout premium (top → bottom) :
+/// 1. Display "Confirme ton inscription" + accent italic "ta place." en
+///    ice-cyan (reproduit `m-text-display` + `m-serif` de la maquette).
+/// 2. Banner premium signalBlue (gradient + Bebas) avec le nom de la
+///    compétition + jeu/date.
+/// 3. Bloc paiement (visible uniquement si payante) : 3 rows entry fee
+///    / service / total.
+/// 4. Caption "RÉPARTITION DES GAINS" + row de cards rangs (🥇/🥈/🥉/4️⃣)
+///    avec couleur dédiée gold/silver/hotCoral/pearl.
+/// 5. `ReferralProgressCard` si quota parrainage actif.
+/// 6. Boutons stores du jeu (si URLs configurées).
+/// 7. `_AckTile` checkbox d'acceptation des règles.
+/// 8. CTA primary "PROCÉDER AU PAIEMENT · X XAF" / "M'INSCRIRE
+///    GRATUITEMENT" + ghost Annuler.
 class RegistrationConfirmPage extends ConsumerStatefulWidget {
   const RegistrationConfirmPage({
     required this.competitionId,
@@ -73,38 +87,48 @@ class _RegistrationConfirmPageState
     // Lot D — Récupère l'éligibilité parrainage en parallèle. Si la
     // compétition n'a pas de quota, on a `target=0` et `eligible=true`,
     // le widget n'est pas affiché et le bouton inscription reste actif.
-    final eligibilityAsync =
-        ref.watch(referralEligibilityProvider(widget.competitionId));
+    final eligibilityAsync = ref.watch(
+      referralEligibilityProvider(widget.competitionId),
+    );
     final eligibility = eligibilityAsync.valueOrNull;
     final hasGating = eligibility != null && eligibility.target > 0;
     final isEligible = eligibility?.eligible ?? !hasGating;
     final canSubmit = _ack && !_submitting && isEligible;
 
     return Scaffold(
-      appBar: const ArenaAppBar(title: 'Confirmer inscription'),
+      appBar: const ArenaAppBar(title: 'CHECKOUT'),
       body: ArenaScreenBackground(
         child: SafeArea(
           child: ListView(
             padding: const EdgeInsets.all(ArenaSpacing.lg),
             children: [
-              _CompetitionSummary(
+              const _DisplayTitle()
+                  .animate()
+                  .fadeIn(duration: ArenaDurations.medium),
+              const SizedBox(height: ArenaSpacing.md),
+              _CompetitionBanner(
                 name: widget.competitionName,
                 gameLabel: widget.gameLabel,
                 gameEmoji: widget.gameEmoji,
                 dateLabel: widget.dateLabel,
                 formatLabel: widget.formatLabel,
                 isFree: _isFree,
-              ).animate().fadeIn(duration: ArenaDurations.medium),
+              ).animate(delay: 80.ms).fadeIn(duration: ArenaDurations.medium),
               const SizedBox(height: ArenaSpacing.lg),
               if (!_isFree) ...[
-                const _SectionLabel('Paiement'),
-                const SizedBox(height: ArenaSpacing.sm),
                 _PaymentBreakdown(entryFeeXaf: widget.entryFeeXaf)
-                    .animate(delay: 100.ms)
+                    .animate(delay: 140.ms)
                     .fadeIn(duration: ArenaDurations.medium),
                 const SizedBox(height: ArenaSpacing.lg),
               ],
-              const _SectionLabel('Récompense du tournoi'),
+              Text(
+                'RÉPARTITION DES GAINS',
+                style: ArenaText.monoSmall.copyWith(
+                  color: ArenaColors.silver,
+                  letterSpacing: 1.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               const SizedBox(height: ArenaSpacing.sm),
               _PrizeDistribution(
                 totalXaf: widget.totalPrizeXaf,
@@ -120,7 +144,14 @@ class _RegistrationConfirmPageState
               if (widget.androidStoreUrl != null ||
                   widget.iosStoreUrl != null) ...[
                 const SizedBox(height: ArenaSpacing.lg),
-                const _SectionLabel('Télécharger le jeu'),
+                Text(
+                  'TÉLÉCHARGER LE JEU',
+                  style: ArenaText.monoSmall.copyWith(
+                    color: ArenaColors.silver,
+                    letterSpacing: 1.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 const SizedBox(height: ArenaSpacing.sm),
                 _StoreButtons(
                   androidUrl: widget.androidStoreUrl,
@@ -218,18 +249,44 @@ class _RegistrationConfirmPageState
   }
 }
 
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.label);
-  final String label;
+/// Titre display tout en haut du checkout — reproduit le `m-text-display`
+/// de la maquette avec un accent italic ice-cyan sur la fin de phrase
+/// ("Confirme ton inscription.") pour donner du caractère.
+class _DisplayTitle extends StatelessWidget {
+  const _DisplayTitle();
 
   @override
   Widget build(BuildContext context) {
-    return Text(label.toUpperCase(), style: ArenaText.inputLabel);
+    return RichText(
+      text: TextSpan(
+        style: ArenaText.h1.copyWith(
+          color: ArenaColors.bone,
+          fontSize: 28,
+          letterSpacing: 1,
+          height: 1,
+        ),
+        children: [
+          const TextSpan(text: 'Confirme '),
+          TextSpan(
+            text: 'ton inscription.',
+            style: ArenaText.serifAccent.copyWith(
+              color: ArenaColors.iceCyan,
+              fontSize: 22,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
-class _CompetitionSummary extends StatelessWidget {
-  const _CompetitionSummary({
+/// Banner premium pour la compétition — reproduit `.m-banner` de la
+/// maquette (~70 px). Gradient `signalBlueDark → signalBlue` (sans
+/// couleur game-themed pour rester neutre — la page checkout n'a pas
+/// accès au `GameType` enum, seulement au label string). Affiche un
+/// pill `GRATUIT` ou `PAYANTE` en haut à droite.
+class _CompetitionBanner extends StatelessWidget {
+  const _CompetitionBanner({
     required this.name,
     required this.gameLabel,
     required this.gameEmoji,
@@ -248,44 +305,91 @@ class _CompetitionSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(ArenaSpacing.lg),
-      decoration: arenaGlowCardDecoration(),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [ArenaColors.signalBlue, ArenaColors.signalBlueDark],
+        ),
+        borderRadius: BorderRadius.circular(ArenaRadius.lg),
+        boxShadow: const [
+          BoxShadow(
+            color: ArenaColors.signalBlueGlow,
+            blurRadius: 18,
+            spreadRadius: -4,
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Expanded(child: Text(name, style: ArenaText.h2)),
-              if (isFree)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
+              Expanded(
+                child: Text(
+                  name.toUpperCase(),
+                  style: ArenaText.h2.copyWith(
+                    color: ArenaColors.bone,
+                    fontSize: 18,
+                    letterSpacing: 1.5,
                   ),
-                  decoration: BoxDecoration(
-                    color: ArenaColors.statusOk.withValues(alpha: 0.18),
-                    borderRadius: BorderRadius.circular(ArenaRadius.round),
-                    border: Border.all(
-                      color: ArenaColors.statusOk.withValues(alpha: 0.5),
-                    ),
-                  ),
-                  child: Text(
-                    'GRATUIT',
-                    style: ArenaText.button.copyWith(
-                      color: ArenaColors.statusOk,
-                      fontSize: 11,
-                    ),
-                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
+              ),
+              const SizedBox(width: ArenaSpacing.xs),
+              _Pill(
+                label: isFree ? 'GRATUIT' : 'PAYANTE',
+                accent:
+                    isFree ? ArenaColors.statusOk : ArenaColors.tierGoldWarm,
+              ),
             ],
           ),
-          const SizedBox(height: ArenaSpacing.sm),
-          Text('$gameEmoji $gameLabel', style: ArenaText.bodyMuted),
+          const SizedBox(height: 6),
+          Text(
+            '$gameEmoji  $gameLabel  ·  $formatLabel',
+            style: ArenaText.small.copyWith(
+              color: ArenaColors.bone.withValues(alpha: 0.85),
+            ),
+          ),
           const SizedBox(height: 2),
-          Text('🗓 $dateLabel', style: ArenaText.bodyMuted),
-          const SizedBox(height: 2),
-          Text('🏆 $formatLabel', style: ArenaText.bodyMuted),
+          Text(
+            '🗓  $dateLabel',
+            style: ArenaText.small.copyWith(
+              color: ArenaColors.bone.withValues(alpha: 0.85),
+            ),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+/// Pill `GRATUIT` / `PAYANTE` — fond `bone @ 25 %` translucide, texte
+/// `accent` bold mono.
+class _Pill extends StatelessWidget {
+  const _Pill({required this.label, required this.accent});
+
+  final String label;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: ArenaColors.bone.withValues(alpha: 0.25),
+        borderRadius: BorderRadius.circular(ArenaRadius.round),
+      ),
+      child: Text(
+        label,
+        style: ArenaText.badge.copyWith(
+          color: ArenaColors.bone,
+          letterSpacing: 1,
+          fontWeight: FontWeight.w800,
+        ),
       ),
     );
   }
@@ -325,7 +429,11 @@ class _PaymentBreakdown extends StatelessWidget {
 }
 
 class _Row extends StatelessWidget {
-  const _Row({required this.label, required this.value, this.emphasis = false});
+  const _Row({
+    required this.label,
+    required this.value,
+    this.emphasis = false,
+  });
   final String label;
   final String value;
   final bool emphasis;
@@ -357,6 +465,10 @@ class _Row extends StatelessWidget {
   }
 }
 
+/// Répartition des gains — total en `bigNumber` vert au centre, puis
+/// une row de cards rangs (jusqu'à `kMaxRewardedRanks`) reproduisant la
+/// maquette `m-row gap:6px` + `m-card flex:1 align-items:center`. Chaque
+/// rang a sa couleur dédiée (gold/silver/hotCoral/pearl).
 class _PrizeDistribution extends StatelessWidget {
   const _PrizeDistribution({
     required this.totalXaf,
@@ -370,8 +482,18 @@ class _PrizeDistribution extends StatelessWidget {
   /// affichées, y compris celles à 0.
   final List<int> distribution;
 
+  static const _rankColors = <Color>[
+    ArenaColors.tierGoldWarm,
+    ArenaColors.silver,
+    ArenaColors.hotCoral,
+    ArenaColors.pearl,
+  ];
+
   @override
   Widget build(BuildContext context) {
+    final ranks = distribution.length > kMaxRewardedRanks
+        ? kMaxRewardedRanks
+        : distribution.length;
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.lg),
       decoration: BoxDecoration(
@@ -385,33 +507,70 @@ class _PrizeDistribution extends StatelessWidget {
           Center(
             child: Text(
               '${_formatXaf(totalXaf)} XAF',
-              style: ArenaText.bigNumber.copyWith(color: ArenaColors.statusOk),
+              style: ArenaText.bigNumber.copyWith(
+                color: ArenaColors.statusOk,
+                fontSize: 28,
+              ),
             ),
           ),
           const SizedBox(height: ArenaSpacing.md),
-          for (var i = 0; i < distribution.length && i < kMaxRewardedRanks; i++)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                children: [
-                  Text(
-                    prizeRankEmoji(i),
-                    style: const TextStyle(fontSize: 18),
+          Row(
+            children: [
+              for (var i = 0; i < ranks; i++) ...[
+                Expanded(
+                  child: _RankCard(
+                    emoji: prizeRankEmoji(i),
+                    amount: distribution[i],
+                    color: _rankColors[i.clamp(0, _rankColors.length - 1)],
                   ),
-                  const SizedBox(width: ArenaSpacing.sm),
-                  Expanded(
-                    child: Text(
-                      '${prizeRankLabel(i)} place',
-                      style: ArenaText.body,
-                    ),
-                  ),
-                  Text(
-                    '${_formatXaf(distribution[i])} XAF',
-                    style: ArenaText.mono,
-                  ),
-                ],
-              ),
+                ),
+                if (i < ranks - 1) const SizedBox(width: 6),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Mini card par rang — emoji 🥇/🥈/🥉/4️⃣ + montant en mono. Fond et
+/// border colorés selon `color` (gold/silver/hotCoral/pearl).
+class _RankCard extends StatelessWidget {
+  const _RankCard({
+    required this.emoji,
+    required this.amount,
+    required this.color,
+  });
+
+  final String emoji;
+  final int amount;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(ArenaRadius.md),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 20)),
+          const SizedBox(height: 4),
+          Text(
+            _formatXaf(amount),
+            style: ArenaText.mono.copyWith(
+              color: color,
+              fontWeight: FontWeight.w800,
+              fontSize: 11,
             ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ],
       ),
     );

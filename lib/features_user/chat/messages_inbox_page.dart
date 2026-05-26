@@ -116,7 +116,7 @@ class _InboxTabs extends StatelessWidget {
         indicatorWeight: 2,
         tabs: const [
           Tab(text: 'DIRECT'),
-          Tab(text: 'COMPÉTITIONS'),
+          Tab(text: 'TOURNOIS'),
         ],
       ),
     );
@@ -445,16 +445,52 @@ class _MatchThreadRow extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: ArenaColors.carbon2,
+            color: highlighted
+                ? ArenaColors.signalBlue.withValues(alpha: 0.08)
+                : ArenaColors.carbon2,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: highlighted ? ArenaColors.signalBlue : ArenaColors.border,
             ),
+            boxShadow: highlighted
+                ? const [
+                    BoxShadow(
+                      color: ArenaColors.signalBlueGlow,
+                      blurRadius: 14,
+                      spreadRadius: -4,
+                    ),
+                  ]
+                : null,
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ArenaAvatar(initials: initials, color: color),
+              // Avatar + dot statut en bas-droite : vert si le match est
+              // "hot" (en cours ou imminent), sinon pas de dot. Reproduit
+              // `m-dot m-dot-online` de la maquette #15.
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  ArenaAvatar(initials: initials, color: color),
+                  if (highlighted)
+                    Positioned(
+                      right: -2,
+                      bottom: -2,
+                      child: Container(
+                        width: 11,
+                        height: 11,
+                        decoration: BoxDecoration(
+                          color: ArenaColors.statusOk,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: ArenaColors.carbon2,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
               const SizedBox(width: ArenaSpacing.md),
               Expanded(
                 child: Column(
