@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_users_repository.dart';
+import 'package:arena/data/repositories/admin_chat_repository.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:arena/features_admin/auth_admin/widgets/totp_gate.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
@@ -15,6 +16,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
+
+/// Modes du broadcast super-admin :
+/// - [push] : insert dans `notifications` → trigger DB → FCM (titre, body,
+///   image, route, type). Non-persistant côté inbox user.
+/// - [chat] : bulk insert dans `admin_chat_messages` via [AdminChatRepository.broadcast]
+///   → trigger DB crée aussi une row `notifications type=admin_message`
+///   (donc FCM aussi). Persistant dans `/admin-messages` côté user.
+enum _BroadcastMode { push, chat }
 
 /// PHASE 12.5 — Écran super-admin pour envoyer une notification ciblée.
 ///
@@ -38,6 +47,7 @@ class _SuperAdminBroadcastState extends ConsumerState<SuperAdminBroadcast> {
 
   AdminUsersFilter _filter = const AdminUsersFilter();
   String _notifType = 'system';
+  _BroadcastMode _mode = _BroadcastMode.push;
   bool _sending = false;
   String? _lastResult;
   File? _pickedImage;
@@ -76,10 +86,15 @@ class _SuperAdminBroadcastState extends ConsumerState<SuperAdminBroadcast> {
     super.dispose();
   }
 
-  bool get _canSend =>
-      _titleCtrl.text.trim().isNotEmpty &&
-      _bodyCtrl.text.trim().isNotEmpty &&
-      !_sending;
+  bool get _canSend {
+    if (_sending) return false;
+    if (_mode == _BroadcastMode.chat) {
+      // Chat n'a qu'un champ texte (= body), pas de titre obligatoire.
+      return _bodyCtrl.text.trim().isNotEmpty;
+    }
+    return _titleCtrl.text.trim().isNotEmpty &&
+        _bodyCtrl.text.trim().isNotEmpty;
+  }
 
   Future<void> _pickAndUploadImage() async {
     final picker = ImagePicker();
@@ -138,10 +153,13 @@ class _SuperAdminBroadcastState extends ConsumerState<SuperAdminBroadcast> {
     final adminId = ref.read(currentSessionProvider)?.user.id;
     if (adminId == null) return;
 
+    final isChat = _mode == _BroadcastMode.chat;
     final totpOk = await TotpGate.confirm(
       context,
       ref,
-      reason: 'Envoyer une notif à ${userIds.length} utilisateur(s)',
+      reason: isChat
+          ? 'Envoyer un message chat à ${userIds.length} utilisateur(s)'
+          : 'Envoyer une notif à ${userIds.length} utilisateur(s)',
     );
     if (!totpOk) return;
     if (!mounted) return;
@@ -151,38 +169,60 @@ class _SuperAdminBroadcastState extends ConsumerState<SuperAdminBroadcast> {
       _lastResult = null;
     });
 
-    final client = ref.read(supabaseClientProvider);
-    final route = _routeCtrl.text.trim();
-    final imageUrl = _uploadedImageUrl;
-    final rows = [
-      for (final uid in userIds)
-        {
-          'user_id': uid,
-          'type': _notifType,
-          'title': _titleCtrl.text.trim(),
-          'body': _bodyCtrl.text.trim(),
-          if (imageUrl != null) 'image_url': imageUrl,
-          'data': route.isEmpty ? <String, dynamic>{} : {'route': route},
-        },
-    ];
-
     try {
-      await client.from('notifications').insert(rows);
-      await ref.read(adminAuditLogRepositoryProvider).record(
-        adminId: adminId,
-        action: 'broadcast_notification',
-        targetType: 'notification',
-        targetId: null,
-        beforeState: {},
-        afterState: {
-          'recipients_count': userIds.length,
-          'type': _notifType,
-          'title': _titleCtrl.text.trim(),
-          'has_route': route.isNotEmpty,
-          'has_image': imageUrl != null,
-          'competition_ids': _filter.competitionIds,
-        },
-      );
+      if (isChat) {
+        // Bulk insert dans admin_chat_messages. Le trigger DB
+        // `_notify_admin_message` créera 1 row notifications type=admin_message
+        // par destinataire → FCM auto + persistance dans /admin-messages.
+        await ref.read(adminChatRepositoryProvider).broadcast(
+              adminId: adminId,
+              recipientIds: userIds,
+              text: _bodyCtrl.text.trim(),
+            );
+        await ref.read(adminAuditLogRepositoryProvider).record(
+          adminId: adminId,
+          action: 'broadcast_chat_message',
+          targetType: 'admin_chat_message',
+          targetId: null,
+          beforeState: {},
+          afterState: {
+            'recipients_count': userIds.length,
+            'text_length': _bodyCtrl.text.trim().length,
+            'competition_ids': _filter.competitionIds,
+          },
+        );
+      } else {
+        final client = ref.read(supabaseClientProvider);
+        final route = _routeCtrl.text.trim();
+        final imageUrl = _uploadedImageUrl;
+        final rows = [
+          for (final uid in userIds)
+            {
+              'user_id': uid,
+              'type': _notifType,
+              'title': _titleCtrl.text.trim(),
+              'body': _bodyCtrl.text.trim(),
+              if (imageUrl != null) 'image_url': imageUrl,
+              'data': route.isEmpty ? <String, dynamic>{} : {'route': route},
+            },
+        ];
+        await client.from('notifications').insert(rows);
+        await ref.read(adminAuditLogRepositoryProvider).record(
+          adminId: adminId,
+          action: 'broadcast_notification',
+          targetType: 'notification',
+          targetId: null,
+          beforeState: {},
+          afterState: {
+            'recipients_count': userIds.length,
+            'type': _notifType,
+            'title': _titleCtrl.text.trim(),
+            'has_route': route.isNotEmpty,
+            'has_image': imageUrl != null,
+            'competition_ids': _filter.competitionIds,
+          },
+        );
+      }
       if (!mounted) return;
       setState(() {
         _sending = false;
@@ -207,14 +247,23 @@ class _SuperAdminBroadcastState extends ConsumerState<SuperAdminBroadcast> {
     final usersAsync = ref.watch(adminUsersProvider(_filter));
     final compsAsync = ref.watch(filterableCompetitionsProvider);
 
+    final isChat = _mode == _BroadcastMode.chat;
     return Scaffold(
-      appBar: const ArenaAppBar(title: 'Notification broadcast'),
+      appBar: ArenaAppBar(
+        title: isChat ? 'Message chat broadcast' : 'Notification broadcast',
+      ),
       body: ArenaScreenBackground(
         accent: ArenaColors.neonRed,
         child: SafeArea(
           child: ListView(
             padding: const EdgeInsets.all(ArenaSpacing.lg),
             children: [
+              // ─── Mode toggle ───────────────────────────────────────
+              _ModeToggle(
+                mode: _mode,
+                onChanged: (m) => setState(() => _mode = m),
+              ),
+              const SizedBox(height: ArenaSpacing.md),
               // ─── Filtres cible ──────────────────────────────────────
               Text('🎯 CIBLE', style: ArenaText.h3),
               const SizedBox(height: ArenaSpacing.sm),
@@ -333,53 +382,65 @@ class _SuperAdminBroadcastState extends ConsumerState<SuperAdminBroadcast> {
               // ─── Composition du message ─────────────────────────────
               Text('📝 MESSAGE', style: ArenaText.h3),
               const SizedBox(height: ArenaSpacing.sm),
-              ArenaTextField(
-                controller: _titleCtrl,
-                hint: 'Titre (visible dans la notification)',
-                maxLength: 60,
-              ),
-              const SizedBox(height: ArenaSpacing.sm),
+              if (!isChat) ...[
+                ArenaTextField(
+                  controller: _titleCtrl,
+                  hint: 'Titre (visible dans la notification)',
+                  maxLength: 60,
+                ),
+                const SizedBox(height: ArenaSpacing.sm),
+              ],
               ArenaTextField(
                 controller: _bodyCtrl,
-                hint: 'Corps du message',
+                hint: isChat
+                    ? 'Texte du message (visible dans /admin-messages)'
+                    : 'Corps du message',
                 minLines: 3,
-                maxLines: 6,
+                maxLines: isChat ? 10 : 6,
+                maxLength: isChat ? 2000 : null,
               ),
-              const SizedBox(height: ArenaSpacing.sm),
-              ArenaTextField(
-                controller: _routeCtrl,
-                hint: 'Route deep-link (optionnel) — ex. /competitions',
-                helper: "Si défini, taper la notif redirige l'utilisateur sur"
-                    " cette page de l'app.",
-              ),
-              const SizedBox(height: ArenaSpacing.md),
-              Text('🖼 IMAGE (optionnel)', style: ArenaText.h3),
-              const SizedBox(height: ArenaSpacing.sm),
-              _ImagePickerCard(
-                pickedImage: _pickedImage,
-                uploadedUrl: _uploadedImageUrl,
-                uploading: _uploadingImage,
-                onPick: _pickAndUploadImage,
-                onClear: _clearImage,
-              ),
-              const SizedBox(height: ArenaSpacing.sm),
-              Text('Type', style: ArenaText.inputLabel),
-              const SizedBox(height: ArenaSpacing.xs),
-              Wrap(
-                spacing: ArenaSpacing.xs,
-                runSpacing: ArenaSpacing.xs,
-                children: [
-                  for (final t in _typeOptions)
-                    _toggle(t, _notifType == t, () {
-                      setState(() => _notifType = t);
-                    }),
-                ],
-              ),
+              if (!isChat) ...[
+                const SizedBox(height: ArenaSpacing.sm),
+                ArenaTextField(
+                  controller: _routeCtrl,
+                  hint: 'Route deep-link (optionnel) — ex. /competitions',
+                  helper:
+                      "Si défini, taper la notif redirige l'utilisateur sur"
+                      " cette page de l'app.",
+                ),
+                const SizedBox(height: ArenaSpacing.md),
+                Text('🖼 IMAGE (optionnel)', style: ArenaText.h3),
+                const SizedBox(height: ArenaSpacing.sm),
+                _ImagePickerCard(
+                  pickedImage: _pickedImage,
+                  uploadedUrl: _uploadedImageUrl,
+                  uploading: _uploadingImage,
+                  onPick: _pickAndUploadImage,
+                  onClear: _clearImage,
+                ),
+                const SizedBox(height: ArenaSpacing.sm),
+                Text('Type', style: ArenaText.inputLabel),
+                const SizedBox(height: ArenaSpacing.xs),
+                Wrap(
+                  spacing: ArenaSpacing.xs,
+                  runSpacing: ArenaSpacing.xs,
+                  children: [
+                    for (final t in _typeOptions)
+                      _toggle(t, _notifType == t, () {
+                        setState(() => _notifType = t);
+                      }),
+                  ],
+                ),
+              ],
               const SizedBox(height: ArenaSpacing.lg),
 
               // ─── Action ─────────────────────────────────────────────
               ArenaButton(
-                label: _sending ? 'ENVOI EN COURS…' : '🚀 ENVOYER MAINTENANT',
+                label: _sending
+                    ? 'ENVOI EN COURS…'
+                    : (isChat
+                        ? '💬 ENVOYER LE MESSAGE'
+                        : '🚀 ENVOYER LA NOTIF'),
                 fullWidth: true,
                 size: ArenaButtonSize.large,
                 isLoading: _sending,
@@ -550,6 +611,74 @@ class _SuperAdminBroadcastState extends ConsumerState<SuperAdminBroadcast> {
           style: ArenaText.body.copyWith(
             color: active ? ArenaColors.signalBlue : ArenaColors.silver,
             fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ModeToggle extends StatelessWidget {
+  const _ModeToggle({required this.mode, required this.onChanged});
+
+  final _BroadcastMode mode;
+  final ValueChanged<_BroadcastMode> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: ArenaColors.carbon,
+        border: Border.all(color: ArenaColors.border),
+        borderRadius: BorderRadius.circular(ArenaRadius.round),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _segment(
+              label: '📨 NOTIF PUSH',
+              active: mode == _BroadcastMode.push,
+              onTap: () => onChanged(_BroadcastMode.push),
+            ),
+          ),
+          Expanded(
+            child: _segment(
+              label: '💬 MESSAGE CHAT',
+              active: mode == _BroadcastMode.chat,
+              onTap: () => onChanged(_BroadcastMode.chat),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _segment({
+    required String label,
+    required bool active,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(ArenaRadius.round),
+      child: AnimatedContainer(
+        duration: ArenaDurations.short,
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: active
+              ? ArenaColors.signalBlue.withValues(alpha: 0.18)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(ArenaRadius.round),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: ArenaText.small.copyWith(
+              color: active ? ArenaColors.signalBlue : ArenaColors.silver,
+              fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+              letterSpacing: 0.8,
+            ),
           ),
         ),
       ),
