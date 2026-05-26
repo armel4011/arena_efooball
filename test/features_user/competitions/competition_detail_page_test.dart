@@ -41,10 +41,8 @@ Widget _scoped({
       overrides: [
         competitionByIdProvider
             .overrideWith((ref, _) => Stream<Competition?>.value(comp)),
-        competitionMatchesProvider
-            .overrideWith((ref, _) async => matches),
-        competitionStandingsProvider
-            .overrideWith((ref, _) async => buckets),
+        competitionMatchesProvider.overrideWith((ref, _) async => matches),
+        competitionStandingsProvider.overrideWith((ref, _) async => buckets),
         // La detail page est gated derrière `myRegisteredCompetitionIdsProvider` :
         // sans inscription, on tombe sur `_GatedDetailView` au lieu du body
         // taggé. On force le joueur "inscrit" pour ces tests.
@@ -88,7 +86,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Élimination directe'), findsOneWidget);
-    expect(find.text('16 joueurs'), findsOneWidget);
+    // Restyle premium #11 : la capacité affiche désormais
+    // `${current}/${max} joueurs` (avant : ${max} joueurs).
+    expect(find.text('4/16 joueurs'), findsOneWidget);
     expect(find.textContaining('1 000'), findsWidgets);
   });
 
@@ -119,8 +119,7 @@ void main() {
     expect(find.text('TERMINÉ'), findsWidgets);
   });
 
-  testWidgets(
-      'round-robin format swaps the Bracket tab for GroupStandingsView',
+  testWidgets('round-robin format swaps the Bracket tab for GroupStandingsView',
       (tester) async {
     await bumpViewport(tester);
     await tester.pumpWidget(

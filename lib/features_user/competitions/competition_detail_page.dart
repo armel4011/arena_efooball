@@ -6,7 +6,7 @@ import 'package:arena/data/repositories/competition_repository.dart';
 import 'package:arena/features_shared/prize_ranks.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
-import 'package:arena/features_shared/widgets/arena_card.dart';
+import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:arena/features_shared/widgets/error_state.dart';
@@ -18,11 +18,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-/// PHASE 4 — single competition detail page with 4 tabs.
+/// Page #11 — `CompetitionDetailPage` (`/competitions/:id`).
 ///
-/// The Participants / Bracket / Prizes tabs show light placeholders.
-/// They'll be wired against `registrations` / `phases` / `prizes`
-/// streams in sub-steps 4.D (Bracket) and 4.E (Standings + Prizes).
+/// Recree from scratch en suivant `arena_premium_reference.html` (écran
+/// #11) : banner premium gradient game-themed, double badge sous-banner,
+/// onglets `INFOS / PARTICIPANTS / BRACKET-POULES / CLASSEMENT`. La
+/// page conserve sa séparation gated/inscrit :
+///
+/// * `_GatedDetailView` — joueur non inscrit : banner premium + résumé
+///   prize + bloc parrainage (si quota) + CTA `S'INSCRIRE` en bas.
+/// * `_DetailBody` — joueur inscrit : banner premium + 4 onglets avec
+///   contenus dédiés (les onglets Participants / Bracket-Poules /
+///   Classement délèguent à leurs vues spécialisées existantes).
+///
+/// Providers et routes inchangés : `competitionByIdProvider`,
+/// `myRegisteredCompetitionIdsProvider`, `competitionRankingProvider`,
+/// `BracketView`, `GroupStandingsPage`.
 class CompetitionDetailPage extends ConsumerWidget {
   const CompetitionDetailPage({required this.competitionId, super.key});
 
@@ -37,7 +48,7 @@ class CompetitionDetailPage extends ConsumerWidget {
     final isRegistered = registeredIds.contains(competitionId);
 
     return Scaffold(
-      appBar: const ArenaAppBar(title: 'Compétition'),
+      appBar: const ArenaAppBar(title: 'COMPÉTITION'),
       body: ArenaScreenBackground(
         child: async.when(
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -68,8 +79,152 @@ class CompetitionDetailPage extends ConsumerWidget {
   }
 }
 
-/// Vue affichée quand le joueur n'est pas inscrit à la compétition.
-/// Récap minimal de la comp + CTA pour s'inscrire.
+/// Banner premium — reproduit `.m-banner` 100 px de la maquette : un
+/// gradient game-themed (eFoot bleu / FIFA vert / FC orange), caption
+/// mono `{JEU} · {dates}` semi-transparent en haut, titre Bebas Neue 28
+/// px sur l'image en bas. Le titre est uppercase, peut wrap sur 2
+/// lignes (`maxLines: 2`).
+class _PremiumBanner extends StatelessWidget {
+  const _PremiumBanner({required this.competition});
+
+  final Competition competition;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = competition;
+    final dates = _formatDateRange(c.startDate, c.endDate);
+    final caption = '${c.game.label.toUpperCase()} · $dates';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(
+        ArenaSpacing.lg,
+        ArenaSpacing.md,
+        ArenaSpacing.lg,
+        ArenaSpacing.md,
+      ),
+      decoration: BoxDecoration(gradient: _gradientFor(c.game)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            caption,
+            style: ArenaText.monoSmall.copyWith(
+              color: ArenaColors.bone.withValues(alpha: 0.75),
+              letterSpacing: 1.2,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            c.name.toUpperCase(),
+            style: ArenaText.h1.copyWith(
+              color: ArenaColors.bone,
+              fontSize: 28,
+              letterSpacing: 1.5,
+              height: 1,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  static LinearGradient _gradientFor(GameType g) => switch (g) {
+        GameType.efootball => ArenaColors.bannerEfoot,
+        GameType.fifaMobile => ArenaColors.bannerFifa,
+        GameType.eaSportsFc => ArenaColors.bannerFc,
+      };
+
+  static String _formatDateRange(DateTime start, DateTime? end) {
+    final s = DateFormat('d MMM y', 'fr').format(start.toLocal());
+    if (end == null) return s;
+    final e = DateFormat('d MMM y', 'fr').format(end.toLocal());
+    return '$s — $e';
+  }
+}
+
+/// Ligne de 2 badges sous le banner : statut (OUVERT/EN COURS/COMPLET…)
+/// et capacité (`12/16`). Reproduit `.m-row gap:6px` de la maquette,
+/// rendu hors banner pour rester lisible sur fond ArenaScreenBackground.
+class _BannerBadges extends StatelessWidget {
+  const _BannerBadges({required this.competition});
+
+  final Competition competition;
+
+  @override
+  Widget build(BuildContext context) {
+    final (statusLabel, statusColor) = _statusFor(competition.status);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        ArenaSpacing.lg,
+        ArenaSpacing.md,
+        ArenaSpacing.lg,
+        0,
+      ),
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: [
+          _Pill(label: statusLabel, accent: statusColor),
+          _Pill(
+            label: '${competition.currentPlayers}/${competition.maxPlayers}',
+            accent: ArenaColors.signalBlue,
+          ),
+        ],
+      ),
+    );
+  }
+
+  static (String, Color) _statusFor(CompetitionStatus s) => switch (s) {
+        CompetitionStatus.draft => ('BROUILLON', ArenaColors.silver),
+        CompetitionStatus.registrationOpen => ('OUVERT', ArenaColors.statusOk),
+        CompetitionStatus.registrationClosed => (
+            'COMPLET',
+            ArenaColors.statusWarn,
+          ),
+        CompetitionStatus.ongoing => ('EN COURS', ArenaColors.signalBlue),
+        CompetitionStatus.completed => ('TERMINÉ', ArenaColors.silver),
+        CompetitionStatus.cancelled => ('ANNULÉ', ArenaColors.neonRed),
+      };
+}
+
+/// Pill colorée (status / capacity) — fond `accent @ 15 %`, border
+/// `accent @ 50 %`, texte `accent` bold mono.
+class _Pill extends StatelessWidget {
+  const _Pill({required this.label, required this.accent});
+
+  final String label;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.15),
+        border: Border.all(color: accent.withValues(alpha: 0.5)),
+        borderRadius: BorderRadius.circular(ArenaRadius.round),
+      ),
+      child: Text(
+        label,
+        style: ArenaText.badge.copyWith(
+          color: accent,
+          letterSpacing: 1,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+/// Vue affichée quand le joueur n'est pas inscrit. Reproduit la maquette
+/// #11 jusqu'au CTA bottom : banner premium + badges + récap prize/
+/// gratuit + bloc parrainage si quota + bouton `S'INSCRIRE` collé en
+/// bas (mode payant : montant + devise ; mode gratuit : "gratuitement").
 class _GatedDetailView extends ConsumerWidget {
   const _GatedDetailView({required this.competition});
 
@@ -79,121 +234,78 @@ class _GatedDetailView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final c = competition;
     final isFree = c.isFree;
-    final accent = isFree ? ArenaColors.statusOk : ArenaColors.signalBlue;
-    final dateLabel = DateFormat('EEEE d MMM yyyy · HH:mm', 'fr')
-        .format(c.startDate.toLocal());
+    final accent = isFree ? ArenaColors.statusOk : ArenaColors.tierGoldWarm;
+    final canRegister = c.canRegister;
+    final ctaLabel = isFree
+        ? "S'INSCRIRE GRATUITEMENT"
+        : "S'INSCRIRE · ${_money(c.registrationFee)} ${c.registrationCurrency}";
 
     return SafeArea(
-      child: ListView(
-        // Lot D — la _GatedDetailView contient maintenant un bloc
-        // parrainage potentiellement long ; on passe en ListView pour
-        // permettre le scroll si le contenu déborde (avant : Column +
-        // Spacer non-scrollable qui clippait le bloc parrainage).
-        padding: const EdgeInsets.all(ArenaSpacing.lg),
+      child: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.all(ArenaSpacing.lg),
-            decoration: BoxDecoration(
-              color: accent.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(ArenaRadius.lg),
-              border: Border.all(
-                color: accent.withValues(alpha: 0.35),
-              ),
-            ),
-            child: Column(
+          Expanded(
+            child: ListView(
+              padding: EdgeInsets.zero,
               children: [
-                Text('🔒', style: ArenaText.h1.copyWith(fontSize: 38)),
-                const SizedBox(height: ArenaSpacing.sm),
-                Text(
-                  'Inscris-toi pour accéder au détail',
-                  textAlign: TextAlign.center,
-                  style: ArenaText.h3,
+                _PremiumBanner(competition: c),
+                _BannerBadges(competition: c),
+                const SizedBox(height: ArenaSpacing.lg),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: ArenaSpacing.lg,
+                  ),
+                  child: _GatedPrizeCard(competition: c, accent: accent),
                 ),
-                const SizedBox(height: ArenaSpacing.xs),
-                Text(
-                  'Bracket, matches en direct et chat 1-on-1 sont '
-                  'réservés aux joueurs inscrits.',
-                  textAlign: TextAlign.center,
-                  style: ArenaText.bodyMuted,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: ArenaSpacing.lg),
-          Container(
-            padding: const EdgeInsets.all(ArenaSpacing.lg),
-            decoration: BoxDecoration(
-              color: ArenaColors.carbon,
-              borderRadius: BorderRadius.circular(ArenaRadius.lg),
-              border: Border.all(color: ArenaColors.border),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(c.name, style: ArenaText.h2),
-                const SizedBox(height: 4),
-                Text(
-                  '${_gameEmoji(c.game)} ${c.game.label} · '
-                  '${_formatLabelStatic(c.format)}',
-                  style: ArenaText.bodyMuted,
-                ),
-                const SizedBox(height: 4),
-                Text('🗓 $dateLabel', style: ArenaText.bodyMuted),
-                const SizedBox(height: ArenaSpacing.md),
-                Center(
-                  child: Column(
-                    children: [
-                      if (isFree)
-                        Text(
-                          'GRATUIT',
-                          style: ArenaText.bigNumber.copyWith(
-                            color: accent,
-                            fontSize: 40,
-                            letterSpacing: 2,
-                          ),
-                        )
-                      else
-                        Text(
-                          _prizeFmt(
-                            c.prizePoolLocal,
-                            c.prizePoolCurrency ?? c.registrationCurrency,
-                          ),
-                          style: ArenaText.bigNumber.copyWith(
-                            color: accent,
-                            fontSize: 32,
-                          ),
-                        ),
-                      const SizedBox(height: 2),
-                      Text(
-                        isFree ? 'Inscription libre' : 'À gagner',
-                        style: ArenaText.bodyMuted,
-                      ),
-                    ],
+                if (c.referralQuota > 0) ...[
+                  const SizedBox(height: ArenaSpacing.md),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: ArenaSpacing.lg,
+                    ),
+                    child: ReferralProgressCard(
+                      competitionId: c.id,
+                      referralQuota: c.referralQuota,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: ArenaSpacing.lg),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: ArenaSpacing.lg,
+                  ),
+                  child: Text(
+                    '🔒 Bracket, matches en direct et chat 1-on-1 sont '
+                    'réservés aux joueurs inscrits.',
+                    style: ArenaText.small.copyWith(
+                      color: ArenaColors.silver,
+                    ),
                   ),
                 ),
+                const SizedBox(height: ArenaSpacing.xl),
               ],
             ),
           ),
-          // Lot D — gating parrainage : progression + code à partager
-          if (competition.referralQuota > 0) ...[
-            const SizedBox(height: ArenaSpacing.md),
-            ReferralProgressCard(
-              competitionId: competition.id,
-              referralQuota: competition.referralQuota,
+          // CTA collé en bas, comme la maquette `m-btn m-btn-primary
+          // margin-top: auto`.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              ArenaSpacing.lg,
+              ArenaSpacing.sm,
+              ArenaSpacing.lg,
+              ArenaSpacing.md,
             ),
-          ],
-          const SizedBox(height: ArenaSpacing.lg),
-          Container(
-            padding: const EdgeInsets.all(ArenaSpacing.md),
-            decoration: BoxDecoration(
-              color: ArenaColors.carbon,
-              borderRadius: BorderRadius.circular(ArenaRadius.md),
-              border: Border.all(color: ArenaColors.border),
-            ),
-            child: Text(
-              '↩ Reviens à la liste des compétitions et tape le bouton '
-              '"S\'INSCRIRE" sur la carte pour rejoindre cette compétition.',
-              style: ArenaText.small,
+            child: ArenaButton(
+              label: canRegister ? ctaLabel : 'INSCRIPTIONS FERMÉES',
+              variant: canRegister
+                  ? ArenaButtonVariant.primary
+                  : ArenaButtonVariant.secondary,
+              fullWidth: true,
+              onPressed: canRegister
+                  ? () => context.push(
+                        UserRoutes.registrationConfirmPath(c.id),
+                        extra: _confirmArgsFor(c),
+                      )
+                  : null,
             ),
           ),
         ],
@@ -201,31 +313,84 @@ class _GatedDetailView extends ConsumerWidget {
     );
   }
 
-  static String _prizeFmt(double pool, String currency) {
-    final formatted = NumberFormat.decimalPattern('fr')
-        .format(pool.round())
-        .replaceAll(',', ' ');
-    return '$formatted $currency';
+  static RegistrationConfirmArgs _confirmArgsFor(Competition c) {
+    final dateLabel =
+        DateFormat('d MMM yyyy · HH:mm', 'fr').format(c.startDate.toLocal());
+    return RegistrationConfirmArgs(
+      competitionName: c.name,
+      gameLabel: c.game.label,
+      gameEmoji: _gameEmoji(c.game),
+      dateLabel: dateLabel,
+      formatLabel: _formatLabel(c.format),
+      entryFeeXaf: c.registrationFee.round(),
+      totalPrizeXaf: c.prizePoolLocal.round(),
+      prizeDistribution: c.prizeDistribution,
+      androidStoreUrl: c.androidStoreUrl,
+      iosStoreUrl: c.iosStoreUrl,
+    );
   }
+
+  static String _money(double v) =>
+      NumberFormat.decimalPattern('fr').format(v).replaceAll(',', ' ');
 }
 
-/// Lot D — Carte de progression parrainage affichée sur la page détail
-/// quand `competition.referral_quota > 0`. Le widget partagé
-/// `ReferralProgressCard` couvre la progression + le code à partager
-/// (utilisé aussi par `registration_confirm_page`).
+/// Card "À gagner" / "Inscription libre" affichée dans la vue gated.
+/// Mode payant : ShaderMask gold sur le montant en bigNumber. Mode
+/// gratuit : "GRATUIT" en vert (statusOk).
+class _GatedPrizeCard extends StatelessWidget {
+  const _GatedPrizeCard({required this.competition, required this.accent});
 
-String _gameEmoji(GameType g) => switch (g) {
-      GameType.efootball => '⚽',
-      GameType.fifaMobile => '🏆',
-      GameType.eaSportsFc => '🎮',
-    };
+  final Competition competition;
+  final Color accent;
 
-String _formatLabelStatic(TournamentFormat f) => switch (f) {
-      TournamentFormat.singleElimination => 'Élimination directe',
-      TournamentFormat.groupsThenKnockout => 'Poules + élimination',
-      TournamentFormat.roundRobin => 'Round robin',
-    };
+  @override
+  Widget build(BuildContext context) {
+    final c = competition;
+    final isFree = c.isFree;
+    final prize = isFree
+        ? 'GRATUIT'
+        : '${_money(c.prizePoolLocal)} '
+            '${c.prizePoolCurrency ?? c.registrationCurrency}';
 
+    return Container(
+      padding: const EdgeInsets.all(ArenaSpacing.lg),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(ArenaRadius.lg),
+        border: Border.all(color: accent.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            isFree ? 'INSCRIPTION LIBRE' : 'À GAGNER',
+            style: ArenaText.monoSmall.copyWith(
+              color: accent,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 2,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            prize,
+            style: ArenaText.bigNumber.copyWith(
+              color: accent,
+              fontSize: isFree ? 36 : 32,
+              letterSpacing: 2,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  static String _money(double v) =>
+      NumberFormat.decimalPattern('fr').format(v).replaceAll(',', ' ');
+}
+
+/// Body principal — joueur inscrit. Banner premium + badges + TabBar 4
+/// onglets `INFOS / PARTICIP. / {BRACKET|POULES} / CLASSEMENT`.
 class _DetailBody extends StatelessWidget {
   const _DetailBody({required this.competition});
 
@@ -238,7 +403,9 @@ class _DetailBody extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _Header(competition: competition),
+          _PremiumBanner(competition: competition),
+          _BannerBadges(competition: competition),
+          const SizedBox(height: ArenaSpacing.sm),
           TabBar(
             labelStyle: ArenaText.button,
             unselectedLabelStyle: ArenaText.button,
@@ -285,115 +452,9 @@ class _DetailBody extends StatelessWidget {
   }
 }
 
-class _Header extends StatelessWidget {
-  const _Header({required this.competition});
-
-  final Competition competition;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(
-        ArenaSpacing.lg,
-        ArenaSpacing.xl - 2,
-        ArenaSpacing.lg,
-        ArenaSpacing.md,
-      ),
-      decoration: BoxDecoration(gradient: _gradientFor(competition.game)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: ArenaSpacing.sm,
-                  vertical: 3,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(ArenaRadius.round),
-                ),
-                child: Text(
-                  _statusLabel(competition.status),
-                  style: ArenaText.badge.copyWith(color: Colors.white),
-                ),
-              ),
-              const SizedBox(width: ArenaSpacing.xs),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: ArenaSpacing.sm,
-                  vertical: 3,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.25),
-                  borderRadius: BorderRadius.circular(ArenaRadius.round),
-                ),
-                child: Text(
-                  competition.game.label.toUpperCase(),
-                  style: ArenaText.badge.copyWith(color: Colors.white),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: ArenaSpacing.xs + 2),
-          Text(
-            competition.name.toUpperCase(),
-            style: ArenaText.h2.copyWith(
-              color: Colors.white,
-              fontSize: 22,
-              letterSpacing: 2,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            _subtitleFor(competition),
-            style: ArenaText.bodyMuted.copyWith(
-              color: Colors.white.withValues(alpha: 0.9),
-              fontSize: 11,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  static LinearGradient _gradientFor(GameType g) => switch (g) {
-        GameType.efootball => ArenaColors.bannerEfoot,
-        GameType.fifaMobile => ArenaColors.bannerFifa,
-        GameType.eaSportsFc => ArenaColors.bannerFc,
-      };
-
-  static String _statusLabel(CompetitionStatus s) => switch (s) {
-        CompetitionStatus.draft => 'BROUILLON',
-        CompetitionStatus.registrationOpen => 'OPEN',
-        CompetitionStatus.registrationClosed => 'COMPLET',
-        CompetitionStatus.ongoing => 'EN COURS',
-        CompetitionStatus.completed => 'TERMINÉ',
-        CompetitionStatus.cancelled => 'ANNULÉ',
-      };
-
-  static String _subtitleFor(Competition c) {
-    final dateLabel = _formatDateRange(c.startDate, c.endDate);
-    if (c.prizePoolLocal > 0) {
-      final pool = '${_money(c.prizePoolLocal)} '
-          '${c.prizePoolCurrency ?? c.registrationCurrency}';
-      return '$dateLabel · Récompense $pool · '
-          '${c.currentPlayers}/${c.maxPlayers}';
-    }
-    return '$dateLabel · ${c.currentPlayers}/${c.maxPlayers}';
-  }
-
-  static String _formatDateRange(DateTime start, DateTime? end) {
-    final s = DateFormat('d MMM y', 'fr').format(start.toLocal());
-    if (end == null) return s;
-    final e = DateFormat('d MMM y', 'fr').format(end.toLocal());
-    return '$s — $e';
-  }
-
-  static String _money(double v) => NumberFormat.decimalPattern('fr').format(v);
-}
-
+/// Onglet INFOS — rows clé/valeur premium avec emoji marker. Reproduit
+/// la maquette : 💰 Prize pool / 🎮 Format / 📅 Démarrage / 🏟 Capacité,
+/// chacun sur une ligne séparée par une fine border 6 %.
 class _InfosTab extends StatelessWidget {
   const _InfosTab({required this.competition});
 
@@ -401,85 +462,125 @@ class _InfosTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = competition;
+    final dateLabel =
+        DateFormat('EEEE d MMM y · HH:mm', 'fr').format(c.startDate.toLocal());
+    final prizeLabel = c.prizePoolLocal > 0
+        ? '${_money(c.prizePoolLocal)} '
+            '${c.prizePoolCurrency ?? c.registrationCurrency}'
+        : 'Aucune';
+    final feeLabel = c.registrationFee == 0
+        ? 'Gratuit'
+        : '${_money(c.registrationFee)} ${c.registrationCurrency}';
+    final hasDescription =
+        c.description != null && c.description!.trim().isNotEmpty;
+
     return ListView(
       padding: const EdgeInsets.all(ArenaSpacing.lg),
       children: [
-        if (competition.description != null &&
-            competition.description!.isNotEmpty) ...[
-          ArenaCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('DESCRIPTION', style: ArenaTypography.labelLarge),
-                const SizedBox(height: ArenaSpacing.sm),
-                Text(
-                  competition.description!,
-                  style: ArenaTypography.bodyMedium,
-                ),
-              ],
+        _InfoRow(
+          emoji: '💰',
+          label: 'Récompense',
+          value: prizeLabel,
+          valueColor: c.prizePoolLocal > 0 ? ArenaColors.tierGoldWarm : null,
+          mono: true,
+        ),
+        _InfoRow(
+          emoji: '💸',
+          label: "Frais d'inscription",
+          value: feeLabel,
+          valueColor: c.registrationFee == 0 ? ArenaColors.statusOk : null,
+          mono: c.registrationFee != 0,
+        ),
+        _InfoRow(
+          emoji: '🎮',
+          label: 'Format',
+          value: _formatLabel(c.format),
+        ),
+        _InfoRow(
+          emoji: '📅',
+          label: 'Démarrage',
+          value: dateLabel,
+        ),
+        _InfoRow(
+          emoji: '🏟',
+          label: 'Capacité',
+          value: '${c.currentPlayers}/${c.maxPlayers} joueurs',
+        ),
+        if (hasDescription) ...[
+          const SizedBox(height: ArenaSpacing.md),
+          Text(
+            '📝 DESCRIPTION',
+            style: ArenaText.monoSmall.copyWith(
+              color: ArenaColors.silver,
+              letterSpacing: 1.5,
+              fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: ArenaSpacing.md),
+          const SizedBox(height: ArenaSpacing.xs),
+          Text(c.description!.trim(), style: ArenaText.body),
         ],
-        ArenaCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('FORMAT', style: ArenaTypography.labelLarge),
-              const SizedBox(height: ArenaSpacing.sm),
-              _kv('Type', _formatLabel(competition.format)),
-              _kv('Capacité', '${competition.maxPlayers} joueurs'),
-              _kv(
-                "Frais d'inscription",
-                competition.registrationFee == 0
-                    ? 'Gratuit'
-                    : '${_money(competition.registrationFee)}'
-                        ' ${competition.registrationCurrency}',
-              ),
-              // Commission ARENA volontairement masquée côté joueur (Lot B).
-              if (competition.prizePoolLocal > 0)
-                _kv(
-                  'Récompense',
-                  '${_money(competition.prizePoolLocal)}'
-                      ' ${competition.prizePoolCurrency ?? competition.registrationCurrency}',
-                ),
-            ],
-          ),
-        ),
       ],
     );
   }
 
-  Widget _kv(String k, String v) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+  static String _money(double v) =>
+      NumberFormat.decimalPattern('fr').format(v).replaceAll(',', ' ');
+}
+
+/// Une ligne clé/valeur du tab INFOS — emoji marker + label silver +
+/// valeur bone (ou colorée si valueColor) bold. Border bottom 6 %
+/// translucide pour séparer visuellement les lignes sans trop charger.
+class _InfoRow extends StatelessWidget {
+  const _InfoRow({
+    required this.emoji,
+    required this.label,
+    required this.value,
+    this.valueColor,
+    this.mono = false,
+  });
+
+  final String emoji;
+  final String label;
+  final String value;
+  final Color? valueColor;
+  final bool mono;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: ArenaSpacing.sm),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: ArenaColors.bone.withValues(alpha: 0.06),
+          ),
+        ),
+      ),
       child: Row(
         children: [
+          Text(emoji, style: const TextStyle(fontSize: 16)),
+          const SizedBox(width: ArenaSpacing.sm),
           Expanded(
-            flex: 2,
             child: Text(
-              k,
-              style: ArenaTypography.bodyMedium.copyWith(
-                color: ArenaColors.textMuted,
-              ),
+              label,
+              style: ArenaText.small.copyWith(color: ArenaColors.silver),
             ),
           ),
-          Expanded(
-            flex: 3,
-            child: Text(v, style: ArenaTypography.bodyMedium),
+          const SizedBox(width: ArenaSpacing.sm),
+          Text(
+            value,
+            style: (mono ? ArenaText.mono : ArenaText.body).copyWith(
+              color: valueColor ?? ArenaColors.bone,
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+            ),
+            textAlign: TextAlign.end,
           ),
         ],
       ),
     );
   }
-
-  static String _formatLabel(TournamentFormat f) => switch (f) {
-        TournamentFormat.singleElimination => 'Élimination directe',
-        TournamentFormat.groupsThenKnockout => 'Poules + élimination',
-        TournamentFormat.roundRobin => 'Round robin',
-      };
-
-  static String _money(double v) => NumberFormat.decimalPattern('fr').format(v);
 }
 
 class _DeferredTab extends StatelessWidget {
@@ -654,6 +755,18 @@ ArenaAvatarColor _avatarColorForSeed(String seed) {
 
 String _formatMoney(num v) =>
     NumberFormat.decimalPattern('fr').format(v).replaceAll(',', ' ');
+
+String _gameEmoji(GameType g) => switch (g) {
+      GameType.efootball => '⚽',
+      GameType.fifaMobile => '🏆',
+      GameType.eaSportsFc => '🎮',
+    };
+
+String _formatLabel(TournamentFormat f) => switch (f) {
+      TournamentFormat.singleElimination => 'Élimination directe',
+      TournamentFormat.groupsThenKnockout => 'Poules + élimination',
+      TournamentFormat.roundRobin => 'Round robin',
+    };
 
 /// Label de l'onglet 2 du détail compétition. Élimination directe →
 /// "BRACKET" (arbre KO) ; sinon "POULES" (classement de groupes /
