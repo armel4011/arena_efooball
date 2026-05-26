@@ -1,3 +1,4 @@
+import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
@@ -5,6 +6,7 @@ import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_card.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 /// Vitrine du design system Arena (charte premium).
 ///
@@ -26,27 +28,39 @@ class DesignShowcasePage extends StatelessWidget {
       ),
       body: ListView(
         padding: const EdgeInsets.all(ArenaSpacing.md),
-        children: const [
-          _Section(title: 'COULEURS — Neutres', child: _NeutralSwatch()),
-          SizedBox(height: ArenaSpacing.lg),
-          _Section(title: 'COULEURS — Brand & Accents', child: _BrandSwatch()),
-          SizedBox(height: ArenaSpacing.lg),
-          _Section(title: 'COULEURS — États', child: _StatusSwatch()),
-          SizedBox(height: ArenaSpacing.lg),
-          _Section(title: 'COULEURS — Jeux', child: _GameSwatch()),
-          SizedBox(height: ArenaSpacing.lg),
-          _Section(title: 'TYPOGRAPHIE', child: _TypoSection()),
-          SizedBox(height: ArenaSpacing.lg),
-          _Section(title: 'BOUTONS', child: _ButtonsSection()),
-          SizedBox(height: ArenaSpacing.lg),
-          _Section(title: 'CARTES', child: _CardsSection()),
-          SizedBox(height: ArenaSpacing.lg),
-          _Section(title: 'AVATARS', child: _AvatarsSection()),
-          SizedBox(height: ArenaSpacing.lg),
-          _Section(title: 'BADGES', child: _BadgesSection()),
-          SizedBox(height: ArenaSpacing.lg),
-          _Section(title: 'CHAMPS DE SAISIE', child: _InputsSection()),
-          SizedBox(height: ArenaSpacing.xl),
+        children: [
+          // Lien vers les pages de démo additionnelles (bracket showcase
+          // ajouté 2026-05-26 pour tester l'arbre arborescent jusqu'à
+          // 1024 joueurs sur device).
+          ArenaButton(
+            label: '🏆 BRACKET SHOWCASE (16 → 1024 joueurs)',
+            fullWidth: true,
+            onPressed: () => context.push(UserRoutes.devBracketShowcase),
+          ),
+          const SizedBox(height: ArenaSpacing.lg),
+          const _Section(title: 'COULEURS — Neutres', child: _NeutralSwatch()),
+          const SizedBox(height: ArenaSpacing.lg),
+          const _Section(
+            title: 'COULEURS — Brand & Accents',
+            child: _BrandSwatch(),
+          ),
+          const SizedBox(height: ArenaSpacing.lg),
+          const _Section(title: 'COULEURS — États', child: _StatusSwatch()),
+          const SizedBox(height: ArenaSpacing.lg),
+          const _Section(title: 'COULEURS — Jeux', child: _GameSwatch()),
+          const SizedBox(height: ArenaSpacing.lg),
+          const _Section(title: 'TYPOGRAPHIE', child: _TypoSection()),
+          const SizedBox(height: ArenaSpacing.lg),
+          const _Section(title: 'BOUTONS', child: _ButtonsSection()),
+          const SizedBox(height: ArenaSpacing.lg),
+          const _Section(title: 'CARTES', child: _CardsSection()),
+          const SizedBox(height: ArenaSpacing.lg),
+          const _Section(title: 'AVATARS', child: _AvatarsSection()),
+          const SizedBox(height: ArenaSpacing.lg),
+          const _Section(title: 'BADGES', child: _BadgesSection()),
+          const SizedBox(height: ArenaSpacing.lg),
+          const _Section(title: 'CHAMPS DE SAISIE', child: _InputsSection()),
+          const SizedBox(height: ArenaSpacing.xl),
         ],
       ),
     );

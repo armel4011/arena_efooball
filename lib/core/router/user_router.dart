@@ -1,5 +1,6 @@
 import 'package:arena/core/router/router_refresh.dart';
 import 'package:arena/core/services/onboarding_service.dart';
+import 'package:arena/dev/bracket_showcase_page.dart';
 import 'package:arena/dev/design_showcase_page.dart';
 import 'package:arena/features/splash/splash_router.dart';
 import 'package:arena/features_shared/presentation/dev_preview_page.dart';
@@ -89,6 +90,7 @@ abstract final class UserRoutes {
   static const payoutKyc = '/payouts/kyc';
   static const devPreview = '/_dev/widgets';
   static const devShowcase = '/dev/showcase';
+  static const devBracketShowcase = '/dev/bracket-showcase';
   static const intro = '/intro';
 
   /// Builds the concrete `/competitions/<id>/register/confirm` URL.
@@ -161,6 +163,9 @@ final userRouterProvider = Provider<GoRouter>((ref) {
       // Design system showcase (restyle premium 2026-05-25) — debug only,
       // page non listée dans la navigation principale.
       if (loc == UserRoutes.devShowcase) return null;
+      // Bracket showcase (1024 joueurs synthétiques) — debug only, accès
+      // via lien depuis le design showcase.
+      if (loc == UserRoutes.devBracketShowcase) return null;
 
       // Reset password is reachable from a deep link even if no session
       // yet (Supabase hydrates a recovery session before we land here).
@@ -516,6 +521,11 @@ final userRouterProvider = Provider<GoRouter>((ref) {
         path: UserRoutes.devShowcase,
         name: 'user.dev.showcase',
         builder: (context, state) => const DesignShowcasePage(),
+      ),
+      GoRoute(
+        path: UserRoutes.devBracketShowcase,
+        name: 'user.dev.bracketShowcase',
+        builder: (context, state) => const BracketShowcasePage(),
       ),
     ],
   );

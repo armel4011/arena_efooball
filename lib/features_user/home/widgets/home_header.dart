@@ -4,6 +4,7 @@ import 'package:arena/data/models/profile.dart';
 import 'package:arena/data/repositories/notification_repository.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -38,7 +39,15 @@ class HomeHeader extends ConsumerWidget {
       ),
       child: Row(
         children: [
-          ArenaAvatar(initials: initial, color: color),
+          // Long-press sur l'avatar = raccourci debug vers le design
+          // showcase (qui contient l'accès au bracket showcase). Seul
+          // un appui long en kDebugMode déclenche la nav — l'avatar
+          // garde son comportement standard en release.
+          GestureDetector(
+            onLongPress:
+                kDebugMode ? () => context.push(UserRoutes.devShowcase) : null,
+            child: ArenaAvatar(initials: initial, color: color),
+          ),
           const SizedBox(width: ArenaSpacing.sm),
           Expanded(
             child: Column(
@@ -111,8 +120,9 @@ class HomeHeader extends ConsumerWidget {
     if (hex == null) return ArenaAvatarColor.blue;
     final cleaned = hex.replaceAll('#', '').trim().toUpperCase();
     return switch (cleaned) {
-      'FF6B6B' || 'E03131' || _ when cleaned.startsWith('FF') &&
-              cleaned.endsWith('5F5') =>
+      'FF6B6B' ||
+      'E03131' ||
+      _ when cleaned.startsWith('FF') && cleaned.endsWith('5F5') =>
         ArenaAvatarColor.red,
       _ => ArenaAvatarColor.blue,
     };
