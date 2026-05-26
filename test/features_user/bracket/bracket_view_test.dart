@@ -57,8 +57,7 @@ void main() {
     expect(find.text('Bracket pas encore généré'), findsOneWidget);
   });
 
-  testWidgets('groups matches by round with the right round labels',
-      (tester) async {
+  testWidgets('groups matches by round and renders final card', (tester) async {
     await bumpViewport(tester);
     await tester.pumpWidget(
       _scoped([
@@ -69,14 +68,16 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // 2 rounds total → round 1 (2 matches) = "DEMI-FINALES",
-    // round 2 (1 match) = "FINALE".
-    expect(find.text('DEMI-FINALES'), findsOneWidget);
+    // ArenaBracketTree : la card du dernier round porte le label
+    // "FINALE" (sans score, joueurs non encore résolus) + emoji trophée.
     expect(find.text('FINALE'), findsOneWidget);
-    expect(find.textContaining('MATCH #'), findsNWidgets(3));
+    expect(find.text('🏆'), findsOneWidget);
+    // Caption en haut de la BracketView : compte des joueurs distincts
+    // (0 ici puisque tous les player1Id/player2Id sont null).
+    expect(find.text('ÉLIMINATION DIRECTE · 0 JOUEURS'), findsOneWidget);
   });
 
-  testWidgets('highlights the winner and shows scores', (tester) async {
+  testWidgets('renders the final score in the finale card', (tester) async {
     await bumpViewport(tester);
     await tester.pumpWidget(
       _scoped([
@@ -95,13 +96,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('TERMINÉ'), findsOneWidget);
-    // Two stub player labels (first 6 chars of each UUID).
-    expect(find.textContaining('Joueur aaaaaa'), findsOneWidget);
-    expect(find.textContaining('Joueur bbbbbb'), findsOneWidget);
-    expect(find.text('3'), findsOneWidget);
-    expect(find.text('1'), findsOneWidget);
-    // Winner trophy.
-    expect(find.byIcon(Icons.emoji_events), findsOneWidget);
+    // Un seul match = finale directe : _FinaleContent rend 🏆 + score
+    // formaté "3 — 1" (em dash) plutôt que les labels joueurs.
+    expect(find.text('🏆'), findsOneWidget);
+    expect(find.text('3 — 1'), findsOneWidget);
+    // Caption : 2 joueurs distincts.
+    expect(find.text('ÉLIMINATION DIRECTE · 2 JOUEURS'), findsOneWidget);
   });
 }

@@ -308,9 +308,9 @@ void main() {
       await _pumpAuthed(tester);
 
       expect(find.text('PROFIL'), findsOneWidget);
-      // The username appears in the PlayerProfilePage header + avatar
-      // initial, so >1 match is expected.
-      expect(find.text('Drogba'), findsWidgets);
+      // PlayerProfilePage v2 affiche le username en Bebas 26px UPPERCASE
+      // (cf. player_profile_page.dart:191).
+      expect(find.text('DROGBA'), findsWidgets);
     });
   });
 }

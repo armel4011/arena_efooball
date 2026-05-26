@@ -84,9 +84,9 @@ void main() {
     await _pumpShallow(tester);
 
     expect(find.text('PROFIL'), findsOneWidget);
-    // Le username apparaît dans la PlayerProfilePage (et l'avatar
-    // arrondi le réutilise comme initiale).
-    expect(find.text('Maradona'), findsWidgets);
+    // PlayerProfilePage v2 affiche le username en Bebas 26px UPPERCASE
+    // (cf. player_profile_page.dart:191).
+    expect(find.text('MARADONA'), findsWidgets);
   });
 
   testWidgets('IndexedStack keeps prior tabs in the tree (offstage)',

@@ -38,7 +38,7 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
   }
 
-  testWidgets('renders all 4 main section headers', (tester) async {
+  testWidgets('renders all 4 main section captions', (tester) async {
     await bumpViewport(tester);
     await tester.pumpWidget(_scoped(_profile()));
     // `pumpAndSettle` boucle à l'infini parce que la card LIVE pulse
@@ -47,9 +47,11 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
 
-    expect(find.text('⚡ Prochains matchs'), findsOneWidget);
-    expect(find.text('🔴 Lives en cours'), findsOneWidget);
-    expect(find.text('🏆 Compétitions actives'), findsOneWidget);
+    // Captions v2 : mono small uppercase, lettrage 1.5, couleurs marker.
+    expect(find.text('⚡ PROCHAIN MATCH'), findsOneWidget);
+    expect(find.text('EN DIRECT'), findsOneWidget);
+    expect(find.text('★ TOURNOIS ACTIFS'), findsOneWidget);
+    expect(find.text('📊 TES STATS'), findsOneWidget);
   });
 
   testWidgets('header surfaces the username', (tester) async {
