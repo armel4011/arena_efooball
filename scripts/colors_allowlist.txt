@@ -63,3 +63,16 @@ lib/features_shared/widgets/arena_button.dart
 lib/features_shared/widgets/arena_banner.dart
 lib/features_shared/widgets/arena_badge.dart
 lib/features_shared/widgets/arena_avatar.dart
+
+# ─── Streaming / video viewers : scrim noir + gradients game-genre ────
+# Les pages de visionnage Agora (admin moderation, user watch, fullscreen)
+# utilisent ArenaColors.blackPure pour le scaffold + scrims semi-trans
+# pour lisibilité des overlays UI par-dessus le flux vidéo. Les gradients
+# Color(0xFF...) des cards de live encodent le genre du jeu (eFootball
+# vert, FIFA orange, FC Mobile violet, signal blue) — palette dédiée
+# hors design tokens, brand-genre côté UX.
+lib/features_admin/streams_admin/admin_stream_moderation_page.dart
+lib/features_admin/streams_admin/admin_watch_stream_page.dart
+lib/features_user/home/widgets/live_streams_section.dart
+lib/features_user/streaming/live_streams_page.dart
+lib/features_user/streaming/watch_stream_page.dart
