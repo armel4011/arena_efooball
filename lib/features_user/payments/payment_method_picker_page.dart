@@ -36,7 +36,7 @@ class _PaymentMethodPickerPageState extends State<PaymentMethodPickerPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const ArenaAppBar(title: 'Moyen de paiement'),
+      appBar: const ArenaAppBar(title: 'PAIEMENT'),
       body: ArenaScreenBackground(
         child: SafeArea(
           child: ListView(
@@ -47,7 +47,14 @@ class _PaymentMethodPickerPageState extends State<PaymentMethodPickerPage> {
                 contextLabel: widget.contextLabel,
               ).animate().fadeIn(duration: ArenaDurations.medium),
               const SizedBox(height: ArenaSpacing.lg),
-              Text('📱 MOBILE MONEY', style: ArenaText.inputLabel),
+              Text(
+                '📱 MOBILE MONEY',
+                style: ArenaText.monoSmall.copyWith(
+                  color: ArenaColors.silver,
+                  letterSpacing: 1.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               const SizedBox(height: ArenaSpacing.sm),
               for (final m in PaymentMethod.values)
                 Padding(
@@ -94,6 +101,9 @@ class _PaymentMethodPickerPageState extends State<PaymentMethodPickerPage> {
   }
 }
 
+/// Card centrée façon maquette P1 : caption mono "MONTANT À PAYER" +
+/// chiffre big signalBlue 32px + sous-titre `XAF · {contextLabel}`.
+/// Glow signalBlue pour mettre l'amount en valeur.
 class _AmountCard extends StatelessWidget {
   const _AmountCard({required this.amountXaf, required this.contextLabel});
 
@@ -106,19 +116,32 @@ class _AmountCard extends StatelessWidget {
       padding: const EdgeInsets.all(ArenaSpacing.lg),
       decoration: arenaGlowCardDecoration(),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text("Frais d'inscription", style: ArenaText.bodyMuted),
-          const SizedBox(height: ArenaSpacing.xs),
           Text(
-            '${_formatXaf(amountXaf)} XAF',
-            style: ArenaText.bigNumber.copyWith(
+            'MONTANT À PAYER',
+            style: ArenaText.monoSmall.copyWith(
+              color: ArenaColors.silver,
+              letterSpacing: 1.5,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            _formatXaf(amountXaf),
+            style: ArenaText.mono.copyWith(
               color: ArenaColors.signalBlue,
-              fontSize: 30,
+              fontSize: 34,
+              fontWeight: FontWeight.w800,
+              height: 1,
             ),
           ),
           const SizedBox(height: 2),
-          Text(contextLabel, style: ArenaText.bodyMuted),
+          Text(
+            'XAF · $contextLabel',
+            style: ArenaText.small.copyWith(color: ArenaColors.silver),
+            textAlign: TextAlign.center,
+          ),
         ],
       ),
     );

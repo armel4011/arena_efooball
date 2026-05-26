@@ -79,7 +79,7 @@ class _MobileMoneyDetailsPageState
     final method = widget.method;
     final hasCode = widget.merchantCode.trim().isNotEmpty;
     return Scaffold(
-      appBar: ArenaAppBar(title: method.label),
+      appBar: ArenaAppBar(title: method.label.toUpperCase()),
       body: ArenaScreenBackground(
         child: SafeArea(
           child: ListView(
@@ -100,7 +100,14 @@ class _MobileMoneyDetailsPageState
                   onDial: () => _dialPayment(context),
                 ),
               const SizedBox(height: ArenaSpacing.lg),
-              Text('Pays', style: ArenaText.inputLabel),
+              Text(
+                'PAYS',
+                style: ArenaText.monoSmall.copyWith(
+                  color: ArenaColors.silver,
+                  letterSpacing: 1.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               const SizedBox(height: ArenaSpacing.xs),
               ArenaTextField(
                 controller: _countryCtrl,
@@ -108,8 +115,12 @@ class _MobileMoneyDetailsPageState
               ),
               const SizedBox(height: ArenaSpacing.md),
               Text(
-                'Ton numéro ${method.label}',
-                style: ArenaText.inputLabel,
+                'NUMÉRO ${method.label.toUpperCase()}',
+                style: ArenaText.monoSmall.copyWith(
+                  color: ArenaColors.silver,
+                  letterSpacing: 1.5,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const SizedBox(height: ArenaSpacing.xs),
               Text(

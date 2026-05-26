@@ -26,7 +26,7 @@ class PaymentHistoryPage extends ConsumerWidget {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        appBar: const ArenaAppBar(title: 'Historique'),
+        appBar: const ArenaAppBar(title: 'HISTORIQUE'),
         body: ArenaScreenBackground(
           child: SafeArea(
             child: Column(
@@ -117,17 +117,91 @@ class _PaymentList extends StatelessWidget {
         ),
       );
     }
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(
-        horizontal: ArenaSpacing.lg,
-        vertical: ArenaSpacing.sm,
+    // Net balance = somme des paiements succeeded (en négatif côté
+    // joueur). Affiché en footer card glow gold (maquette P6).
+    final netSucceeded = items
+        .where((p) => p.status == 'succeeded')
+        .fold<double>(0, (acc, p) => acc - p.amountLocal);
+    final netLabel = NumberFormat('#,##0', 'fr_FR')
+        .format(netSucceeded)
+        .replaceAll(',', ' ');
+
+    return Column(
+      children: [
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(
+              horizontal: ArenaSpacing.lg,
+              vertical: ArenaSpacing.sm,
+            ),
+            itemCount: items.length,
+            itemBuilder: (context, i) => Padding(
+              padding: const EdgeInsets.only(bottom: ArenaSpacing.sm),
+              child: _TxCard(payment: items[i])
+                  .animate(delay: (i * 60).ms)
+                  .fadeIn(duration: ArenaDurations.medium),
+            ),
+          ),
+        ),
+        _NetBalanceFooter(label: netLabel),
+      ],
+    );
+  }
+}
+
+/// Footer card glow gold "SOLDE NET — {sign}{amount} XAF". Reproduit
+/// `.m-card-glow` de la maquette P6 avec montant en mono 22 px gold.
+class _NetBalanceFooter extends StatelessWidget {
+  const _NetBalanceFooter({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        ArenaSpacing.lg,
+        ArenaSpacing.sm,
+        ArenaSpacing.lg,
+        ArenaSpacing.lg,
       ),
-      itemCount: items.length,
-      itemBuilder: (context, i) => Padding(
-        padding: const EdgeInsets.only(bottom: ArenaSpacing.sm),
-        child: _TxCard(payment: items[i])
-            .animate(delay: (i * 60).ms)
-            .fadeIn(duration: ArenaDurations.medium),
+      child: Container(
+        padding: const EdgeInsets.all(ArenaSpacing.md),
+        decoration: BoxDecoration(
+          color: ArenaColors.tierGoldWarm.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(ArenaRadius.lg),
+          border: Border.all(
+            color: ArenaColors.tierGoldWarm.withValues(alpha: 0.4),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: ArenaColors.tierGoldWarm.withValues(alpha: 0.18),
+              blurRadius: 18,
+              spreadRadius: -4,
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Text(
+              'SOLDE NET',
+              style: ArenaText.monoSmall.copyWith(
+                color: ArenaColors.bone,
+                letterSpacing: 1.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const Spacer(),
+            Text(
+              '$label XAF',
+              style: ArenaText.mono.copyWith(
+                color: ArenaColors.tierGoldWarm,
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -151,15 +225,17 @@ class _TxCard extends StatelessWidget {
     final amount = NumberFormat('#,##0', 'fr_FR')
         .format(payment.amountLocal)
         .replaceAll(',', ' ');
+    // Card teintée selon le statut (maquette P6 : m-card-danger pour les
+    // sorties, m-card-success pour les gains). On garde un border vif si
+    // resumable pour signaler que la card est tappable.
+    final cardAccent = _isResumable ? ArenaColors.signalBlue : spec.iconColor;
     final card = Container(
       padding: const EdgeInsets.all(ArenaSpacing.md),
       decoration: BoxDecoration(
-        color: ArenaColors.carbon,
+        color: spec.iconColor.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(ArenaRadius.lg),
         border: Border.all(
-          color: _isResumable
-              ? ArenaColors.signalBlue.withValues(alpha: 0.4)
-              : ArenaColors.border,
+          color: cardAccent.withValues(alpha: _isResumable ? 0.45 : 0.3),
         ),
       ),
       child: Row(

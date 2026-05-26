@@ -60,9 +60,7 @@ class PaymentSuccessPage extends StatelessWidget {
             padding: const EdgeInsets.all(ArenaSpacing.lg),
             children: [
               const SizedBox(height: ArenaSpacing.xxl),
-              const _SuccessHero()
-                  .animate()
-                  .scale(
+              const _SuccessHero().animate().scale(
                     begin: const Offset(0.6, 0.6),
                     end: const Offset(1, 1),
                     duration: ArenaDurations.long,
@@ -112,8 +110,7 @@ class PaymentSuccessPage extends StatelessWidget {
                 label: "Retour à l'accueil",
                 variant: ArenaButtonVariant.ghost,
                 fullWidth: true,
-                onPressed: onBackHome ??
-                    () => context.go(UserRoutes.home),
+                onPressed: onBackHome ?? () => context.go(UserRoutes.home),
               ),
             ],
           ),
@@ -184,8 +181,7 @@ class _Receipt extends StatelessWidget {
           _Row(
             label: 'N° transaction',
             value: transactionId,
-            valueStyle:
-                ArenaText.mono.copyWith(color: ArenaColors.signalBlue),
+            valueStyle: ArenaText.mono.copyWith(color: ArenaColors.signalBlue),
           ),
           const ArenaDivider(),
           _Row(label: 'Date', value: dateLabel),

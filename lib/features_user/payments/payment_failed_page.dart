@@ -142,8 +142,7 @@ class PaymentFailedPage extends StatelessWidget {
                 label: '↻ RECOMMENCER',
                 fullWidth: true,
                 size: ArenaButtonSize.large,
-                onPressed: onRetry ??
-                    () => context.go(UserRoutes.home),
+                onPressed: onRetry ?? () => context.go(UserRoutes.home),
               ),
               const SizedBox(height: ArenaSpacing.lg),
               Center(

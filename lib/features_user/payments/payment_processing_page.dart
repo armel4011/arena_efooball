@@ -93,7 +93,7 @@ class _PaymentProcessingPageState extends ConsumerState<PaymentProcessingPage> {
     return Scaffold(
       backgroundColor: ArenaColors.void_,
       appBar: ArenaAppBar(
-        title: 'Statut paiement',
+        title: 'STATUT PAIEMENT',
         onBack: () => _leaveScreen(context),
       ),
       body: ArenaScreenBackground(

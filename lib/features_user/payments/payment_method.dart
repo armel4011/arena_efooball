@@ -68,8 +68,7 @@ class PaymentMethodLogo extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         color: method.brandColor,
-        borderRadius:
-            BorderRadius.circular(size / 4.5),
+        borderRadius: BorderRadius.circular(size / 4.5),
       ),
       alignment: Alignment.center,
       child: Text(

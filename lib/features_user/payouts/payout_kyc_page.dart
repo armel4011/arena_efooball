@@ -41,7 +41,7 @@ class _PayoutKycPageState extends State<PayoutKycPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const ArenaAppBar(title: 'Vérification KYC'),
+      appBar: const ArenaAppBar(title: 'VÉRIFIER'),
       body: ArenaScreenBackground(
         child: SafeArea(
           child: ListView(
@@ -54,11 +54,22 @@ class _PayoutKycPageState extends State<PayoutKycPage> {
               ArenaStepper(totalSteps: _stepCount, currentStep: _step),
               const SizedBox(height: ArenaSpacing.sm),
               Text(
-                'Étape ${_step + 1} / $_stepCount — ${_stepTitles[_step]}',
-                style: ArenaText.bodyMuted,
+                'ÉTAPE ${(_step + 1).toString().padLeft(2, '0')}/$_stepCount · ${_stepTitles[_step].toUpperCase()}',
+                style: ArenaText.monoSmall.copyWith(
+                  color: ArenaColors.statusWarn,
+                  letterSpacing: 1.5,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const SizedBox(height: ArenaSpacing.lg),
-              Text('DOCUMENTS ACCEPTÉS', style: ArenaText.inputLabel),
+              Text(
+                'DOCUMENTS ACCEPTÉS',
+                style: ArenaText.monoSmall.copyWith(
+                  color: ArenaColors.silver,
+                  letterSpacing: 1.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               const SizedBox(height: ArenaSpacing.sm),
               const _AcceptedDocs()
                   .animate(delay: 100.ms)
