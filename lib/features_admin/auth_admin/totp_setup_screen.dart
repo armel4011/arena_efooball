@@ -151,36 +151,40 @@ class _SetupView extends StatelessWidget {
         Center(
           child: Text(
             'SCANNE LE QR CODE',
-            style: ArenaTypography.displayMedium.copyWith(fontSize: 22),
+            style: ArenaText.h1,
           ),
         ),
         const SizedBox(height: ArenaSpacing.sm),
         Center(
           child: Text(
-            'Avec Google Authenticator, Authy ou 1Password.',
-            style: ArenaTypography.bodyMedium.copyWith(
-              color: ArenaColors.textMuted,
+            'AVEC GOOGLE AUTHENTICATOR · AUTHY · 1PASSWORD',
+            style: ArenaText.monoSmall.copyWith(
+              color: ArenaColors.neonRed,
             ),
             textAlign: TextAlign.center,
           ),
         ),
         const SizedBox(height: ArenaSpacing.lg),
         Text(
-          '1. Installe ton app TOTP',
-          style: ArenaTypography.headlineMedium,
+          '01 · INSTALLE TON APP TOTP',
+          style: ArenaText.monoSmall.copyWith(
+            color: ArenaColors.neonRed,
+          ),
         ),
         const SizedBox(height: ArenaSpacing.sm),
         Text(
           'Disponible sur Google Play et App Store. Tu peux aussi'
           ' utiliser Authy ou Microsoft Authenticator.',
-          style: ArenaTypography.bodyMedium.copyWith(
-            color: ArenaColors.textMuted,
+          style: ArenaText.body.copyWith(
+            color: ArenaColors.silver,
           ),
         ),
         const SizedBox(height: ArenaSpacing.xl),
         Text(
-          '2. Scanne ce QR code',
-          style: ArenaTypography.headlineMedium,
+          '02 · SCANNE CE QR CODE',
+          style: ArenaText.monoSmall.copyWith(
+            color: ArenaColors.neonRed,
+          ),
         ),
         const SizedBox(height: ArenaSpacing.md),
         Center(
@@ -203,22 +207,26 @@ class _SetupView extends StatelessWidget {
             children: [
               Text(
                 'Ou entre ce code manuellement :',
-                style: ArenaTypography.bodySmall.copyWith(
-                  color: ArenaColors.textMuted,
-                ),
+                style: ArenaText.small,
               ),
               const SizedBox(height: ArenaSpacing.sm),
               SelectableText(
                 challenge!.secret,
-                style: ArenaTypography.codeMedium,
+                style: ArenaText.mono.copyWith(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 3,
+                ),
               ),
             ],
           ),
         ),
         const SizedBox(height: ArenaSpacing.xl),
         Text(
-          '3. Entre le code à 6 chiffres',
-          style: ArenaTypography.headlineMedium,
+          '03 · ENTRE LE CODE À 6 CHIFFRES',
+          style: ArenaText.monoSmall.copyWith(
+            color: ArenaColors.neonRed,
+          ),
         ),
         const SizedBox(height: ArenaSpacing.md),
         ArenaTextField(
@@ -274,7 +282,7 @@ class _BackupCodesView extends StatelessWidget {
         Center(
           child: Text(
             'CODES DE RÉCUPÉRATION',
-            style: ArenaTypography.displayMedium.copyWith(fontSize: 22),
+            style: ArenaText.h1,
           ),
         ),
         const SizedBox(height: ArenaSpacing.lg),
@@ -427,7 +435,7 @@ class _ErrorBanner extends StatelessWidget {
           Expanded(
             child: Text(
               message,
-              style: ArenaTypography.bodySmall.copyWith(
+              style: ArenaText.body.copyWith(
                 color: ArenaColors.danger,
               ),
             ),

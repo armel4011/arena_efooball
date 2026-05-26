@@ -84,15 +84,15 @@ class _LoginAdminScreenState extends ConsumerState<LoginAdminScreen> {
                   Center(
                     child: Text(
                       'CONSOLE ADMIN',
-                      style: ArenaTypography.displayMedium,
+                      style: ArenaText.h1,
                     ),
                   ),
                   const SizedBox(height: ArenaSpacing.sm),
                   Center(
                     child: Text(
-                      'Accès restreint · Authentification 2FA',
-                      style: ArenaTypography.bodyMedium.copyWith(
-                        color: ArenaColors.textMuted,
+                      'ACCÈS RESTREINT · AUTHENTIFICATION 2FA',
+                      style: ArenaText.monoSmall.copyWith(
+                        color: ArenaColors.neonRed,
                       ),
                     ),
                   ),
@@ -257,7 +257,7 @@ class _ErrorBanner extends StatelessWidget {
           Expanded(
             child: Text(
               message,
-              style: ArenaTypography.bodySmall.copyWith(
+              style: ArenaText.body.copyWith(
                 color: ArenaColors.danger,
               ),
             ),

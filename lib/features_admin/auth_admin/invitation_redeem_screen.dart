@@ -145,15 +145,15 @@ class _InvitationRedeemScreenState
                   Center(
                     child: Text(
                       'DEVENIR ADMIN',
-                      style: ArenaTypography.displayMedium,
+                      style: ArenaText.h1,
                     ),
                   ),
                   const SizedBox(height: ArenaSpacing.sm),
                   Center(
                     child: Text(
-                      "Saisis le code d'invitation reçu par email.",
-                      style: ArenaTypography.bodyMedium.copyWith(
-                        color: ArenaColors.textMuted,
+                      "SAISIS LE CODE D'INVITATION REÇU PAR EMAIL",
+                      style: ArenaText.monoSmall.copyWith(
+                        color: ArenaColors.neonRed,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -385,7 +385,7 @@ class _ErrorBanner extends StatelessWidget {
           Expanded(
             child: Text(
               message,
-              style: ArenaTypography.bodySmall.copyWith(
+              style: ArenaText.body.copyWith(
                 color: ArenaColors.danger,
               ),
             ),

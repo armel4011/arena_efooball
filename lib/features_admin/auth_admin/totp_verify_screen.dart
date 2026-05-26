@@ -128,15 +128,15 @@ class _TotpVerifyScreenState extends ConsumerState<TotpVerifyScreen> {
                 Center(
                   child: Text(
                     'CODE À 6 CHIFFRES',
-                    style: ArenaTypography.displayMedium,
+                    style: ArenaText.h1,
                   ),
                 ),
                 const SizedBox(height: ArenaSpacing.sm),
                 Center(
                   child: Text(
-                    "Ouvre ton app d'authentification.",
-                    style: ArenaTypography.bodyMedium.copyWith(
-                      color: ArenaColors.textMuted,
+                    "OUVRE TON APP D'AUTHENTIFICATION",
+                    style: ArenaText.monoSmall.copyWith(
+                      color: ArenaColors.neonRed,
                     ),
                   ),
                 ),
@@ -385,7 +385,7 @@ class _ErrorBanner extends StatelessWidget {
           Expanded(
             child: Text(
               message,
-              style: ArenaTypography.bodySmall.copyWith(
+              style: ArenaText.body.copyWith(
                 color: ArenaColors.danger,
               ),
             ),
