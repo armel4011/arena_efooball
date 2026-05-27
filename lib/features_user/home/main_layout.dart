@@ -5,6 +5,7 @@ import 'package:arena/features_user/competitions/competitions_list_page.dart';
 import 'package:arena/features_user/home/home_page.dart';
 import 'package:arena/features_user/profile/player_profile_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Root scaffold of the User app once authenticated.
@@ -22,6 +23,7 @@ class MainLayout extends ConsumerStatefulWidget {
 
 class _MainLayoutState extends ConsumerState<MainLayout> {
   int _currentIndex = 0;
+  DateTime? _lastBackPressedAt;
 
   static const _pages = <Widget>[
     HomePage(),
@@ -32,19 +34,50 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: ArenaAppBar(
-        title: _titleForIndex(_currentIndex),
-        actions: [
-          if (_currentIndex == 2) const InboxComposeAction(),
-        ],
-      ),
-      body: IndexedStack(index: _currentIndex, children: _pages),
-      bottomNavigationBar: _GlowingNavBar(
-        currentIndex: _currentIndex,
-        onChanged: (i) => setState(() => _currentIndex = i),
+    return PopScope(
+      // On gere le back system manuellement :
+      //  - sur un tab non-home  -> revient sur Home
+      //  - sur Home             -> double-tap dans <2s pour quitter
+      canPop: false,
+      onPopInvokedWithResult: _handleSystemBack,
+      child: Scaffold(
+        appBar: ArenaAppBar(
+          title: _titleForIndex(_currentIndex),
+          actions: [
+            if (_currentIndex == 2) const InboxComposeAction(),
+          ],
+        ),
+        body: IndexedStack(index: _currentIndex, children: _pages),
+        bottomNavigationBar: _GlowingNavBar(
+          currentIndex: _currentIndex,
+          onChanged: (i) => setState(() => _currentIndex = i),
+        ),
       ),
     );
+  }
+
+  void _handleSystemBack(bool didPop, Object? _) {
+    if (didPop) return;
+    if (_currentIndex != 0) {
+      setState(() => _currentIndex = 0);
+      return;
+    }
+    final now = DateTime.now();
+    final last = _lastBackPressedAt;
+    if (last == null || now.difference(last).inSeconds >= 2) {
+      _lastBackPressedAt = now;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('Appuie encore pour quitter ARENA'),
+            duration: Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      return;
+    }
+    SystemNavigator.pop();
   }
 
   String _titleForIndex(int i) => switch (i) {

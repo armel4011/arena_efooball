@@ -74,9 +74,48 @@ class _OnboardingPageState extends State<OnboardingPage> {
     }
   }
 
+  Future<void> _handleBack(bool didPop, Object? _) async {
+    if (didPop) return;
+    // Slide > 0 : on revient simplement au slide precedent au lieu de
+    // quitter l'onboarding completement.
+    if (_currentPage > 0) {
+      await _controller.previousPage(
+        duration: ArenaDurations.medium,
+        curve: Curves.easeOutCubic,
+      );
+      return;
+    }
+    if (!mounted) return;
+    final skip = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: ArenaColors.carbon,
+        title: const Text("Quitter l'introduction ?"),
+        content: const Text(
+          "Tu peux la revoir plus tard depuis Profil > Revoir l'introduction.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Continuer'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: ArenaColors.silver),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Ignorer'),
+          ),
+        ],
+      ),
+    );
+    if (skip ?? false) widget.onFinish();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: _handleBack,
+      child: Scaffold(
       // Solid void scaffold so the radial blue wash below has somewhere to
       // sit. The wash mirrors the same trick used on the splash screen:
       // a soft signal-blue glow centred slightly above the middle of the
@@ -142,6 +181,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
             ],
           ),
         ),
+      ),
       ),
     );
   }
