@@ -93,6 +93,16 @@
             android:name="flutterEmbedding"
             android:value="2" />
 
+        <!-- FCM : channel par defaut pour les notifs recues quand l'app
+             est en background/killed (rendues directement par le SDK
+             Firebase Android natif, sans passer par _handleForeground).
+             Doit matcher l'ID cree par NotificationService._androidChannel.
+             Sans cette meta, Android tombe sur un channel par defaut
+             silencieux et les notifs n'apparaissent pas. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="arena_default" />
+
         <!-- PHASE 8.4 — flutter_overlay_window foreground service.
              Hosts the floating "ARENA recording" button rendered on
              top of eFootball. The "specialUse" subtype is the only
