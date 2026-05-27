@@ -476,22 +476,6 @@ class _HelpSection extends ConsumerWidget {
       child: Column(
         children: [
           ListTile(
-            leading: const Icon(
-              Icons.support_agent,
-              color: ArenaColors.signalBlue,
-            ),
-            title: const Text("Messages de l'équipe ARENA"),
-            subtitle: Text(
-              'Réponses du support, annonces officielles',
-              style: ArenaTypography.bodySmall.copyWith(
-                color: ArenaColors.textMuted,
-              ),
-            ),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push(UserRoutes.adminMessages),
-          ),
-          const _Divider(),
-          ListTile(
             leading: const Icon(Icons.replay, color: ArenaColors.textMuted),
             title: const Text("Revoir l'introduction"),
             trailing: const Icon(Icons.chevron_right),

@@ -5,6 +5,7 @@ import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/match_status.dart';
 import 'package:arena/data/models/profile.dart';
+import 'package:arena/data/repositories/admin_chat_repository.dart';
 import 'package:arena/data/repositories/chat_repository.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
 import 'package:arena/data/repositories/match_repository.dart';
@@ -177,15 +178,9 @@ class _DirectTab extends ConsumerWidget {
               ];
               final friendChannels =
                   friendChannelsAsync.valueOrNull ?? const [];
-              if (conversations.isEmpty && friendChannels.isEmpty) {
-                return const EmptyState(
-                  icon: Icons.chat_bubble_outline,
-                  title: 'Aucune conversation',
-                  description:
-                      'Tes chats apparaîtront ici — ouvre une discussion '
-                      "depuis la salle de match ou depuis l'onglet Amis.",
-                );
-              }
+              // La row ARENA reste TOUJOURS visible en tete : on ne fait
+              // plus d'early return quand conversations & friends sont
+              // vides ; un EmptyState compact prend la place en dessous.
               final opponentIds = <String>{
                 for (final m in conversations)
                   if (m.player1Id == me && m.player2Id != null)
@@ -204,9 +199,12 @@ class _DirectTab extends ConsumerWidget {
                 data: (m) => m,
                 orElse: () => const <String, Profile>{},
               );
-              // Construit la liste plate : friends d'abord (s'il y en a),
-              // puis matches.
+              // Construit la liste plate :
+              //  1. row ARENA (toujours en tete, conversation officielle)
+              //  2. friends si presents
+              //  3. matches si presents
               final items = <_InboxItem>[
+                const _InboxItem.arenaTeam(),
                 if (friendChannels.isNotEmpty)
                   const _InboxItem.sectionHeader('AMIS'),
                 for (final fc in friendChannels)
@@ -227,6 +225,8 @@ class _DirectTab extends ConsumerWidget {
                     unread:
                         unreadCounts[matchChannelMap[conversations[i].id]] ?? 0,
                   ),
+                if (conversations.isEmpty && friendChannels.isEmpty)
+                  const _InboxItem.emptyHint(),
               ];
               return ListView.separated(
                 padding: const EdgeInsets.fromLTRB(
@@ -240,6 +240,25 @@ class _DirectTab extends ConsumerWidget {
                     const SizedBox(height: ArenaSpacing.sm),
                 itemBuilder: (ctx, i) {
                   final it = items[i];
+                  if (it.kind == _InboxItemKind.arenaTeam) {
+                    return const _ArenaTeamRow();
+                  }
+                  if (it.kind == _InboxItemKind.emptyHint) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: ArenaSpacing.xl,
+                      ),
+                      child: Text(
+                        "Aucune conversation pour l'instant.\n"
+                        'Ouvre une discussion depuis la salle de match\n'
+                        "ou depuis l'onglet Amis.",
+                        style: ArenaText.small.copyWith(
+                          color: ArenaColors.silver,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    );
+                  }
                   if (it.kind == _InboxItemKind.header) {
                     return Padding(
                       padding: EdgeInsets.only(
@@ -747,7 +766,7 @@ ArenaAvatarColor inboxAvatarFor(String seed) {
 
 // ─── Inbox unified item (AMIS + MATCHS) ──────────────────────────────────────
 
-enum _InboxItemKind { header, friend, match }
+enum _InboxItemKind { arenaTeam, header, friend, match, emptyHint }
 
 class _InboxItem {
   const _InboxItem._({
@@ -759,6 +778,10 @@ class _InboxItem {
     this.highlighted = false,
     this.unread = 0,
   });
+
+  const _InboxItem.arenaTeam() : this._(kind: _InboxItemKind.arenaTeam);
+
+  const _InboxItem.emptyHint() : this._(kind: _InboxItemKind.emptyHint);
 
   const _InboxItem.sectionHeader(String label)
       : this._(kind: _InboxItemKind.header, headerLabel: label);
@@ -870,6 +893,139 @@ class _FriendThreadRow extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Conversation "Équipe ARENA" : pinned en tête de l'inbox DIRECT.
+/// Stream realtime via `adminChatRepository.watchInbox` — preview du
+/// dernier message + badge unread. Tap -> /admin-messages.
+class _ArenaTeamRow extends ConsumerWidget {
+  const _ArenaTeamRow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final me = ref.watch(currentSessionProvider)?.user.id;
+    final repo = ref.read(adminChatRepositoryProvider);
+    return StreamBuilder<List<AdminChatMessage>>(
+      stream: me == null ? const Stream.empty() : repo.watchInbox(me),
+      builder: (context, snap) {
+        final msgs = snap.data ?? const <AdminChatMessage>[];
+        final last = msgs.isNotEmpty ? msgs.first : null;
+        final unread = msgs.where((m) => m.isUnread).length;
+        final preview = _previewOf(last);
+        final timeLabel = last == null ? '' : _relativeTime(last.sentAt);
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => context.push(UserRoutes.adminMessages),
+            borderRadius: BorderRadius.circular(14),
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: ArenaColors.neonRed.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: ArenaColors.neonRed),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: ArenaColors.neonRed.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: ArenaColors.neonRed),
+                    ),
+                    child: const Icon(
+                      Icons.shield_outlined,
+                      color: ArenaColors.neonRed,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: ArenaSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              'Équipe ARENA',
+                              style: ArenaText.small.copyWith(
+                                color: ArenaColors.bone,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: ArenaColors.neonRed,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                'OFFICIEL',
+                                style: ArenaText.small.copyWith(
+                                  color: ArenaColors.bone,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 9,
+                                  letterSpacing: 0.6,
+                                ),
+                              ),
+                            ),
+                            const Spacer(),
+                            if (timeLabel.isNotEmpty)
+                              Text(
+                                timeLabel,
+                                style: ArenaText.small.copyWith(
+                                  color: ArenaColors.silver,
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          preview,
+                          style: ArenaText.small.copyWith(
+                            color: ArenaColors.silver,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (unread > 0) ...[
+                    const SizedBox(width: 6),
+                    _UnreadBadge(count: unread),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  static String _previewOf(AdminChatMessage? m) {
+    if (m == null) return 'Support, annonces et infos officielles';
+    if (m.caption != null && m.caption!.isNotEmpty) return m.caption!;
+    if (m.text != null && m.text!.isNotEmpty) return m.text!;
+    if (m.hasImage) return '📷 Image';
+    return '';
+  }
+
+  static String _relativeTime(DateTime t) {
+    final diff = DateTime.now().difference(t);
+    if (diff.inMinutes < 1) return "à l'instant";
+    if (diff.inMinutes < 60) return '${diff.inMinutes}min';
+    if (diff.inHours < 24) return '${diff.inHours}h';
+    if (diff.inDays < 7) return '${diff.inDays}j';
+    return '${(diff.inDays / 7).floor()}sem';
   }
 }
 
