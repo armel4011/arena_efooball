@@ -26,8 +26,12 @@
 // les notifs suivantes partent.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
-import { sendFcmNotification } from '../_shared/fcm.ts';
-import { readApnsConfig, sendApnsVoipPush } from '../_shared/apns.ts';
+import { FcmTokenInvalidError, sendFcmNotification } from '../_shared/fcm.ts';
+import {
+  ApnsTokenInvalidError,
+  readApnsConfig,
+  sendApnsVoipPush,
+} from '../_shared/apns.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -55,6 +59,24 @@ async function markSent(
     .eq('id', id);
   if (error && Deno.env.get('ARENA_DEBUG') === '1') {
     console.error('sent_at update failed:', error.message);
+  }
+}
+
+/// Set `profiles.fcm_token = null` (ou `voip_token`) quand le service
+/// push a explicitement rejeté le token. Évite de spammer FCM/APNs sur
+/// des tokens morts à chaque insert. Le prochain cold start de l'app
+/// re-enregistrera un nouveau token via NotificationService.attach.
+async function clearDeadToken(
+  sb: ReturnType<typeof createClient>,
+  userId: string,
+  column: 'fcm_token' | 'voip_token',
+): Promise<void> {
+  const { error } = await sb
+    .from('profiles')
+    .update({ [column]: null })
+    .eq('id', userId);
+  if (error && Deno.env.get('ARENA_DEBUG') === '1') {
+    console.error(`clear ${column} failed:`, error.message);
   }
 }
 
@@ -155,14 +177,33 @@ Deno.serve(async (req: Request): Promise<Response> => {
             caller_name: callerName,
           },
         });
+        await markSent(sb, r.id);
+        return jsonResponse({ ok: true, channel: 'voip' });
       } catch (e) {
-        return jsonResponse(
-          { error: 'apns_send_failed', detail: String(e) },
-          500,
-        );
+        // Token VoIP mort (410 Gone, BadDeviceToken…) : clear côté DB
+        // pour ne pas resoumettre indéfiniment. Si l'utilisateur a aussi
+        // un fcm_token (rare mais possible), on fallback dessous.
+        if (e instanceof ApnsTokenInvalidError) {
+          await clearDeadToken(sb, r.user_id, 'voip_token');
+          if (Deno.env.get('ARENA_DEBUG') === '1') {
+            console.warn(
+              `voip_token cleared (${e.reason}) for user ${r.user_id}`,
+            );
+          }
+          if (!profile.fcm_token) {
+            return jsonResponse({
+              skipped: 'voip_token_cleared',
+              reason: e.reason,
+            });
+          }
+          // sinon → fall through vers la branche FCM ci-dessous
+        } else {
+          return jsonResponse(
+            { error: 'apns_send_failed', detail: String(e) },
+            500,
+          );
+        }
       }
-      await markSent(sb, r.id);
-      return jsonResponse({ ok: true, channel: 'voip' });
     }
     // APNs pas encore configuré (clé .p8 absente) : on retombe sur FCM
     // si un fcm_token existe, sinon on skip juste en dessous.
@@ -206,6 +247,21 @@ Deno.serve(async (req: Request): Promise<Response> => {
           },
     });
   } catch (e) {
+    // Token FCM mort (404 UNREGISTERED, SENDER_ID_MISMATCH, INVALID_ARGUMENT)
+    // : clear côté DB et retourne 200 pour ne pas que le webhook DB
+    // retry indéfiniment sur un token qui ne reviendra jamais.
+    if (e instanceof FcmTokenInvalidError) {
+      await clearDeadToken(sb, r.user_id, 'fcm_token');
+      if (Deno.env.get('ARENA_DEBUG') === '1') {
+        console.warn(
+          `fcm_token cleared (${e.errorCode}) for user ${r.user_id}`,
+        );
+      }
+      return jsonResponse({
+        skipped: 'fcm_token_cleared',
+        errorCode: e.errorCode,
+      });
+    }
     return jsonResponse(
       { error: 'fcm_send_failed', detail: String(e) },
       500,

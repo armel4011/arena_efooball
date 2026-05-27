@@ -107,8 +107,25 @@ export interface VoipPushOptions {
   extra: Record<string, string>;
 }
 
-/// Envoie un push VoIP au device. Throws sur erreur réseau ou statut
-/// APNs != 200 — l'appelant logge / remonte l'erreur.
+/// Signale qu'APNs a explicitement rejeté le device token (410 Gone,
+/// 400 BadDeviceToken, 403 ExpiredProviderToken sur le token). L'appelant
+/// doit clear `profiles.voip_token` côté DB et ne PAS retry. Causes
+/// typiques :
+///  - HTTP 410 → device a désinstallé l'app ou logout-out d'iCloud
+///  - HTTP 400 reason `BadDeviceToken` → format invalide / mauvais env
+///  - HTTP 400 reason `DeviceTokenNotForTopic` → token enregistré pour
+///    un autre bundle (rare, mais permanent)
+export class ApnsTokenInvalidError extends Error {
+  constructor(public readonly reason: string, public readonly detail: string) {
+    super(`apns_token_invalid:${reason}:${detail}`);
+    this.name = 'ApnsTokenInvalidError';
+  }
+}
+
+/// Envoie un push VoIP au device.
+///  - Throws `ApnsTokenInvalidError` si APNs rejette le token (410, 400
+///    BadDeviceToken / DeviceTokenNotForTopic). L'appelant clear voip_token.
+///  - Throws une erreur générique sur toute autre erreur.
 export async function sendApnsVoipPush(
   cfg: ApnsConfig,
   opts: VoipPushOptions,
@@ -141,6 +158,25 @@ export async function sendApnsVoipPush(
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
-    throw new Error(`apns_voip_failed: ${res.status} ${await res.text()}`);
+    const txt = await res.text();
+    // APNs renvoie `{"reason":"BadDeviceToken"}` ou similaire en JSON.
+    let reason = '';
+    try {
+      const json = JSON.parse(txt) as { reason?: string };
+      reason = json.reason ?? '';
+    } catch (_) {
+      // not JSON, fallthrough
+    }
+    const tokenInvalid = res.status === 410 ||
+        reason === 'BadDeviceToken' ||
+        reason === 'DeviceTokenNotForTopic' ||
+        reason === 'Unregistered';
+    if (tokenInvalid) {
+      throw new ApnsTokenInvalidError(
+        reason || `HTTP_${res.status}`,
+        txt,
+      );
+    }
+    throw new Error(`apns_voip_failed: ${res.status} ${txt}`);
   }
 }

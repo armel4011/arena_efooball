@@ -109,9 +109,28 @@ export interface FcmPayload {
   imageUrl?: string;
 }
 
-/// Envoie une notification push via FCM HTTP v1. Throws sur erreur réseau
-/// ou statut !=200 — l'appelant logge et marque la notif comme
-/// `sent_at = null` (retry sur la prochaine insertion).
+/// Signale que FCM a explicitement rejeté le token : l'app a été
+/// désinstallée, le token a été régénéré, ou le projet Firebase ne
+/// reconnaît plus cet appareil. L'appelant doit clear le token côté
+/// DB et ne PAS retry (sinon on inonde FCM en pure perte). Causes
+/// typiques :
+///  - HTTP 404 + errorCode `UNREGISTERED` → désinstallation / clear-data
+///  - HTTP 400 + errorCode `INVALID_ARGUMENT` (sur le champ `token`)
+///    → token mal formé ou pour un autre projet Firebase
+///  - HTTP 403 + errorCode `SENDER_ID_MISMATCH` → token d'un autre projet
+export class FcmTokenInvalidError extends Error {
+  constructor(public readonly errorCode: string, public readonly detail: string) {
+    super(`fcm_token_invalid:${errorCode}:${detail}`);
+    this.name = 'FcmTokenInvalidError';
+  }
+}
+
+/// Envoie une notification push via FCM HTTP v1.
+///  - Throws `FcmTokenInvalidError` si FCM rejette explicitement le
+///    token (404 UNREGISTERED, 400 INVALID_ARGUMENT, 403 SENDER_ID_MISMATCH).
+///    L'appelant doit clear `profiles.fcm_token` et ne PAS retry.
+///  - Throws une erreur générique sur tout autre échec (réseau, 5xx) —
+///    l'appelant peut retenter plus tard.
 export async function sendFcmNotification(opts: FcmPayload): Promise<void> {
   const saJson = Deno.env.get('FIREBASE_SERVICE_ACCOUNT_JSON');
   if (!saJson) {
@@ -165,6 +184,38 @@ export async function sendFcmNotification(opts: FcmPayload): Promise<void> {
   });
   if (!res.ok) {
     const txt = await res.text();
+    // Parse l'errorCode FCM v1 (cf. https://firebase.google.com/docs/
+    // reference/fcm/rest/v1/ErrorCode) — il vit dans error.details[].errorCode.
+    let errorCode = '';
+    try {
+      const json = JSON.parse(txt) as {
+        error?: {
+          message?: string;
+          status?: string;
+          details?: Array<{ errorCode?: string }>;
+        };
+      };
+      errorCode = json.error?.details?.[0]?.errorCode ??
+          json.error?.status ?? '';
+    } catch (_) {
+      // Pas du JSON : on regarde le texte brut pour les codes connus.
+      if (/UNREGISTERED|NotRegistered/i.test(txt)) errorCode = 'UNREGISTERED';
+      else if (/SenderIdMismatch|SENDER_ID_MISMATCH/i.test(txt)) {
+        errorCode = 'SENDER_ID_MISMATCH';
+      } else if (/InvalidRegistration|INVALID_ARGUMENT/i.test(txt)) {
+        errorCode = 'INVALID_ARGUMENT';
+      }
+    }
+    // Token mort : 404 UNREGISTERED est le cas classique post-désinstall.
+    // INVALID_ARGUMENT côté token (mauvais format) et SENDER_ID_MISMATCH
+    // (token d'un autre projet Firebase) sont aussi définitifs.
+    const tokenInvalid = res.status === 404 ||
+        errorCode === 'UNREGISTERED' ||
+        errorCode === 'SENDER_ID_MISMATCH' ||
+        (res.status === 400 && errorCode === 'INVALID_ARGUMENT');
+    if (tokenInvalid) {
+      throw new FcmTokenInvalidError(errorCode || `HTTP_${res.status}`, txt);
+    }
     throw new Error(`fcm_send_failed: ${res.status} ${txt}`);
   }
 }
