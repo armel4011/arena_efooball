@@ -267,17 +267,16 @@ final matchRepositoryProvider = Provider<MatchRepository>((ref) {
 
 /// All matches of a competition, keyed by competition id.
 ///
-/// Backed by [MatchRepository.listForCompetition] (one-shot) rather than
-/// [MatchRepository.watchForCompetition]. We tried streaming the bracket
-/// realtime in V1.0 but with `matchByIdProvider` + `matchScoreSubmissionsProvider`
-/// already running on the open match room, having a third Realtime stream
-/// on the bracket pushed the emulator into ANR territory and triggered
-/// "Reading from a closed socket" exceptions on dispose. Pull-to-refresh
-/// is enough for the bracket — the rare admin/live dashboard that *does*
-/// need a streamed bracket can use `watchForCompetition` directly.
-final competitionMatchesProvider = FutureProvider.family
+/// **Realtime stream depuis batch 🔴 2026-05-28** : remplace l'ancien
+/// FutureProvider+pull-refresh. Le risque ANR historique (3 streams
+/// simultanés bracket + matchById + scoreSubmissions saturant WebSocket)
+/// est mitigué par `.autoDispose` qui ferme le stream bracket des qu'on
+/// quitte `bracket_view_page` pour entrer dans une `match_room_page` —
+/// les 2 contextes ne sont jamais actifs en meme temps en navigation
+/// normale (go_router push).
+final competitionMatchesProvider = StreamProvider.family
     .autoDispose<List<ArenaMatch>, String>((ref, competitionId) {
-  return ref.watch(matchRepositoryProvider).listForCompetition(competitionId);
+  return ref.watch(matchRepositoryProvider).watchForCompetition(competitionId);
 });
 
 /// Realtime stream of a single match by id. `.autoDispose` empêche le

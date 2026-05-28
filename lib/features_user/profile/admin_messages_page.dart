@@ -23,18 +23,22 @@ class AdminMessagesPage extends ConsumerWidget {
     if (userId == null) {
       return const Scaffold(body: SizedBox.shrink());
     }
+    final async = ref.watch(userAdminMessagesProvider);
     final repo = ref.read(adminChatRepositoryProvider);
     return Scaffold(
       appBar: const ArenaAppBar(title: 'Messages ARENA'),
       body: ArenaScreenBackground(
         child: SafeArea(
-          child: StreamBuilder<List<AdminChatMessage>>(
-            stream: repo.watchInbox(userId),
-            builder: (context, snap) {
-              if (snap.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              final msgs = snap.data ?? const [];
+          child: async.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(
+              child: Text(
+                'Erreur : $e',
+                style: ArenaText.bodyMuted,
+                textAlign: TextAlign.center,
+              ),
+            ),
+            data: (msgs) {
               if (msgs.isEmpty) {
                 return Center(
                   child: Padding(

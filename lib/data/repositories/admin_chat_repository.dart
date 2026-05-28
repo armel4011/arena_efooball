@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:arena/data/repositories/profile_repository.dart';
+import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -271,4 +272,16 @@ class AdminChatRepository {
 
 final adminChatRepositoryProvider = Provider<AdminChatRepository>((ref) {
   return AdminChatRepository(ref.watch(supabaseClientProvider));
+});
+
+/// Inbox user temps reel : tous les messages admin recus par l'utilisateur
+/// courant. Sert AdminMessagesPage. Avant cette migration, la page utilisait
+/// un `StreamBuilder` direct qui re-souscrivait au stream Supabase a chaque
+/// rebuild Flutter (chaque changement de keyboard, theme, etc.). Pousser
+/// via Riverpod cache la souscription et evite ces reconnexions inutiles.
+final userAdminMessagesProvider =
+    StreamProvider.autoDispose<List<AdminChatMessage>>((ref) {
+  final userId = ref.watch(currentSessionProvider)?.user.id;
+  if (userId == null) return Stream.value(const []);
+  return ref.watch(adminChatRepositoryProvider).watchInbox(userId);
 });

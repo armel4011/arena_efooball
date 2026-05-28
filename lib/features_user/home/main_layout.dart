@@ -1,3 +1,4 @@
+import 'package:arena/core/services/realtime_resume_service.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_user/chat/messages_inbox_page.dart';
@@ -34,6 +35,10 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
 
   @override
   Widget build(BuildContext context) {
+    // Anchore le RealtimeResumeService dans la session — il s'attache au
+    // WidgetsBinding et invalide les StreamProvider Supabase quand l'app
+    // revient au foreground (evite les donnees obsoletes apres background).
+    ref.watch(realtimeResumeServiceProvider);
     return PopScope(
       // On gere le back system manuellement :
       //  - sur un tab non-home  -> revient sur Home

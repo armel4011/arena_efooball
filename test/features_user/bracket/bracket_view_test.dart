@@ -33,7 +33,7 @@ ArenaMatch _match({
 Widget _scoped(List<ArenaMatch> matches) => ProviderScope(
       overrides: [
         competitionMatchesProvider
-            .overrideWith((ref, _) async => matches),
+            .overrideWith((ref, _) => Stream<List<ArenaMatch>>.value(matches)),
       ],
       child: const MaterialApp(
         home: Scaffold(body: BracketView(competitionId: 'c-1')),

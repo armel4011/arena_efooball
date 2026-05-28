@@ -41,7 +41,8 @@ Widget _scoped({
       overrides: [
         competitionByIdProvider
             .overrideWith((ref, _) => Stream<Competition?>.value(comp)),
-        competitionMatchesProvider.overrideWith((ref, _) async => matches),
+        competitionMatchesProvider
+            .overrideWith((ref, _) => Stream<List<ArenaMatch>>.value(matches)),
         competitionStandingsProvider.overrideWith((ref, _) async => buckets),
         // La detail page est gated derrière `myRegisteredCompetitionIdsProvider` :
         // sans inscription, on tombe sur `_GatedDetailView` au lieu du body

@@ -203,6 +203,72 @@ class FriendsRepository {
         );
   }
 
+  // ───── Streams realtime (listes + peers) ────────────────────────────────
+  //
+  // Ces 3 streams alimentent les providers `incomingFriendRequests*` /
+  // `outgoingFriendRequests*` / `acceptedFriends*` en mode realtime —
+  // l'utilisateur voit immediatement les demandes acceptees / declinees
+  // / nouvelles amities sans pull-refresh.
+  //
+  // Pattern : `.stream(primaryKey: ['id'])` + 1 filtre serveur (.eq) +
+  // filtre client sur le statut + `asyncMap()` qui re-resout les peers
+  // a chaque update. Le re-fetch profils n'est pas optimal (1 select
+  // a chaque event) mais les listes sont petites (cap a 50-200) et les
+  // mutations rares — pas la peine de bricoler un cache pour V1.
+
+  /// Demandes pending entrantes en realtime (avec profil peer resolu).
+  Stream<List<(Friendship, Profile)>> watchIncomingPendingWithPeers(String me) {
+    return _client
+        .from(_table)
+        .stream(primaryKey: ['id'])
+        .eq('addressee_id', me)
+        .asyncMap((rows) async {
+          final friendships = [
+            for (final r in rows)
+              if (r['status'] == 'pending') Friendship.fromJson(r),
+          ];
+          return resolvePeers(me: me, friendships: friendships);
+        });
+  }
+
+  /// Demandes pending sortantes en realtime (avec profil peer resolu).
+  Stream<List<(Friendship, Profile)>> watchOutgoingPendingWithPeers(String me) {
+    return _client
+        .from(_table)
+        .stream(primaryKey: ['id'])
+        .eq('requester_id', me)
+        .asyncMap((rows) async {
+          final friendships = [
+            for (final r in rows)
+              if (r['status'] == 'pending') Friendship.fromJson(r),
+          ];
+          return resolvePeers(me: me, friendships: friendships);
+        });
+  }
+
+  /// Amitiés acceptées en realtime (avec profil peer resolu).
+  /// Note : `.stream()` ne supporte pas OR cote serveur, donc on
+  /// souscrit a TOUTE la table (la RLS `friendships_self_select` filtre
+  /// deja a ce que `me` peut voir) et on filtre client.
+  Stream<List<(Friendship, Profile)>> watchAcceptedWithPeers(String me) {
+    return _client
+        .from(_table)
+        .stream(primaryKey: ['id'])
+        .asyncMap((rows) async {
+          final friendships = [
+            for (final r in rows)
+              if (r['status'] == 'accepted' &&
+                  (r['requester_id'] == me || r['addressee_id'] == me))
+                Friendship.fromJson(r),
+          ]..sort((a, b) {
+              final au = a.updatedAt ?? a.createdAt ?? DateTime(0);
+              final bu = b.updatedAt ?? b.createdAt ?? DateTime(0);
+              return bu.compareTo(au);
+            });
+          return resolvePeers(me: me, friendships: friendships);
+        });
+  }
+
   // ───── Mutations via RPC ────────────────────────────────────────────────
 
   Future<String> sendRequest(String targetId) async {
@@ -254,33 +320,35 @@ final friendsRepositoryProvider = Provider<FriendsRepository>((ref) {
 });
 
 /// Demandes pending entrantes — liste affichée onglet "Demandes" + badge.
+/// **Realtime** : un user qui accepte/decline ou un nouveau requesteur
+/// apparait sans pull-refresh.
 final incomingFriendRequestsProvider =
-    FutureProvider.autoDispose<List<(Friendship, Profile)>>((ref) async {
+    StreamProvider.autoDispose<List<(Friendship, Profile)>>((ref) {
   final me = ref.watch(currentSessionProvider)?.user.id;
-  if (me == null) return const [];
-  final repo = ref.watch(friendsRepositoryProvider);
-  final friendships = await repo.listIncomingPending(me);
-  return repo.resolvePeers(me: me, friendships: friendships);
+  if (me == null) return Stream.value(const []);
+  return ref
+      .watch(friendsRepositoryProvider)
+      .watchIncomingPendingWithPeers(me);
 });
 
 /// Demandes pending sortantes (visibilité utile dans l'onglet "Demandes").
+/// **Realtime** : quand la cible accepte, la demande disparait instantly.
 final outgoingFriendRequestsProvider =
-    FutureProvider.autoDispose<List<(Friendship, Profile)>>((ref) async {
+    StreamProvider.autoDispose<List<(Friendship, Profile)>>((ref) {
   final me = ref.watch(currentSessionProvider)?.user.id;
-  if (me == null) return const [];
-  final repo = ref.watch(friendsRepositoryProvider);
-  final friendships = await repo.listOutgoingPending(me);
-  return repo.resolvePeers(me: me, friendships: friendships);
+  if (me == null) return Stream.value(const []);
+  return ref
+      .watch(friendsRepositoryProvider)
+      .watchOutgoingPendingWithPeers(me);
 });
 
 /// Liste amis acceptés + profil joueur.
+/// **Realtime** : nouvel ami apparait sans refresh, ami retire disparait.
 final acceptedFriendsProvider =
-    FutureProvider.autoDispose<List<(Friendship, Profile)>>((ref) async {
+    StreamProvider.autoDispose<List<(Friendship, Profile)>>((ref) {
   final me = ref.watch(currentSessionProvider)?.user.id;
-  if (me == null) return const [];
-  final repo = ref.watch(friendsRepositoryProvider);
-  final friendships = await repo.listAccepted(me);
-  return repo.resolvePeers(me: me, friendships: friendships);
+  if (me == null) return Stream.value(const []);
+  return ref.watch(friendsRepositoryProvider).watchAcceptedWithPeers(me);
 });
 
 /// Liste des utilisateurs bloqués par `me`.

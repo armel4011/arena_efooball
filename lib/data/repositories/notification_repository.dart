@@ -1,3 +1,4 @@
+import 'package:arena/core/services/persistent_cache.dart';
 import 'package:arena/data/models/arena_notification.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -135,9 +136,22 @@ final notificationRepositoryProvider = Provider<NotificationRepository>((ref) {
 
 /// Realtime stream of the signed-in user's notifications, newest first.
 /// Returns an empty list when no user is signed in (signed-out splash etc.).
-final userNotificationsProvider =
-    StreamProvider.family.autoDispose<List<ArenaNotification>, String>((ref, userId) {
-  return ref.watch(notificationRepositoryProvider).watch(userId);
+///
+/// **Cold start cache** : la derniere liste reçue est persistee via
+/// `PersistentCache` et réémise instantanément au prochain démarrage,
+/// avant que le stream Supabase n'ait recu son premier event. La cloche
+/// s'affiche donc avec son badge sans spinner ; les eventuels nouveaux
+/// items arrivent par le stream dans la seconde qui suit.
+final userNotificationsProvider = StreamProvider.family
+    .autoDispose<List<ArenaNotification>, String>((ref, userId) async* {
+  final source = ref.watch(notificationRepositoryProvider).watch(userId);
+  final cache = await ref.watch(persistentCacheProvider.future);
+  yield* cache.hydrate<ArenaNotification>(
+    namespace: 'notifications.$userId',
+    source: source,
+    fromJson: ArenaNotification.fromJson,
+    toJson: (n) => n.toJson(),
+  );
 });
 
 /// Convenience — unread count derived from the stream above. Used by the

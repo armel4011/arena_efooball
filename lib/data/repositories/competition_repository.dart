@@ -1,3 +1,4 @@
+import 'package:arena/core/services/persistent_cache.dart';
 import 'package:arena/core/utils/poll_stream.dart';
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
@@ -170,13 +171,25 @@ final competitionRepositoryProvider = Provider<CompetitionRepository>((ref) {
 /// toutes les heures au mieux). Poll 60s tient la fraîcheur perçue
 /// et libère 4 channels Realtime (1 par variant de filtre game).
 /// `.autoDispose` cancel le polling quand l'écran ferme.
+///
+/// **Cold start cache** : la derniere liste reçue est persistee
+/// (PersistentCache) et réémise instantanément au prochain démarrage —
+/// la page Compétitions s'affiche immediatement avec la liste connue,
+/// le poll/stream remplace dans la seconde si du nouveau est arrivé.
 final competitionsListProvider =
     StreamProvider.family.autoDispose<List<Competition>, GameType?>(
-        (ref, game) {
+        (ref, game) async* {
   final repo = ref.watch(competitionRepositoryProvider);
-  return pollStream(
+  final source = pollStream(
     const Duration(seconds: 60),
     () => repo.list(game: game),
+  );
+  final cache = await ref.watch(persistentCacheProvider.future);
+  yield* cache.hydrate<Competition>(
+    namespace: 'competitions.${game?.name ?? "all"}',
+    source: source,
+    fromJson: Competition.fromJson,
+    toJson: (c) => c.toJson(),
   );
 });
 
