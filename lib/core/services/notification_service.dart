@@ -215,11 +215,19 @@ class NotificationService {
   Future<String?> _downloadImageToCache(String url) async {
     try {
       final uri = Uri.parse(url);
-      final client = HttpClient()..connectionTimeout = const Duration(seconds: 8);
+      // Timeout 15s : utile sur 3G / connexion fluctuante (8s ratait sur
+      // certains tests reels meme avec une image picsum < 100 KB).
+      final client = HttpClient()
+        ..connectionTimeout = const Duration(seconds: 15);
       final req = await client.getUrl(uri);
       final res = await req.close();
       if (res.statusCode != 200) {
         client.close();
+        if (kDebugMode) {
+          debugPrint(
+            '[notifs] image download HTTP ${res.statusCode} for $url',
+          );
+        }
         return null;
       }
       final bytes = await res.fold<List<int>>(

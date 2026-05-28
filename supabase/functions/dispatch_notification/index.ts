@@ -244,6 +244,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
             // Aplatit `data.route` si présent — utilisé côté app pour
             // router le tap (cf. ArenaNotification.route).
             route: (r.data?.['route'] as string | undefined) ?? '',
+            // Aplatit l'image_url dans `data` aussi — sert de fallback
+            // au foreground handler (cf. NotificationService._handleForeground)
+            // au cas où `RemoteMessage.notification.android.imageUrl` ne
+            // serait pas remonté par certains OEM Android.
+            image_url: r.image_url ?? '',
           },
     });
   } catch (e) {

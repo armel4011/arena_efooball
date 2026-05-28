@@ -3,7 +3,6 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
-import 'package:arena/features_shared/widgets/arena_badge.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -152,19 +151,59 @@ class _Chip extends StatelessWidget {
   }
 }
 
-/// Banner premium d'une compétition active — gradient game-themed
-/// (eFoot/FIFA/FC) avec titre Bebas-like en bone, badge statut
-/// (OUVERT/EN COURS) translucide à droite, et meta bottom (joueurs · fee ·
-/// démarrage) en mono blanc semi-transparent.
+/// Banner premium d'une compétition active sur la home.
+///
+/// **Trois couleurs d'accent par tier** (border + glow + badge mini), comme
+/// sur la page liste — pour que le joueur identifie au scroll les tournois
+/// payants / gratuits-avec-gain / gratuits-purs :
+///  - Payant         → OR (`tierGoldWarm`) + badge `★`
+///  - Gratuit + gain → TURQUOISE (`iceCyan`) + badge `🎁`
+///  - Gratuit pur    → VERT (`statusOk`) + badge ASCII libre
+///
+/// Le gradient game-themed (eFoot/FIFA/FC) reste en arriere-plan pour
+/// conserver l'identite jeu (bleu/vert/orange).
 class _CompetitionBanner extends StatelessWidget {
   const _CompetitionBanner({required this.competition});
   final Competition competition;
 
+  bool get _isPaid => !competition.isFree;
+  bool get _hasPrize => competition.prizePoolLocal > 0;
+
+  /// Couleur d'accent par tier — partagee avec `CompetitionListCard`.
+  Color get _accent {
+    if (_isPaid) return ArenaColors.tierGoldWarm;
+    if (_hasPrize) return ArenaColors.iceCyan;
+    return ArenaColors.statusOk;
+  }
+
+  /// Glow assorti a l'accent (jamais sur le gradient game).
+  Color get _glow {
+    if (_isPaid) return ArenaColors.tierGoldWarm.withValues(alpha: 0.32);
+    if (_hasPrize) return ArenaColors.iceCyanGlow;
+    return ArenaColors.statusOk.withValues(alpha: 0.22);
+  }
+
+  /// Mini badge tier en haut-gauche (compact pour la home).
+  (String, Color) get _tierBadge {
+    if (_isPaid) return ('★ PREMIUM', ArenaColors.tierGoldWarm);
+    if (_hasPrize) return ('🎁 + GAINS', ArenaColors.iceCyan);
+    return ('GRATUIT', ArenaColors.statusOk);
+  }
+
+  /// Gradient de fond par tier — remplace l'ancien gradient game-themed
+  /// (eFoot bleu/FIFA vert/FC orange) pour que le tarif soit immediatement
+  /// lisible au scroll.
+  LinearGradient get _tierGradient {
+    if (_isPaid) return ArenaColors.compTierPaid;
+    if (_hasPrize) return ArenaColors.compTierFreePrize;
+    return ArenaColors.compTierFreePure;
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = competition;
-    final gradient = _gradientFor(c.game);
-    final (statusLabel, statusColor) = _statusChip(c.status);
+    final gradient = _tierGradient;
+    final statusLabel = _statusLabel(c.status);
     final daysToStart = c.startDate.difference(DateTime.now()).inDays;
     final startLabel = daysToStart > 0
         ? 'Dans ${daysToStart}j'
@@ -174,6 +213,8 @@ class _CompetitionBanner extends StatelessWidget {
     final fee = c.registrationFee.round();
     final feeLabel = fee == 0 ? 'Gratuit' : '$fee ${c.registrationCurrency}';
     final players = '${c.currentPlayers}/${c.maxPlayers}';
+    final accent = _accent;
+    final (tierLabel, tierColor) = _tierBadge;
 
     return InkWell(
       onTap: () => context.push(UserRoutes.competitionPath(c.id)),
@@ -183,6 +224,14 @@ class _CompetitionBanner extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: gradient,
           borderRadius: BorderRadius.circular(ArenaRadius.lg),
+          border: Border.all(color: accent, width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: _glow,
+              blurRadius: 18,
+              spreadRadius: -6,
+            ),
+          ],
         ),
         padding: const EdgeInsets.all(ArenaSpacing.md),
         child: Column(
@@ -190,20 +239,20 @@ class _CompetitionBanner extends StatelessWidget {
           children: [
             Row(
               children: [
-                Expanded(
-                  child: Text(
-                    c.name,
-                    style: ArenaText.h3.copyWith(
-                      color: ArenaColors.bone,
-                      fontSize: 15,
-                      letterSpacing: 0.5,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: ArenaSpacing.xs),
-                _StatusPill(label: statusLabel, accent: statusColor),
+                _TierMiniBadge(label: tierLabel, color: tierColor),
+                const Spacer(),
+                _StatusPill(label: statusLabel),
               ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              c.name,
+              style: ArenaText.h3.copyWith(
+                color: ArenaColors.bone,
+                fontSize: 15,
+                letterSpacing: 0.5,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 6),
             Row(
@@ -215,9 +264,9 @@ class _CompetitionBanner extends StatelessWidget {
                 Text(
                   feeLabel,
                   style: ArenaText.mono.copyWith(
-                    color: ArenaColors.bone,
+                    color: _isPaid ? accent : ArenaColors.bone,
                     fontSize: 12,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ],
@@ -228,30 +277,57 @@ class _CompetitionBanner extends StatelessWidget {
     );
   }
 
-  static LinearGradient _gradientFor(GameType game) => switch (game) {
-        GameType.efootball => ArenaColors.bannerEfoot,
-        GameType.fifaMobile => ArenaColors.bannerFifa,
-        GameType.eaSportsFc => ArenaColors.bannerFc,
-      };
-
-  static (String, ArenaBadgeVariant) _statusChip(CompetitionStatus s) =>
-      switch (s) {
-        CompetitionStatus.registrationOpen => (
-            'OUVERT',
-            ArenaBadgeVariant.success
-          ),
-        CompetitionStatus.ongoing => ('EN COURS', ArenaBadgeVariant.info),
-        _ => ('BIENTÔT', ArenaBadgeVariant.warn),
+  static String _statusLabel(CompetitionStatus s) => switch (s) {
+        CompetitionStatus.registrationOpen => 'OUVERT',
+        CompetitionStatus.ongoing => 'EN COURS',
+        _ => 'BIENTÔT',
       };
 }
 
-/// Pill statut (OUVERT/EN COURS/BIENTÔT) — fond bone @ 25 % translucide qui marche
-/// sur n'importe quel gradient, texte bone bold. `accent` est conservé
-/// pour usage futur (border colorée) sans changer le rendu actuel.
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({required this.label, required this.accent});
+/// Badge mini en haut-gauche : « ★ PREMIUM » / « 🎁 + GAINS » / « GRATUIT ».
+/// **Fond noir + bordure + texte coloré** — necessaire depuis que le
+/// gradient de fond du banner est aussi celui du tier (sinon badge fond
+/// clair sur fond clair = invisible). Look "etiquette premium" qui tranche
+/// net sur n'importe quel gradient.
+class _TierMiniBadge extends StatelessWidget {
+  const _TierMiniBadge({required this.label, required this.color});
   final String label;
-  final ArenaBadgeVariant accent;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: ArenaColors.void_,
+        borderRadius: BorderRadius.circular(ArenaRadius.round),
+        border: Border.all(color: color, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.55),
+            blurRadius: 6,
+            spreadRadius: -2,
+          ),
+        ],
+      ),
+      child: Text(
+        label,
+        style: ArenaText.badge.copyWith(
+          color: color,
+          fontSize: 9,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.6,
+        ),
+      ),
+    );
+  }
+}
+
+/// Pill statut (OUVERT/EN COURS/BIENTÔT) — fond bone @ 25 % translucide qui
+/// marche sur n'importe quel gradient game, texte bone bold.
+class _StatusPill extends StatelessWidget {
+  const _StatusPill({required this.label});
+  final String label;
 
   @override
   Widget build(BuildContext context) {

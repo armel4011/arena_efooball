@@ -54,6 +54,10 @@ class _SuperAdminBroadcastState extends ConsumerState<SuperAdminBroadcast> {
   String? _uploadedImageUrl;
   bool _uploadingImage = false;
 
+  /// Caption optionnelle (mode push : sous-titre de la notif sous l'image,
+  /// mode chat : legende affichee sous l'image dans le fil — comme WhatsApp).
+  final _captionCtrl = TextEditingController();
+
   static const _typeOptions = <String>[
     'system',
     'match_starting',
@@ -83,17 +87,23 @@ class _SuperAdminBroadcastState extends ConsumerState<SuperAdminBroadcast> {
       ..removeListener(_onChanged)
       ..dispose();
     _routeCtrl.dispose();
+    _captionCtrl.dispose();
     super.dispose();
   }
 
   bool get _canSend {
     if (_sending) return false;
+    if (_uploadingImage) return false;
+    final hasBody = _bodyCtrl.text.trim().isNotEmpty;
+    final hasImage = _uploadedImageUrl != null;
     if (_mode == _BroadcastMode.chat) {
-      // Chat n'a qu'un champ texte (= body), pas de titre obligatoire.
-      return _bodyCtrl.text.trim().isNotEmpty;
+      // Mode chat (WhatsApp-like) : autorise body OU image (ou les deux).
+      // Si image seule, la caption peut aussi etre vide.
+      return hasBody || hasImage;
     }
-    return _titleCtrl.text.trim().isNotEmpty &&
-        _bodyCtrl.text.trim().isNotEmpty;
+    // Mode push : titre + (body ou image). L'image seule sans body est OK
+    // tant que le titre est present (titre = headline de la notif systeme).
+    return _titleCtrl.text.trim().isNotEmpty && (hasBody || hasImage);
   }
 
   Future<void> _pickAndUploadImage() async {
@@ -106,26 +116,40 @@ class _SuperAdminBroadcastState extends ConsumerState<SuperAdminBroadcast> {
     );
     if (picked == null) return;
     if (!mounted) return;
+    final file = File(picked.path);
     setState(() {
-      _pickedImage = File(picked.path);
+      _pickedImage = file;
       _uploadingImage = true;
       _uploadedImageUrl = null;
     });
     try {
-      final client = ref.read(supabaseClientProvider);
-      final ext = picked.path.split('.').last.toLowerCase();
-      final path =
-          'broadcast/${DateTime.now().millisecondsSinceEpoch}-${picked.name}';
-      await client.storage.from('notification_images').upload(
-            path,
-            File(picked.path),
-            fileOptions: FileOptions(
-              contentType: 'image/$ext',
-              upsert: false,
-            ),
-          );
-      final url =
-          client.storage.from('notification_images').getPublicUrl(path);
+      String url;
+      if (_mode == _BroadcastMode.chat) {
+        // Mode chat : route via le repo qui ecrit dans
+        // `admin_chat_broadcast/<adminId>/...` (cf. RLS admin-write).
+        final adminId = ref.read(currentSessionProvider)?.user.id;
+        if (adminId == null) {
+          throw StateError('admin session expired');
+        }
+        url = await ref
+            .read(adminChatRepositoryProvider)
+            .uploadBroadcastImage(adminId: adminId, file: file);
+      } else {
+        // Mode push : bucket public, prefix `broadcast/`.
+        final client = ref.read(supabaseClientProvider);
+        final ext = picked.path.split('.').last.toLowerCase();
+        final path =
+            'broadcast/${DateTime.now().millisecondsSinceEpoch}-${picked.name}';
+        await client.storage.from('notification_images').upload(
+              path,
+              file,
+              fileOptions: FileOptions(
+                contentType: 'image/$ext',
+                upsert: false,
+              ),
+            );
+        url = client.storage.from('notification_images').getPublicUrl(path);
+      }
       if (!mounted) return;
       setState(() {
         _uploadingImage = false;
@@ -145,6 +169,7 @@ class _SuperAdminBroadcastState extends ConsumerState<SuperAdminBroadcast> {
     setState(() {
       _pickedImage = null;
       _uploadedImageUrl = null;
+      _captionCtrl.clear();
     });
   }
 
@@ -174,10 +199,18 @@ class _SuperAdminBroadcastState extends ConsumerState<SuperAdminBroadcast> {
         // Bulk insert dans admin_chat_messages. Le trigger DB
         // `_notify_admin_message` créera 1 row notifications type=admin_message
         // par destinataire → FCM auto + persistance dans /admin-messages.
+        // L'image (si presente) est UPLOADEE UNE SEULE FOIS dans
+        // `admin_chat_broadcast/<adminId>/...` et la meme URL est insérée
+        // pour chaque destinataire — pas de duplication storage.
+        final body = _bodyCtrl.text.trim();
+        final imageUrl = _uploadedImageUrl;
+        final caption = _captionCtrl.text.trim();
         await ref.read(adminChatRepositoryProvider).broadcast(
               adminId: adminId,
               recipientIds: userIds,
-              text: _bodyCtrl.text.trim(),
+              text: body.isEmpty ? null : body,
+              imageUrl: imageUrl,
+              caption: caption.isEmpty ? null : caption,
             );
         await ref.read(adminAuditLogRepositoryProvider).record(
           adminId: adminId,
@@ -187,7 +220,9 @@ class _SuperAdminBroadcastState extends ConsumerState<SuperAdminBroadcast> {
           beforeState: {},
           afterState: {
             'recipients_count': userIds.length,
-            'text_length': _bodyCtrl.text.trim().length,
+            'text_length': body.length,
+            'has_image': imageUrl != null,
+            'has_caption': caption.isNotEmpty,
             'competition_ids': _filter.competitionIds,
           },
         );
@@ -230,6 +265,7 @@ class _SuperAdminBroadcastState extends ConsumerState<SuperAdminBroadcast> {
         _titleCtrl.clear();
         _bodyCtrl.clear();
         _routeCtrl.clear();
+        _captionCtrl.clear();
         _pickedImage = null;
         _uploadedImageUrl = null;
       });
@@ -393,7 +429,7 @@ class _SuperAdminBroadcastState extends ConsumerState<SuperAdminBroadcast> {
               ArenaTextField(
                 controller: _bodyCtrl,
                 hint: isChat
-                    ? 'Texte du message (visible dans /admin-messages)'
+                    ? 'Texte du message (optionnel si image jointe)'
                     : 'Corps du message',
                 minLines: 3,
                 maxLines: isChat ? 10 : 6,
@@ -408,16 +444,32 @@ class _SuperAdminBroadcastState extends ConsumerState<SuperAdminBroadcast> {
                       "Si défini, taper la notif redirige l'utilisateur sur"
                       " cette page de l'app.",
                 ),
-                const SizedBox(height: ArenaSpacing.md),
-                Text('🖼 IMAGE (optionnel)', style: ArenaText.h3),
+              ],
+              // ─── Image (les 2 modes) ──────────────────────────────────
+              // Mode push : header image de la notif systeme (BigPicture).
+              // Mode chat : image jointe affichee dans la bulle (WhatsApp).
+              const SizedBox(height: ArenaSpacing.md),
+              Text('🖼 IMAGE (optionnel)', style: ArenaText.h3),
+              const SizedBox(height: ArenaSpacing.sm),
+              _ImagePickerCard(
+                pickedImage: _pickedImage,
+                uploadedUrl: _uploadedImageUrl,
+                uploading: _uploadingImage,
+                onPick: _pickAndUploadImage,
+                onClear: _clearImage,
+              ),
+              // ─── Caption (mode chat uniquement, WhatsApp-like) ────────
+              if (isChat && _pickedImage != null) ...[
                 const SizedBox(height: ArenaSpacing.sm),
-                _ImagePickerCard(
-                  pickedImage: _pickedImage,
-                  uploadedUrl: _uploadedImageUrl,
-                  uploading: _uploadingImage,
-                  onPick: _pickAndUploadImage,
-                  onClear: _clearImage,
+                ArenaTextField(
+                  controller: _captionCtrl,
+                  hint: "Légende sous l'image (optionnel, max 1024)",
+                  minLines: 1,
+                  maxLines: 4,
+                  maxLength: 1024,
                 ),
+              ],
+              if (!isChat) ...[
                 const SizedBox(height: ArenaSpacing.sm),
                 Text('Type', style: ArenaText.inputLabel),
                 const SizedBox(height: ArenaSpacing.xs),

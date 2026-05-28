@@ -142,6 +142,24 @@ class ArenaColors {
   // Alias sémantique : LIVE indicator (= neonRed pulsant)
   static const Color statusLive = neonRed;
 
+  // ─── Competition tier gradients ──────────────────────────────────────────
+  // Remplacent le gradient game-themed sur les banners liste + home pour
+  // que le tier (payant/gratuit+gain/gratuit pur) soit identifiable en un
+  // coup d'oeil. Top-left = ton vif (couleur de l'accent), bottom-right =
+  // ton sombre profond pour donner de la profondeur sans masquer le texte.
+  static const LinearGradient compTierPaid = LinearGradient(
+    begin: Alignment.topLeft, end: Alignment.bottomRight,
+    colors: [tierGoldWarm, tierGoldDeep], // or chaud → or sombre
+  );
+  static const LinearGradient compTierFreePrize = LinearGradient(
+    begin: Alignment.topLeft, end: Alignment.bottomRight,
+    colors: [iceCyan, Color(0xFF0A3A4A)], // turquoise → bleu profond
+  );
+  static const LinearGradient compTierFreePure = LinearGradient(
+    begin: Alignment.topLeft, end: Alignment.bottomRight,
+    colors: [statusOk, Color(0xFF0F5132)], // vert vif → vert forêt
+  );
+
   // ─── Stream moderation gradients (admin grille 6 slots) ─────────────────
   static const LinearGradient streamSlot1Gradient = LinearGradient(
     begin: Alignment.topLeft, end: Alignment.bottomRight,

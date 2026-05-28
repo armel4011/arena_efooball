@@ -157,22 +157,67 @@ class AdminChatRepository {
     });
   }
 
-  /// Bulk insert pour broadcast cible (1 row par recipient, meme texte).
+  /// Bulk insert pour broadcast cible (1 row par recipient).
+  ///
+  /// Trois modes selon les params :
+  /// - texte seul : `text` non-null, `imageUrl`/`caption` null
+  /// - image seule : `imageUrl` non-null, `text`/`caption` peuvent etre null
+  /// - image + caption : `imageUrl` + `caption` non-null
+  ///
+  /// L'image doit deja avoir ete uploadee via [uploadBroadcastImage]
+  /// (un seul upload partage entre tous les destinataires — sinon on
+  /// uploadrait N fois pour rien).
   Future<void> broadcast({
     required String adminId,
     required List<String> recipientIds,
-    required String text,
+    String? text,
+    String? imageUrl,
+    String? caption,
   }) async {
     if (recipientIds.isEmpty) return;
+    final trimmedText = text?.trim();
+    final trimmedCaption = caption?.trim();
+    final hasText = trimmedText != null && trimmedText.isNotEmpty;
+    final hasImage = imageUrl != null;
+    if (!hasText && !hasImage) {
+      throw ArgumentError('broadcast: text or imageUrl required');
+    }
     final rows = [
       for (final r in recipientIds)
         {
           'admin_id': adminId,
           'recipient_id': r,
-          'text': text.trim(),
+          if (hasText) 'text': trimmedText,
+          if (hasImage) 'image_url': imageUrl,
+          if (trimmedCaption != null && trimmedCaption.isNotEmpty)
+            'caption': trimmedCaption,
         },
     ];
     await _client.from(_table).insert(rows);
+  }
+
+  /// Upload une image partagee pour un broadcast chat (1 fichier, N
+  /// recipients). Retourne l'URL publique a passer ensuite a [broadcast].
+  /// Ecrit dans `notification_images/admin_chat_broadcast/<adminId>/...`.
+  Future<String> uploadBroadcastImage({
+    required String adminId,
+    required File file,
+  }) async {
+    final ext = file.path.split('.').last.toLowerCase();
+    final ts = DateTime.now().millisecondsSinceEpoch;
+    final path = 'admin_chat_broadcast/$adminId/$ts.$ext';
+    final mime = switch (ext) {
+      'png' => 'image/png',
+      'webp' => 'image/webp',
+      'gif' => 'image/gif',
+      _ => 'image/jpeg',
+    };
+    await _client.storage.from('notification_images').upload(
+          path,
+          file,
+          fileOptions: FileOptions(contentType: mime, upsert: false),
+        );
+    return _client.storage.from('notification_images').getPublicUrl(path);
   }
 
   Future<void> markRead(String messageId) async {
