@@ -288,29 +288,34 @@ class _PriceFooter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isPaid) {
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: _PriceBlock(
-              label: 'ENTRÉE',
-              value: _CompetitionMoney.format(registrationFee),
-              currency: registrationCurrency,
-              accent: ArenaColors.tierGoldWarm,
-            ),
-          ),
-          if (prizePool > 0) ...[
-            const SizedBox(width: ArenaSpacing.sm),
+      // IntrinsicHeight requis pour que `crossAxisAlignment.stretch`
+      // aligne les 2 blocs sur la meme hauteur sans demander Infinity
+      // au parent (qui crashait silencieusement la card en prod).
+      return IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
             Expanded(
               child: _PriceBlock(
-                label: 'À GAGNER',
-                value: _CompetitionMoney.format(prizePool),
-                currency: prizeCurrency,
-                accent: ArenaColors.statusOk,
+                label: 'ENTRÉE',
+                value: _CompetitionMoney.format(registrationFee),
+                currency: registrationCurrency,
+                accent: ArenaColors.tierGoldWarm,
               ),
             ),
+            if (prizePool > 0) ...[
+              const SizedBox(width: ArenaSpacing.sm),
+              Expanded(
+                child: _PriceBlock(
+                  label: 'À GAGNER',
+                  value: _CompetitionMoney.format(prizePool),
+                  currency: prizeCurrency,
+                  accent: ArenaColors.statusOk,
+                ),
+              ),
+            ],
           ],
-        ],
+        ),
       );
     }
     // Gratuit
