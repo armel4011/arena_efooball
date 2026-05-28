@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:arena/core/services/sync_queue_service.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/arena_notification.dart';
 import 'package:arena/data/repositories/notification_repository.dart';
@@ -77,10 +78,14 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
   }
 
   Future<void> _onTap(ArenaNotification notif) async {
-    final repo = ref.read(notificationRepositoryProvider);
     if (notif.isUnread) {
+      // Offline-aware : si reseau down, l'action est enqueue et rejouee
+      // au retour online (cf. SyncQueueService).
       unawaited(
-        repo.markRead(notif.id).catchError(
+        ref
+            .read(offlineAwareActionsProvider)
+            .markNotificationRead(notif.id)
+            .catchError(
               (Object e) => debugPrint('markRead failed for ${notif.id}: $e'),
             ),
       );

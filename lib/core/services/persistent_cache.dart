@@ -110,6 +110,37 @@ class PersistentCache {
       unawaited(writeList<T>(namespace, list, toJson));
     }
   }
+
+  /// Variante pour `List<(A, B)>` (records) — utilise pour friends
+  /// (`List<(Friendship, Profile)>`). Serialise chaque tuple comme
+  /// `{"a": ..., "b": ...}`.
+  Stream<List<(A, B)>> hydratePairs<A, B>({
+    required String namespace,
+    required Stream<List<(A, B)>> source,
+    required A Function(Map<String, dynamic>) fromJsonA,
+    required B Function(Map<String, dynamic>) fromJsonB,
+    required Map<String, dynamic> Function(A) toJsonA,
+    required Map<String, dynamic> Function(B) toJsonB,
+  }) async* {
+    final cached = readList<(A, B)>(namespace, (json) {
+      final a = fromJsonA(json['a'] as Map<String, dynamic>);
+      final b = fromJsonB(json['b'] as Map<String, dynamic>);
+      return (a, b);
+    });
+    if (cached != null && cached.isNotEmpty) {
+      yield cached;
+    }
+    await for (final list in source) {
+      yield list;
+      unawaited(
+        writeList<(A, B)>(
+          namespace,
+          list,
+          (pair) => {'a': toJsonA(pair.$1), 'b': toJsonB(pair.$2)},
+        ),
+      );
+    }
+  }
 }
 
 /// Provider singleton — instancie le cache une fois au boot. Resolu via

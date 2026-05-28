@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:arena/core/services/persistent_cache.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -279,9 +280,31 @@ final adminChatRepositoryProvider = Provider<AdminChatRepository>((ref) {
 /// un `StreamBuilder` direct qui re-souscrivait au stream Supabase a chaque
 /// rebuild Flutter (chaque changement de keyboard, theme, etc.). Pousser
 /// via Riverpod cache la souscription et evite ces reconnexions inutiles.
+///
+/// **Cold start cache (Phase 2 offline)** : la liste connue est persistee
+/// → la page Messages s'affiche instantanement au boot meme offline.
 final userAdminMessagesProvider =
-    StreamProvider.autoDispose<List<AdminChatMessage>>((ref) {
+    StreamProvider.autoDispose<List<AdminChatMessage>>((ref) async* {
   final userId = ref.watch(currentSessionProvider)?.user.id;
-  if (userId == null) return Stream.value(const []);
-  return ref.watch(adminChatRepositoryProvider).watchInbox(userId);
+  if (userId == null) {
+    yield const [];
+    return;
+  }
+  final source = ref.watch(adminChatRepositoryProvider).watchInbox(userId);
+  final cache = await ref.watch(persistentCacheProvider.future);
+  yield* cache.hydrate<AdminChatMessage>(
+    namespace: 'admin_messages.$userId',
+    source: source,
+    fromJson: AdminChatMessage.fromJson,
+    toJson: (m) => {
+      'id': m.id,
+      'admin_id': m.adminId,
+      'recipient_id': m.recipientId,
+      'text': m.text,
+      'image_url': m.imageUrl,
+      'caption': m.caption,
+      'sent_at': m.sentAt.toIso8601String(),
+      'read_at': m.readAt?.toIso8601String(),
+    },
+  );
 });

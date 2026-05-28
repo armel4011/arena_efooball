@@ -1,6 +1,9 @@
+import 'package:arena/core/services/network_status_service.dart';
 import 'package:arena/core/services/realtime_resume_service.dart';
+import 'package:arena/core/services/sync_queue_service.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
+import 'package:arena/features_shared/widgets/offline_banner.dart';
 import 'package:arena/features_user/chat/messages_inbox_page.dart';
 import 'package:arena/features_user/competitions/competitions_list_page.dart';
 import 'package:arena/features_user/home/home_page.dart';
@@ -35,10 +38,15 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
 
   @override
   Widget build(BuildContext context) {
-    // Anchore le RealtimeResumeService dans la session — il s'attache au
-    // WidgetsBinding et invalide les StreamProvider Supabase quand l'app
-    // revient au foreground (evite les donnees obsoletes apres background).
-    ref.watch(realtimeResumeServiceProvider);
+    // Anchore les services session — `realtimeResumeServiceProvider`
+    // invalide les StreamProvider Supabase au foreground resume ;
+    // `networkStatusServiceProvider` ecoute connectivity_plus pour le
+    // banner offline ; `syncQueueServiceProvider` attache l'auto-flush
+    // au retour online. Les 3 sont keep-alive (singleton session).
+    ref
+      ..watch(realtimeResumeServiceProvider)
+      ..watch(networkStatusServiceProvider)
+      ..watch(syncQueueServiceProvider);
     return PopScope(
       // On gere le back system manuellement :
       //  - sur un tab non-home  -> revient sur Home
@@ -52,7 +60,16 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
             if (_currentIndex == 2) const InboxComposeAction(),
           ],
         ),
-        body: IndexedStack(index: _currentIndex, children: _pages),
+        // Banner offline tout en haut du body — n'occupe d'espace que
+        // quand le reseau est down (AnimatedSize collapse a height 0).
+        body: Column(
+          children: [
+            const OfflineBanner(),
+            Expanded(
+              child: IndexedStack(index: _currentIndex, children: _pages),
+            ),
+          ],
+        ),
         bottomNavigationBar: _GlowingNavBar(
           currentIndex: _currentIndex,
           onChanged: (i) => setState(() => _currentIndex = i),

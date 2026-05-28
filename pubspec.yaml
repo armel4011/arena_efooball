@@ -59,6 +59,12 @@ dependencies:
   flutter_secure_storage: ^9.2.2
   shared_preferences: ^2.3.2
 
+  # ─── Offline-first stack — PHASE 14 (2026-05-28) ───────────
+  # `connectivity_plus` : detection du status reseau (online/offline,
+  #     wifi vs mobile). Utilise par NetworkStatusService pour driver
+  #     le banner UI et la sync queue.
+  connectivity_plus: ^6.0.5
+
   # ─── Deep links (auth + reset password) — PHASE 2 ──────────
   app_links: ^6.3.2
 

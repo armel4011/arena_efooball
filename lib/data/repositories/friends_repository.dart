@@ -1,3 +1,4 @@
+import 'package:arena/core/services/persistent_cache.dart';
 import 'package:arena/data/models/friendship.dart';
 import 'package:arena/data/models/profile.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
@@ -358,11 +359,26 @@ final outgoingFriendRequestsProvider =
 
 /// Liste amis acceptés + profil joueur.
 /// **Realtime** : nouvel ami apparait sans refresh, ami retire disparait.
+/// **Cold start cache (Phase 2 offline)** : liste persistee → la page
+/// "Mes amis" reste utilisable hors ligne avec la derniere photo connue.
 final acceptedFriendsProvider =
-    StreamProvider.autoDispose<List<(Friendship, Profile)>>((ref) {
+    StreamProvider.autoDispose<List<(Friendship, Profile)>>((ref) async* {
   final me = ref.watch(currentSessionProvider)?.user.id;
-  if (me == null) return Stream.value(const []);
-  return ref.watch(friendsRepositoryProvider).watchAcceptedWithPeers(me);
+  if (me == null) {
+    yield const [];
+    return;
+  }
+  final source =
+      ref.watch(friendsRepositoryProvider).watchAcceptedWithPeers(me);
+  final cache = await ref.watch(persistentCacheProvider.future);
+  yield* cache.hydratePairs<Friendship, Profile>(
+    namespace: 'friends.accepted.$me',
+    source: source,
+    fromJsonA: Friendship.fromJson,
+    fromJsonB: Profile.fromJson,
+    toJsonA: (f) => f.toJson(),
+    toJsonB: (p) => p.toJson(),
+  );
 });
 
 /// Liste des utilisateurs bloqués par `me`.
