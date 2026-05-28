@@ -27,27 +27,40 @@ class ChatRepository {
   /// friend chats n'apparaissaient nulle part dans l'inbox.
   Future<List<({String channelId, String friendshipId, String peerId})>>
       listMyFriendChannels(String me) async {
-    // 1. Liste tous les friend channels où je suis membre.
+    // **Joint serveur** : on embed `friendships` (peer info) ET
+    // `chat_channel_user_state` (hidden flag) en une seule requete au
+    // lieu de 2 sequentielles. La RLS sur chat_channel_user_state
+    // filtre deja a `auth.uid() = user_id` → l'embed retourne 0 ou 1
+    // row par channel.
     final rows = await _client
         .from(_channelsTable)
-        .select('id, friendship_id, friendships!inner(requester_id, addressee_id, status)')
+        .select(
+          'id, friendship_id, '
+          'friendships!inner(requester_id, addressee_id, status), '
+          'chat_channel_user_state(hidden)',
+        )
         .eq('type', 'friend')
         .eq('friendships.status', 'accepted')
         .or(
           'requester_id.eq.$me,addressee_id.eq.$me',
           referencedTable: 'friendships',
         );
-    final all =
+    final result =
         <({String channelId, String friendshipId, String peerId})>[];
     for (final row in rows as List<dynamic>) {
       final map = row as Map<String, dynamic>;
+      // Skip si masque pour moi (hidden=true dans ma user_state row).
+      final states = map['chat_channel_user_state'] as List<dynamic>?;
+      final hidden = states != null &&
+          states.any((s) => (s as Map<String, dynamic>)['hidden'] == true);
+      if (hidden) continue;
       final f = map['friendships'] as Map<String, dynamic>?;
       if (f == null) continue;
       final requester = f['requester_id'] as String?;
       final addressee = f['addressee_id'] as String?;
       final peer = requester == me ? addressee : requester;
       if (peer == null) continue;
-      all.add(
+      result.add(
         (
           channelId: map['id'] as String,
           friendshipId: map['friendship_id'] as String,
@@ -55,21 +68,7 @@ class ChatRepository {
         ),
       );
     }
-    if (all.isEmpty) return all;
-
-    // 2. Filtre les channels masqués pour moi (hidden=true dans
-    // chat_channel_user_state). RLS limite déjà les rows à moi.
-    final ids = [for (final c in all) c.channelId];
-    final hiddenRows = await _client
-        .from(_userStateTable)
-        .select('channel_id')
-        .eq('hidden', true)
-        .inFilter('channel_id', ids);
-    final hidden = {
-      for (final r in hiddenRows as List<dynamic>)
-        (r as Map<String, dynamic>)['channel_id'] as String,
-    };
-    return [for (final c in all) if (!hidden.contains(c.channelId)) c];
+    return result;
   }
 
   /// Map matchId → channelId pour les channels type='match' existants.
@@ -94,32 +93,24 @@ class ChatRepository {
   /// l'inbox DIRECT pour n'afficher que les vraies conversations.
   Future<Set<String>> openedMatchChannelIds(List<String> matchIds) async {
     if (matchIds.isEmpty) return const {};
+    // **Joint serveur** : 1 query (channels + user_state embed) au lieu
+    // de 2 (channels puis hidden filter). Voir listMyFriendChannels
+    // pour le pattern detaille.
     final rows = await _client
         .from(_channelsTable)
-        .select('id, match_id')
+        .select('id, match_id, chat_channel_user_state(hidden)')
         .eq('type', 'match')
         .inFilter('match_id', matchIds);
-    final byMatch = <String, String>{};
+    final result = <String>{};
     for (final r in rows as List<dynamic>) {
       final map = r as Map<String, dynamic>;
-      byMatch[map['match_id'] as String] = map['id'] as String;
+      final states = map['chat_channel_user_state'] as List<dynamic>?;
+      final hidden = states != null &&
+          states.any((s) => (s as Map<String, dynamic>)['hidden'] == true);
+      if (hidden) continue;
+      result.add(map['match_id'] as String);
     }
-    if (byMatch.isEmpty) return const {};
-
-    // Retire les channels masqués pour moi.
-    final hiddenRows = await _client
-        .from(_userStateTable)
-        .select('channel_id')
-        .eq('hidden', true)
-        .inFilter('channel_id', byMatch.values.toList());
-    final hiddenChannelIds = {
-      for (final r in hiddenRows as List<dynamic>)
-        (r as Map<String, dynamic>)['channel_id'] as String,
-    };
-    return {
-      for (final e in byMatch.entries)
-        if (!hiddenChannelIds.contains(e.value)) e.key,
-    };
+    return result;
   }
 
   /// Returns the existing match channel for [matchId], or creates one

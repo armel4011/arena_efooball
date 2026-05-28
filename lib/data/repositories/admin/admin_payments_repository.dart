@@ -40,76 +40,49 @@ class AdminPaymentsRepository {
   final SupabaseClient _client;
 
   /// One-shot fetch des paiements en attente de validation, plus
-  /// anciens en tête. Consommé en polling (cf. provider) : le filtre
-  /// `status` est appliqué côté serveur — contrairement au `.stream()`
-  /// Realtime qui aurait ramené toute la table.
+  /// anciens en tête. **Joints serveur** pour username + competition
+  /// name en une seule requête (vs 3 queries avant — payments +
+  /// profiles + competitions).
   Future<List<AdminPaymentRow>> listPending() async {
     final rows = await _client
         .from(_table)
-        .select()
+        .select(_selectWithJoins)
         .eq('status', 'awaiting_admin')
         .order('created_at');
-    return _enrich([
-      for (final r in rows)
-        AdminPaymentRow(
-          payment: PaymentRecord.fromJson(r),
-          username: '—',
-          competitionName: '—',
-        ),
-    ]);
+    return [for (final r in rows) _parseJoinedRow(r)];
   }
 
   /// One-shot fetch de l'historique (paiements clos : validés ou
-  /// rejetés), plus récents en tête. Filtre `status` côté serveur.
+  /// rejetés), plus récents en tête. Idem : joints serveur.
   Future<List<AdminPaymentRow>> listHistory() async {
     final rows = await _client
         .from(_table)
-        .select()
+        .select(_selectWithJoins)
         .inFilter('status', ['succeeded', 'rejected'])
         .order('updated_at', ascending: false);
-    return _enrich([
-      for (final r in rows)
-        AdminPaymentRow(
-          payment: PaymentRecord.fromJson(r),
-          username: '—',
-          competitionName: '—',
-        ),
-    ]);
+    return [for (final r in rows) _parseJoinedRow(r)];
   }
 
-  /// Joint profiles.username + competitions.name. La realtime stream
-  /// de Supabase ne supporte pas les selects avec joins — on le fait
-  /// donc en deuxième pass côté Dart.
-  Future<List<AdminPaymentRow>> _enrich(List<AdminPaymentRow> rows) async {
-    if (rows.isEmpty) return rows;
-    final userIds = {for (final r in rows) r.payment.userId}.toList();
-    final compIds = {for (final r in rows) r.payment.competitionId}.toList();
-    final users = (await _client
-            .from('profiles')
-            .select('id, username')
-            .inFilter('id', userIds) as List<dynamic>)
-        .cast<Map<String, dynamic>>();
-    final comps = (await _client
-            .from('competitions')
-            .select('id, name')
-            .inFilter('id', compIds) as List<dynamic>)
-        .cast<Map<String, dynamic>>();
-    final usernameById = {
-      for (final u in users)
-        u['id'] as String: u['username'] as String? ?? '—',
-    };
-    final compNameById = {
-      for (final c in comps)
-        c['id'] as String: c['name'] as String? ?? '—',
-    };
-    return [
-      for (final r in rows)
-        AdminPaymentRow(
-          payment: r.payment,
-          username: usernameById[r.payment.userId] ?? '—',
-          competitionName: compNameById[r.payment.competitionId] ?? '—',
-        ),
-    ];
+  /// Select avec joints embarques sur `profiles` (username) et
+  /// `competitions` (name). PostgREST embed les rows referencees
+  /// sous une cle "profiles" / "competitions" dans la reponse JSON ;
+  /// on les extrait dans `_parseJoinedRow`.
+  static const _selectWithJoins =
+      '*, profiles!user_id(username), competitions!competition_id(name)';
+
+  AdminPaymentRow _parseJoinedRow(Map<String, dynamic> row) {
+    final profile = row['profiles'] as Map<String, dynamic>?;
+    final comp = row['competitions'] as Map<String, dynamic>?;
+    // PaymentRecord.fromJson ne connait pas les nested ; on les retire
+    // pour eviter un parsing inattendu.
+    final paymentJson = Map<String, dynamic>.from(row)
+      ..remove('profiles')
+      ..remove('competitions');
+    return AdminPaymentRow(
+      payment: PaymentRecord.fromJson(paymentJson),
+      username: profile?['username'] as String? ?? '—',
+      competitionName: comp?['name'] as String? ?? '—',
+    );
   }
 
   /// Valide un paiement. Le trigger DB `on_payment_validated`

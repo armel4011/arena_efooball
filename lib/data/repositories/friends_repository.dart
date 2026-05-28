@@ -127,6 +127,20 @@ class FriendsRepository {
 
   /// Convertit une liste de Friendship en couples (friendship, peer profile)
   /// en un seul round-trip via `in.(...)`.
+  ///
+  /// **Selection partielle** : on omet les colonnes lourdes (stats jsonb,
+  /// fcm_token, voip_token, whatsapp_number, kyc_*, referral_*, totp_*,
+  /// timezone, currencies) qui ne servent pas pour la liste d'amis —
+  /// seuls username + avatar + badge actif/banni sont consommes par
+  /// `friends_page.dart` et `public_profile_page.dart`. Reduit le
+  /// payload de ~2 KB → ~150 octets par profil (×20-200 amis).
+  ///
+  /// On garde quand meme `email`, `country_code` car `Profile` les
+  /// declare `required` (Freezed leverait sinon une exception missing-key).
+  static const _peerColumns =
+      'id, username, email, country_code, avatar_color, role, '
+      'is_active, permanent_ban, deleted_at, created_at, updated_at';
+
   Future<List<(Friendship, Profile)>> resolvePeers({
     required String me,
     required List<Friendship> friendships,
@@ -135,7 +149,7 @@ class FriendsRepository {
     final ids = {for (final f in friendships) f.otherUserId(me)};
     final rows = await _client
         .from(_profilesTable)
-        .select()
+        .select(_peerColumns)
         .inFilter('id', ids.toList());
     final byId = <String, Profile>{
       for (final row in rows as List<dynamic>)
