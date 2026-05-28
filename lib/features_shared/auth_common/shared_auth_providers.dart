@@ -1,4 +1,5 @@
 import 'package:arena/core/flavors/flavor_config.dart';
+import 'package:arena/core/services/persistent_cache.dart';
 import 'package:arena/data/models/profile.dart';
 import 'package:arena/data/repositories/auth_failure.dart';
 import 'package:arena/data/repositories/auth_repository.dart';
@@ -52,15 +53,39 @@ final currentSessionProvider = Provider<sb.Session?>((ref) {
 /// Current authenticated [Profile], with role-based gating for the
 /// active flavor (admin profile in user app → [WrongAppForRoleFailure],
 /// and vice-versa).
-final currentProfileProvider = FutureProvider<Profile?>((ref) async {
+///
+/// **Cold start cache** : le profil precedent est persiste via
+/// PersistentCache → la home (avatar + username + tier) et la page
+/// Profil (stats grid lue depuis profile.stats) s'affichent
+/// instantanement au boot, meme offline. Le re-fetch reseau remplace
+/// si necessaire.
+final currentProfileProvider = StreamProvider<Profile?>((ref) async* {
   final session = ref.watch(currentSessionProvider);
-  if (session == null) return null;
-  final profile =
-      await ref.watch(profileRepositoryProvider).getById(session.user.id);
-  if (profile == null) return null;
-  enforceRoleForFlavor(profile);
-  return profile;
+  if (session == null) {
+    yield null;
+    return;
+  }
+  final cache = await ref.watch(persistentCacheProvider.future);
+  final source = _fetchProfileOnce(ref, session.user.id);
+  yield* cache.hydrateSingle<Profile>(
+    namespace: 'profile.${session.user.id}',
+    source: source,
+    fromJson: Profile.fromJson,
+    toJson: (p) => p.toJson(),
+  );
 });
+
+/// Stream wrapper qui execute le fetch une seule fois puis ferme.
+/// hydrateSingle veut un `Stream<Profile?>`, et on a un `Future`.
+Stream<Profile?> _fetchProfileOnce(Ref ref, String userId) async* {
+  final profile = await ref.watch(profileRepositoryProvider).getById(userId);
+  if (profile == null) {
+    yield null;
+    return;
+  }
+  enforceRoleForFlavor(profile);
+  yield profile;
+}
 
 /// Sign-out helper exposed as a callback so screens can wire it directly.
 final signOutProvider = Provider<Future<void> Function()>((ref) {

@@ -24,7 +24,8 @@ Profile _player() => const Profile(
 
 Widget _scoped() => ProviderScope(
       overrides: [
-        currentProfileProvider.overrideWith((ref) async => _player()),
+        currentProfileProvider
+            .overrideWith((ref) => Stream.value(_player())),
         competitionsListProvider
             .overrideWith((ref, _) => Stream<List<Competition>>.value([])),
         playerStatsProvider

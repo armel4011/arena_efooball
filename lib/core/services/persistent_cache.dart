@@ -45,6 +45,40 @@ class PersistentCache {
 
   String _key(String namespace) => 'arena.cache.$namespace';
 
+  /// Lit un objet T unique depuis le cache. Renvoie null si absent
+  /// ou invalide.
+  T? readObject<T>(
+    String namespace,
+    T Function(Map<String, dynamic>) fromJson,
+  ) {
+    final raw = _prefs.getString(_key(namespace));
+    if (raw == null) return null;
+    try {
+      return fromJson(jsonDecode(raw) as Map<String, dynamic>);
+    } catch (e, st) {
+      if (kDebugMode) {
+        debugPrint('[cache] readObject($namespace) failed: $e\n$st');
+      }
+      _prefs.remove(_key(namespace));
+      return null;
+    }
+  }
+
+  /// Persiste un objet T unique.
+  Future<void> writeObject<T>(
+    String namespace,
+    T value,
+    Map<String, dynamic> Function(T) toJson,
+  ) async {
+    try {
+      await _prefs.setString(_key(namespace), jsonEncode(toJson(value)));
+    } catch (e, st) {
+      if (kDebugMode) {
+        debugPrint('[cache] writeObject($namespace) failed: $e\n$st');
+      }
+    }
+  }
+
   /// Lit une `List<T>` depuis le cache. Renvoie `null` si absent /
   /// invalide / vide — l'appelant decide alors d'afficher loader ou
   /// liste vide (pas de fausse "donnee absente" remontee comme vide).
@@ -91,8 +125,15 @@ class PersistentCache {
   /// Stream helper : emit d'abord le cache existant (si non-null), puis
   /// chaque valeur de [source] (qu'on persiste au passage).
   ///
+  /// **Offline-safe** : si [source] leve (SocketException, WebSocket
+  /// down, etc.), l'exception est silencieusement avalee — l'AsyncValue
+  /// reste sur la derniere valeur emise (le cache). L'UI ne montre
+  /// JAMAIS d'ecran d'erreur reseau ; le user voit le bandeau "Hors
+  /// ligne" et le contenu reste fige sur sa derniere version connue.
+  ///
   /// Si le cache est absent au boot, on ne yield rien — l'appelant
-  /// montre son loader normal, puis recoit la 1ere donnee live.
+  /// montre son loader normal, puis recoit la 1ere donnee live (ou
+  /// reste sur le loader silencieusement si pas de reseau).
   Stream<List<T>> hydrate<T>({
     required String namespace,
     required Stream<List<T>> source,
@@ -103,11 +144,43 @@ class PersistentCache {
     if (cached != null && cached.isNotEmpty) {
       yield cached;
     }
-    await for (final list in source) {
-      yield list;
-      // Persist en arriere-plan ; pas besoin d'await — le yield
-      // precedent a deja transmis a l'UI.
-      unawaited(writeList<T>(namespace, list, toJson));
+    try {
+      await for (final list in source) {
+        yield list;
+        // Persist en arriere-plan ; pas besoin d'await — le yield
+        // precedent a deja transmis a l'UI.
+        unawaited(writeList<T>(namespace, list, toJson));
+      }
+    } catch (e, st) {
+      // Swallow — l'UI reste figee sur le dernier yield (cache ou
+      // derniere donnee live recue avant la coupure).
+      if (kDebugMode) {
+        debugPrint('[cache] hydrate($namespace) source error swallowed: $e\n$st');
+      }
+    }
+  }
+
+  /// Variante pour un objet unique (vs liste). Utilisee pour
+  /// `currentProfileProvider` qui retourne `Profile?`.
+  Stream<T?> hydrateSingle<T>({
+    required String namespace,
+    required Stream<T?> source,
+    required T Function(Map<String, dynamic>) fromJson,
+    required Map<String, dynamic> Function(T) toJson,
+  }) async* {
+    final cached = readObject<T>(namespace, fromJson);
+    if (cached != null) yield cached;
+    try {
+      await for (final value in source) {
+        yield value;
+        if (value != null) {
+          unawaited(writeObject<T>(namespace, value, toJson));
+        }
+      }
+    } catch (e, st) {
+      if (kDebugMode) {
+        debugPrint('[cache] hydrateSingle($namespace) source error swallowed: $e\n$st');
+      }
     }
   }
 
@@ -130,15 +203,21 @@ class PersistentCache {
     if (cached != null && cached.isNotEmpty) {
       yield cached;
     }
-    await for (final list in source) {
-      yield list;
-      unawaited(
-        writeList<(A, B)>(
-          namespace,
-          list,
-          (pair) => {'a': toJsonA(pair.$1), 'b': toJsonB(pair.$2)},
-        ),
-      );
+    try {
+      await for (final list in source) {
+        yield list;
+        unawaited(
+          writeList<(A, B)>(
+            namespace,
+            list,
+            (pair) => {'a': toJsonA(pair.$1), 'b': toJsonB(pair.$2)},
+          ),
+        );
+      }
+    } catch (e, st) {
+      if (kDebugMode) {
+        debugPrint('[cache] hydratePairs($namespace) source error swallowed: $e\n$st');
+      }
     }
   }
 }

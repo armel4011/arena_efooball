@@ -24,7 +24,7 @@ Profile _profile({Map<String, dynamic> stats = const {}}) => Profile(
 
 Widget _scoped(Profile profile) => ProviderScope(
       overrides: [
-        currentProfileProvider.overrideWith((ref) async => profile),
+        currentProfileProvider.overrideWith((ref) => Stream.value(profile)),
       ],
       child: const MaterialApp(home: Scaffold(body: HomePage())),
     );

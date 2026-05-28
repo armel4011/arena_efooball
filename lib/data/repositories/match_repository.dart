@@ -1,3 +1,4 @@
+import 'package:arena/core/services/persistent_cache.dart';
 import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
@@ -297,11 +298,28 @@ final matchScoreSubmissionsProvider = StreamProvider.family
 
 /// Matchs actifs (scheduled / ready / in_progress / awaiting…) du joueur
 /// courant — alimente la home "Prochains matchs".
+///
+/// **Cold start cache** : la liste connue est persistee → la section
+/// "Prochain match" s'affiche instantanement au boot meme offline.
 final myActiveMatchesProvider =
-    FutureProvider.autoDispose<List<ArenaMatch>>((ref) async {
+    StreamProvider.autoDispose<List<ArenaMatch>>((ref) async* {
   final me = ref.watch(currentSessionProvider)?.user.id;
-  if (me == null) return const [];
-  return ref.watch(matchRepositoryProvider).listActiveForPlayer(me);
+  if (me == null) {
+    yield const [];
+    return;
+  }
+  final cache = await ref.watch(persistentCacheProvider.future);
+  // Source = fetch one-shot wrappe en Stream (le repo n'a pas de stream
+  // pour cette query — listActiveForPlayer filtre cote serveur).
+  final source = Stream<List<ArenaMatch>>.fromFuture(
+    ref.watch(matchRepositoryProvider).listActiveForPlayer(me),
+  );
+  yield* cache.hydrate<ArenaMatch>(
+    namespace: 'active_matches.$me',
+    source: source,
+    fromJson: ArenaMatch.fromJson,
+    toJson: (m) => m.toJson(),
+  );
 });
 
 /// Tous les matchs du joueur courant, récents en haut. Alimente l'onglet

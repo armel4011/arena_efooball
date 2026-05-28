@@ -122,7 +122,9 @@ Future<Widget> _buildApp({
     // MainLayout/HomePage eager-build every tab via IndexedStack, so we
     // mute the data sources they reach for — otherwise they hit Supabase
     // and crash the tree.
-    myActiveMatchesProvider.overrideWith((ref) async => const <ArenaMatch>[]),
+    myActiveMatchesProvider.overrideWith(
+      (ref) => Stream<List<ArenaMatch>>.value(const []),
+    ),
     activePublicStreamsProvider
         .overrideWith((ref) => Stream<List<MatchStream>>.value(const [])),
     myPaymentsProvider
@@ -133,7 +135,8 @@ Future<Widget> _buildApp({
     if (profile != null) ...[
       if (useSession)
         currentSessionProvider.overrideWith((ref) => _FakeSession(profile.id)),
-      currentProfileProvider.overrideWith((ref) async => profile),
+      currentProfileProvider
+          .overrideWith((ref) => Stream<Profile?>.value(profile)),
     ],
   ];
 
