@@ -35,7 +35,7 @@ class CompetitionsListPage extends ConsumerStatefulWidget {
 
 class _CompetitionsListPageState extends ConsumerState<CompetitionsListPage> {
   GameType? _game;
-  StatusBucket _bucket = StatusBucket.upcoming;
+  StatusBucket _bucket = StatusBucket.all;
   PricingBucket _pricing = PricingBucket.all;
 
   @override
@@ -191,9 +191,8 @@ class _CompetitionsListPageState extends ConsumerState<CompetitionsListPage> {
           : GameType.values.firstWhere((g) => g.name == gameId);
 
       final statusId = selection['status']?.firstOrNull;
-      // Status n'a pas d'option "toutes" — fallback sur upcoming si vide.
       _bucket = statusId == null
-          ? StatusBucket.upcoming
+          ? StatusBucket.all
           : StatusBucket.values.firstWhere((b) => b.name == statusId);
 
       final pricingId = selection['pricing']?.firstOrNull;
@@ -206,7 +205,7 @@ class _CompetitionsListPageState extends ConsumerState<CompetitionsListPage> {
   int _activeFilterCount() {
     var n = 0;
     if (_game != null) n++;
-    if (_bucket != StatusBucket.upcoming) n++;
+    if (_bucket != StatusBucket.all) n++;
     if (_pricing != PricingBucket.all) n++;
     return n;
   }
@@ -214,7 +213,7 @@ class _CompetitionsListPageState extends ConsumerState<CompetitionsListPage> {
   void _resetAll() {
     setState(() {
       _game = null;
-      _bucket = StatusBucket.upcoming;
+      _bucket = StatusBucket.all;
       _pricing = PricingBucket.all;
     });
   }

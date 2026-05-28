@@ -24,6 +24,7 @@ enum PricingBucket {
 
 /// Status filter — bucket regroupant plusieurs `CompetitionStatus`.
 enum StatusBucket {
+  all('Toutes'),
   upcoming('À venir'),
   ongoing('En cours'),
   completed('Terminés');
@@ -32,6 +33,7 @@ enum StatusBucket {
   final String label;
 
   bool matches(CompetitionStatus status) => switch (this) {
+        StatusBucket.all => true,
         StatusBucket.upcoming => status == CompetitionStatus.draft ||
             status == CompetitionStatus.registrationOpen ||
             status == CompetitionStatus.registrationClosed,
