@@ -186,8 +186,14 @@ class NetworkStatusService {
 /// est desactivee et on retombe sur la detection d'interface seule.
 final networkStatusServiceProvider =
     Provider<NetworkStatusService>((ref) {
-  final base = dotenv.env['SUPABASE_URL']?.trim() ?? '';
-  final probeUrl = base.isEmpty ? null : '$base/auth/v1/health';
+  // `dotenv` n'est pas charge dans les widget tests — y acceder leverait
+  // NotInitializedError. On garde donc la sonde optionnelle : sans URL,
+  // le service retombe sur la detection d'interface seule.
+  String? probeUrl;
+  if (dotenv.isInitialized) {
+    final base = dotenv.env['SUPABASE_URL']?.trim() ?? '';
+    if (base.isNotEmpty) probeUrl = '$base/auth/v1/health';
+  }
   final svc = NetworkStatusService(Connectivity(), probeUrl: probeUrl)
     ..start();
   ref.onDispose(svc.dispose);
