@@ -76,3 +76,9 @@ lib/features_admin/streams_admin/admin_watch_stream_page.dart
 lib/features_user/home/widgets/live_streams_section.dart
 lib/features_user/streaming/live_streams_page.dart
 lib/features_user/streaming/watch_stream_page.dart
+
+# ─── Image viewer plein ecran : scrim noir + contraste blanc ──────────
+# Meme cas que les viewers video ci-dessus : barrier/scrim noir +
+# icone/caption blanches pour rester lisibles par-dessus une image
+# arbitraire (couleur inconnue). Le blanc pur n'a pas de token design.
+lib/features_shared/widgets/arena_image_viewer.dart
