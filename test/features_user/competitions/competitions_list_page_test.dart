@@ -63,8 +63,7 @@ void main() {
     // Bucket statut "À venir" par défaut → ne montre que les comps en
     // registrationOpen / draft / registrationClosed. On donne 2 comps
     // qui matchent ce bucket pour vérifier qu'elles rendent toutes.
-    // (Le nom est affiché tel quel dans le banner game-themed, donc
-    // pas d'uppercase dans l'assertion.)
+    // (Le bandeau de titre rend le nom en MAJUSCULES — restyle premium.)
     await bumpViewport(tester);
     await tester.pumpWidget(
       _scoped([
@@ -74,8 +73,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Coupe Cameroun'), findsOneWidget);
-    expect(find.text('Trophée RDC'), findsOneWidget);
+    expect(find.text('COUPE CAMEROUN'), findsOneWidget);
+    expect(find.text('TROPHÉE RDC'), findsOneWidget);
     // Deux comps gratuites (fee = 0 par défaut) → 2 fee labels "GRATUIT"
     // dans le banner premium (cf. CompetitionListCard, restyle #10).
     expect(find.text('GRATUIT'), findsNWidgets(2));

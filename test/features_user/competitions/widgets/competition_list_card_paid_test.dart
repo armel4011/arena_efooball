@@ -54,10 +54,11 @@ void main() {
 
     // La presence du nom suffit a prouver que la card s'est rendue
     // sans crash de layout (sinon Text n'aurait pas pu se peindre).
-    expect(find.text('Tournoi du weekend'), findsOneWidget);
-    // La presence de ENTREE confirme que `_PriceFooter` (branche isPaid)
-    // a bien ete rendue, ce qui n'etait pas le cas avec le bug.
-    expect(find.textContaining('ENTR'), findsWidgets);
+    // Le bandeau de titre rend le nom en MAJUSCULES (restyle premium).
+    expect(find.text('TOURNOI DU WEEKEND'), findsOneWidget);
+    // Le badge tier "PREMIUM" confirme que la branche payante (isPaid)
+    // a bien ete rendue, ce qui n'etait pas le cas avec le bug de layout.
+    expect(find.textContaining('PREMIUM'), findsOneWidget);
     expect(find.textContaining('GAGNER'), findsWidgets);
     // Pas d'exception de layout au pump (le matcher integre de Flutter
     // throw sinon).
