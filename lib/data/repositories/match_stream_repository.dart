@@ -1,3 +1,4 @@
+import 'package:arena/core/services/persistent_cache.dart';
 import 'package:arena/core/utils/poll_stream.dart';
 import 'package:arena/data/models/match_stream.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
@@ -146,7 +147,17 @@ final matchStreamsByMatchProvider = StreamProvider.family
 /// qui consomme un Realtime stream coûte 1 channel sur la limite Pro
 /// (500 channels concurrents par projet). Poll 45s suffit.
 final activePublicStreamsProvider =
-    StreamProvider<List<MatchStream>>((ref) {
+    StreamProvider<List<MatchStream>>((ref) async* {
   final repo = ref.watch(matchStreamRepositoryProvider);
-  return pollStream(const Duration(seconds: 45), repo.listActivePublic);
+  final source = pollStream(const Duration(seconds: 45), repo.listActivePublic);
+  // Offline-safe : emet le cache d'abord, persiste chaque poll, et avale
+  // les erreurs reseau (la section "EN DIRECT" reste figee sur la
+  // derniere liste connue au lieu d'afficher une erreur).
+  final cache = await ref.watch(persistentCacheProvider.future);
+  yield* cache.hydrate<MatchStream>(
+    namespace: 'active_public_streams',
+    source: source,
+    fromJson: MatchStream.fromJson,
+    toJson: (s) => s.toJson(),
+  );
 });

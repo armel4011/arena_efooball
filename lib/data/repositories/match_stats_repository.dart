@@ -1,3 +1,4 @@
+import 'package:arena/core/services/persistent_cache.dart';
 import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/models/player_stats.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
@@ -122,14 +123,31 @@ final matchStatsRepositoryProvider = Provider<MatchStatsRepository>((ref) {
 /// refreshes when the user comes back from elsewhere in the app.
 final playerStatsProvider =
     FutureProvider.family.autoDispose<PlayerStats, String>(
-  (ref, playerId) =>
-      ref.watch(matchStatsRepositoryProvider).getForPlayer(playerId),
+  (ref, playerId) async {
+    final cache = await ref.watch(persistentCacheProvider.future);
+    // Offline-safe : renvoie les dernieres stats connues (ou un zero-state
+    // coherent) au lieu d'une erreur reseau quand l'app est hors-ligne.
+    return cache.fetchObjectOrCache<PlayerStats>(
+      namespace: 'player_stats.$playerId',
+      fetch: () => ref.watch(matchStatsRepositoryProvider).getForPlayer(playerId),
+      fromJson: PlayerStats.fromJson,
+      toJson: (s) => s.toJson(),
+      offlineFallback: const PlayerStats.empty(),
+    );
+  },
 );
 
 final playerRecentMatchesProvider =
     FutureProvider.family.autoDispose<List<ArenaMatch>, String>(
-  (ref, playerId) =>
-      ref.watch(matchStatsRepositoryProvider).recentMatches(playerId),
+  (ref, playerId) async {
+    final cache = await ref.watch(persistentCacheProvider.future);
+    return cache.fetchListOrCache<ArenaMatch>(
+      namespace: 'recent_matches.$playerId',
+      fetch: () => ref.watch(matchStatsRepositoryProvider).recentMatches(playerId),
+      fromJson: ArenaMatch.fromJson,
+      toJson: (m) => m.toJson(),
+    );
+  },
 );
 
 /// Variante 10-rows utilisée par le profil public (Phase 13). On garde

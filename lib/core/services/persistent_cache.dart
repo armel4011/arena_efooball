@@ -122,6 +122,73 @@ class PersistentCache {
     }
   }
 
+  /// `true` si [e] ressemble a une coupure reseau (offline / DNS / WS
+  /// down). Sert aux helpers `fetch*OrCache` a decider s'ils avalent
+  /// l'erreur (offline → on fige) ou la rethrow (erreur metier reelle,
+  /// ex: RLS 42501).
+  static bool isOfflineError(Object e) {
+    final s = e.toString();
+    return s.contains('SocketException') ||
+        s.contains('Failed host lookup') ||
+        s.contains('ClientException') ||
+        s.contains('RealtimeSubscribeException') ||
+        s.contains('Connection closed') ||
+        s.contains('Connection refused') ||
+        s.contains('Connection reset');
+  }
+
+  /// Variante **one-shot** (FutureProvider) de [hydrate] pour une liste.
+  /// Tente [fetch] ; au succes persiste + renvoie la donnee fraiche. En
+  /// cas d'erreur reseau, renvoie le dernier cache connu (UI figee) ou
+  /// une liste vide si aucun cache (jamais d'ecran d'erreur offline). Les
+  /// erreurs NON-reseau (RLS, parsing serveur, etc.) sont rethrow.
+  Future<List<T>> fetchListOrCache<T>({
+    required String namespace,
+    required Future<List<T>> Function() fetch,
+    required T Function(Map<String, dynamic>) fromJson,
+    required Map<String, dynamic> Function(T) toJson,
+  }) async {
+    try {
+      final data = await fetch();
+      unawaited(writeList<T>(namespace, data, toJson));
+      return data;
+    } catch (e, st) {
+      final cached = readList<T>(namespace, fromJson);
+      if (cached != null) return cached;
+      if (isOfflineError(e)) return <T>[];
+      if (kDebugMode) {
+        debugPrint('[cache] fetchListOrCache($namespace) rethrow: $e\n$st');
+      }
+      rethrow;
+    }
+  }
+
+  /// Variante **one-shot** pour un objet unique. [offlineFallback] est
+  /// renvoye quand on est offline ET qu'aucun cache n'existe (ex:
+  /// `PlayerStats.empty()`), pour que l'UI affiche un etat coherent
+  /// plutot qu'une erreur reseau.
+  Future<T> fetchObjectOrCache<T>({
+    required String namespace,
+    required Future<T> Function() fetch,
+    required T Function(Map<String, dynamic>) fromJson,
+    required Map<String, dynamic> Function(T) toJson,
+    required T offlineFallback,
+  }) async {
+    try {
+      final data = await fetch();
+      unawaited(writeObject<T>(namespace, data, toJson));
+      return data;
+    } catch (e, st) {
+      final cached = readObject<T>(namespace, fromJson);
+      if (cached != null) return cached;
+      if (isOfflineError(e)) return offlineFallback;
+      if (kDebugMode) {
+        debugPrint('[cache] fetchObjectOrCache($namespace) rethrow: $e\n$st');
+      }
+      rethrow;
+    }
+  }
+
   /// Stream helper : emit d'abord le cache existant (si non-null), puis
   /// chaque valeur de [source] (qu'on persiste au passage).
   ///

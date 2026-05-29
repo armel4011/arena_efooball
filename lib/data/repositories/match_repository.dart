@@ -328,5 +328,13 @@ final myAllMatchesProvider =
     FutureProvider.autoDispose<List<ArenaMatch>>((ref) async {
   final me = ref.watch(currentSessionProvider)?.user.id;
   if (me == null) return const [];
-  return ref.watch(matchRepositoryProvider).listAnyForPlayer(me);
+  final cache = await ref.watch(persistentCacheProvider.future);
+  // Offline-safe : l'onglet DIRECT de l'inbox reste fige sur les derniers
+  // matchs connus au lieu d'afficher une erreur reseau hors-ligne.
+  return cache.fetchListOrCache<ArenaMatch>(
+    namespace: 'inbox_all_matches.$me',
+    fetch: () => ref.watch(matchRepositoryProvider).listAnyForPlayer(me),
+    fromJson: ArenaMatch.fromJson,
+    toJson: (m) => m.toJson(),
+  );
 });

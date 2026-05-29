@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:arena/core/services/persistent_cache.dart';
 import 'package:arena/data/models/chat_channel.dart';
 import 'package:arena/data/models/chat_message.dart';
 import 'package:arena/data/repositories/match_repository.dart';
@@ -433,7 +434,20 @@ final myOpenedMatchChannelIdsProvider =
   final matches = await ref.watch(myAllMatchesProvider.future);
   if (matches.isEmpty) return const {};
   final ids = [for (final m in matches) m.id];
-  return ref.watch(chatRepositoryProvider).openedMatchChannelIds(ids);
+  // Offline-safe : ce provider bloque l'inbox (cf. messages_inbox_page),
+  // donc on fige sur les derniers channels ouverts connus au lieu de
+  // remonter une erreur reseau. Cache une List<String> (wrapper {id}).
+  final me = ref.watch(currentSessionProvider)?.user.id ?? 'anon';
+  final cache = await ref.watch(persistentCacheProvider.future);
+  final cached = await cache.fetchListOrCache<String>(
+    namespace: 'inbox_opened_channels.$me',
+    fetch: () async =>
+        (await ref.watch(chatRepositoryProvider).openedMatchChannelIds(ids))
+            .toList(),
+    fromJson: (j) => j['id'] as String,
+    toJson: (s) => {'id': s},
+  );
+  return cached.toSet();
 });
 
 /// Item 3 wave C (2026-05-19) — friend chats du user courant, à
