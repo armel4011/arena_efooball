@@ -163,16 +163,19 @@ class PersistentCache {
     }
   }
 
-  /// Variante **one-shot** pour un objet unique. [offlineFallback] est
-  /// renvoye quand on est offline ET qu'aucun cache n'existe (ex:
-  /// `PlayerStats.empty()`), pour que l'UI affiche un etat coherent
-  /// plutot qu'une erreur reseau.
+  /// Variante **one-shot** pour un objet unique. [offlineFallback], s'il
+  /// est fourni, est renvoye quand on est offline ET qu'aucun cache
+  /// n'existe (ex: `PlayerStats.empty()`), pour que l'UI affiche un etat
+  /// coherent plutot qu'une erreur reseau. S'il est `null` (ex:
+  /// `ChatChannel` qui n'a pas d'etat vide sensé), on rethrow l'erreur —
+  /// l'UI montre alors son erreur uniquement dans le cas "offline ET
+  /// jamais charge auparavant".
   Future<T> fetchObjectOrCache<T>({
     required String namespace,
     required Future<T> Function() fetch,
     required T Function(Map<String, dynamic>) fromJson,
     required Map<String, dynamic> Function(T) toJson,
-    required T offlineFallback,
+    T? offlineFallback,
   }) async {
     try {
       final data = await fetch();
@@ -181,7 +184,7 @@ class PersistentCache {
     } catch (e, st) {
       final cached = readObject<T>(namespace, fromJson);
       if (cached != null) return cached;
-      if (isOfflineError(e)) return offlineFallback;
+      if (offlineFallback != null && isOfflineError(e)) return offlineFallback;
       if (kDebugMode) {
         debugPrint('[cache] fetchObjectOrCache($namespace) rethrow: $e\n$st');
       }

@@ -403,12 +403,31 @@ final chatRepositoryProvider = Provider<ChatRepository>((ref) {
 final matchChannelProvider =
     FutureProvider.family.autoDispose<ChatChannel, String>((ref, matchId) async {
   final repo = ref.watch(chatRepositoryProvider);
-  final channel = await repo.ensureMatchChannel(matchId);
-  await repo.unhideChannelForMe(channel.id);
-  await repo.markChannelAsRead(channel.id);
-  ref
-    ..invalidate(myOpenedMatchChannelIdsProvider)
-    ..invalidate(myUnreadCountsProvider);
+  final cache = await ref.watch(persistentCacheProvider.future);
+  // Offline-safe : on fige sur le dernier canal connu (le user a deja
+  // ouvert cette conv en ligne). Sans fallback : si offline ET jamais
+  // ouvert, on rethrow (erreur inevitable, conv jamais chargee).
+  final channel = await cache.fetchObjectOrCache<ChatChannel>(
+    namespace: 'match_channel.$matchId',
+    fetch: () => repo.ensureMatchChannel(matchId),
+    fromJson: ChatChannel.fromJson,
+    toJson: (c) => c.toJson(),
+  );
+  // Side-effects reseau best-effort — ignorees hors-ligne pour ne pas
+  // faire echouer l'ouverture de la conv depuis le cache.
+  try {
+    await repo.unhideChannelForMe(channel.id);
+    await repo.markChannelAsRead(channel.id);
+    ref
+      ..invalidate(myOpenedMatchChannelIdsProvider)
+      ..invalidate(myUnreadCountsProvider);
+  } catch (e) {
+    if (PersistentCache.isOfflineError(e)) {
+      // hors-ligne : on garde le canal en cache, rien a invalider
+    } else {
+      rethrow;
+    }
+  }
   return channel;
 });
 
@@ -421,9 +440,20 @@ final myChatClearedAtProvider =
 });
 
 /// Realtime stream of all messages in a chat channel, oldest → newest.
+/// Offline-safe : la liste reste figee sur les derniers messages connus
+/// (cache) au lieu d'afficher une erreur reseau quand la conv est
+/// ouverte hors-ligne.
 final channelMessagesProvider =
-    StreamProvider.family.autoDispose<List<ChatMessage>, String>((ref, channelId) {
-  return ref.watch(chatRepositoryProvider).watchMessages(channelId);
+    StreamProvider.family.autoDispose<List<ChatMessage>, String>(
+        (ref, channelId) async* {
+  final source = ref.watch(chatRepositoryProvider).watchMessages(channelId);
+  final cache = await ref.watch(persistentCacheProvider.future);
+  yield* cache.hydrate<ChatMessage>(
+    namespace: 'chat_messages.$channelId',
+    source: source,
+    fromJson: ChatMessage.fromJson,
+    toJson: (m) => m.toJson(),
+  );
 });
 
 /// Set des match_ids du joueur courant qui ont au moins un chat_channel
