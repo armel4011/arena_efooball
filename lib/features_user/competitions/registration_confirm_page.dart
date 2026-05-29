@@ -1,4 +1,5 @@
 import 'package:arena/core/router/user_router.dart';
+import 'package:arena/core/services/sync_queue_service.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
 import 'package:arena/data/repositories/referral_repository.dart';
@@ -7,6 +8,7 @@ import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_divider.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
+import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/competitions/widgets/referral_progress_card.dart';
 import 'package:arena/features_user/payments/payment_method.dart';
 import 'package:flutter/material.dart';
@@ -194,14 +196,25 @@ class _RegistrationConfirmPageState
     setState(() => _submitting = true);
     try {
       if (_isFree) {
-        await ref
-            .read(competitionRepositoryProvider)
-            .registerSelfFree(widget.competitionId);
+        final playerId = ref.read(currentSessionProvider)?.user.id;
+        if (playerId == null) {
+          throw StateError('Aucune session — inscription impossible.');
+        }
+        final queued =
+            await ref.read(offlineAwareActionsProvider).registerFreeCompetition(
+                  competitionId: widget.competitionId,
+                  playerId: playerId,
+                );
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Inscription confirmée à ${widget.competitionName}.'),
-            backgroundColor: ArenaColors.statusOk,
+            content: Text(
+              queued
+                  ? 'Hors ligne — inscription enregistrée, confirmée à la reconnexion.'
+                  : 'Inscription confirmée à ${widget.competitionName}.',
+            ),
+            backgroundColor:
+                queued ? ArenaColors.statusWarn : ArenaColors.statusOk,
           ),
         );
         context.go(UserRoutes.home);

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/services/agora_rtm_service.dart';
+import 'package:arena/core/services/sync_queue_service.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/core/utils/arena_error_message.dart';
 import 'package:arena/data/models/chat_channel.dart';
@@ -161,12 +162,19 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _sending = true);
     try {
-      await ref.read(chatRepositoryProvider).sendMessage(
+      final queued = await ref.read(offlineAwareActionsProvider).sendChatMessage(
             channelId: channelId,
             senderId: selfId,
             content: text,
           );
       _inputCtrl.clear();
+      if (queued && mounted) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Hors ligne — message envoyé à la reconnexion.'),
+          ),
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(

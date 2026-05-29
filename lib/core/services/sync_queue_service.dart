@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:arena/core/services/network_status_service.dart';
+import 'package:arena/data/repositories/chat_repository.dart';
+import 'package:arena/data/repositories/competition_repository.dart';
 import 'package:arena/data/repositories/notification_repository.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:flutter/foundation.dart';
@@ -78,6 +80,12 @@ sealed class SyncAction {
           createdAt: createdAt,
           payload: payload,
         );
+      case RegisterFreeCompetitionAction._type:
+        return RegisterFreeCompetitionAction.fromPayload(
+          id: id,
+          createdAt: createdAt,
+          payload: payload,
+        );
       default:
         if (kDebugMode) {
           debugPrint('[sync] unknown action type "$type" — dropping');
@@ -146,6 +154,7 @@ class SendChatMessageAction extends SyncAction {
     required super.id,
     required super.createdAt,
     required this.channelId,
+    required this.senderId,
     required this.text,
   });
 
@@ -158,11 +167,13 @@ class SendChatMessageAction extends SyncAction {
         id: id,
         createdAt: createdAt,
         channelId: payload['channel_id'] as String,
+        senderId: payload['sender_id'] as String,
         text: payload['text'] as String,
       );
 
   static const _type = 'chat.send';
   final String channelId;
+  final String senderId;
   final String text;
 
   @override
@@ -171,6 +182,7 @@ class SendChatMessageAction extends SyncAction {
   @override
   Map<String, dynamic> get payload => {
         'channel_id': channelId,
+        'sender_id': senderId,
         'text': text,
       };
 
@@ -179,10 +191,16 @@ class SendChatMessageAction extends SyncAction {
     try {
       // `id` de la queue sert d'idempotency key — l'INSERT utilise
       // cet id comme PK pour eviter le double-envoi si flush rejoue.
+      // Colonnes alignees sur `ChatRepository.sendMessage` :
+      // channel_id / sender_id / content / type. La moderation tourne
+      // cote serveur (trigger AFTER INSERT) — elle s'applique donc
+      // aussi aux messages rejoues depuis la queue.
       await client.from('chat_messages').insert({
         'id': id,
         'channel_id': channelId,
-        'body': text,
+        'sender_id': senderId,
+        'content': text,
+        'type': 'text',
         'created_at': createdAt.toIso8601String(),
       });
       return true;
@@ -200,17 +218,102 @@ class SendChatMessageAction extends SyncAction {
   }
 }
 
+class RegisterFreeCompetitionAction extends SyncAction {
+  const RegisterFreeCompetitionAction({
+    required super.id,
+    required super.createdAt,
+    required this.competitionId,
+    required this.playerId,
+  });
+
+  factory RegisterFreeCompetitionAction.fromPayload({
+    required String id,
+    required DateTime createdAt,
+    required Map<String, dynamic> payload,
+  }) =>
+      RegisterFreeCompetitionAction(
+        id: id,
+        createdAt: createdAt,
+        competitionId: payload['competition_id'] as String,
+        playerId: payload['player_id'] as String,
+      );
+
+  static const _type = 'competition.register_free';
+  final String competitionId;
+  final String playerId;
+
+  @override
+  String get type => _type;
+
+  @override
+  Map<String, dynamic> get payload => {
+        'competition_id': competitionId,
+        'player_id': playerId,
+      };
+
+  @override
+  Future<bool> execute(SupabaseClient client) async {
+    try {
+      // Insert aligne sur `CompetitionRepository.registerSelfFree`. La
+      // policy `registrations_free_self_insert` valide cote DB que la
+      // compet est gratuite (registration_fee = 0) — si elle est devenue
+      // payante entre-temps, l'INSERT est rejete (42501) et on drop.
+      await client.from('competition_registrations').insert({
+        'competition_id': competitionId,
+        'player_id': playerId,
+        'status': 'confirmed',
+      });
+      return true;
+    } catch (e) {
+      if (kDebugMode) debugPrint('[sync] competition.register_free failed: $e');
+      if (e is PostgrestException) {
+        // 23505 = unique(competition_id, player_id) → deja inscrit, OK.
+        // 42501 = RLS denied (devenue payante / pleine) = definitif.
+        if (e.code == '23505' || e.code == '42501') return true;
+      }
+      return false;
+    }
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────
 // Service
 // ─────────────────────────────────────────────────────────────────────
+
+/// Snapshot reactif de l'etat de la queue — alimente l'indicateur de
+/// synchronisation dans la bannière (nombre d'actions en attente +
+/// flush en cours).
+@immutable
+class SyncState {
+  const SyncState({required this.pending, required this.flushing});
+
+  final int pending;
+  final bool flushing;
+
+  static const idle = SyncState(pending: 0, flushing: false);
+
+  SyncState copyWith({int? pending, bool? flushing}) => SyncState(
+        pending: pending ?? this.pending,
+        flushing: flushing ?? this.flushing,
+      );
+
+  @override
+  bool operator ==(Object other) =>
+      other is SyncState &&
+      other.pending == pending &&
+      other.flushing == flushing;
+
+  @override
+  int get hashCode => Object.hash(pending, flushing);
+}
 
 /// File d'attente locale des mutations offline. Persiste dans
 /// SharedPreferences (JSON list) — suffisant pour <100 actions
 /// typiques avant un flush.
 ///
 /// **Auto-flush** : ecoute `NetworkStatusService` et tente de drainer la
-/// queue a chaque transition `offline → online`. Le service est aussi
-/// flushable manuellement (ex: bouton "reessayer" dans un settings).
+/// queue des qu'une interface reseau redevient active (online OU slow).
+/// Le service est aussi flushable manuellement (ex: bouton "reessayer").
 class SyncQueueService {
   SyncQueueService({
     required SharedPreferences prefs,
@@ -228,21 +331,28 @@ class SyncQueueService {
   StreamSubscription<NetworkStatus>? _sub;
   bool _flushing = false;
 
+  /// Etat reactif (pending + flushing) pour l'UI. Mis a jour a chaque
+  /// enqueue / flush / persist.
+  final ValueNotifier<SyncState> state = ValueNotifier(SyncState.idle);
+
   /// A appeler 1 fois au boot pour brancher l'auto-flush.
   void attach() {
+    state.value = SyncState(pending: pending.length, flushing: false);
     _sub = _network.stream.listen((s) {
-      if (s == NetworkStatus.online) {
+      // Des qu'une interface est active (online ou slow), on draine.
+      if (s == NetworkStatus.online || s == NetworkStatus.slow) {
         unawaited(flush());
       }
     });
-    // Si on demarre deja online avec une queue non vide, flush immediat.
-    if (_network.current == NetworkStatus.online && pending.isNotEmpty) {
+    // Si on demarre deja connecte avec une queue non vide, flush immediat.
+    if (_network.isConnected && pending.isNotEmpty) {
       unawaited(flush());
     }
   }
 
   void dispose() {
     _sub?.cancel();
+    state.dispose();
   }
 
   /// Snapshot synchrone des actions en attente (pour UI badge).
@@ -267,9 +377,9 @@ class SyncQueueService {
   Future<void> enqueue(SyncAction action) async {
     final current = pending.toList()..add(action);
     await _persist(current);
-    // Tentative immediate si on est online — pas la peine d'attendre
-    // la prochaine transition.
-    if (_network.current == NetworkStatus.online) {
+    // Tentative immediate si une interface est active — pas la peine
+    // d'attendre la prochaine transition.
+    if (_network.isConnected) {
       unawaited(flush());
     }
   }
@@ -278,6 +388,7 @@ class SyncQueueService {
   Future<void> flush() async {
     if (_flushing) return;
     _flushing = true;
+    state.value = state.value.copyWith(flushing: true);
     try {
       final actions = pending;
       if (actions.isEmpty) return;
@@ -289,12 +400,15 @@ class SyncQueueService {
       await _persist(remaining);
     } finally {
       _flushing = false;
+      state.value = SyncState(pending: pending.length, flushing: false);
     }
   }
 
-  Future<void> _persist(List<SyncAction> actions) {
+  Future<void> _persist(List<SyncAction> actions) async {
     final json = jsonEncode([for (final a in actions) a.toJson()]);
-    return _prefs.setString(_key, json);
+    await _prefs.setString(_key, json);
+    // Reflete le compte courant sans toucher au flag flushing.
+    state.value = state.value.copyWith(pending: actions.length);
   }
 }
 
@@ -364,14 +478,66 @@ class OfflineAwareActions {
     }
   }
 
-  // NOTE Phase 3 V1 : seul `markNotificationRead` est expose ici.
-  // Les autres mutations identifiees (send chat message, register comp
-  // gratuite, submit score) ont des pipelines existants complexes
-  // (moderation EF, RPC validation, anti-cheat) qui ne supportent pas
-  // un simple INSERT offline → il faut soit dupliquer la logique
-  // serveur en local, soit accepter de bloquer l'action en offline.
-  // `SendChatMessageAction` est dispo dans le code comme exemple pour
-  // brancher plus tard quand la moderation pourra etre lazy-evaluee.
+  /// Envoie un message de chat texte. Offline → queue (rejoue au retour
+  /// reseau, idempotent via l'id local), online → INSERT direct via le
+  /// repository. La moderation tourne cote serveur (trigger AFTER
+  /// INSERT) donc elle s'applique dans les deux cas.
+  ///
+  /// Retourne `true` si l'action a ete mise en file (offline) — l'UI
+  /// peut alors afficher un feedback "message en attente".
+  Future<bool> sendChatMessage({
+    required String channelId,
+    required String senderId,
+    required String content,
+  }) async {
+    final trimmed = content.trim();
+    if (trimmed.isEmpty) return false;
+    final capped =
+        trimmed.length > 2000 ? trimmed.substring(0, 2000) : trimmed;
+    if (_offline) {
+      await _enqueue(
+        SendChatMessageAction(
+          id: generateUuidV4(),
+          createdAt: DateTime.now().toUtc(),
+          channelId: channelId,
+          senderId: senderId,
+          text: capped,
+        ),
+      );
+      return true;
+    }
+    await _ref.read(chatRepositoryProvider).sendMessage(
+          channelId: channelId,
+          senderId: senderId,
+          content: capped,
+        );
+    return false;
+  }
+
+  /// Inscription a une competition GRATUITE. Offline → queue, online →
+  /// INSERT direct. Idempotent cote serveur (unique competition/player).
+  ///
+  /// Retourne `true` si l'action a ete mise en file (offline).
+  Future<bool> registerFreeCompetition({
+    required String competitionId,
+    required String playerId,
+  }) async {
+    if (_offline) {
+      await _enqueue(
+        RegisterFreeCompetitionAction(
+          id: generateUuidV4(),
+          createdAt: DateTime.now().toUtc(),
+          competitionId: competitionId,
+          playerId: playerId,
+        ),
+      );
+      return true;
+    }
+    await _ref
+        .read(competitionRepositoryProvider)
+        .registerSelfFree(competitionId);
+    return false;
+  }
 }
 
 final offlineAwareActionsProvider =
