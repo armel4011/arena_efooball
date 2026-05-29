@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:arena/core/services/persistent_cache.dart';
 import 'package:arena/core/utils/poll_stream.dart';
 import 'package:arena/data/models/competition.dart';
@@ -219,12 +221,31 @@ final competitionRankingProvider =
 /// cold-start avec session restaurée tardivement, la stream se crée
 /// alors que `auth.currentUser` est encore null et reste vide).
 final myRegisteredCompetitionIdsProvider =
-    StreamProvider.autoDispose<Set<String>>((ref) {
+    StreamProvider.autoDispose<Set<String>>((ref) async* {
   final session = ref.watch(currentSessionProvider);
   if (session == null) {
-    return Stream.value(const <String>{});
+    yield const <String>{};
+    return;
   }
-  return ref
-      .watch(competitionRepositoryProvider)
-      .watchMyRegisteredCompetitionIds();
+  final me = session.user.id;
+  final cache = await ref.watch(persistentCacheProvider.future);
+  // Offline-safe (onglet TOURNOIS de l'inbox) : on emet d'abord le set
+  // connu (ou vide), puis on suit le stream et on avale les erreurs
+  // reseau — la liste reste figee au lieu d'afficher une erreur.
+  final ns = 'my_registered_comps.$me';
+  final cached = cache.readList<String>(ns, (j) => j['id'] as String);
+  yield (cached ?? const <String>[]).toSet();
+  try {
+    final source = ref
+        .watch(competitionRepositoryProvider)
+        .watchMyRegisteredCompetitionIds();
+    await for (final ids in source) {
+      yield ids;
+      unawaited(cache.writeList<String>(ns, ids.toList(), (s) => {'id': s}));
+    }
+  } catch (e) {
+    if (kDebugMode) {
+      debugPrint('[cache] my_registered_comps stream error swallowed: $e');
+    }
+  }
 });
