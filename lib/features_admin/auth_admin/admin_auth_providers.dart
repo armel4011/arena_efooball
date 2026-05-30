@@ -8,6 +8,7 @@ import 'package:arena/features_admin/auth_admin/invitation_redeem_screen.dart'
     show InvitationRedeemScreen;
 import 'package:arena/features_admin/auth_admin/widgets/totp_gate.dart'
     show TotpGate;
+import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -264,6 +265,32 @@ final adminAuthRepositoryProvider = Provider<AdminAuthRepository>((ref) {
 // Controllers Riverpod
 // =============================================================================
 
+/// Marque si la session admin courante a passé la vérification TOTP (2e
+/// facteur au login OU enrôlement frais). On stocke l'`user.id` vérifié
+/// plutôt qu'un bool : la garde du router exige `state == session.user.id`,
+/// ce qui invalide automatiquement un état périmé après un changement de
+/// compte. L'état vit en mémoire → il se vide au kill de l'app, donc le
+/// code TOTP est redemandé à chaque cold-start (cohérent « accès restreint »).
+///
+/// Sans ça, `totp_enabled == true` (= TOTP *configuré*) était confondu avec
+/// *vérifié cette session* → l'écran `/totp/verify` était court-circuité et
+/// le 2e facteur jamais exigé au login.
+class AdminTotpSessionController extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  // Un setter `markVerified =` se lirait mal à l'appel ; méthode explicite.
+  // ignore: use_setters_to_change_properties
+  void markVerified(String userId) => state = userId;
+
+  void reset() => state = null;
+}
+
+final adminTotpSessionProvider =
+    NotifierProvider<AdminTotpSessionController, String?>(
+  AdminTotpSessionController.new,
+);
+
 /// Sign-in controller for the admin app (email + password step).
 ///
 /// Success doesn't mean fully authenticated — TOTP verification is the
@@ -273,6 +300,9 @@ class AdminSignInController extends AsyncNotifier<Profile?> {
   Future<Profile?> build() async => null;
 
   Future<void> signIn({required String email, required String password}) async {
+    // Toute nouvelle connexion repart sans 2e facteur validé → l'écran
+    // `/totp/verify` sera exigé avant le dashboard.
+    ref.read(adminTotpSessionProvider.notifier).reset();
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return ref
@@ -353,6 +383,12 @@ class AdminTotpSetupController extends AsyncNotifier<TotpSetupState> {
     state = await AsyncValue.guard(() async {
       final codes =
           await ref.read(adminAuthRepositoryProvider).verifyTotpSetup(code);
+      // L'enrôlement frais vaut vérification pour cette session — sinon le
+      // user serait renvoyé sur `/totp/verify` juste après avoir scanné.
+      final uid = ref.read(currentSessionProvider)?.user.id;
+      if (uid != null) {
+        ref.read(adminTotpSessionProvider.notifier).markVerified(uid);
+      }
       return TotpSetupState(challenge: challenge, backupCodes: codes);
     });
   }
@@ -371,7 +407,11 @@ class AdminTotpVerifyController extends AsyncNotifier<Profile?> {
   Future<void> verify(String code) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      return ref.read(adminAuthRepositoryProvider).verifyTotpLogin(code);
+      final profile =
+          await ref.read(adminAuthRepositoryProvider).verifyTotpLogin(code);
+      // 2e facteur validé pour cette session → la garde laisse passer.
+      ref.read(adminTotpSessionProvider.notifier).markVerified(profile.id);
+      return profile;
     });
   }
 

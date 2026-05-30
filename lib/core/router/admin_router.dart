@@ -2,6 +2,7 @@ import 'package:arena/core/router/router_refresh.dart';
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/features/splash/splash_router.dart';
 import 'package:arena/features_admin/audit/admin_audit_log_page.dart';
+import 'package:arena/features_admin/auth_admin/admin_auth_providers.dart';
 import 'package:arena/features_admin/auth_admin/invitation_redeem_screen.dart';
 import 'package:arena/features_admin/auth_admin/login_admin_screen.dart';
 import 'package:arena/features_admin/auth_admin/splash_admin_screen.dart';
@@ -106,7 +107,7 @@ abstract final class AdminRoutes {
 final adminRouterProvider = Provider<GoRouter>((ref) {
   final refresh = RouterRefreshListenable(
     ref,
-    [currentSessionProvider, currentProfileProvider],
+    [currentSessionProvider, currentProfileProvider, adminTotpSessionProvider],
   );
   ref.onDispose(refresh.dispose);
 
@@ -145,7 +146,15 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
         return loc == AdminRoutes.totpSetup ? null : AdminRoutes.totpSetup;
       }
 
-      // TOTP enabled — keep them out of the auth screens.
+      // TOTP enrôlé — mais il faut un 2e facteur VALIDÉ cette session
+      // (`totp_enabled` = configuré ≠ vérifié). Sinon on force `/totp/verify`.
+      final totpVerified =
+          ref.read(adminTotpSessionProvider) == profile.id;
+      if (!totpVerified) {
+        return loc == AdminRoutes.totpVerify ? null : AdminRoutes.totpVerify;
+      }
+
+      // Pleinement authentifié — keep them out of the auth screens.
       if (AdminRoutes.unauthenticated.contains(loc)) {
         return AdminRoutes.home;
       }

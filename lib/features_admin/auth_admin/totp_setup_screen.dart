@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:arena/core/router/admin_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/data/models/profile.dart';
 import 'package:arena/data/repositories/auth_failure.dart';
 import 'package:arena/features_admin/auth_admin/admin_auth_providers.dart';
+import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
@@ -47,6 +51,34 @@ class _TotpSetupScreenState extends ConsumerState<TotpSetupScreen> {
     super.dispose();
   }
 
+  /// `verify-totp-setup` a flippé `totp_enabled=true` côté serveur, mais le
+  /// profil en cache (`currentProfileProvider`) dit encore `false` → le guard
+  /// du router rebondirait vers cet écran. On invalide le provider et on
+  /// attend la ré-émission du profil frais (`totpEnabled=true`) AVANT de
+  /// naviguer, sinon boucle de redirection. Timeout de garde si le réseau
+  /// traîne : on navigue quand même, le guard se stabilisera au refresh.
+  Future<void> _finishSetup() async {
+    ref.invalidate(currentProfileProvider);
+    final ready = Completer<void>();
+    final sub = ref.listenManual<AsyncValue<Profile?>>(
+      currentProfileProvider,
+      (_, next) {
+        if ((next.valueOrNull?.totpEnabled ?? false) && !ready.isCompleted) {
+          ready.complete();
+        }
+      },
+      fireImmediately: true,
+    );
+    try {
+      await ready.future.timeout(const Duration(seconds: 8));
+    } catch (_) {
+      // Réseau lent/offline — on continue, le guard re-évaluera au refresh.
+    } finally {
+      sub.close();
+    }
+    if (mounted) context.go(AdminRoutes.home);
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(adminTotpSetupControllerProvider);
@@ -70,9 +102,7 @@ class _TotpSetupScreenState extends ConsumerState<TotpSetupScreen> {
                     codes: backupCodes,
                     acknowledged: _backupAcknowledged,
                     onAck: (v) => setState(() => _backupAcknowledged = v),
-                    onContinue: _backupAcknowledged
-                        ? () => context.go(AdminRoutes.home)
-                        : null,
+                    onContinue: _backupAcknowledged ? _finishSetup : null,
                   )
                 : _SetupView(
                     challenge: challenge,
