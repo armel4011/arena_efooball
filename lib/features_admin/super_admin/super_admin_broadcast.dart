@@ -147,8 +147,11 @@ class _SuperAdminBroadcastState extends ConsumerState<SuperAdminBroadcast> {
           'gif' => 'image/gif',
           _ => 'image/jpeg',
         };
+        // Cle propre `<ts>.<ext>` comme le chat admin — `picked.name` peut
+        // contenir espaces/caracteres speciaux (ex. "WhatsApp Image ... .jpeg")
+        // qui cassent la cle de l'objet storage.
         final path =
-            'broadcast/${DateTime.now().millisecondsSinceEpoch}-${picked.name}';
+            'broadcast/${DateTime.now().millisecondsSinceEpoch}.$ext';
         await client.storage.from('notification_images').upload(
               path,
               file,
