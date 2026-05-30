@@ -5,7 +5,7 @@ import 'package:arena/core/services/callkit_service.dart';
 import 'package:arena/data/repositories/notification_repository.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/painting.dart' show Color;
+import 'package:arena/core/theme/arena_theme.dart' show ArenaColors;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
@@ -188,7 +188,7 @@ class NotificationService {
       // cercle qui entoure la petite icône dans le volet déroulé — c'est
       // notre « fond bleu ». Vaut aussi pour les notifs natives via le
       // meta-data default_notification_color du manifest.
-      color: const Color(0xFF4C7AFF),
+      color: ArenaColors.signalBlue,
       styleInformation: bigPicturePath == null
           ? null
           : BigPictureStyleInformation(
