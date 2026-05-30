@@ -34,34 +34,44 @@ ON CONFLICT (id) DO UPDATE
       allowed_mime_types = EXCLUDED.allowed_mime_types;
 
 -- RLS storage.objects pour ce bucket.
+-- NB : `public.is_admin()` ne prend AUCUN argument (il lit auth.uid() en
+-- interne) — pas de surcharge `is_admin(uuid)`. Appeler is_admin(auth.uid())
+-- echoue (function does not exist) et bloquait l'upload en 403.
+-- DROP IF EXISTS pour rester idempotent (la migration a ete appliquee a la
+-- main sur le remote apres coup).
+
 -- READ public (le bucket est marque public=true, mais on garde une
 -- policy explicite SELECT pour la coherence audit).
+DROP POLICY IF EXISTS "notification_images_public_read" ON storage.objects;
 CREATE POLICY "notification_images_public_read"
   ON storage.objects FOR SELECT
   TO anon, authenticated
   USING (bucket_id = 'notification_images');
 
 -- WRITE admin uniquement (INSERT / UPDATE / DELETE).
+DROP POLICY IF EXISTS "notification_images_admin_insert" ON storage.objects;
 CREATE POLICY "notification_images_admin_insert"
   ON storage.objects FOR INSERT
   TO authenticated
   WITH CHECK (
     bucket_id = 'notification_images'
-    AND public.is_admin(auth.uid())
+    AND public.is_admin()
   );
 
+DROP POLICY IF EXISTS "notification_images_admin_update" ON storage.objects;
 CREATE POLICY "notification_images_admin_update"
   ON storage.objects FOR UPDATE
   TO authenticated
   USING (
     bucket_id = 'notification_images'
-    AND public.is_admin(auth.uid())
+    AND public.is_admin()
   );
 
+DROP POLICY IF EXISTS "notification_images_admin_delete" ON storage.objects;
 CREATE POLICY "notification_images_admin_delete"
   ON storage.objects FOR DELETE
   TO authenticated
   USING (
     bucket_id = 'notification_images'
-    AND public.is_admin(auth.uid())
+    AND public.is_admin()
   );
