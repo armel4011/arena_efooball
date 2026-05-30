@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Teinte de la petite icône de notification ARENA (status bar +
+         accent de l'en-tête de notif). Bleu de la marque ARENA. -->
+    <color name="notification_tint">#4C7AFF</color>
+</resources>

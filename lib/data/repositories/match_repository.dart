@@ -276,24 +276,47 @@ final matchRepositoryProvider = Provider<MatchRepository>((ref) {
 /// les 2 contextes ne sont jamais actifs en meme temps en navigation
 /// normale (go_router push).
 final competitionMatchesProvider = StreamProvider.family
-    .autoDispose<List<ArenaMatch>, String>((ref, competitionId) {
-  return ref.watch(matchRepositoryProvider).watchForCompetition(competitionId);
+    .autoDispose<List<ArenaMatch>, String>((ref, competitionId) async* {
+  // Offline-safe : le bracket reste fige sur les derniers matchs connus
+  // au lieu d'afficher une ErrorState reseau hors-ligne.
+  final cache = await ref.watch(persistentCacheProvider.future);
+  yield* cache.hydrate<ArenaMatch>(
+    namespace: 'competition_matches.$competitionId',
+    source:
+        ref.watch(matchRepositoryProvider).watchForCompetition(competitionId),
+    fromJson: ArenaMatch.fromJson,
+    toJson: (m) => m.toJson(),
+  );
 });
 
 /// Realtime stream of a single match by id. `.autoDispose` empêche le
-/// cache de stocker N matches visités à vie (1 stream WebSocket par
-/// match resterait actif pour la session).
+/// stream WebSocket de rester actif pour chaque match visité. Le cache
+/// disque ne garde lui que le dernier JSON connu par match (borne, ~Ko) →
+/// la MatchRoom reste affichee hors-ligne au lieu d'une ErrorState.
 final matchByIdProvider =
-    StreamProvider.family.autoDispose<ArenaMatch?, String>((ref, matchId) {
-  return ref.watch(matchRepositoryProvider).watchById(matchId);
+    StreamProvider.family.autoDispose<ArenaMatch?, String>((ref, matchId) async* {
+  final cache = await ref.watch(persistentCacheProvider.future);
+  yield* cache.hydrateSingle<ArenaMatch>(
+    namespace: 'match.$matchId',
+    source: ref.watch(matchRepositoryProvider).watchById(matchId),
+    fromJson: ArenaMatch.fromJson,
+    toJson: (m) => m.toJson(),
+  );
 });
 
 /// Realtime stream of score-submission events for a match. `.autoDispose`
 /// — utilisé uniquement dans le MatchRoom; rien ne le consomme après
-/// la fin du match.
+/// la fin du match. Cache offline-safe : le flow de score reste fige sur
+/// les derniers events au lieu d'une ErrorState dans la room.
 final matchScoreSubmissionsProvider = StreamProvider.family
-    .autoDispose<List<Map<String, dynamic>>, String>((ref, matchId) {
-  return ref.watch(matchRepositoryProvider).watchScoreSubmissions(matchId);
+    .autoDispose<List<Map<String, dynamic>>, String>((ref, matchId) async* {
+  final cache = await ref.watch(persistentCacheProvider.future);
+  yield* cache.hydrate<Map<String, dynamic>>(
+    namespace: 'score_submissions.$matchId',
+    source: ref.watch(matchRepositoryProvider).watchScoreSubmissions(matchId),
+    fromJson: (json) => json,
+    toJson: (m) => m,
+  );
 });
 
 /// Matchs actifs (scheduled / ready / in_progress / awaiting…) du joueur

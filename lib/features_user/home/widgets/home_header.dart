@@ -86,7 +86,7 @@ class HomeHeader extends ConsumerWidget {
                   color: ArenaColors.silver,
                   size: 20,
                 ),
-                onPressed: () => context.go(UserRoutes.notifications),
+                onPressed: () => context.push(UserRoutes.notifications),
               ),
               if (unread > 0)
                 Positioned(

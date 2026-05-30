@@ -338,23 +338,46 @@ final friendsRepositoryProvider = Provider<FriendsRepository>((ref) {
 /// **Realtime** : un user qui accepte/decline ou un nouveau requesteur
 /// apparait sans pull-refresh.
 final incomingFriendRequestsProvider =
-    StreamProvider.autoDispose<List<(Friendship, Profile)>>((ref) {
+    StreamProvider.autoDispose<List<(Friendship, Profile)>>((ref) async* {
   final me = ref.watch(currentSessionProvider)?.user.id;
-  if (me == null) return Stream.value(const []);
-  return ref
-      .watch(friendsRepositoryProvider)
-      .watchIncomingPendingWithPeers(me);
+  if (me == null) {
+    yield const [];
+    return;
+  }
+  // Offline-safe : l'onglet "Demandes" reste fige sur les dernieres
+  // demandes connues au lieu d'un _ErrorList reseau hors-ligne.
+  final cache = await ref.watch(persistentCacheProvider.future);
+  yield* cache.hydratePairs<Friendship, Profile>(
+    namespace: 'friends.incoming.$me',
+    source:
+        ref.watch(friendsRepositoryProvider).watchIncomingPendingWithPeers(me),
+    fromJsonA: Friendship.fromJson,
+    fromJsonB: Profile.fromJson,
+    toJsonA: (f) => f.toJson(),
+    toJsonB: (p) => p.toJson(),
+  );
 });
 
 /// Demandes pending sortantes (visibilité utile dans l'onglet "Demandes").
 /// **Realtime** : quand la cible accepte, la demande disparait instantly.
+/// Cache offline-safe identique aux demandes entrantes.
 final outgoingFriendRequestsProvider =
-    StreamProvider.autoDispose<List<(Friendship, Profile)>>((ref) {
+    StreamProvider.autoDispose<List<(Friendship, Profile)>>((ref) async* {
   final me = ref.watch(currentSessionProvider)?.user.id;
-  if (me == null) return Stream.value(const []);
-  return ref
-      .watch(friendsRepositoryProvider)
-      .watchOutgoingPendingWithPeers(me);
+  if (me == null) {
+    yield const [];
+    return;
+  }
+  final cache = await ref.watch(persistentCacheProvider.future);
+  yield* cache.hydratePairs<Friendship, Profile>(
+    namespace: 'friends.outgoing.$me',
+    source:
+        ref.watch(friendsRepositoryProvider).watchOutgoingPendingWithPeers(me),
+    fromJsonA: Friendship.fromJson,
+    fromJsonB: Profile.fromJson,
+    toJsonA: (f) => f.toJson(),
+    toJsonB: (p) => p.toJson(),
+  );
 });
 
 /// Liste amis acceptés + profil joueur.
@@ -402,9 +425,18 @@ final friendshipBetweenProvider =
 });
 
 /// Profil public par username (utilisé par /profile/u/:username).
+/// Offline-safe : renvoie le dernier profil connu pour ce username au
+/// lieu d'un _ErrorState reseau (rethrow uniquement si offline ET jamais
+/// charge → la page montre alors son erreur, cas rare).
 final publicProfileByUsernameProvider =
-    FutureProvider.autoDispose.family<Profile?, String>((ref, username) {
-  return ref.watch(friendsRepositoryProvider).findByUsername(username);
+    FutureProvider.autoDispose.family<Profile?, String>((ref, username) async {
+  final cache = await ref.watch(persistentCacheProvider.future);
+  return cache.fetchObjectOrCacheNullable<Profile>(
+    namespace: 'public_profile.${username.toLowerCase()}',
+    fetch: () => ref.watch(friendsRepositoryProvider).findByUsername(username),
+    fromJson: Profile.fromJson,
+    toJson: (p) => p.toJson(),
+  );
 });
 
 /// Compteur live de demandes pending entrantes — pour le badge.

@@ -1,3 +1,4 @@
+import 'package:arena/core/services/persistent_cache.dart';
 import 'package:arena/data/models/standings.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -63,8 +64,27 @@ final standingsRepositoryProvider = Provider<StandingsRepository>((ref) {
 });
 
 final competitionStandingsProvider =
-    FutureProvider.family.autoDispose<List<StandingsBucket>, String>((ref, competitionId) {
-  return ref
-      .watch(standingsRepositoryProvider)
-      .forCompetition(competitionId);
+    FutureProvider.family.autoDispose<List<StandingsBucket>, String>(
+        (ref, competitionId) async {
+  final cache = await ref.watch(persistentCacheProvider.future);
+  // Offline-safe : les poules restent figees sur le dernier classement
+  // connu au lieu d'une ErrorState reseau. `StandingsBucket` est une
+  // classe simple (pas de JSON) → on serialise ses parts (group + rows),
+  // toutes deux freezed.
+  return cache.fetchListOrCache<StandingsBucket>(
+    namespace: 'standings.$competitionId',
+    fetch: () =>
+        ref.watch(standingsRepositoryProvider).forCompetition(competitionId),
+    fromJson: (json) => StandingsBucket(
+      group: CompetitionGroup.fromJson(json['group'] as Map<String, dynamic>),
+      rows: [
+        for (final r in json['rows'] as List<dynamic>)
+          GroupStandingRow.fromJson(r as Map<String, dynamic>),
+      ],
+    ),
+    toJson: (b) => {
+      'group': b.group.toJson(),
+      'rows': [for (final r in b.rows) r.toJson()],
+    },
+  );
 });

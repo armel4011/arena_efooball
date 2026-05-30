@@ -157,7 +157,16 @@ export async function sendFcmNotification(opts: FcmPayload): Promise<void> {
     };
     if (opts.imageUrl) notif.image = opts.imageUrl;
     message.notification = notif;
-    const androidNotif: Record<string, string> = { sound: 'default' };
+    // `icon` = silhouette blanche status bar (drawable Android `ic_notification`).
+    // Double le default_notification_icon du manifest — explicite pour les
+    // notifs rendues nativement quand l'app est background/killed.
+    const androidNotif: Record<string, string> = {
+      sound: 'default',
+      icon: 'ic_notification',
+      // Couleur d'accent ARENA (signalBlue) : Android la peint en fond du
+      // cercle qui entoure la petite icône dans le volet, app background/killed.
+      color: '#4C7AFF',
+    };
     if (opts.imageUrl) androidNotif.image = opts.imageUrl;
     message.android = {
       priority: 'HIGH',

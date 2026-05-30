@@ -1,3 +1,4 @@
+import 'package:arena/core/services/persistent_cache.dart';
 import 'package:arena/data/models/reintegration_request.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
@@ -100,13 +101,22 @@ final reintegrationRequestsRepositoryProvider =
 });
 
 /// Dernière requête de l'utilisateur connecté (null si jamais soumise).
+/// Offline-safe : l'écran de bannissement affiche la derniere requete
+/// connue au lieu d'une erreur reseau (un user banni a souvent un reseau
+/// instable et doit pouvoir consulter l'etat de sa demande hors-ligne).
 final myReintegrationRequestProvider =
     FutureProvider.autoDispose<ReintegrationRequest?>((ref) async {
   final userId = ref.watch(currentSessionProvider)?.user.id;
   if (userId == null) return null;
-  return ref
-      .watch(reintegrationRequestsRepositoryProvider)
-      .latestForUser(userId);
+  final cache = await ref.watch(persistentCacheProvider.future);
+  return cache.fetchObjectOrCacheNullable<ReintegrationRequest>(
+    namespace: 'reintegration.$userId',
+    fetch: () => ref
+        .watch(reintegrationRequestsRepositoryProvider)
+        .latestForUser(userId),
+    fromJson: ReintegrationRequest.fromJson,
+    toJson: (r) => r.toJson(),
+  );
 });
 
 /// Liste pending pour l'écran super-admin (auto-refresh quand on tranche).
