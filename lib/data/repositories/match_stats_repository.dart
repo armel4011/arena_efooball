@@ -155,8 +155,19 @@ final playerRecentMatchesProvider =
 /// son scroll initial.
 final playerRecent10MatchesProvider =
     FutureProvider.family.autoDispose<List<ArenaMatch>, String>(
-  (ref, playerId) =>
-      ref.watch(matchStatsRepositoryProvider).recentMatches(playerId, limit: 10),
+  (ref, playerId) async {
+    final cache = await ref.watch(persistentCacheProvider.future);
+    // Offline-safe : la carte "matchs recents" du profil public reste
+    // figee sur les derniers matchs connus au lieu d'une erreur reseau.
+    return cache.fetchListOrCache<ArenaMatch>(
+      namespace: 'recent_matches_10.$playerId',
+      fetch: () => ref
+          .watch(matchStatsRepositoryProvider)
+          .recentMatches(playerId, limit: 10),
+      fromJson: ArenaMatch.fromJson,
+      toJson: (m) => m.toJson(),
+    );
+  },
 );
 
 /// Powers the full match-history page (#14) — every status, not just

@@ -192,6 +192,43 @@ class PersistentCache {
     }
   }
 
+  /// Variante de [fetchObjectOrCache] pour un fetch qui peut renvoyer
+  /// `null` (ex: `findByUsername` → joueur introuvable, `latestForUser`
+  /// → jamais soumis). [fetchObjectOrCache] exige un T non-null ; ici on
+  /// accepte `null` comme valeur métier legitime.
+  ///
+  /// Au succes : persiste si non-null (un `null` n'efface PAS le cache —
+  /// un fetch qui repond null offline-puis-online ne doit pas ecraser la
+  /// derniere donnee connue ; seul un vrai online-null le ferait, mais on
+  /// reste prudent et on garde l'ancien). Sur erreur **reseau** : renvoie
+  /// le dernier cache connu (qui peut être `null` si jamais charge). Les
+  /// erreurs **metier** (RLS 42501, parsing) sont rethrow — on ne masque
+  /// pas une erreur reelle derriere une donnee perimee.
+  Future<T?> fetchObjectOrCacheNullable<T>({
+    required String namespace,
+    required Future<T?> Function() fetch,
+    required T Function(Map<String, dynamic>) fromJson,
+    required Map<String, dynamic> Function(T) toJson,
+  }) async {
+    try {
+      final data = await fetch();
+      if (data != null) {
+        unawaited(writeObject<T>(namespace, data, toJson));
+      }
+      return data;
+    } catch (e, st) {
+      if (isOfflineError(e)) {
+        return readObject<T>(namespace, fromJson);
+      }
+      if (kDebugMode) {
+        debugPrint(
+          '[cache] fetchObjectOrCacheNullable($namespace) rethrow: $e\n$st',
+        );
+      }
+      rethrow;
+    }
+  }
+
   /// Stream helper : emit d'abord le cache existant (si non-null), puis
   /// chaque valeur de [source] (qu'on persiste au passage).
   ///

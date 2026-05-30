@@ -196,11 +196,18 @@ final competitionsListProvider =
 });
 
 /// Realtime stream of one competition by id. `.autoDispose` évite que
-/// chaque competition visitée reste cachée à vie (memory leak après
-/// browse de 50+ compétitions).
+/// chaque competition visitée garde un stream WebSocket actif. Le cache
+/// disque ne conserve que le dernier JSON connu par compétition →
+/// l'écran détail reste affiché hors-ligne au lieu d'une ErrorState.
 final competitionByIdProvider =
-    StreamProvider.family.autoDispose<Competition?, String>((ref, id) {
-  return ref.watch(competitionRepositoryProvider).watchById(id);
+    StreamProvider.family.autoDispose<Competition?, String>((ref, id) async* {
+  final cache = await ref.watch(persistentCacheProvider.future);
+  yield* cache.hydrateSingle<Competition>(
+    namespace: 'competition.$id',
+    source: ref.watch(competitionRepositoryProvider).watchById(id),
+    fromJson: Competition.fromJson,
+    toJson: (c) => c.toJson(),
+  );
 });
 
 /// Classement général final d'une compétition (lecture seule côté
