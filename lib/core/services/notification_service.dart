@@ -5,6 +5,7 @@ import 'package:arena/core/services/callkit_service.dart';
 import 'package:arena/data/repositories/notification_repository.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/painting.dart' show Color;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
@@ -138,7 +139,7 @@ class NotificationService {
 
   Future<void> _ensureLocalPlugin() async {
     if (_localReady) return;
-    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidInit = AndroidInitializationSettings('@drawable/ic_notification');
     const iosInit = DarwinInitializationSettings();
     await _local.initialize(
       const InitializationSettings(android: androidInit, iOS: iosInit),
@@ -182,7 +183,12 @@ class NotificationService {
       channelDescription: _androidChannel.description,
       importance: Importance.high,
       priority: Priority.high,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
+      // Couleur d'accent ARENA (signalBlue) : Android la peint en fond du
+      // cercle qui entoure la petite icône dans le volet déroulé — c'est
+      // notre « fond bleu ». Vaut aussi pour les notifs natives via le
+      // meta-data default_notification_color du manifest.
+      color: const Color(0xFF4C7AFF),
       styleInformation: bigPicturePath == null
           ? null
           : BigPictureStyleInformation(
@@ -191,8 +197,10 @@ class NotificationService {
               summaryText: body,
               hideExpandedLargeIcon: true,
             ),
+      // Gros icône à droite de la notif : l'image du push si présente,
+      // sinon le chevron ARENA blanc sur cercle bleu (ic_notification_large).
       largeIcon: bigPicturePath == null
-          ? null
+          ? const DrawableResourceAndroidBitmap('ic_notification_large')
           : FilePathAndroidBitmap(bigPicturePath),
     );
 

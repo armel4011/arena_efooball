@@ -103,6 +103,17 @@
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="arena_default" />
 
+        <!-- Petite icône (status bar) ARENA pour les notifs rendues
+             nativement par le SDK Firebase (app en background/killed).
+             Doit être une silhouette blanche/transparente, sinon Android
+             affiche un carré blanc. Teinte appliquée via le color ci-dessous. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notification" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/notification_tint" />
+
         <!-- PHASE 8.4 — flutter_overlay_window foreground service.
              Hosts the floating "ARENA recording" button rendered on
              top of eFootball. The "specialUse" subtype is the only
