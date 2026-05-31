@@ -6,10 +6,12 @@ import 'package:arena/data/repositories/auth_failure.dart';
 import 'package:arena/features_admin/auth_admin/admin_auth_providers.dart';
 import 'package:arena/features_admin/auth_admin/login_admin_screen.dart'
     show LoginAdminScreen;
+import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_user/auth/widgets/auth_failure_message.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -180,12 +182,36 @@ class _TotpVerifyScreenState extends ConsumerState<TotpVerifyScreen> {
                     ),
                   ),
                 ),
+                // Bypass dev-only : evite la re-verification 2FA a chaque
+                // cold-start pendant le dev. Cache en release (kDebugMode).
+                if (kDebugMode)
+                  Center(
+                    child: TextButton(
+                      onPressed: isLoading ? null : _devBypass,
+                      child: Text(
+                        '⚠ Continuer (DEV — bypass 2FA)',
+                        style: ArenaText.small.copyWith(
+                          color: ArenaColors.warning,
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
         ),
       ),
     );
+  }
+
+  /// Marque la session comme verifiee sans code (dev uniquement) et file
+  /// au dashboard — la garde du router exige `verified == user.id`.
+  void _devBypass() {
+    final uid = ref.read(currentSessionProvider)?.user.id;
+    if (uid != null) {
+      ref.read(adminTotpSessionProvider.notifier).markVerified(uid);
+    }
+    context.go(AdminRoutes.home);
   }
 
   void _backupCodeStub() {

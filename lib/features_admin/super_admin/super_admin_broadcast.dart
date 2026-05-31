@@ -138,13 +138,25 @@ class _SuperAdminBroadcastState extends ConsumerState<SuperAdminBroadcast> {
         // Mode push : bucket public, prefix `broadcast/`.
         final client = ref.read(supabaseClientProvider);
         final ext = picked.path.split('.').last.toLowerCase();
+        // `image/$ext` produit `image/jpg` pour un .jpg → MIME invalide
+        // (le vrai est `image/jpeg`), rejete par le bucket en 415. On mappe
+        // vers des types IANA standards.
+        final mime = switch (ext) {
+          'png' => 'image/png',
+          'webp' => 'image/webp',
+          'gif' => 'image/gif',
+          _ => 'image/jpeg',
+        };
+        // Cle propre `<ts>.<ext>` comme le chat admin — `picked.name` peut
+        // contenir espaces/caracteres speciaux (ex. "WhatsApp Image ... .jpeg")
+        // qui cassent la cle de l'objet storage.
         final path =
-            'broadcast/${DateTime.now().millisecondsSinceEpoch}-${picked.name}';
+            'broadcast/${DateTime.now().millisecondsSinceEpoch}.$ext';
         await client.storage.from('notification_images').upload(
               path,
               file,
               fileOptions: FileOptions(
-                contentType: 'image/$ext',
+                contentType: mime,
                 upsert: false,
               ),
             );

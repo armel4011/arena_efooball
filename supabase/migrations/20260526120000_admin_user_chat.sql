@@ -36,7 +36,7 @@ ALTER TABLE public.admin_chat_messages ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "admin_chat_select_admin"
   ON public.admin_chat_messages FOR SELECT
   TO authenticated
-  USING (public.is_admin(auth.uid()));
+  USING (public.is_admin());
 
 CREATE POLICY "admin_chat_select_user"
   ON public.admin_chat_messages FOR SELECT
@@ -47,7 +47,7 @@ CREATE POLICY "admin_chat_insert_admin_only"
   ON public.admin_chat_messages FOR INSERT
   TO authenticated
   WITH CHECK (
-    public.is_admin(auth.uid())
+    public.is_admin()
     AND admin_id = auth.uid()
   );
 
