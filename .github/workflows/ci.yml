@@ -100,6 +100,47 @@ jobs:
           fail_ci_if_error: false
         continue-on-error: true
 
+  security-scan:
+    name: Security scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        # `fetch-depth: 0` non requis : on scanne le working tree
+        # (`gitleaks dir`), pas tout l'historique git — les secrets
+        # historiques déjà rotés (cf. .gitleaks.toml) n'ont pas à rouvrir
+        # la CI à chaque run.
+        uses: actions/checkout@v6
+
+      - name: Secret scan (gitleaks)
+        # Bloquant — même posture que le garde-fou couleurs `--strict` :
+        # tout nouveau secret committé fait échouer la CI. Les faux positifs
+        # connus sont allowlistés dans `.gitleaks.toml`. Binaire épinglé
+        # plutôt que l'action (pas de dépendance à une licence org).
+        env:
+          GITLEAKS_VERSION: 8.30.1
+        run: |
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | tar -xz gitleaks
+          ./gitleaks dir . --config .gitleaks.toml --no-banner --redact --verbose
+
+      - name: Dependency vulnerability scan (OSV)
+        # Non bloquant pour l'instant (même posture que le garde-fou spacing) :
+        # OSV peut remonter des CVE dans des transitives non corrigeables
+        # immédiatement (ex. chaîne build_runner). Sert d'abord à la
+        # visibilité ; passer en bloquant une fois la baseline traitée
+        # (retirer `continue-on-error` et, au besoin, ajouter un
+        # `osv-scanner.toml` pour ignorer les vulns acceptées).
+        continue-on-error: true
+        env:
+          OSV_VERSION: 2.3.8
+        run: |
+          curl -sSfL "https://github.com/google/osv-scanner/releases/download/v${OSV_VERSION}/osv-scanner_linux_amd64" \
+            -o osv-scanner
+          chmod +x osv-scanner
+          ./osv-scanner scan source --lockfile=pubspec.lock
+
   build-apk:
     name: Build APK (${{ matrix.flavor }})
     runs-on: ubuntu-latest

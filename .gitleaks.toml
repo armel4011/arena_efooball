@@ -1,0 +1,48 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Configuration gitleaks — ARENA
+# ─────────────────────────────────────────────────────────────────────────────
+# Étend les règles par défaut de gitleaks (clés API, tokens, clés privées…)
+# et allowliste les faux positifs connus du repo. Exécuté en CI
+# (.github/workflows/ci.yml → job `security-scan`) en mode bloquant sur le
+# working tree (`gitleaks dir`) : tout NOUVEAU secret committé fait échouer la
+# CI. Pour reproduire en local : `gitleaks dir . --config .gitleaks.toml`.
+# ─────────────────────────────────────────────────────────────────────────────
+
+title = "ARENA gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Faux positifs connus + secrets déjà rotés (inexploitables)"
+
+paths = [
+  # Artefacts de build / outillage : absents du checkout CI, mais exclus pour
+  # que `gitleaks dir .` en local ne scanne pas les caches (.dill, etc.).
+  '''^build/''',
+  '''^\.dart_tool/''',
+  '''^\.tmp_gitleaks/''',
+  # Template d'environnement — uniquement des placeholders `YOUR_xxx`.
+  '''\.env\.example$''',
+  # Ces deux fichiers strippent le header PEM d'une clé lue depuis Deno.env
+  # (`.replace(/-----BEGIN PRIVATE KEY-----/, '')`) — aucune clé n'y est en dur.
+  '''supabase/functions/_shared/apns\.ts$''',
+  '''supabase/functions/_shared/fcm\.ts$''',
+]
+
+regexes = [
+  # Ancien WEBHOOK_SECRET — rotaté/brûlé le 2026-05-23 (bascule Vault, migration
+  # 20260522100000_webhook_secret_from_vault.sql). Encore présent en clair dans
+  # 5 migrations historiques mais désormais inexploitable. Cf. docs/AUDIT_FOLLOWUP.md.
+  '''8877a4a699baf715b90661172e80a353d229b7b65792caa1931af3a7a3909acd''',
+  # Clé Firebase bidon injectée par la CI dans le stub google-services.json.
+  '''AIzaSyA-CI-STUB-NOT-A-REAL-KEY-000000''',
+  # Faux positif `generic-api-key` dans la doc : `key='allowed_countries_v1'`
+  # est un identifiant de feature flag, pas un secret.
+  '''allowed_countries_v1''',
+]
+
+# NB : `.env` et `android/app/src/*/google-services.json` sont gitignorés
+# (donc absents du checkout CI) et NE sont volontairement PAS allowlistés —
+# ainsi gitleaks les signalerait s'ils étaient committés par erreur. En local,
+# `gitleaks dir .` peut donc encore les remonter : c'est attendu.
