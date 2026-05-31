@@ -159,6 +159,48 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return jsonResponse({ error: "invitation_email_mismatch" }, 403);
   }
 
+  // 1bis. RÉSERVATION ATOMIQUE du slot (ferme la race condition).
+  //   On incrémente `uses_count` sous deux conditions : qu'il n'ait pas bougé
+  //   depuis la lecture ci-dessus (compare-and-swap via `.eq(uses_count, …)`)
+  //   et qu'il reste de la place (`.lt(uses_count, max_uses)`). Postgres
+  //   sérialise les UPDATE concurrents sur la même ligne : deux redeems
+  //   simultanés du même code à usage unique → un seul gagne le slot, l'autre
+  //   reçoit 0 ligne → 409. Sans ça, deux requêtes lisaient `uses_count` en
+  //   parallèle, passaient toutes deux le check, et créaient chacune un compte.
+  const { data: claimed, error: claimErr } = await service
+    .from("invitation_codes")
+    .update({ uses_count: invite.uses_count + 1 })
+    .eq("id", invite.id)
+    .eq("uses_count", invite.uses_count)
+    .lt("uses_count", invite.max_uses)
+    .select("id")
+    .maybeSingle();
+  if (claimErr) {
+    return jsonResponse(
+      { error: "invitation_claim_failed", detail: claimErr.message },
+      500,
+    );
+  }
+  if (!claimed) {
+    // Un redeem concurrent a pris le dernier slot entre la lecture et ici.
+    return jsonResponse({ error: "invitation_already_used" }, 409);
+  }
+
+  // Libère le slot réservé si une étape suivante échoue (best-effort). Le
+  // `.eq(uses_count, invite.uses_count + 1)` garantit qu'on ne décrémente que
+  // notre propre incrément, jamais celui d'un redeem concurrent légitime.
+  const releaseSlot = async () => {
+    try {
+      await service
+        .from("invitation_codes")
+        .update({ uses_count: invite.uses_count })
+        .eq("id", invite.id)
+        .eq("uses_count", invite.uses_count + 1);
+    } catch (_) {
+      // best-effort : pire cas, un slot reste consommé (refus côté sûreté).
+    }
+  };
+
   // 2. Crée le compte auth.users via l'admin API. `email_confirm: true`
   //    skippe l'OTP : le super-admin a déjà délivré le canal de
   //    confiance (l'invitation), pas la peine de re-confirmer.
@@ -170,6 +212,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
       user_metadata: { username },
     });
   if (createErr || !created.user) {
+    // Échec création : on rend le slot qu'on avait réservé.
+    await releaseSlot();
     // Supabase renvoie un message du type "User already registered"
     // qu'on remappe pour l'UI.
     const msg = createErr?.message ?? "";
@@ -211,6 +255,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     // profile". L'erreur la plus fréquente ici est `username` déjà
     // pris (contrainte unique côté DB).
     await service.auth.admin.deleteUser(userId).catch(() => {});
+    await releaseSlot();
     const detail = profileErr?.message ?? "";
     if (/username/i.test(detail) && /unique/i.test(detail)) {
       return jsonResponse({ error: "username_already_taken" }, 409);
@@ -221,16 +266,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
     );
   }
 
-  // 4. Marque l'invitation comme utilisée. Si on échoue ici, on log mais
-  //    on ne rollback pas — le profil est créé, c'est ce qui compte.
-  //    Le code reste "valid" en DB, mais l'EF re-bloquera au prochain
-  //    redeem (uses_count == 0 → check email mismatch + tout le reste).
-  //    Pire cas : un autre admin peut redeemer avec le même code, ce
-  //    qui est mineux comparé à un orphan auth.user.
+  // 4. Stampe l'audit du redeem. `uses_count` a DÉJÀ été incrémenté
+  //    atomiquement à l'étape 1bis (réservation) — ici on ne pose plus que
+  //    l'horodatage et l'auteur. Échec non bloquant : le compte est créé,
+  //    le slot est déjà consommé, seule la traçabilité used_at/used_by manque.
   const { error: stampErr } = await service
     .from("invitation_codes")
     .update({
-      uses_count: invite.uses_count + 1,
       used_at: new Date().toISOString(),
       used_by: userId,
     })
