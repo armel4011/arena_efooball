@@ -136,8 +136,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
     method = "backup";
   }
 
-  // On *ne* renvoie *pas* le secret au client.
+  // On *ne* renvoie *pas* le secret ni les codes de secours au client.
   const safeProfile: Record<string, unknown> = { ...profile };
   delete safeProfile.totp_secret;
+  delete safeProfile.backup_codes;
   return jsonResponse({ method, profile: safeProfile });
 });

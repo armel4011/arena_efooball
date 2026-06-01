@@ -8,10 +8,27 @@ class ProfileRepository {
 
   static const _table = 'profiles';
 
+  /// Colonnes lues côté client. **Liste explicite volontaire** : ni
+  /// `totp_secret` ni `backup_codes` n'y figurent — ces colonnes sont
+  /// réservées au service role (Edge Functions TOTP) et `REVOKE`'d pour
+  /// `anon`/`authenticated` (migration 20260601_… — fix audit C-1). Un
+  /// `select()` implicite (`*`) lèverait désormais `permission denied for
+  /// column profiles.totp_secret`. Garder synchro avec le modèle [Profile].
+  static const _columns =
+      'id, username, email, country_code, avatar_color, role, is_active, '
+      'permanent_ban, fcm_token, stats, auth_provider, auth_provider_id, '
+      'whatsapp_number, preferred_language, preferred_currency, timezone, '
+      'onboarding_completed, onboarding_completed_at, totp_enabled, '
+      'cgu_accepted_at, cgu_version_accepted, privacy_policy_accepted_at, '
+      'marketing_consent, account_deletion_requested_at, '
+      'account_deletion_reason, deleted_at, kyc_status, kyc_verified_at, '
+      'referral_code, referred_by, created_at, updated_at';
+
   final SupabaseClient _client;
 
   Future<Profile?> getById(String id) async {
-    final row = await _client.from(_table).select().eq('id', id).maybeSingle();
+    final row =
+        await _client.from(_table).select(_columns).eq('id', id).maybeSingle();
     if (row == null) return null;
     return Profile.fromJson(row);
   }
@@ -24,7 +41,7 @@ class ProfileRepository {
     if (list.isEmpty) return const {};
     final rows = await _client
         .from(_table)
-        .select()
+        .select(_columns)
         .inFilter('id', list);
     return {
       for (final row in rows as List<dynamic>)
@@ -55,7 +72,7 @@ class ProfileRepository {
     final row = await _client
         .from(_table)
         .insert(profile.toJson())
-        .select()
+        .select(_columns)
         .single();
     return Profile.fromJson(row);
   }
@@ -65,7 +82,7 @@ class ProfileRepository {
         .from(_table)
         .update(patch)
         .eq('id', id)
-        .select()
+        .select(_columns)
         .single();
     return Profile.fromJson(row);
   }

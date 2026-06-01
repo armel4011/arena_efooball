@@ -15,7 +15,7 @@ security definer
 set search_path = public, extensions
 as $$
 declare
-  v_webhook_secret text := '8877a4a699baf715b90661172e80a353d229b7b65792caa1931af3a7a3909acd';
+  v_webhook_secret text := 'ROTATED-SEE-MIGRATION-20260522100000';
   v_function_url text := 'https://mamfuexzadeejtjrtzrq.supabase.co/functions/v1/moderate-chat-message';
   v_payload jsonb;
 begin

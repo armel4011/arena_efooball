@@ -25,7 +25,7 @@ begin
   -- Le secret est stocké dans pg_catalog.pg_db_role_setting via une
   -- option `app.settings.webhook_secret`. À défaut, on lit depuis vault
   -- ou on inline en clair ici (notre choix V1).
-  v_webhook_secret := '8877a4a699baf715b90661172e80a353d229b7b65792caa1931af3a7a3909acd';
+  v_webhook_secret := 'ROTATED-SEE-MIGRATION-20260522100000';
 
   v_payload := jsonb_build_object(
     'type',      'INSERT',

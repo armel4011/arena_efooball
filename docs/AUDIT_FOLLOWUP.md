@@ -277,3 +277,38 @@ blocage entre **deux UUID arbitraires** (pas seulement les siens).
   passe future veut le fermer : wrapper RPC qui exige
   `p_user_a = auth.uid() OR p_user_b = auth.uid()`, en gardant la
   fonction interne non exposée pour les policies.
+
+## Audit complet 2026-06-01 — fix C-1 / M-3 / E-1
+
+- [x] **C-1 — colonnes secrètes de `profiles` verrouillées** — migration
+  `20260601120000_c1_revoke_profiles_secret_columns.sql` (appliquée prod).
+  `profiles_select` rendait `totp_secret`/`backup_codes` lisibles par tout
+  utilisateur via `select=*`. Piège PG : un `REVOKE (colonne)` est inopérant
+  tant qu'un GRANT SELECT *table-level* existe → on a `REVOKE SELECT` table
+  puis `GRANT SELECT (<34 colonnes non-secrètes>)` à anon/authenticated.
+  Côté client, `ProfileRepository` (getById/getByIds/create/update) est passé
+  d'un `.select()` implicite (`*`) à une liste de colonnes explicite (sans
+  secrets) — sinon `permission denied for column profiles.totp_secret`.
+  Vérifié : `column_privileges` ne liste plus SELECT sur les 2 secrets pour
+  anon/authenticated ; `flutter analyze` 0 issue · 213/213 tests verts.
+  EF TOTP non impactées (service role bypasse les grants colonne).
+  - [ ] **Résiduel (MEDIUM, ex-C-1)** — la PII inter-utilisateurs (email,
+    whatsapp_number, fcm_token) reste lisible par `authenticated` via
+    `getByIds` (hydratation adversaires/pairs/brackets). Fix complet =
+    vue `public_profiles` (colonnes publiques only) + modèle `PublicProfile`
+    pour les lectures cross-user. Reporté (refacto multi-fichiers, à tester
+    sur device).
+- [x] **M-3 — `backup_codes` plus renvoyés au client** — `delete
+  safeProfile.backup_codes;` ajouté dans `admin-verify-totp` et
+  `register-admin` (en plus de `totp_secret`). `verify-totp-setup` renvoie
+  les backup codes en clair UNE fois au setup = légitime, conservé.
+  ⚠️ **À déployer** : `bin/supabase.exe functions deploy admin-verify-totp register-admin`
+  (le fix source ne prend effet qu'après redéploiement des EF).
+- [x] **E-1 — secret webhook : rotation confirmée + scrub** — vérifié via
+  Vault (`decrypted_secrets`) : le secret `webhook_secret` n'est PLUS la
+  valeur brûlée `8877a4a6…` (rotée, len 64 ; webhooks prod fonctionnels →
+  le secret EF correspond). Risque neutralisé. Hygiène : la valeur morte
+  (8 occurrences dans 5 migrations pré-Vault, supersédées par
+  `20260522100000`) remplacée par le placeholder
+  `ROTATED-SEE-MIGRATION-20260522100000` ; entrée d'allowlist gitleaks
+  correspondante retirée (CI scanne le working tree, pas l'historique).

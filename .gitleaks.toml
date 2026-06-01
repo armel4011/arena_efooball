@@ -31,10 +31,10 @@ paths = [
 ]
 
 regexes = [
-  # Ancien WEBHOOK_SECRET — rotaté/brûlé le 2026-05-23 (bascule Vault, migration
-  # 20260522100000_webhook_secret_from_vault.sql). Encore présent en clair dans
-  # 5 migrations historiques mais désormais inexploitable. Cf. docs/AUDIT_FOLLOWUP.md.
-  '''8877a4a699baf715b90661172e80a353d229b7b65792caa1931af3a7a3909acd''',
+  # NB : l'ancien WEBHOOK_SECRET (rotaté le 2026-05-23, bascule Vault migration
+  # 20260522100000) a été SCRUBBÉ du working tree le 2026-06-01 — les 5 migrations
+  # historiques portent désormais le placeholder `ROTATED-SEE-MIGRATION-20260522100000`.
+  # Plus aucune allowlist nécessaire ; si la valeur réapparaît, gitleaks doit échouer.
   # Clé Firebase bidon injectée par la CI dans le stub google-services.json.
   '''AIzaSyA-CI-STUB-NOT-A-REAL-KEY-000000''',
   # Faux positif `generic-api-key` dans la doc : `key='allowed_countries_v1'`
