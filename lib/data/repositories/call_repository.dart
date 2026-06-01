@@ -109,8 +109,10 @@ class CallRepository {
 
   /// Username d'un profil — pour afficher « X vous appelle ».
   Future<String> usernameOf(String userId) async {
+    // Vue publique : la table `profiles` est restreinte à self+admin
+    // (fix C-1 résiduel) ; l'appelé n'est pas l'utilisateur courant.
     final row = await _client
-        .from('profiles')
+        .from('public_profiles')
         .select('username')
         .eq('id', userId)
         .maybeSingle();

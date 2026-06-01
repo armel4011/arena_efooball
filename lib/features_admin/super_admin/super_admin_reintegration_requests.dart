@@ -137,7 +137,7 @@ class _RequestCard extends ConsumerWidget {
           profileAsync.maybeWhen(
             data: (p) => p == null
                 ? const SizedBox.shrink()
-                : Text(p.email, style: ArenaText.bodyMuted),
+                : Text(p.email ?? '—', style: ArenaText.bodyMuted),
             orElse: () => const SizedBox.shrink(),
           ),
           const SizedBox(height: ArenaSpacing.sm),

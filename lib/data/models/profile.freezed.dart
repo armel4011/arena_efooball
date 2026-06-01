@@ -22,8 +22,11 @@ Profile _$ProfileFromJson(Map<String, dynamic> json) {
 mixin _$Profile {
   String get id => throw _privateConstructorUsedError;
   String get username => throw _privateConstructorUsedError;
-  String get email => throw _privateConstructorUsedError;
-  String get countryCode => throw _privateConstructorUsedError;
+  String get countryCode =>
+      throw _privateConstructorUsedError; // Nullable depuis le fix C-1 résiduel : les lectures cross-user passent
+// par la vue `public_profiles` qui n'expose PAS l'email (PII). Non-null
+// en pratique pour le profil de l'utilisateur courant (lu sur la table).
+  String? get email => throw _privateConstructorUsedError;
   String get avatarColor => throw _privateConstructorUsedError;
   @UserRoleConverter()
   UserRole get role => throw _privateConstructorUsedError;
@@ -73,8 +76,8 @@ abstract class $ProfileCopyWith<$Res> {
   $Res call(
       {String id,
       String username,
-      String email,
       String countryCode,
+      String? email,
       String avatarColor,
       @UserRoleConverter() UserRole role,
       bool isActive,
@@ -122,8 +125,8 @@ class _$ProfileCopyWithImpl<$Res, $Val extends Profile>
   $Res call({
     Object? id = null,
     Object? username = null,
-    Object? email = null,
     Object? countryCode = null,
+    Object? email = freezed,
     Object? avatarColor = null,
     Object? role = null,
     Object? isActive = null,
@@ -162,14 +165,14 @@ class _$ProfileCopyWithImpl<$Res, $Val extends Profile>
           ? _value.username
           : username // ignore: cast_nullable_to_non_nullable
               as String,
-      email: null == email
-          ? _value.email
-          : email // ignore: cast_nullable_to_non_nullable
-              as String,
       countryCode: null == countryCode
           ? _value.countryCode
           : countryCode // ignore: cast_nullable_to_non_nullable
               as String,
+      email: freezed == email
+          ? _value.email
+          : email // ignore: cast_nullable_to_non_nullable
+              as String?,
       avatarColor: null == avatarColor
           ? _value.avatarColor
           : avatarColor // ignore: cast_nullable_to_non_nullable
@@ -296,8 +299,8 @@ abstract class _$$ProfileImplCopyWith<$Res> implements $ProfileCopyWith<$Res> {
   $Res call(
       {String id,
       String username,
-      String email,
       String countryCode,
+      String? email,
       String avatarColor,
       @UserRoleConverter() UserRole role,
       bool isActive,
@@ -343,8 +346,8 @@ class __$$ProfileImplCopyWithImpl<$Res>
   $Res call({
     Object? id = null,
     Object? username = null,
-    Object? email = null,
     Object? countryCode = null,
+    Object? email = freezed,
     Object? avatarColor = null,
     Object? role = null,
     Object? isActive = null,
@@ -383,14 +386,14 @@ class __$$ProfileImplCopyWithImpl<$Res>
           ? _value.username
           : username // ignore: cast_nullable_to_non_nullable
               as String,
-      email: null == email
-          ? _value.email
-          : email // ignore: cast_nullable_to_non_nullable
-              as String,
       countryCode: null == countryCode
           ? _value.countryCode
           : countryCode // ignore: cast_nullable_to_non_nullable
               as String,
+      email: freezed == email
+          ? _value.email
+          : email // ignore: cast_nullable_to_non_nullable
+              as String?,
       avatarColor: null == avatarColor
           ? _value.avatarColor
           : avatarColor // ignore: cast_nullable_to_non_nullable
@@ -513,8 +516,8 @@ class _$ProfileImpl extends _Profile {
   const _$ProfileImpl(
       {required this.id,
       required this.username,
-      required this.email,
       required this.countryCode,
+      this.email,
       this.avatarColor = '#4C7AFF',
       @UserRoleConverter() this.role = UserRole.player,
       this.isActive = true,
@@ -554,9 +557,12 @@ class _$ProfileImpl extends _Profile {
   @override
   final String username;
   @override
-  final String email;
-  @override
   final String countryCode;
+// Nullable depuis le fix C-1 résiduel : les lectures cross-user passent
+// par la vue `public_profiles` qui n'expose PAS l'email (PII). Non-null
+// en pratique pour le profil de l'utilisateur courant (lu sur la table).
+  @override
+  final String? email;
   @override
   @JsonKey()
   final String avatarColor;
@@ -638,7 +644,7 @@ class _$ProfileImpl extends _Profile {
 
   @override
   String toString() {
-    return 'Profile(id: $id, username: $username, email: $email, countryCode: $countryCode, avatarColor: $avatarColor, role: $role, isActive: $isActive, permanentBan: $permanentBan, fcmToken: $fcmToken, stats: $stats, authProvider: $authProvider, authProviderId: $authProviderId, whatsappNumber: $whatsappNumber, preferredLanguage: $preferredLanguage, preferredCurrency: $preferredCurrency, timezone: $timezone, onboardingCompleted: $onboardingCompleted, onboardingCompletedAt: $onboardingCompletedAt, totpEnabled: $totpEnabled, cguAcceptedAt: $cguAcceptedAt, cguVersionAccepted: $cguVersionAccepted, privacyPolicyAcceptedAt: $privacyPolicyAcceptedAt, marketingConsent: $marketingConsent, accountDeletionRequestedAt: $accountDeletionRequestedAt, accountDeletionReason: $accountDeletionReason, deletedAt: $deletedAt, kycStatus: $kycStatus, kycVerifiedAt: $kycVerifiedAt, referralCode: $referralCode, referredBy: $referredBy, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'Profile(id: $id, username: $username, countryCode: $countryCode, email: $email, avatarColor: $avatarColor, role: $role, isActive: $isActive, permanentBan: $permanentBan, fcmToken: $fcmToken, stats: $stats, authProvider: $authProvider, authProviderId: $authProviderId, whatsappNumber: $whatsappNumber, preferredLanguage: $preferredLanguage, preferredCurrency: $preferredCurrency, timezone: $timezone, onboardingCompleted: $onboardingCompleted, onboardingCompletedAt: $onboardingCompletedAt, totpEnabled: $totpEnabled, cguAcceptedAt: $cguAcceptedAt, cguVersionAccepted: $cguVersionAccepted, privacyPolicyAcceptedAt: $privacyPolicyAcceptedAt, marketingConsent: $marketingConsent, accountDeletionRequestedAt: $accountDeletionRequestedAt, accountDeletionReason: $accountDeletionReason, deletedAt: $deletedAt, kycStatus: $kycStatus, kycVerifiedAt: $kycVerifiedAt, referralCode: $referralCode, referredBy: $referredBy, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -649,9 +655,9 @@ class _$ProfileImpl extends _Profile {
             (identical(other.id, id) || other.id == id) &&
             (identical(other.username, username) ||
                 other.username == username) &&
-            (identical(other.email, email) || other.email == email) &&
             (identical(other.countryCode, countryCode) ||
                 other.countryCode == countryCode) &&
+            (identical(other.email, email) || other.email == email) &&
             (identical(other.avatarColor, avatarColor) ||
                 other.avatarColor == avatarColor) &&
             (identical(other.role, role) || other.role == role) &&
@@ -717,8 +723,8 @@ class _$ProfileImpl extends _Profile {
         runtimeType,
         id,
         username,
-        email,
         countryCode,
+        email,
         avatarColor,
         role,
         isActive,
@@ -769,8 +775,8 @@ abstract class _Profile extends Profile {
   const factory _Profile(
       {required final String id,
       required final String username,
-      required final String email,
       required final String countryCode,
+      final String? email,
       final String avatarColor,
       @UserRoleConverter() final UserRole role,
       final bool isActive,
@@ -808,9 +814,12 @@ abstract class _Profile extends Profile {
   @override
   String get username;
   @override
-  String get email;
+  String
+      get countryCode; // Nullable depuis le fix C-1 résiduel : les lectures cross-user passent
+// par la vue `public_profiles` qui n'expose PAS l'email (PII). Non-null
+// en pratique pour le profil de l'utilisateur courant (lu sur la table).
   @override
-  String get countryCode;
+  String? get email;
   @override
   String get avatarColor;
   @override

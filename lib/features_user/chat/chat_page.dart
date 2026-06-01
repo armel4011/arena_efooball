@@ -470,7 +470,7 @@ final _opponentProvider =
   if (match == null) return null;
   final otherId = match.player1Id == selfId ? match.player2Id : match.player1Id;
   if (otherId == null) return null;
-  return ref.read(profileRepositoryProvider).getById(otherId);
+  return ref.read(profileRepositoryProvider).getPublicById(otherId);
 });
 
 class _ChatAppBar extends StatelessWidget {

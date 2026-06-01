@@ -29,9 +29,13 @@ final matchPlayersProvider =
   final match = await ref.watch(matchByIdProvider(matchId).future);
   if (match == null) return const MatchPlayers(p1: null, p2: null);
   final repo = ref.watch(profileRepositoryProvider);
-  final p1 =
-      match.player1Id == null ? null : await repo.getById(match.player1Id!);
-  final p2 =
-      match.player2Id == null ? null : await repo.getById(match.player2Id!);
+  // Profils PUBLICS (adversaire ou soi) : on n'a besoin que de pseudo +
+  // avatar, et la table est restreinte à self+admin (fix C-1 résiduel).
+  final p1 = match.player1Id == null
+      ? null
+      : await repo.getPublicById(match.player1Id!);
+  final p2 = match.player2Id == null
+      ? null
+      : await repo.getPublicById(match.player2Id!);
   return MatchPlayers(p1: p1, p2: p2);
 });

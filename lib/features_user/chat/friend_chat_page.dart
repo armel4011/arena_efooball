@@ -362,7 +362,7 @@ final _friendPeerProvider =
   final peerId = friendship.requesterId == selfId
       ? friendship.addresseeId
       : friendship.requesterId;
-  return ref.read(profileRepositoryProvider).getById(peerId);
+  return ref.read(profileRepositoryProvider).getPublicById(peerId);
 });
 
 class _FriendChatAppBar extends StatelessWidget {

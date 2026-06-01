@@ -14,8 +14,11 @@ sealed class Profile with _$Profile {
   const factory Profile({
     required String id,
     required String username,
-    required String email,
     required String countryCode,
+    // Nullable depuis le fix C-1 résiduel : les lectures cross-user passent
+    // par la vue `public_profiles` qui n'expose PAS l'email (PII). Non-null
+    // en pratique pour le profil de l'utilisateur courant (lu sur la table).
+    String? email,
     @Default('#4C7AFF') String avatarColor,
     @Default(UserRole.player) @UserRoleConverter() UserRole role,
     @Default(true) bool isActive,

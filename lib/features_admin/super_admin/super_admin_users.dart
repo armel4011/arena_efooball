@@ -435,7 +435,7 @@ class _UserCard extends ConsumerWidget {
                           ArenaText.body.copyWith(fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 2),
-                    Text(profile.email, style: ArenaText.bodyMuted),
+                    Text(profile.email ?? '—', style: ArenaText.bodyMuted),
                   ],
                 ),
               ),
