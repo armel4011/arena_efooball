@@ -25,7 +25,7 @@ select cron.schedule(
       body := '{}'::jsonb,
       headers := jsonb_build_object(
         'Content-Type', 'application/json',
-        'Authorization', 'Bearer 8877a4a699baf715b90661172e80a353d229b7b65792caa1931af3a7a3909acd'
+        'Authorization', 'Bearer ROTATED-SEE-MIGRATION-20260522100000'
       ),
       timeout_milliseconds := 30000
     );
@@ -52,7 +52,7 @@ begin
     body := '{}'::jsonb,
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      'Authorization', 'Bearer 8877a4a699baf715b90661172e80a353d229b7b65792caa1931af3a7a3909acd'
+      'Authorization', 'Bearer ROTATED-SEE-MIGRATION-20260522100000'
     ),
     timeout_milliseconds := 30000
   );

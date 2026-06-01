@@ -286,5 +286,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
   //    signInWithPassword pour obtenir le JWT.
   const safeProfile: Record<string, unknown> = { ...profile };
   delete safeProfile.totp_secret;
+  delete safeProfile.backup_codes;
   return jsonResponse({ profile: safeProfile });
 });
