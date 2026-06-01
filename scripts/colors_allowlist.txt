@@ -12,8 +12,10 @@
 # et étendue ici quand de nouveaux écrans s'ajoutent.
 
 # ─── Splash & branding ────────────────────────────────────────────────
-# Les écrans splash utilisent des Color() hex pour les gradients
-# cinématiques (la palette ArenaColors n'expose pas ces tons mid).
+# Les Color(0x…) hex ont été migrés vers ArenaColors (signalBlue/neonRed/
+# splashUserDeep/splashAdminDeep/void_/gameEfoot…) et les fonts vers
+# ArenaText.splash* (audit quick-wins). Restent des `Colors.white` KEEP :
+# texte/chevrons/glow blancs sur dégradé cinématique (contraste voulu).
 lib/features/splash/splash_screen.dart
 lib/features/splash/splash_router.dart
 
