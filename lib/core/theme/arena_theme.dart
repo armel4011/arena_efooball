@@ -131,6 +131,12 @@ class ArenaColors {
   static const Color signalBlueDark = Color(0xFF2952CC);
   static const Color neonRedDark = Color(0xFFCC2945);
 
+  // Stops médians des dégradés cinématiques du splash (USER bleu / ADMIN
+  // rouge). Le stop USER #1A2D5C est aussi le fond natif (cf. pubspec
+  // flutter_native_splash). Cf. SplashScreen.
+  static const Color splashUserDeep = Color(0xFF1A2D5C);
+  static const Color splashAdminDeep = Color(0xFF5C1A2D);
+
   // Glows (utilisables tels quels dans BoxShadow.color)
   static const Color signalBlueGlow = Color(0x804C7AFF); // signalBlue @ 50 %
   static const Color neonRedGlow = Color(0x80FF2D55);    // neonRed @ 50 %
@@ -267,6 +273,18 @@ class ArenaText {
   );
   static TextStyle appBarTitle = GoogleFonts.bebasNeue(
     fontSize: 14, letterSpacing: 2, color: ArenaColors.bone,
+  );
+  // Styles cinématiques du splash (couleur appliquée par l'appelant via
+  // copyWith — ces glyphes sont sur dégradé). Centralisés ici pour qu'aucun
+  // `GoogleFonts.*` inline ne subsiste dans features/splash.
+  static TextStyle splashBrand = GoogleFonts.bebasNeue(
+    fontSize: 44, letterSpacing: 8, fontWeight: FontWeight.w700,
+  );
+  static TextStyle splashTagline = GoogleFonts.instrumentSerif(
+    fontSize: 13, fontStyle: FontStyle.italic, letterSpacing: 1.5,
+  );
+  static TextStyle splashBadge = GoogleFonts.bebasNeue(
+    fontSize: 12, letterSpacing: 1,
   );
   static TextStyle bigNumber = GoogleFonts.bebasNeue(
     fontSize: 30, letterSpacing: 2, color: ArenaColors.bone,

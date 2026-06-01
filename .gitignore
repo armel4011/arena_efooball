@@ -108,3 +108,9 @@ _restyle_ref/
 
 # Site web statique (landing / downloads) — gestion séparée.
 site web/
+
+# Screenshots de test manuels à la racine (captures device ad-hoc).
+/_t*.png
+
+# Backups ad-hoc du registre de migrations distant (snapshots manuels).
+supabase/_remote_migration_history_backup_*.json

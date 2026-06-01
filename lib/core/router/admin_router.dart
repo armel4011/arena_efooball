@@ -29,6 +29,7 @@ import 'package:arena/features_admin/super_admin/super_admin_revenue.dart';
 import 'package:arena/features_admin/super_admin/super_admin_users.dart';
 import 'package:arena/features_shared/presentation/dev_preview_page.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -313,11 +314,13 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
           userId: state.pathParameters['userId'] ?? '',
         ),
       ),
-      GoRoute(
-        path: AdminRoutes.devPreview,
-        name: 'admin.dev.preview',
-        builder: (context, state) => const DevPreviewPage(),
-      ),
+      // Route outillage dev — réservée aux builds debug. Cf. audit quick-wins.
+      if (kDebugMode)
+        GoRoute(
+          path: AdminRoutes.devPreview,
+          name: 'admin.dev.preview',
+          builder: (context, state) => const DevPreviewPage(),
+        ),
     ],
   );
 });
