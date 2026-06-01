@@ -2,10 +2,10 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:arena/core/services/callkit_service.dart';
+import 'package:arena/core/theme/arena_theme.dart' show ArenaColors;
 import 'package:arena/data/repositories/notification_repository.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
-import 'package:arena/core/theme/arena_theme.dart' show ArenaColors;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';

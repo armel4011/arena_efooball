@@ -12,6 +12,7 @@
 
 import 'dart:async';
 
+import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/features/splash/splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -137,11 +138,11 @@ class _ShortSplashScreenState extends State<_ShortSplashScreen>
   }
 
   Color get _accentColor =>
-      widget.isAdmin ? const Color(0xFFFF2D55) : const Color(0xFF4C7AFF);
+      widget.isAdmin ? ArenaColors.neonRed : ArenaColors.signalBlue;
   Color get _midColor =>
-      widget.isAdmin ? const Color(0xFF5C1A2D) : const Color(0xFF1A2D5C);
+      widget.isAdmin ? ArenaColors.splashAdminDeep : ArenaColors.splashUserDeep;
   Color get _chevronAccent =>
-      widget.isAdmin ? const Color(0xFF4C7AFF) : const Color(0xFFFF2D55);
+      widget.isAdmin ? ArenaColors.signalBlue : ArenaColors.neonRed;
 
   @override
   Widget build(BuildContext context) {
@@ -155,7 +156,7 @@ class _ShortSplashScreenState extends State<_ShortSplashScreen>
             colors: [
               _accentColor,
               _midColor,
-              const Color(0xFF0A0A0F),
+              ArenaColors.void_,
             ],
           ),
         ),
@@ -233,9 +234,9 @@ class _SplashLoadingState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accentColor =
-        isAdmin ? const Color(0xFFFF2D55) : const Color(0xFF4C7AFF);
+        isAdmin ? ArenaColors.neonRed : ArenaColors.signalBlue;
     final midColor =
-        isAdmin ? const Color(0xFF5C1A2D) : const Color(0xFF1A2D5C);
+        isAdmin ? ArenaColors.splashAdminDeep : ArenaColors.splashUserDeep;
 
     return Scaffold(
       body: Container(
@@ -247,7 +248,7 @@ class _SplashLoadingState extends StatelessWidget {
             colors: [
               accentColor,
               midColor,
-              const Color(0xFF0A0A0F),
+              ArenaColors.void_,
             ],
           ),
         ),

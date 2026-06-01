@@ -13,8 +13,8 @@
 // Background stars : opacity 0→0.3→0.7→0.7→0 sur toute la durée.
 // ════════════════════════════════════════════════════════════════════
 
+import 'package:arena/core/theme/arena_theme.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({
@@ -148,11 +148,11 @@ class _SplashScreenState extends State<SplashScreen>
 
   // ─── Couleurs USER/ADMIN ──────────────────────────────────────────
   Color get _accentColor =>
-      widget.isAdmin ? const Color(0xFFFF2D55) : const Color(0xFF4C7AFF);
+      widget.isAdmin ? ArenaColors.neonRed : ArenaColors.signalBlue;
   Color get _midColor =>
-      widget.isAdmin ? const Color(0xFF5C1A2D) : const Color(0xFF1A2D5C);
+      widget.isAdmin ? ArenaColors.splashAdminDeep : ArenaColors.splashUserDeep;
   Color get _chevronAccent =>
-      widget.isAdmin ? const Color(0xFF4C7AFF) : const Color(0xFFFF2D55);
+      widget.isAdmin ? ArenaColors.signalBlue : ArenaColors.neonRed;
 
   String get _brand => widget.isAdmin ? 'ADMIN' : 'ARENA';
   String get _tagline => widget.isAdmin
@@ -171,7 +171,7 @@ class _SplashScreenState extends State<SplashScreen>
             colors: [
               _accentColor,
               _midColor,
-              const Color(0xFF0A0A0F),
+              ArenaColors.void_,
             ],
           ),
         ),
@@ -277,22 +277,13 @@ class _SplashScreenState extends State<SplashScreen>
               children: [
                 Text(
                   _brand,
-                  style: GoogleFonts.bebasNeue(
-                    fontSize: 44,
-                    letterSpacing: 8,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
+                  style: ArenaText.splashBrand.copyWith(color: Colors.white),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   _tagline,
-                  style: GoogleFonts.instrumentSerif(
-                    fontSize: 13,
-                    fontStyle: FontStyle.italic,
-                    letterSpacing: 1.5,
-                    color: Colors.white.withValues(alpha: 0.7),
-                  ),
+                  style: ArenaText.splashTagline
+                      .copyWith(color: Colors.white.withValues(alpha: 0.7)),
                 ),
               ],
             ),
@@ -393,11 +384,11 @@ class GamesRow extends StatelessWidget {
     return const Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        GameBadge(label: 'EFB', color: Color(0xFF00B4D8)),
+        GameBadge(label: 'EFB', color: ArenaColors.gameEfoot),
         SizedBox(width: 16),
-        GameBadge(label: 'FIFA', color: Color(0xFF06D6A0)),
+        GameBadge(label: 'FIFA', color: ArenaColors.gameFifa),
         SizedBox(width: 16),
-        GameBadge(label: 'FC', color: Color(0xFFF77F00)),
+        GameBadge(label: 'FC', color: ArenaColors.gameFc),
       ],
     );
   }
@@ -430,11 +421,7 @@ class GameBadge extends StatelessWidget {
       child: Center(
         child: Text(
           label,
-          style: GoogleFonts.bebasNeue(
-            fontSize: 12,
-            color: Colors.white,
-            letterSpacing: 1,
-          ),
+          style: ArenaText.splashBadge.copyWith(color: Colors.white),
         ),
       ),
     );

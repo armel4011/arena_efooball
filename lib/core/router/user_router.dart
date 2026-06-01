@@ -44,6 +44,7 @@ import 'package:arena/features_user/recording/match_in_progress_overlay.dart';
 import 'package:arena/features_user/recording/recording_error_page.dart';
 import 'package:arena/features_user/streaming/live_streams_page.dart';
 import 'package:arena/features_user/streaming/watch_stream_page.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -519,21 +520,25 @@ final userRouterProvider = Provider<GoRouter>((ref) {
           return PayoutKycPage(pendingAmountXaf: extra?.pendingAmountXaf ?? 0);
         },
       ),
-      GoRoute(
-        path: UserRoutes.devPreview,
-        name: 'user.dev.preview',
-        builder: (context, state) => const DevPreviewPage(),
-      ),
-      GoRoute(
-        path: UserRoutes.devShowcase,
-        name: 'user.dev.showcase',
-        builder: (context, state) => const DesignShowcasePage(),
-      ),
-      GoRoute(
-        path: UserRoutes.devBracketShowcase,
-        name: 'user.dev.bracketShowcase',
-        builder: (context, state) => const BracketShowcasePage(),
-      ),
+      // Routes outillage dev — réservées aux builds debug (jamais
+      // atteignables par URL en release). Cf. audit quick-wins.
+      if (kDebugMode) ...[
+        GoRoute(
+          path: UserRoutes.devPreview,
+          name: 'user.dev.preview',
+          builder: (context, state) => const DevPreviewPage(),
+        ),
+        GoRoute(
+          path: UserRoutes.devShowcase,
+          name: 'user.dev.showcase',
+          builder: (context, state) => const DesignShowcasePage(),
+        ),
+        GoRoute(
+          path: UserRoutes.devBracketShowcase,
+          name: 'user.dev.bracketShowcase',
+          builder: (context, state) => const BracketShowcasePage(),
+        ),
+      ],
     ],
   );
 });
