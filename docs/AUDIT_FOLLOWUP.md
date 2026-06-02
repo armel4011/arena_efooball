@@ -312,3 +312,33 @@ blocage entre **deux UUID arbitraires** (pas seulement les siens).
   `20260522100000`) remplacée par le placeholder
   `ROTATED-SEE-MIGRATION-20260522100000` ; entrée d'allowlist gitleaks
   correspondante retirée (CI scanne le working tree, pas l'historique).
+
+## C-1 résiduel (PII inter-utilisateurs) — PR #14, mergée 2026-06-02
+
+✅ **Migration appliquée en prod le 2026-06-01 (version remote `20260601184427`).**
+La RLS restrictive étant déjà active côté base, le merge du code Dart rerouté
+était l'action sûre (une app construite depuis `main` sans ce code aurait des
+lectures cross-user vides). La checklist device reste valable comme smoke test
+post-merge.
+
+- [x] **Fix PII cross-user via vue `public_profiles` + RLS self+admin** —
+  migration `20260601130000_c1_residual_public_profiles_view.sql`. La policy
+  `profiles_select` est restreinte à self+admin ; une vue `public_profiles`
+  (`security_invoker=false`) expose uniquement les colonnes publiques (sans
+  email/whatsapp/fcm/voip/kyc/auth_provider/referral). `Profile.email` passé
+  `String?`. Lectures reroutées :
+  - `ProfileRepository` : `getByIds` + nouveau `getPublicById` + `usernameExists` → vue.
+    `getById`/`create`/`update` restent sur la table (self/admin).
+  - cross-user `getById` → `getPublicById` : chat (`_opponentProvider`),
+    chat ami (`_friendPeerProvider`), salle de match (`matchPlayersProvider`).
+  - `friends_repository` : `resolvePeers`/`searchByUsername`/`findByUsername` → vue.
+  - `competition_repository.getRanking` : embed `profiles!player_id` remplacé
+    par 2 requêtes (registrations + `public_profiles`).
+  - `call_repository.usernameOf` → vue.
+  - admin (`super_admin_users`, reintegration, embeds admin) : restent sur la
+    table (les admins lisent la table via la RLS `is_admin()`).
+  - **Checklist device** (cf. en-tête de la migration) : salle de match, chats,
+    inbox, bracket/poules, classement final, recherche+profil public, appel
+    entrant, vérif username au signup, écrans admin.
+  - Validé localement : `flutter analyze` 0 issue · 213/213 tests · l'advisor
+    `security_definer_view` flaggera `public_profiles` (WARN assumé, intentionnel).

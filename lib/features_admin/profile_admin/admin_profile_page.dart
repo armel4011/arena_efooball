@@ -312,7 +312,7 @@ class _ProfileForm extends StatelessWidget {
           // ─── Read-only block ────────────────────────────────────
           Text('COMPTE', style: ArenaText.inputLabel),
           const SizedBox(height: ArenaSpacing.sm),
-          _ReadOnlyRow(label: 'Email', value: profile.email),
+          _ReadOnlyRow(label: 'Email', value: profile.email ?? '—'),
           _ReadOnlyRow(
             label: 'Rôle',
             value:
@@ -364,7 +364,7 @@ class _Header extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 2),
-              Text(profile.email, style: ArenaText.bodyMuted),
+              Text(profile.email ?? '—', style: ArenaText.bodyMuted),
               const SizedBox(height: 6),
               ArenaBadge(
                 label: profile.role == UserRole.superAdmin

@@ -18,7 +18,10 @@ class FriendsRepository {
   const FriendsRepository(this._client);
 
   static const _table = 'friendships';
-  static const _profilesTable = 'profiles';
+  // Vue publique (sans PII) — la table `profiles` est restreinte à self+admin
+  // depuis le fix C-1 résiduel. Toutes les lectures de profils d'autrui
+  // (amis, recherche, profil public) passent par la vue.
+  static const _profilesView = 'public_profiles';
 
   final SupabaseClient _client;
 
@@ -136,11 +139,12 @@ class FriendsRepository {
   /// `friends_page.dart` et `public_profile_page.dart`. Reduit le
   /// payload de ~2 KB → ~150 octets par profil (×20-200 amis).
   ///
-  /// On garde quand meme `email`, `country_code` car `Profile` les
-  /// declare `required` (Freezed leverait sinon une exception missing-key).
+  /// `email` n'est plus sélectionné (PII absente de la vue) — `Profile.email`
+  /// est nullable depuis le fix C-1 résiduel. `deleted_at` est filtré par la
+  /// vue elle-même.
   static const _peerColumns =
-      'id, username, email, country_code, avatar_color, role, '
-      'is_active, permanent_ban, deleted_at, created_at, updated_at';
+      'id, username, country_code, avatar_color, role, '
+      'is_active, permanent_ban, created_at, updated_at';
 
   Future<List<(Friendship, Profile)>> resolvePeers({
     required String me,
@@ -149,7 +153,7 @@ class FriendsRepository {
     if (friendships.isEmpty) return const [];
     final ids = {for (final f in friendships) f.otherUserId(me)};
     final rows = await _client
-        .from(_profilesTable)
+        .from(_profilesView)
         .select(_peerColumns)
         .inFilter('id', ids.toList());
     final byId = <String, Profile>{
@@ -176,13 +180,14 @@ class FriendsRepository {
     final trimmed = query.trim();
     if (trimmed.length < 2) return const [];
     final pattern = '%${trimmed.replaceAll('%', r'\%')}%';
+    // Vue publique : `*` y est sûr (que des colonnes publiques) et `deleted_at`
+    // est déjà filtré par la vue.
     final rows = await _client
-        .from(_profilesTable)
+        .from(_profilesView)
         .select()
         .ilike('username', pattern)
         .eq('is_active', true)
         .eq('permanent_ban', false)
-        .filter('deleted_at', 'is', null)
         .neq('id', me)
         .limit(limit);
     return [
@@ -196,11 +201,10 @@ class FriendsRepository {
     final trimmed = username.trim();
     if (trimmed.isEmpty) return null;
     final row = await _client
-        .from(_profilesTable)
+        .from(_profilesView)
         .select()
         .ilike('username', trimmed)
         .eq('is_active', true)
-        .filter('deleted_at', 'is', null)
         .maybeSingle();
     if (row == null) return null;
     return Profile.fromJson(row);

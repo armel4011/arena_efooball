@@ -113,14 +113,28 @@ class CompetitionRepository {
   ) async {
     final rows = await _client
         .from('competition_registrations')
-        .select(
-          'player_id, final_rank, '
-          'profiles!player_id(username, country_code, avatar_color)',
-        )
+        .select('player_id, final_rank')
         .eq('competition_id', competitionId);
+    final regs = [for (final r in rows as List<dynamic>) r as Map<String, dynamic>];
+
+    // Les profils joueurs sont résolus via la vue publique `public_profiles`
+    // (la table `profiles` est restreinte à self+admin — fix C-1 résiduel).
+    // On ne peut plus embarquer `profiles!player_id(...)` côté PostgREST.
+    final ids = {for (final r in regs) r['player_id'] as String}.toList();
+    final profilesById = <String, Map<String, dynamic>>{};
+    if (ids.isNotEmpty) {
+      final pr = await _client
+          .from('public_profiles')
+          .select('id, username, country_code, avatar_color')
+          .inFilter('id', ids);
+      for (final p in pr as List<dynamic>) {
+        final m = p as Map<String, dynamic>;
+        profilesById[m['id'] as String] = m;
+      }
+    }
+
     final list = [
-      for (final row in rows as List<dynamic>)
-        _mapRankingEntry(row as Map<String, dynamic>),
+      for (final row in regs) _mapRankingEntry(row, profilesById[row['player_id']]),
     ]..sort((a, b) {
         // Les non-classés tombent en fin de liste.
         final ra = a.finalRank ?? 1 << 30;
@@ -131,13 +145,16 @@ class CompetitionRepository {
     return list;
   }
 
-  CompetitionRankingEntry _mapRankingEntry(Map<String, dynamic> row) {
-    final profile = row['profiles'] as Map<String, dynamic>? ?? const {};
+  CompetitionRankingEntry _mapRankingEntry(
+    Map<String, dynamic> row,
+    Map<String, dynamic>? profile,
+  ) {
+    final p = profile ?? const {};
     return CompetitionRankingEntry(
       playerId: row['player_id'] as String,
-      username: profile['username'] as String? ?? '—',
-      countryCode: profile['country_code'] as String? ?? '',
-      avatarColor: profile['avatar_color'] as String? ?? '#4C7AFF',
+      username: p['username'] as String? ?? '—',
+      countryCode: p['country_code'] as String? ?? '',
+      avatarColor: p['avatar_color'] as String? ?? '#4C7AFF',
       finalRank: row['final_rank'] as int?,
     );
   }

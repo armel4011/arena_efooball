@@ -10,8 +10,8 @@ _$ProfileImpl _$$ProfileImplFromJson(Map<String, dynamic> json) =>
     _$ProfileImpl(
       id: json['id'] as String,
       username: json['username'] as String,
-      email: json['email'] as String,
       countryCode: json['country_code'] as String,
+      email: json['email'] as String?,
       avatarColor: json['avatar_color'] as String? ?? '#4C7AFF',
       role: json['role'] == null
           ? UserRole.player
@@ -65,8 +65,8 @@ Map<String, dynamic> _$$ProfileImplToJson(_$ProfileImpl instance) =>
     <String, dynamic>{
       'id': instance.id,
       'username': instance.username,
-      'email': instance.email,
       'country_code': instance.countryCode,
+      if (instance.email case final value?) 'email': value,
       'avatar_color': instance.avatarColor,
       if (const UserRoleConverter().toJson(instance.role) case final value?)
         'role': value,

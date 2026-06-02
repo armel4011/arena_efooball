@@ -24,8 +24,19 @@ class ProfileRepository {
       'account_deletion_reason, deleted_at, kyc_status, kyc_verified_at, '
       'referral_code, referred_by, created_at, updated_at';
 
+  /// Vue exposant uniquement les colonnes PUBLIQUES (sans PII). Toute
+  /// lecture d'un profil d'AUTRE utilisateur passe par là — la table
+  /// `profiles` est restreinte à self+admin par la RLS (fix C-1 résiduel,
+  /// migration 20260601130000). `email` n'y figure pas → null côté Profile.
+  static const _publicView = 'public_profiles';
+  static const _publicColumns =
+      'id, username, avatar_color, country_code, stats, role, is_active, '
+      'permanent_ban, totp_enabled, last_seen_at, created_at, updated_at';
+
   final SupabaseClient _client;
 
+  /// Profil COMPLET (table) — réservé à self (profil courant) et admin.
+  /// Pour un profil d'autrui, utiliser [getPublicById] / [getByIds].
   Future<Profile?> getById(String id) async {
     final row =
         await _client.from(_table).select(_columns).eq('id', id).maybeSingle();
@@ -33,15 +44,28 @@ class ProfileRepository {
     return Profile.fromJson(row);
   }
 
-  /// Récupère plusieurs profils en un round-trip. Utilisé par la home
-  /// "Prochains matchs" et l'inbox messages pour hydrater les opponents
-  /// sans N round-trips.
+  /// Profil PUBLIC d'un utilisateur (vue `public_profiles`, sans PII).
+  /// À utiliser pour tout profil qui n'est pas celui de l'utilisateur
+  /// courant (adversaire, pair de chat, joueur de bracket…).
+  Future<Profile?> getPublicById(String id) async {
+    final row = await _client
+        .from(_publicView)
+        .select(_publicColumns)
+        .eq('id', id)
+        .maybeSingle();
+    if (row == null) return null;
+    return Profile.fromJson(row);
+  }
+
+  /// Récupère plusieurs profils PUBLICS en un round-trip. Utilisé par la
+  /// home "Prochains matchs" et l'inbox messages pour hydrater les opponents
+  /// sans N round-trips. Lit la vue publique (sans PII).
   Future<Map<String, Profile>> getByIds(Iterable<String> ids) async {
     final list = ids.toSet().toList();
     if (list.isEmpty) return const {};
     final rows = await _client
-        .from(_table)
-        .select(_columns)
+        .from(_publicView)
+        .select(_publicColumns)
         .inFilter('id', list);
     return {
       for (final row in rows as List<dynamic>)
@@ -58,8 +82,10 @@ class ProfileRepository {
   Future<bool> usernameExists(String username) async {
     final trimmed = username.trim();
     if (trimmed.isEmpty) return false;
+    // Lit la vue publique : l'appel est pré-signup (rôle `anon`), or la table
+    // est restreinte à self+admin. La vue expose `username`/`id` à tous.
     final row = await _client
-        .from(_table)
+        .from(_publicView)
         .select('id')
         .ilike('username', trimmed)
         .maybeSingle();
