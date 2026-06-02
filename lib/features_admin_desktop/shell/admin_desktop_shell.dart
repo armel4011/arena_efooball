@@ -1,0 +1,252 @@
+import 'package:arena/core/router/admin_desktop_router.dart';
+import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
+import 'package:fluent_ui/fluent_ui.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+/// Entrée du menu latéral desktop.
+class _NavEntry {
+  const _NavEntry({
+    required this.route,
+    required this.icon,
+    required this.label,
+    this.superAdminOnly = false,
+  });
+
+  final String route;
+  final IconData icon;
+  final String label;
+  final bool superAdminOnly;
+}
+
+const List<_NavEntry> _mainEntries = [
+  _NavEntry(
+    route: AdminDesktopRoutes.dashboard,
+    icon: FluentIcons.view_dashboard,
+    label: 'Tableau de bord',
+  ),
+  _NavEntry(
+    route: AdminDesktopRoutes.competitions,
+    icon: FluentIcons.trophy2,
+    label: 'Compétitions',
+  ),
+  _NavEntry(
+    route: AdminDesktopRoutes.matches,
+    icon: FluentIcons.game,
+    label: 'Matchs',
+  ),
+  _NavEntry(
+    route: AdminDesktopRoutes.streams,
+    icon: FluentIcons.video,
+    label: 'Streams live',
+  ),
+  _NavEntry(
+    route: AdminDesktopRoutes.payouts,
+    icon: FluentIcons.money,
+    label: 'Paiements',
+  ),
+  _NavEntry(
+    route: AdminDesktopRoutes.auditLog,
+    icon: FluentIcons.compliance_audit,
+    label: "Journal d'audit",
+  ),
+];
+
+const List<_NavEntry> _superEntries = [
+  _NavEntry(
+    route: AdminDesktopRoutes.superDashboard,
+    icon: FluentIcons.org,
+    label: "Vue d'ensemble",
+    superAdminOnly: true,
+  ),
+  _NavEntry(
+    route: AdminDesktopRoutes.superUsers,
+    icon: FluentIcons.people,
+    label: 'Utilisateurs',
+    superAdminOnly: true,
+  ),
+  _NavEntry(
+    route: AdminDesktopRoutes.superPaymentsValidation,
+    icon: FluentIcons.receipt_check,
+    label: 'Validation paiements',
+    superAdminOnly: true,
+  ),
+  _NavEntry(
+    route: AdminDesktopRoutes.superInvitations,
+    icon: FluentIcons.add_friend,
+    label: 'Invitations admin',
+    superAdminOnly: true,
+  ),
+  _NavEntry(
+    route: AdminDesktopRoutes.superRevenue,
+    icon: FluentIcons.chart,
+    label: 'Revenus',
+    superAdminOnly: true,
+  ),
+  _NavEntry(
+    route: AdminDesktopRoutes.superBroadcast,
+    icon: FluentIcons.megaphone,
+    label: 'Diffusion',
+    superAdminOnly: true,
+  ),
+  _NavEntry(
+    route: AdminDesktopRoutes.superReintegration,
+    icon: FluentIcons.follow_user,
+    label: 'Réintégrations',
+    superAdminOnly: true,
+  ),
+];
+
+/// Coquille de navigation desktop — barre latérale Fluent (NavigationView)
+/// entourant le contenu routé par GoRouter (ShellRoute).
+///
+/// La sélection du menu est dérivée de la route courante ; cliquer sur un
+/// item fait un `context.go(...)`. Les sections super-admin n'apparaissent
+/// que si le profil courant a le rôle `super_admin`.
+class AdminDesktopShell extends ConsumerWidget {
+  const AdminDesktopShell({
+    required this.child,
+    required this.currentPath,
+    super.key,
+  });
+
+  /// Contenu de la route active (injecté par le ShellRoute).
+  final Widget child;
+
+  /// Chemin de la route active (ex. `/competitions`).
+  final String currentPath;
+
+  List<_NavEntry> _visibleEntries({required bool isSuperAdmin}) => [
+        ..._mainEntries,
+        if (isSuperAdmin) ..._superEntries,
+      ];
+
+  int? _selectedIndex(List<_NavEntry> entries) {
+    // Correspondance par préfixe : `/competitions/xyz` sélectionne
+    // l'item `/competitions`. Le dashboard (`/`) ne matche que lui-même.
+    for (var i = 0; i < entries.length; i++) {
+      final route = entries[i].route;
+      if (route == AdminDesktopRoutes.dashboard) {
+        if (currentPath == route) return i;
+        continue;
+      }
+      if (currentPath == route || currentPath.startsWith('$route/')) {
+        return i;
+      }
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profile = ref.watch(currentProfileProvider).valueOrNull;
+    final isSuperAdmin = profile?.isSuperAdmin ?? false;
+    final entries = _visibleEntries(isSuperAdmin: isSuperAdmin);
+    final selected = _selectedIndex(entries);
+
+    final items = <NavigationPaneItem>[
+      ..._mainEntries.map((e) => _paneItem(context, e)),
+      if (isSuperAdmin) ...[
+        PaneItemSeparator(),
+        PaneItemHeader(
+          header: Text(
+            'SUPER ADMIN',
+            style: GoogleFonts.bebasNeue(
+              color: ArenaColors.tierGold,
+              fontSize: 14,
+              letterSpacing: 1.5,
+            ),
+          ),
+        ),
+        ..._superEntries.map((e) => _paneItem(context, e)),
+      ],
+    ];
+
+    return NavigationView(
+      titleBar: TitleBar(
+        isBackButtonVisible: false,
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'ARENA',
+              style: GoogleFonts.bebasNeue(
+                color: ArenaColors.bone,
+                fontSize: 22,
+                letterSpacing: 2,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              'ADMIN',
+              style: GoogleFonts.bebasNeue(
+                color: ArenaColors.neonRed,
+                fontSize: 22,
+                letterSpacing: 2,
+              ),
+            ),
+          ],
+        ),
+        endHeader: Padding(
+          padding: const EdgeInsets.only(right: 12),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (profile != null)
+                Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: Text(
+                    profile.username,
+                    style: GoogleFonts.spaceGrotesk(
+                      color: ArenaColors.silver,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              IconButton(
+                icon: const Icon(FluentIcons.contact, size: 16),
+                onPressed: () => context.go(AdminDesktopRoutes.profile),
+              ),
+              const SizedBox(width: 4),
+              IconButton(
+                icon: const Icon(FluentIcons.sign_out, size: 16),
+                onPressed: () async {
+                  await ref.read(signOutProvider)();
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+      pane: NavigationPane(
+        selected: selected,
+        displayMode: PaneDisplayMode.expanded,
+        size: const NavigationPaneSize(openWidth: 240),
+        items: items,
+        footerItems: [
+          PaneItemSeparator(),
+          _paneItem(
+            context,
+            const _NavEntry(
+              route: AdminDesktopRoutes.profile,
+              icon: FluentIcons.contact_card,
+              label: 'Mon profil',
+            ),
+          ),
+        ],
+      ),
+      paneBodyBuilder: (item, body) => child,
+    );
+  }
+
+  PaneItem _paneItem(BuildContext context, _NavEntry entry) {
+    return PaneItem(
+      icon: Icon(entry.icon, size: 18),
+      title: Text(entry.label),
+      body: const SizedBox.shrink(),
+      onTap: () => context.go(entry.route),
+    );
+  }
+}

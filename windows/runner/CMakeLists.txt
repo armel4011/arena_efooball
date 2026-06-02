@@ -6,12 +6,21 @@ project(runner LANGUAGES CXX)
 # work.
 #
 # Any new source files that you add to the application should be added here.
+#
+# Le registrant compilé est la copie filtrée produite par le CMakeLists
+# parent (plugins mobile-only exclus du build Windows). Fallback sur le
+# fichier généré d'origine si la variable n'est pas définie.
+if(NOT DEFINED ARENA_PLUGIN_REGISTRANT)
+  set(ARENA_PLUGIN_REGISTRANT
+    "${FLUTTER_MANAGED_DIR}/generated_plugin_registrant.cc")
+endif()
+
 add_executable(${BINARY_NAME} WIN32
   "flutter_window.cpp"
   "main.cpp"
   "utils.cpp"
   "win32_window.cpp"
-  "${FLUTTER_MANAGED_DIR}/generated_plugin_registrant.cc"
+  "${ARENA_PLUGIN_REGISTRANT}"
   "Runner.rc"
   "runner.exe.manifest"
 )

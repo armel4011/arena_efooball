@@ -84,3 +84,12 @@ lib/features_user/streaming/watch_stream_page.dart
 # icone/caption blanches pour rester lisibles par-dessus une image
 # arbitraire (couleur inconnue). Le blanc pur n'a pas de token design.
 lib/features_shared/widgets/arena_image_viewer.dart
+
+# ─── Desktop Windows (Fluent UI) — Vague 1 ────────────────────────────
+# bootstrap_desktop : Color(0x00000000) = fond transparent requis par
+# window_manager (WindowOptions.backgroundColor) avant la 1re frame —
+# aucun token design ne correspond à "transparent fenêtre native".
+lib/core/services/bootstrap_desktop.dart
+# QR code TOTP : fond blanc pur obligatoire pour le scan par Google
+# Authenticator (même KEEP que totp_setup_screen.dart mobile, ligne 54).
+lib/features_admin_desktop/auth/desktop_totp_setup_screen.dart
