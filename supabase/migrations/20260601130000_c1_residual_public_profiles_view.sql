@@ -1,7 +1,7 @@
 -- ─────────────────────────────────────────────────────────────────────
 -- Fix audit C-1 (résiduel) — stoppe la fuite de PII inter-utilisateurs.
 -- ─────────────────────────────────────────────────────────────────────
--- ⚠️ NE PAS APPLIQUER EN PROD AVANT VÉRIFICATION SUR DEVICE.
+-- ✅ APPLIQUÉE EN PROD le 2026-06-01 via MCP (version remote 20260601184427).
 -- Ce changement restreint les LIGNES lisibles de `profiles` à self+admin.
 -- Toute lecture cross-user (adversaire, pair de chat, joueur de bracket,
 -- classement, recherche d'amis, profil public, usernameOf) doit passer par

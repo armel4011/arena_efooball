@@ -313,11 +313,15 @@ blocage entre **deux UUID arbitraires** (pas seulement les siens).
   `ROTATED-SEE-MIGRATION-20260522100000` ; entrée d'allowlist gitleaks
   correspondante retirée (CI scanne le working tree, pas l'historique).
 
-## C-1 résiduel (PII inter-utilisateurs) — PR DRAFT 2026-06-01
+## C-1 résiduel (PII inter-utilisateurs) — PR #14, mergée 2026-06-02
 
-⚠️ **DRAFT — migration NON appliquée en prod, à vérifier sur device avant merge.**
+✅ **Migration appliquée en prod le 2026-06-01 (version remote `20260601184427`).**
+La RLS restrictive étant déjà active côté base, le merge du code Dart rerouté
+était l'action sûre (une app construite depuis `main` sans ce code aurait des
+lectures cross-user vides). La checklist device reste valable comme smoke test
+post-merge.
 
-- [ ] **Fix PII cross-user via vue `public_profiles` + RLS self+admin** —
+- [x] **Fix PII cross-user via vue `public_profiles` + RLS self+admin** —
   migration `20260601130000_c1_residual_public_profiles_view.sql`. La policy
   `profiles_select` est restreinte à self+admin ; une vue `public_profiles`
   (`security_invoker=false`) expose uniquement les colonnes publiques (sans
