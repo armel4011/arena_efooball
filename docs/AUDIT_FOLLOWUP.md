@@ -342,3 +342,27 @@ post-merge.
     entrant, vérif username au signup, écrans admin.
   - Validé localement : `flutter analyze` 0 issue · 213/213 tests · l'advisor
     `security_definer_view` flaggera `public_profiles` (WARN assumé, intentionnel).
+
+## Rate-limit TOTP admin — 2026-06-02
+
+✅ **Migration `20260602100000_totp_rate_limit.sql` appliquée en prod + EF
+`admin-verify-totp` / `admin-stepup-totp` redéployées le 2026-06-02.**
+
+- [x] **Brute-force 2FA fermé** — les deux EF acceptaient un nombre illimité
+  d'essais (10^6 codes possibles). Implémenté : **3 échecs consécutifs →
+  verrou 30 minutes** (aligné sur les messages UI existants de
+  `auth_failure_message.dart`).
+  - Table `totp_attempts` (RLS deny-all, service_role only) + 3 fonctions SQL
+    atomiques : `totp_record_failure` / `totp_check_lock` / `totp_record_success`
+    (SECURITY DEFINER, REVOKE EXECUTE anon/authenticated → pas d'oracle client).
+  - Compteur **partagé** entre verify-login et step-up (même surface d'attaque).
+  - Verrou actif → 429 `admin_locked` AVANT vérification du code (pas d'oracle).
+  - Lockout loggé dans `anti_cheat_events` (type `totp_lockout`, severity 2) —
+    contrainte CHECK étendue.
+  - Helper partagé `supabase/functions/_shared/totp_rate_limit.ts` (fail-open
+    contrôlé : si le rate-limit est indisponible, un admin légitime n'est pas
+    bloqué, le code TOTP reste vérifié).
+  - Flutter : `_mapAdminEdgeError` mappe `admin_locked` / statut 429 →
+    `AdminLockedFailure` (message UI déjà existant).
+  - Testé en prod dans une transaction annulée : échec 1 → 2 restants,
+    échec 2 → 1 restant, échec 3 → verrou `retry_after_seconds=1800`. ✓

@@ -26,6 +26,10 @@ AuthFailure _mapAdminEdgeError(FunctionException e) {
     // ── TOTP ─────────────────────────────────────────────────────────
     case 'invalid_code':
       return InvalidTotpCodeFailure(e);
+    case 'admin_locked':
+      // Rate-limit serveur : 3 échecs TOTP → verrou 30 min
+      // (EF admin-verify-totp / admin-stepup-totp, statut 429).
+      return AdminLockedFailure(e);
     case 'totp_not_configured':
     case 'no_secret_pending':
       return const BackendUnavailableFailure(
@@ -56,6 +60,7 @@ AuthFailure _mapAdminEdgeError(FunctionException e) {
   }
   if (e.status == 401) return InvalidTotpCodeFailure(e);
   if (e.status == 403) return WrongAppForRoleFailure(e);
+  if (e.status == 429) return AdminLockedFailure(e);
   return UnknownAuthFailure(e);
 }
 
