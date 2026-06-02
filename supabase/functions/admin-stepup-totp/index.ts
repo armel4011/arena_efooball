@@ -24,6 +24,12 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import { consumeBackupCodeHashed, verifyTotp } from "../_shared/totp.ts";
+import {
+  checkTotpLock,
+  lockedBody,
+  recordTotpFailure,
+  recordTotpSuccess,
+} from "../_shared/totp_rate_limit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -103,14 +109,29 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return jsonResponse({ error: "totp_not_configured" }, 412);
   }
 
+  // Rate-limit : verrou actif → 429 sans vérifier le code (pas d'oracle).
+  // Compteur partagé avec admin-verify-totp (même surface d'attaque).
+  const lock = await checkTotpLock(service, user.id);
+  if (lock.locked) {
+    return jsonResponse(lockedBody(lock), 429);
+  }
+
   if (isTotp) {
     const ok = await verifyTotp({
       secretBase32: profile.totp_secret,
       code,
     });
     if (!ok) {
-      return jsonResponse({ error: "invalid_code" }, 401);
+      const failure = await recordTotpFailure(service, user.id);
+      if (failure.locked) {
+        return jsonResponse(lockedBody(failure), 429);
+      }
+      return jsonResponse({
+        error: "invalid_code",
+        attempts_remaining: failure.attemptsRemaining,
+      }, 401);
     }
+    await recordTotpSuccess(service, user.id);
     return jsonResponse({ ok: true, method: "totp" });
   }
 
@@ -120,7 +141,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
     : [];
   const result = await consumeBackupCodeHashed(stored, code, hmacKey);
   if (!result.matched) {
-    return jsonResponse({ error: "invalid_code" }, 401);
+    const failure = await recordTotpFailure(service, user.id);
+    if (failure.locked) {
+      return jsonResponse(lockedBody(failure), 429);
+    }
+    return jsonResponse({
+      error: "invalid_code",
+      attempts_remaining: failure.attemptsRemaining,
+    }, 401);
   }
   const { error: updateErr } = await service
     .from("profiles")
@@ -132,6 +160,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       500,
     );
   }
+  await recordTotpSuccess(service, user.id);
   return jsonResponse({
     ok: true,
     method: "backup",
