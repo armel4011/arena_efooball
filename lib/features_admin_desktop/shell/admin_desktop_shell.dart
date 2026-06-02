@@ -1,5 +1,7 @@
 import 'package:arena/core/router/admin_desktop_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/features_admin_desktop/notifications/desktop_notification_bell.dart';
+import 'package:arena/features_admin_desktop/notifications/desktop_notification_service.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -146,6 +148,11 @@ class AdminDesktopShell extends ConsumerWidget {
     final entries = _visibleEntries(isSuperAdmin: isSuperAdmin);
     final selected = _selectedIndex(entries);
 
+    // Active l'abonnement Realtime (paiements/litiges/messages/réintégrations)
+    // dès que le shell est monté — sinon le provider ne s'instancierait qu'à
+    // la première ouverture de la cloche.
+    ref.watch(desktopNotificationsProvider);
+
     final items = <NavigationPaneItem>[
       ..._mainEntries.map((e) => _paneItem(context, e)),
       if (isSuperAdmin) ...[
@@ -205,6 +212,8 @@ class AdminDesktopShell extends ConsumerWidget {
                     ),
                   ),
                 ),
+              const DesktopNotificationBell(),
+              const SizedBox(width: 4),
               IconButton(
                 icon: const Icon(FluentIcons.contact, size: 16),
                 onPressed: () => context.go(AdminDesktopRoutes.profile),
