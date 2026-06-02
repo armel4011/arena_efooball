@@ -140,6 +140,13 @@ dependencies:
   # NB : on utilise file_picker.saveFile() (déjà dans deps PHASE 8a)
   # pour ouvrir le picker SAF natif Android — pas de file_saver.
 
+  # ─── PHASE DESKTOP — Admin Windows (Fluent UI) ─────────────
+  # Entrée dédiée `lib/main_admin_desktop.dart` — design Windows 11
+  # natif (fluent_ui), fenêtre gérée par window_manager. Le code
+  # métier (repositories/providers/models) est partagé avec le mobile.
+  fluent_ui: ^4.9.0
+  window_manager: ^0.4.2
+
   # ─── DEFERRED (à activer dans leur PHASE) ──────────────────
   #
   # PHASE 2.3 — Apple SSO (compte Apple Developer requis)

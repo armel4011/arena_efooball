@@ -10,6 +10,13 @@ set(BINARY_NAME "arena")
 # versions of CMake.
 cmake_policy(VERSION 3.14...3.25)
 
+# Le SDK Firebase C++ (téléchargé par firebase_core pour Windows) déclare
+# `cmake_minimum_required(VERSION <3.5)` — incompatible avec CMake 4.x
+# (VS 2026) qui a retiré la compatibilité < 3.5. Sans ce minimum de
+# politique, le configure échoue : « Unable to generate build files ».
+# Sans effet sur les CMake plus anciens (variable simplement ignorée).
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+
 # Define build configuration option.
 get_property(IS_MULTICONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 if(IS_MULTICONFIG)
@@ -49,13 +56,58 @@ endfunction()
 set(FLUTTER_MANAGED_DIR "${CMAKE_CURRENT_SOURCE_DIR}/flutter")
 add_subdirectory(${FLUTTER_MANAGED_DIR})
 
+# ─── Registrant filtré (plugins mobile-only exclus) ───────────────────
+# `generated_plugin_registrant.cc` (régénéré par Flutter à chaque build)
+# inclut et enregistre firebase_core, que l'on exclut du build Windows
+# (cf. ARENA_WINDOWS_EXCLUDED_PLUGINS plus bas). On produit une copie
+# filtrée dans le dossier de build et c'est elle que le runner compile.
+file(READ "${FLUTTER_MANAGED_DIR}/generated_plugin_registrant.cc"
+  _arena_registrant)
+# Le header relatif doit rester résoluble depuis le dossier de build.
+string(REPLACE "#include \"generated_plugin_registrant.h\""
+  "#include \"${FLUTTER_MANAGED_DIR}/generated_plugin_registrant.h\""
+  _arena_registrant "${_arena_registrant}")
+# Retire l'include et l'appel d'enregistrement de firebase_core.
+string(REGEX REPLACE "#include <firebase_core/[^\n]*\n" ""
+  _arena_registrant "${_arena_registrant}")
+string(REGEX REPLACE "  FirebaseCorePluginCApi[^;]*;\n" ""
+  _arena_registrant "${_arena_registrant}")
+set(ARENA_PLUGIN_REGISTRANT
+  "${CMAKE_CURRENT_BINARY_DIR}/arena_filtered_plugin_registrant.cc")
+file(WRITE "${ARENA_PLUGIN_REGISTRANT}" "${_arena_registrant}")
+
 # Application build; see runner/CMakeLists.txt.
 add_subdirectory("runner")
 
 
 # Generated plugin build rules, which manage building the plugins and adding
 # them to the application.
-include(flutter/generated_plugins.cmake)
+#
+# ─── Exclusion des plugins mobile-only ────────────────────────────────
+# Certains packages du pubspec déclarent un support Windows mais ne sont
+# JAMAIS utilisés par l'app desktop (lib/main_admin_desktop.dart) et
+# cassent ou alourdissent le build natif :
+#   * firebase_core : télécharge + compile le SDK Firebase C++ (NuGet,
+#     CMakeLists ancien) — FCM n'existe pas sur Windows, le bootstrap
+#     desktop n'initialise jamais Firebase.
+#   * jni : interop Java (dépendance transitive Android-only) — exige un
+#     JDK (FindJNI) pour compiler son stub natif Windows.
+# On lit generated_plugins.cmake (régénéré par Flutter à chaque build),
+# on retire ces plugins des listes, puis on exécute le résultat. Le
+# filtre survit donc à la régénération du fichier.
+set(ARENA_WINDOWS_EXCLUDED_PLUGINS
+  firebase_core
+  jni
+)
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/flutter/generated_plugins.cmake"
+  _arena_plugins_content)
+foreach(_excluded ${ARENA_WINDOWS_EXCLUDED_PLUGINS})
+  string(REGEX REPLACE "[ \t]+${_excluded}\n" ""
+    _arena_plugins_content "${_arena_plugins_content}")
+endforeach()
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/arena_filtered_plugins.cmake"
+  "${_arena_plugins_content}")
+include("${CMAKE_CURRENT_BINARY_DIR}/arena_filtered_plugins.cmake")
 
 
 # === Installation ===

@@ -27,7 +27,10 @@ allowlist_file="scripts/colors_allowlist.txt"
 #   Color(0xFF1A1A22)       → ArenaColors.carbon2 ✅
 #   Colors.white            → ArenaColors.bone ou Colors.white avec KEEP
 #   Colors.black.withValues(alpha: 0.35) → KEEP (scrim, voir allowlist)
-pattern='(Color\(0x[0-9A-Fa-f]{8}\)|Colors\.(white|black|red|blue|green|yellow|orange|purple|grey|gray|amber|cyan|pink|teal|indigo|lime|brown))'
+# NB : `(^|[^A-Za-z])` devant `Colors\.` évite les faux positifs sur les
+# tokens du design system dont le nom contient "Colors." en sous-chaîne
+# (ex. `ArenaColors.blackPure` matchait `Colors.black`).
+pattern='(Color\(0x[0-9A-Fa-f]{8}\)|(^|[^A-Za-z])Colors\.(white|black|red|blue|green|yellow|orange|purple|grey|gray|amber|cyan|pink|teal|indigo|lime|brown))'
 
 # Load allowlist into a bash array (skip comments and empty lines).
 allowed=()
