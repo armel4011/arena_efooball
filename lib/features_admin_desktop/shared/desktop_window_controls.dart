@@ -1,3 +1,4 @@
+import 'package:arena/core/theme/arena_theme.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -5,11 +6,13 @@ import 'package:window_manager/window_manager.dart';
 /// desktop.
 ///
 /// La barre de titre native est masquée (`TitleBarStyle.hidden` dans le
-/// bootstrap) : c'est le `TitleBar` Fluent qui occupe le haut de la
-/// fenêtre, et ce widget lui fournit les contrôles natifs via
-/// `captionControls`. Les boutons viennent de window_manager
-/// ([WindowCaptionButton]) : rendu identique aux boutons Windows 11
-/// (le bouton fermer passe au rouge au survol).
+/// bootstrap) : c'est le `TitleBar` Fluent (shell) ou le
+/// [DesktopWindowDragStrip] (écrans d'auth) qui fournit ces contrôles.
+///
+/// Implémentation 100 % Fluent (icônes `FluentIcons.chrome_*`) — on
+/// n'utilise PAS `WindowCaptionButton` de window_manager : ses icônes
+/// sont des images de package non déclarées comme assets dans son
+/// pubspec, donc invisibles à l'exécution.
 class DesktopWindowCaption extends StatefulWidget {
   const DesktopWindowCaption({super.key});
 
@@ -19,10 +22,20 @@ class DesktopWindowCaption extends StatefulWidget {
 
 class _DesktopWindowCaptionState extends State<DesktopWindowCaption>
     with WindowListener {
+  bool _isMaximized = false;
+
   @override
   void initState() {
     super.initState();
     windowManager.addListener(this);
+    _syncMaximized();
+  }
+
+  Future<void> _syncMaximized() async {
+    final maximized = await windowManager.isMaximized();
+    if (mounted && maximized != _isMaximized) {
+      setState(() => _isMaximized = maximized);
+    }
   }
 
   @override
@@ -31,43 +44,82 @@ class _DesktopWindowCaptionState extends State<DesktopWindowCaption>
     super.dispose();
   }
 
-  // Rafraîchit l'icône agrandir/restaurer quand l'état change (y compris
-  // via double-clic sur la barre ou Win+flèches).
+  // Suit l'état agrandi/restauré (y compris via Win+flèches ou double-clic).
   @override
-  void onWindowMaximize() => setState(() {});
+  void onWindowMaximize() => setState(() => _isMaximized = true);
 
   @override
-  void onWindowUnmaximize() => setState(() {});
+  void onWindowUnmaximize() => setState(() => _isMaximized = false);
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        WindowCaptionButton.minimize(
-          brightness: Brightness.dark,
+        _CaptionButton(
+          icon: FluentIcons.chrome_minimize,
+          tooltip: 'Réduire',
           onPressed: windowManager.minimize,
         ),
-        FutureBuilder<bool>(
-          future: windowManager.isMaximized(),
-          builder: (context, snapshot) {
-            if (snapshot.data ?? false) {
-              return WindowCaptionButton.unmaximize(
-                brightness: Brightness.dark,
-                onPressed: windowManager.unmaximize,
-              );
-            }
-            return WindowCaptionButton.maximize(
-              brightness: Brightness.dark,
-              onPressed: windowManager.maximize,
-            );
-          },
+        _CaptionButton(
+          icon: _isMaximized
+              ? FluentIcons.chrome_restore
+              : FluentIcons.square_shape,
+          tooltip: _isMaximized ? 'Restaurer' : 'Agrandir',
+          onPressed: toggleMaximize,
         ),
-        WindowCaptionButton.close(
-          brightness: Brightness.dark,
+        _CaptionButton(
+          icon: FluentIcons.chrome_close,
+          tooltip: 'Fermer',
+          isClose: true,
           onPressed: windowManager.close,
         ),
       ],
+    );
+  }
+}
+
+/// Bouton de barre de titre style Windows 11 : 46 px de large, fond
+/// transparent, surbrillance au survol (rouge Arena pour Fermer).
+class _CaptionButton extends StatelessWidget {
+  const _CaptionButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+    this.isClose = false,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final Future<void> Function() onPressed;
+  final bool isClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: HoverButton(
+        onPressed: onPressed,
+        builder: (context, states) {
+          final hovered = states.isHovered || states.isPressed;
+          final background = !hovered
+              ? null
+              : isClose
+                  ? ArenaColors.neonRed
+                  : ArenaColors.borderHi;
+          return Container(
+            width: 46,
+            color: background,
+            alignment: Alignment.center,
+            child: Icon(
+              icon,
+              size: 10,
+              color: ArenaColors.bone,
+            ),
+          );
+        },
+      ),
     );
   }
 }
@@ -83,8 +135,8 @@ Future<void> toggleMaximize() async {
 }
 
 /// Zone de drag de fenêtre pour les écrans HORS shell (login, TOTP) :
-/// bande invisible en haut de l'écran qui permet de déplacer la fenêtre
-/// et héberge les boutons de fenêtre à droite.
+/// bande en haut de l'écran qui permet de déplacer la fenêtre et héberge
+/// les boutons de fenêtre à droite.
 class DesktopWindowDragStrip extends StatelessWidget {
   const DesktopWindowDragStrip({super.key});
 
@@ -93,6 +145,7 @@ class DesktopWindowDragStrip extends StatelessWidget {
     return SizedBox(
       height: 36,
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Zone draggable (tout sauf les boutons).
           Expanded(

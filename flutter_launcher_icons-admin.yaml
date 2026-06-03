@@ -10,3 +10,10 @@ flutter_launcher_icons:
   # Adaptive icons désactivés : master 1024 monolithique (dégradé +
   # chevrons + texte « ADMIN »). Cf. flutter_launcher_icons-user.yaml.
   remove_alpha_ios: true
+  # ─── Desktop Windows (ARENA Admin Desktop) ──────────────────
+  # Génère windows/runner/resources/app_icon.ico (icône de fenêtre,
+  # barre des tâches et exe) à partir du même master 1024.
+  windows:
+    generate: true
+    image_path: "assets/icons/arena_admin_1024.png"
+    icon_size: 256
