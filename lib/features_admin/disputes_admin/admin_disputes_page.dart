@@ -185,6 +185,7 @@ class _ScoresCard extends StatelessWidget {
             initial: _initialFor(match.player1Id),
             color: ArenaAvatarColor.orange,
             label: 'Joueur 1 (HOME)',
+            teamName: match.player1TeamName,
             score: '${match.score1 ?? '?'}',
             scoreColor: ArenaColors.gameFifa,
           ),
@@ -197,6 +198,7 @@ class _ScoresCard extends StatelessWidget {
             initial: _initialFor(match.player2Id),
             color: ArenaAvatarColor.red,
             label: 'Joueur 2 (AWAY)',
+            teamName: match.player2TeamName,
             score: '${match.score2 ?? '?'}',
             scoreColor: ArenaColors.neonRed,
           ),
@@ -214,6 +216,7 @@ class _Row extends StatelessWidget {
     required this.initial,
     required this.color,
     required this.label,
+    required this.teamName,
     required this.score,
     required this.scoreColor,
   });
@@ -221,11 +224,13 @@ class _Row extends StatelessWidget {
   final String initial;
   final ArenaAvatarColor color;
   final String label;
+  final String? teamName;
   final String score;
   final Color scoreColor;
 
   @override
   Widget build(BuildContext context) {
+    final team = teamName?.trim();
     return Padding(
       padding: const EdgeInsets.all(ArenaSpacing.md),
       child: Row(
@@ -236,7 +241,25 @@ class _Row extends StatelessWidget {
             size: ArenaAvatarSize.sm,
           ),
           const SizedBox(width: ArenaSpacing.sm),
-          Expanded(child: Text(label, style: ArenaText.body)),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: ArenaText.body),
+                const SizedBox(height: 2),
+                Text(
+                  (team == null || team.isEmpty)
+                      ? '⚽ Équipe non renseignée'
+                      : '⚽ $team',
+                  style: ArenaText.bodyMuted.copyWith(
+                    color: (team == null || team.isEmpty)
+                        ? ArenaColors.silverDim
+                        : ArenaColors.silver,
+                  ),
+                ),
+              ],
+            ),
+          ),
           Text(
             score,
             style: ArenaText.mono.copyWith(

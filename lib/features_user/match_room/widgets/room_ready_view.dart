@@ -2,6 +2,7 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/repositories/match_repository.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_user/match_room/match_room_page.dart'
     show MatchRole;
 import 'package:arena/features_user/match_room/widgets/cyan_dashed_container.dart';
@@ -26,6 +27,9 @@ class RoomReadyView extends ConsumerStatefulWidget {
 
 class _RoomReadyViewState extends ConsumerState<RoomReadyView> {
   bool _submitting = false;
+  late final TextEditingController _teamCtrl;
+
+  bool get _isPlayer1 => widget.role == MatchRole.player1;
 
   bool get _isHome =>
       widget.match.homePlayerId != null &&
@@ -35,12 +39,35 @@ class _RoomReadyViewState extends ConsumerState<RoomReadyView> {
         MatchRole.observer => false,
       };
 
+  @override
+  void initState() {
+    super.initState();
+    final existing =
+        _isPlayer1 ? widget.match.player1TeamName : widget.match.player2TeamName;
+    _teamCtrl = TextEditingController(text: existing ?? '');
+  }
+
+  @override
+  void dispose() {
+    _teamCtrl.dispose();
+    super.dispose();
+  }
+
   Future<void> _markStarted() async {
+    final teamName = _teamCtrl.text.trim();
+    // Garde-fou : le bouton est déjà désactivé tant que le nom est vide.
+    if (teamName.isEmpty) return;
     setState(() => _submitting = true);
     try {
-      await ref
-          .read(matchRepositoryProvider)
-          .markInProgress(widget.match.id);
+      final repo = ref.read(matchRepositoryProvider);
+      // Le nom d'équipe est obligatoire avant de démarrer — on le persiste
+      // d'abord (aide à l'arbitrage anti-triche) puis on flippe in_progress.
+      await repo.setTeamName(
+        matchId: widget.match.id,
+        isPlayer1: _isPlayer1,
+        teamName: teamName,
+      );
+      await repo.markInProgress(widget.match.id);
     } catch (e) {
       if (!mounted) return;
       setState(() => _submitting = false);
@@ -122,12 +149,23 @@ class _RoomReadyViewState extends ConsumerState<RoomReadyView> {
         ],
         if (isPlayer) ...[
           const SizedBox(height: ArenaSpacing.lg),
+          Text('NOM DE TON ÉQUIPE', style: ArenaText.inputLabel),
+          const SizedBox(height: ArenaSpacing.sm),
+          ArenaTextField(
+            controller: _teamCtrl,
+            hint: 'Ex. Real Madrid, FC Barcelone…',
+            maxLength: 40,
+            helper: "Obligatoire — l'équipe que tu utilises pour ce match. "
+                "Visible par l'admin en cas de litige anti-triche.",
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: ArenaSpacing.md),
           ArenaButton(
             label: 'JE SUIS DANS LA ROOM',
             icon: Icons.play_arrow_rounded,
             fullWidth: true,
             isLoading: _submitting,
-            onPressed: _markStarted,
+            onPressed: _teamCtrl.text.trim().isEmpty ? null : _markStarted,
           ),
           const SizedBox(height: ArenaSpacing.sm),
           OpenChatLink(matchId: widget.match.id),

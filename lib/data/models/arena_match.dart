@@ -33,6 +33,8 @@ sealed class ArenaMatch with _$ArenaMatch {
     MatchStatus status,
     String? homePlayerId,
     String? roomCode,
+    String? player1TeamName,
+    String? player2TeamName,
     String? nextMatchId,
     DateTime? scheduledAt,
     DateTime? startedAt,

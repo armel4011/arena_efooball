@@ -138,6 +138,22 @@ class MatchRepository {
     }).eq('id', matchId);
   }
 
+  /// Records the team name a player will use for this match. Stamps the
+  /// column matching the player's seat ([isPlayer1]) — the per-column
+  /// intent is enforced here, not by RLS (cf. `matches_player_update`).
+  /// Used for anti-cheat arbitration so the admin knows which team each
+  /// player fielded.
+  Future<void> setTeamName({
+    required String matchId,
+    required bool isPlayer1,
+    required String teamName,
+  }) async {
+    final column = isPlayer1 ? 'player1_team_name' : 'player2_team_name';
+    await _client.from(_table).update({
+      column: teamName.trim(),
+    }).eq('id', matchId);
+  }
+
   /// Either player marks the match as actually started — flips to
   /// `in_progress` and stamps `started_at`.
   Future<void> markInProgress(String matchId) async {
