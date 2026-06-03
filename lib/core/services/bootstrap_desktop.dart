@@ -37,6 +37,9 @@ Future<void> bootstrapDesktop({
 
     // ─── Fenêtre Windows ────────────────────────────────────────────
     await windowManager.ensureInitialized();
+    // Barre de titre native masquée : c'est le TitleBar Fluent (shell) ou
+    // le DesktopWindowDragStrip (écrans d'auth) qui fournit le drag + les
+    // boutons réduire/agrandir/fermer (DesktopWindowCaption).
     const windowOptions = WindowOptions(
       size: Size(
         ArenaDesktop.defaultWindowWidth,
@@ -49,7 +52,8 @@ Future<void> bootstrapDesktop({
       center: true,
       title: 'ARENA Admin',
       backgroundColor: Color(0x00000000),
-      titleBarStyle: TitleBarStyle.normal,
+      titleBarStyle: TitleBarStyle.hidden,
+      windowButtonVisibility: false,
     );
     unawaited(
       windowManager.waitUntilReadyToShow(windowOptions, () async {

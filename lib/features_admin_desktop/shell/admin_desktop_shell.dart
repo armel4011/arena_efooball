@@ -2,11 +2,13 @@ import 'package:arena/core/router/admin_desktop_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/features_admin_desktop/notifications/desktop_notification_bell.dart';
 import 'package:arena/features_admin_desktop/notifications/desktop_notification_service.dart';
+import 'package:arena/features_admin_desktop/shared/desktop_window_controls.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:window_manager/window_manager.dart';
 
 /// Entrée du menu latéral desktop.
 class _NavEntry {
@@ -174,6 +176,11 @@ class AdminDesktopShell extends ConsumerWidget {
     return NavigationView(
       titleBar: TitleBar(
         isBackButtonVisible: false,
+        // Barre native masquée (TitleBarStyle.hidden) → cette barre Fluent
+        // gère le déplacement de la fenêtre + le double-clic agrandir.
+        onDragStarted: windowManager.startDragging,
+        onDoubleTap: toggleMaximize,
+        captionControls: const DesktopWindowCaption(),
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [

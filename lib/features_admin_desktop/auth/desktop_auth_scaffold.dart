@@ -1,5 +1,6 @@
 import 'package:arena/core/theme/arena_fluent_theme.dart';
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/features_admin_desktop/shared/desktop_window_controls.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -24,8 +25,21 @@ class DesktopAuthScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return ColoredBox(
       color: ArenaColors.void_,
+      child: Column(
+        children: [
+          // Barre de fenêtre (drag + réduire/agrandir/fermer) — la barre
+          // native est masquée, ces écrans vivent hors du shell Fluent.
+          const DesktopWindowDragStrip(),
+          Expanded(child: _buildBody(context)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBody(BuildContext context) {
+    return Container(
       alignment: Alignment.center,
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(ArenaDesktop.pagePadding),
