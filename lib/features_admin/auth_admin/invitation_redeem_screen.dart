@@ -171,7 +171,10 @@ class _InvitationRedeemScreenState
                       FilteringTextInputFormatter.allow(
                         RegExp(r'[A-Za-z0-9\-]'),
                       ),
-                      LengthLimitingTextInputFormatter(19),
+                      // 20 = longueur exacte de ARENA-XXXX-XXXX-XXXX.
+                      // (Était 19 : il était impossible de saisir un code
+                      // valide — bug bloquant trouvé au smoke test 2026-06-03.)
+                      LengthLimitingTextInputFormatter(20),
                     ],
                   ),
                   const SizedBox(height: 6),
