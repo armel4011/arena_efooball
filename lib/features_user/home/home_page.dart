@@ -8,6 +8,7 @@ import 'package:arena/features_user/home/widgets/active_competitions_section.dar
 import 'package:arena/features_user/home/widgets/home_header.dart';
 import 'package:arena/features_user/home/widgets/live_streams_section.dart';
 import 'package:arena/features_user/home/widgets/pending_payment_banner.dart';
+import 'package:arena/features_user/home/widgets/promo_banner_section.dart';
 import 'package:arena/features_user/home/widgets/stat_grid.dart';
 import 'package:arena/features_user/home/widgets/upcoming_matches_section.dart';
 import 'package:flutter/material.dart';
@@ -51,6 +52,7 @@ class HomePage extends ConsumerWidget {
           children: [
             HomeHeader(profile: profile),
             const PendingPaymentBanner(),
+            const PromoBannerSection(),
             const SizedBox(height: ArenaSpacing.lg),
             const _SectionCaption(
               label: '⚡ PROCHAIN MATCH',
