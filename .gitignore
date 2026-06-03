@@ -114,3 +114,4 @@ site web/
 
 # Backups ad-hoc du registre de migrations distant (snapshots manuels).
 supabase/_remote_migration_history_backup_*.json
+dist/

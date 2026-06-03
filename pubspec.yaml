@@ -201,6 +201,10 @@ dev_dependencies:
   # Génération : voir docs/BRANDING.md
   flutter_launcher_icons: ^0.13.1
 
+  # ─── Desktop Windows : packaging MSIX (installeur) ──────────
+  # Génération : voir docs/DISTRIBUTION_DESKTOP.md
+  msix: ^3.16.13
+
   # ─── Tests ─────────────────────────────────────────────────
   mocktail: ^1.0.4
 
@@ -251,3 +255,28 @@ flutter_native_splash:
   ios: true
   android: true
   fullscreen: true
+
+# ─────────────────────────────────────────────────────────────────
+# Packaging MSIX — ARENA Admin Desktop (Windows)
+# ─────────────────────────────────────────────────────────────────
+# Génération de l'installeur (après un build release) :
+#   flutter build windows -t lib/main_admin_desktop.dart
+#   dart run msix:create --build-windows false
+# Le certificat (windows/certificates/, gitignoré) signe le paquet ;
+# son mot de passe est passé en CLI ou lu depuis ce bloc — voir
+# docs/DISTRIBUTION_DESKTOP.md pour l'installation sur d'autres postes.
+msix_config:
+  display_name: ARENA Admin
+  publisher_display_name: Arena
+  identity_name: com.arena.admin.desktop
+  publisher: CN=Arena Admin
+  msix_version: 1.0.0.0
+  logo_path: assets/icons/arena_admin_1024.png
+  capabilities: internetClient
+  certificate_path: windows/certificates/arena_admin.pfx
+  certificate_password: ArenaAdmin2026!
+  install_certificate: false
+  build_windows: false
+  output_path: dist
+  output_name: arena-admin-setup
+  languages: fr-fr, en-us
