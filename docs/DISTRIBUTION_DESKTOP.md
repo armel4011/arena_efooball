@@ -1,116 +1,107 @@
 # Distribution de ARENA Admin Desktop (Windows)
 
-Guide pour générer l'installeur MSIX et installer l'app sur d'autres
-ordinateurs Windows 10/11.
+Deux méthodes pour installer l'app sur d'autres ordinateurs Windows 10/11.
+**La méthode recommandée est l'installeur .exe : un seul fichier, aucun
+certificat à gérer.**
 
 ---
 
-## 1. Générer l'installeur (sur le poste de développement)
+## ⭐ Méthode 1 — Installeur unique .exe (recommandée)
+
+### Générer l'installeur (sur le poste de développement)
 
 ```sh
-# 1. Build release de l'app desktop
+# 1. Build release de l'app desktop (fermer l'app si elle tourne)
+taskkill /F /IM arena.exe
 flutter build windows -t lib/main_admin_desktop.dart
 
-# 2. Création du paquet MSIX signé (config dans pubspec.yaml > msix_config)
+# 2. Compilation de l'installeur (Inno Setup 6)
+"%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" windows\installer\arena_admin_installer.iss
+```
+
+→ Résultat : **`dist/arena-admin-installeur-1.0.0.exe`** (~52 MB)
+
+### Installer sur n'importe quel poste
+
+1. Copier **ce seul fichier** sur le poste (USB, réseau, cloud...)
+2. Double-clic → assistant d'installation en français
+3. L'app s'installe **sans droits administrateur** (par utilisateur),
+   crée les raccourcis Menu Démarrer + Bureau (optionnel) et un
+   désinstallateur.
+
+> 💡 Si le fichier a été téléchargé depuis internet, Windows SmartScreen
+> peut afficher « Windows a protégé votre ordinateur » → cliquer
+> **Informations complémentaires** → **Exécuter quand même**.
+> (Pas d'avertissement si copié par USB/réseau local.)
+
+### Mise à jour de l'app
+
+1. Incrémenter `#define AppVersion` dans
+   `windows/installer/arena_admin_installer.iss` (ex. "1.0.1")
+2. Re-générer (mêmes commandes ci-dessus)
+3. Installer le nouvel .exe par-dessus l'ancien → mise à jour propre.
+
+### Modifier l'installeur
+
+Le script est dans `windows/installer/arena_admin_installer.iss`
+(langue, raccourcis, dossier d'installation, version...). Inno Setup 6
+est installé dans `%LOCALAPPDATA%\Programs\Inno Setup 6\`.
+
+---
+
+## Méthode 2 — Paquet MSIX (pour le Microsoft Store plus tard)
+
+<details>
+<summary>Déplier — utile uniquement pour la piste Store ou un déploiement
+géré en entreprise (Intune)</summary>
+
+### Générer
+
+```sh
+taskkill /F /IM arena.exe
+flutter build windows -t lib/main_admin_desktop.dart
 dart run msix:create --build-windows false
 ```
 
-→ Résultat : **`dist/arena-admin-setup.msix`** (~72 MB)
+→ `dist/arena-admin-setup.msix` (~72 MB)
 
-> ⚠️ L'app desktop ne doit **pas être en cours d'exécution** pendant la
-> génération (elle verrouille des fichiers dans le dossier Release).
-> La fermer d'abord : `taskkill /F /IM arena.exe`
+### Installer sur un autre poste (2 fichiers + 2 étapes)
 
----
+1. Copier `arena-admin-setup.msix` **+** `windows/certificates/arena_admin.cer`
+2. Installer le certificat (une fois par poste, droits admin requis) :
+   - Clic droit sur le `.cer` → Installer le certificat → **Ordinateur
+     local** → **Autorités de certification racines de confiance**
+   - Ou en PowerShell admin :
+     `Import-Certificate -FilePath .\arena_admin.cer -CertStoreLocation Cert:\LocalMachine\Root`
+3. Double-clic sur le `.msix` → Installer
 
-## 2. Installer sur un autre ordinateur
-
-### Fichiers à copier sur le poste cible (clé USB / réseau)
-
-| Fichier | Rôle |
-|---|---|
-| `dist/arena-admin-setup.msix` | L'installeur de l'app |
-| `windows/certificates/arena_admin.cer` | Le certificat à approuver (1 seule fois par poste) |
-
-### Étape A — Installer le certificat (une seule fois par poste)
-
-L'app est signée avec un certificat auto-signé « Arena Admin ». Windows
-doit l'approuver avant d'accepter l'installeur.
-
-**Option 1 — Interface graphique :**
-1. Clic droit sur `arena_admin.cer` → **Installer le certificat**
-2. Emplacement : **Ordinateur local** (nécessite les droits admin)
-3. **Placer tous les certificats dans le magasin suivant** → Parcourir →
-   **Autorités de certification racines de confiance** → OK → Terminer
-
-**Option 2 — PowerShell (en administrateur) :**
-```powershell
-Import-Certificate -FilePath .\arena_admin.cer `
-  -CertStoreLocation Cert:\LocalMachine\Root
-```
-
-### Étape B — Installer l'app
-
-1. Double-clic sur `arena-admin-setup.msix`
-2. Cliquer **Installer**
-3. L'app **ARENA Admin** apparaît dans le menu Démarrer 🎉
-
-### Mises à jour
-
-Pour mettre à jour l'app sur un poste : regénérer le MSIX (avec un
-`msix_version` supérieur dans `pubspec.yaml`, ex. `1.0.1.0`), copier le
-nouveau `.msix` sur le poste et double-cliquer → **Mettre à jour**.
-Le certificat n'a pas besoin d'être réinstallé.
-
----
-
-## 3. Gestion du certificat
+### Certificat de signature MSIX
 
 | Fichier | Contenu | Criticité |
 |---|---|---|
-| `windows/certificates/arena_admin.pfx` | Certificat **+ clé privée** (signe les MSIX) | 🔴 À sauvegarder comme le keystore Android |
-| `windows/certificates/arena_admin.cer` | Certificat public (à distribuer aux postes) | 🟢 Public |
+| `windows/certificates/arena_admin.pfx` | Certificat + clé privée | 🔴 À sauvegarder (coffre) |
+| `windows/certificates/arena_admin.cer` | Certificat public | 🟢 À distribuer |
 | `windows/certificates/INFOS.txt` | Mot de passe du .pfx | 🔴 Avec le .pfx |
 
-- **Validité** : 5 ans (expire le 2031-06-03)
-- **Le dossier `windows/certificates/` est gitignoré** — sauvegardez-le
-  dans le même coffre que `arena-release.jks` / `key.properties`.
-- ⚠️ Si le `.pfx` est perdu : régénérer un certificat (procédure ci-dessous)
-  et **réinstaller le nouveau `.cer` sur tous les postes** (les mises à
-  jour signées avec un nouveau certificat exigent de désinstaller/réinstaller l'app).
+- Validité : expire le **2031-06-03**. Dossier **gitignoré** — sauvegardé
+  dans le coffre chiffré (cf. checklist pré-lancement).
+- Régénération : voir le script PowerShell dans `INFOS.txt` ou l'historique
+  de ce fichier.
 
-### Régénération du certificat (PowerShell)
+### Vers le Microsoft Store
 
-```powershell
-$cert = New-SelfSignedCertificate -Type Custom -Subject "CN=Arena Admin" `
-  -KeyUsage DigitalSignature -FriendlyName "Arena Admin Desktop" `
-  -CertStoreLocation "Cert:\CurrentUser\My" -NotAfter (Get-Date).AddYears(5) `
-  -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3", "2.5.29.19={text}")
-$password = ConvertTo-SecureString -String "<MOT_DE_PASSE>" -Force -AsPlainText
-Export-PfxCertificate -Cert $cert -FilePath "windows\certificates\arena_admin.pfx" -Password $password
-Export-Certificate -Cert $cert -FilePath "windows\certificates\arena_admin.cer"
-```
-
-Puis mettre à jour `certificate_password` dans `pubspec.yaml` (msix_config).
-
----
-
-## 4. Alternative sans installation : version portable
-
-Pour un usage ponctuel (pas d'installation, pas de certificat) :
-zipper le dossier `build/windows/x64/runner/Release/` et le copier sur
-le poste cible → lancer `arena.exe` directement. Fonctionne tant que les
-[redistribuables Visual C++](https://aka.ms/vs/17/release/vc_redist.x64.exe)
-sont présents (préinstallés sur la plupart des Windows).
-
----
-
-## 5. Vers le Microsoft Store (plus tard)
-
-Pour une distribution publique sans gestion de certificat :
 1. Compte développeur Microsoft (19 $ une fois)
-2. `msix_config` : retirer `certificate_path` et ajouter l'identité fournie
-   par le Partner Center
-3. `dart run msix:publish` ou upload manuel du `.msix`
+2. `msix_config` (pubspec) : retirer `certificate_path`, mettre l'identité
+   du Partner Center
+3. `dart run msix:publish` — le Store signe l'app lui-même.
 
-Le Store signe l'app lui-même — plus aucun certificat à gérer.
+</details>
+
+---
+
+## Alternative sans installation : version portable
+
+Zipper `build/windows/x64/runner/Release/` et lancer `arena.exe`
+directement sur le poste cible. Nécessite les
+[redistribuables Visual C++](https://aka.ms/vs/17/release/vc_redist.x64.exe)
+(présents sur la plupart des Windows).
