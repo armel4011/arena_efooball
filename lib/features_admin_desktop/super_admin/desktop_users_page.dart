@@ -1,3 +1,4 @@
+import 'package:arena/core/router/admin_desktop_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/core/utils/arena_error_message.dart';
 import 'package:arena/data/models/profile.dart';
@@ -7,6 +8,7 @@ import 'package:arena/features_admin_desktop/shared/desktop_totp_gate.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 /// Super-admin · Utilisateurs (desktop) — tableau des utilisateurs avec
@@ -254,6 +256,22 @@ class _UserCard extends ConsumerWidget {
           const SizedBox(height: 12),
           Row(
             children: [
+              // Chat individuel admin→user (même flux que le bouton
+              // chat_bubble du mobile) : ouvre /super/messages/<userId>.
+              Button(
+                onPressed: () => context.go(
+                  AdminDesktopRoutes.superChatThreadPath(profile.id),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(FluentIcons.chat, size: 12),
+                    SizedBox(width: 6),
+                    Text('Message'),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
               if (banned)
                 FilledButton(
                   onPressed: () => _toggleBan(context, ref),
