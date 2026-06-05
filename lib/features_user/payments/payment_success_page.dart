@@ -179,7 +179,7 @@ class _Receipt extends StatelessWidget {
             valueStyle: ArenaText.mono.copyWith(fontWeight: FontWeight.w700),
           ),
           const ArenaDivider(),
-          _Row(label: l10n.paymentSuccessReceiptMethod, value: method.label),
+          _Row(label: l10n.paymentSuccessReceiptMethod, value: method.labelOf(l10n)),
           const ArenaDivider(),
           _Row(
             label: l10n.paymentSuccessReceiptTransaction,

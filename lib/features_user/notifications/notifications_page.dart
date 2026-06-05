@@ -218,13 +218,23 @@ class _EmptyState extends StatelessWidget {
 }
 
 enum _NotificationFilter {
-  all('Toutes'),
-  match('Matchs'),
-  earning('Gains'),
-  system('Système');
+  all,
+  match,
+  earning,
+  system;
 
-  const _NotificationFilter(this.label);
-  final String label;
+  String labelFor(AppLocalizations l10n) {
+    switch (this) {
+      case _NotificationFilter.all:
+        return l10n.notificationsFilterAll;
+      case _NotificationFilter.match:
+        return l10n.notificationsFilterMatch;
+      case _NotificationFilter.earning:
+        return l10n.notificationsFilterEarning;
+      case _NotificationFilter.system:
+        return l10n.notificationsFilterSystem;
+    }
+  }
 
   bool matches(_NotificationCategory category) {
     if (this == _NotificationFilter.all) return true;
@@ -262,6 +272,7 @@ class _FilterChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
@@ -270,7 +281,7 @@ class _FilterChips extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(right: ArenaSpacing.xs),
               child: _Chip(
-                label: f.label,
+                label: f.labelFor(l10n),
                 active: f == current,
                 onTap: () => onChanged(f),
               ),
@@ -337,6 +348,7 @@ class _NotificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final visual = _visualFor(notif);
     final tint = notif.isUnread ? 0.12 : 0.06;
     return InkWell(
@@ -387,7 +399,7 @@ class _NotificationCard extends StatelessWidget {
                   ],
                   const SizedBox(height: ArenaSpacing.xs),
                   Text(
-                    _formatTimestamp(notif.createdAt),
+                    _formatTimestamp(notif.createdAt, l10n),
                     style: ArenaText.small.copyWith(
                       color:
                           notif.isUnread ? visual.color : ArenaColors.silverDim,
@@ -484,13 +496,13 @@ _NotifVisual _visualFor(ArenaNotification n) {
 /// French relative timestamp ("Il y a 5 min", "Hier", "3j"). Kept inline
 /// because no other screen needs this exact format — every other clock
 /// in the app shows absolute times.
-String _formatTimestamp(DateTime? at) {
+String _formatTimestamp(DateTime? at, AppLocalizations l10n) {
   if (at == null) return '';
   final diff = DateTime.now().difference(at);
-  if (diff.inMinutes < 1) return "À l'instant";
+  if (diff.inMinutes < 1) return l10n.notificationsTimeJustNow;
   if (diff.inMinutes < 60) return 'Il y a ${diff.inMinutes} min';
   if (diff.inHours < 24) return 'Il y a ${diff.inHours} h';
-  if (diff.inDays == 1) return 'Hier';
+  if (diff.inDays == 1) return l10n.notificationsTimeYesterday;
   if (diff.inDays < 7) return '${diff.inDays}j';
   return '${at.day.toString().padLeft(2, '0')}/${at.month.toString().padLeft(2, '0')}';
 }

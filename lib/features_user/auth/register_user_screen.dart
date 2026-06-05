@@ -225,30 +225,30 @@ class _AccountStep extends StatelessWidget {
   final bool googleLoading;
   final bool isLoading;
 
-  String? _emailError(String value) {
-    if (value.isEmpty) return 'Email requis.';
+  String? _emailError(String value, AppLocalizations l10n) {
+    if (value.isEmpty) return l10n.registerEmailRequired;
     if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(value)) {
-      return 'Format email invalide.';
+      return l10n.registerEmailInvalid;
     }
     return null;
   }
 
-  String? _passwordError(String value) {
-    if (value.length < 8) return '8 caractères minimum.';
+  String? _passwordError(String value, AppLocalizations l10n) {
+    if (value.length < 8) return l10n.registerPasswordTooShort;
     return null;
   }
 
-  String? _confirmError() {
+  String? _confirmError(AppLocalizations l10n) {
     if (passwordConfirmCtrl.text != passwordCtrl.text) {
-      return 'Les mots de passe ne correspondent pas.';
+      return l10n.registerPasswordMismatch;
     }
     return null;
   }
 
-  bool get _canSubmit =>
-      _emailError(emailCtrl.text) == null &&
-      _passwordError(passwordCtrl.text) == null &&
-      _confirmError() == null;
+  bool _canSubmit(AppLocalizations l10n) =>
+      _emailError(emailCtrl.text, l10n) == null &&
+      _passwordError(passwordCtrl.text, l10n) == null &&
+      _confirmError(l10n) == null;
 
   @override
   Widget build(BuildContext context) {
@@ -276,8 +276,9 @@ class _AccountStep extends StatelessWidget {
             textInputAction: TextInputAction.next,
             prefixIcon: Icons.email_outlined,
             enabled: !isLoading,
-            errorText:
-                emailCtrl.text.isEmpty ? null : _emailError(emailCtrl.text),
+            errorText: emailCtrl.text.isEmpty
+                ? null
+                : _emailError(emailCtrl.text, l10n),
           ),
           const SizedBox(height: ArenaSpacing.md),
           ArenaTextField(
@@ -289,7 +290,7 @@ class _AccountStep extends StatelessWidget {
             enabled: !isLoading,
             errorText: passwordCtrl.text.isEmpty
                 ? null
-                : _passwordError(passwordCtrl.text),
+                : _passwordError(passwordCtrl.text, l10n),
           ),
           const SizedBox(height: ArenaSpacing.md),
           ArenaTextField(
@@ -299,15 +300,16 @@ class _AccountStep extends StatelessWidget {
             textInputAction: TextInputAction.done,
             prefixIcon: Icons.lock_outline,
             enabled: !isLoading,
-            errorText:
-                passwordConfirmCtrl.text.isEmpty ? null : _confirmError(),
+            errorText: passwordConfirmCtrl.text.isEmpty
+                ? null
+                : _confirmError(l10n),
           ),
           const SizedBox(height: ArenaSpacing.xl),
           ArenaButton(
             label: l10n.registerAccountContinueButton,
             fullWidth: true,
             size: ArenaButtonSize.large,
-            onPressed: _canSubmit ? onNext : null,
+            onPressed: _canSubmit(l10n) ? onNext : null,
           ),
         ],
       ),

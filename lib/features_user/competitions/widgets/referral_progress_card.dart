@@ -163,11 +163,11 @@ class _ReferralCodeCopy extends StatelessWidget {
     );
   }
 
-  Future<void> _share() async {
+  Future<void> _share(AppLocalizations l10n) async {
     await Share.share(
       "Rejoins-moi sur ARENA ! Tournois d'e-sport mobile gratuits avec "
       "récompenses. Utilise mon code de parrainage à l'inscription : $code",
-      subject: 'Rejoins-moi sur ARENA',
+      subject: l10n.referralShareSubject,
     );
   }
 
@@ -220,7 +220,7 @@ class _ReferralCodeCopy extends StatelessWidget {
               const SizedBox(width: ArenaSpacing.sm),
               Expanded(
                 child: FilledButton.icon(
-                  onPressed: _share,
+                  onPressed: () => _share(l10n),
                   icon: const Icon(
                     Icons.share_rounded,
                     size: 16,

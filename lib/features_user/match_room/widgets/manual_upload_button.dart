@@ -15,13 +15,15 @@ class ManualUploadButton extends ConsumerStatefulWidget {
   const ManualUploadButton({
     required this.matchId,
     required this.playerId,
-    this.label = 'Envoyer une vidéo de preuve',
+    this.label,
     super.key,
   });
 
   final String matchId;
   final String playerId;
-  final String label;
+
+  /// Falls back to [AppLocalizations.manualUploadButtonLabel] when null.
+  final String? label;
 
   @override
   ConsumerState<ManualUploadButton> createState() => _ManualUploadButtonState();
@@ -63,8 +65,9 @@ class _ManualUploadButtonState extends ConsumerState<ManualUploadButton> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return ArenaButton(
-      label: widget.label,
+      label: widget.label ?? l10n.manualUploadButtonLabel,
       icon: Icons.upload_file,
       variant: ArenaButtonVariant.secondary,
       isLoading: _busy,

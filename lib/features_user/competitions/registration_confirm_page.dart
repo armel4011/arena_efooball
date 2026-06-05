@@ -215,7 +215,8 @@ class _RegistrationConfirmPageState
             content: Text(
               queued
                   ? l10n.regConfirmOfflineQueued
-                  : 'Inscription confirmée à ${widget.competitionName}.',
+                  : '${l10n.regConfirmConfirmedPrefix}'
+                      '${widget.competitionName}.',
             ),
             backgroundColor:
                 queued ? ArenaColors.statusWarn : ArenaColors.statusOk,

@@ -163,6 +163,7 @@ class _MethodTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(ArenaRadius.lg),
@@ -195,11 +196,11 @@ class _MethodTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    method.label,
+                    method.labelOf(l10n),
                     style: ArenaText.body.copyWith(fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 2),
-                  Text(method.countriesLine, style: ArenaText.bodyMuted),
+                  Text(method.countriesLineOf(l10n), style: ArenaText.bodyMuted),
                 ],
               ),
             ),

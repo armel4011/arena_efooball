@@ -297,9 +297,9 @@ class _MatchCard extends StatelessWidget {
 
   bool get _selfIsP1 => match.player1Id == selfId;
 
-  String get _opponentLabel {
+  String _opponentLabel(AppLocalizations l10n) {
     final id = _selfIsP1 ? match.player2Id : match.player1Id;
-    if (id == null) return 'Adversaire';
+    if (id == null) return l10n.matchHistoryOpponentFallback;
     return 'Joueur ${id.substring(0, id.length.clamp(0, 6))}…';
   }
 
@@ -326,8 +326,10 @@ class _MatchCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final scores = _scores;
     final accent = _accent;
+    final opponentLabel = _opponentLabel(l10n);
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.md),
       decoration: BoxDecoration(
@@ -338,8 +340,8 @@ class _MatchCard extends StatelessWidget {
       child: Row(
         children: [
           ArenaAvatar(
-            initials: _opponentLabel.length >= 2
-                ? _opponentLabel.substring(0, 2).toUpperCase()
+            initials: opponentLabel.length >= 2
+                ? opponentLabel.substring(0, 2).toUpperCase()
                 : 'A',
             size: ArenaAvatarSize.sm,
           ),
@@ -349,7 +351,7 @@ class _MatchCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'vs $_opponentLabel',
+                  'vs $opponentLabel',
                   style: ArenaText.body.copyWith(
                     fontWeight: FontWeight.w700,
                     fontSize: 13,

@@ -39,7 +39,7 @@ class MobileMoneyDetailsPage extends ConsumerStatefulWidget {
     required this.competitionName,
     required this.merchantCode,
     this.dialCode = '+237',
-    this.country = '🇨🇲 Cameroun',
+    this.country,
     super.key,
   });
 
@@ -52,7 +52,9 @@ class MobileMoneyDetailsPage extends ConsumerStatefulWidget {
   /// l'admin créateur lors de la création de la compétition.
   final String merchantCode;
   final String dialCode;
-  final String country;
+
+  /// Falls back to [AppLocalizations.mobileMoneyDefaultCountry] when null.
+  final String? country;
 
   @override
   ConsumerState<MobileMoneyDetailsPage> createState() =>
@@ -62,8 +64,7 @@ class MobileMoneyDetailsPage extends ConsumerStatefulWidget {
 class _MobileMoneyDetailsPageState
     extends ConsumerState<MobileMoneyDetailsPage> {
   final _phoneCtrl = TextEditingController();
-  late final TextEditingController _countryCtrl =
-      TextEditingController(text: widget.country);
+  final _countryCtrl = TextEditingController();
   bool _submitting = false;
 
   @override
@@ -80,8 +81,10 @@ class _MobileMoneyDetailsPageState
     final l10n = AppLocalizations.of(context);
     final method = widget.method;
     final hasCode = widget.merchantCode.trim().isNotEmpty;
+    // Disabled, read-only field — resolve the localized default once.
+    _countryCtrl.text = widget.country ?? l10n.mobileMoneyDefaultCountry;
     return Scaffold(
-      appBar: ArenaAppBar(title: method.label.toUpperCase()),
+      appBar: ArenaAppBar(title: method.labelOf(l10n).toUpperCase()),
       body: ArenaScreenBackground(
         child: SafeArea(
           child: ListView(
@@ -117,7 +120,7 @@ class _MobileMoneyDetailsPageState
               ),
               const SizedBox(height: ArenaSpacing.md),
               Text(
-                '${l10n.mobileMoneyNumberLabel}${method.label.toUpperCase()}',
+                '${l10n.mobileMoneyNumberLabel}${method.labelOf(l10n).toUpperCase()}',
                 style: ArenaText.monoSmall.copyWith(
                   color: ArenaColors.silver,
                   letterSpacing: 1.5,
@@ -151,7 +154,7 @@ class _MobileMoneyDetailsPageState
               if (_phoneValid) ...[
                 const SizedBox(height: ArenaSpacing.xs),
                 Text(
-                  '${l10n.mobileMoneyPhoneValid}${method.label}',
+                  '${l10n.mobileMoneyPhoneValid}${method.labelOf(l10n)}',
                   style:
                       ArenaText.bodyMuted.copyWith(color: ArenaColors.statusOk),
                 ),
@@ -276,7 +279,7 @@ class _Hero extends StatelessWidget {
           PaymentMethodLogo(method: method, size: 70),
           const SizedBox(height: ArenaSpacing.sm),
           Text(
-            '${l10n.mobileMoneyHeroPayment}${method.label}',
+            '${l10n.mobileMoneyHeroPayment}${method.labelOf(l10n)}',
             style: ArenaText.h3,
           ),
           const SizedBox(height: 2),
@@ -370,7 +373,7 @@ class _MerchantCodeCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Compose ce code sur ton ${method.label}, paie le montant '
+            'Compose ce code sur ton ${method.labelOf(l10n)}, paie le montant '
             'exact, puis reviens ici cliquer "J\'AI PAYÉ".',
             style: ArenaText.small,
           ),
@@ -428,15 +431,14 @@ class _DialBox extends StatelessWidget {
 class _Disclaimer extends StatelessWidget {
   const _Disclaimer();
 
-  static const _items = <String>[
-    'Paie le montant EXACT — sinon le super-admin refusera',
-    'Garde le SMS de confirmation Mobile Money en preuve',
-    "L'admin valide manuellement ton paiement après réception",
-  ];
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final items = <String>[
+      l10n.mobileMoneyDisclaimerExactAmount,
+      l10n.mobileMoneyDisclaimerKeepSms,
+      l10n.mobileMoneyDisclaimerManualValidation,
+    ];
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.lg),
       decoration: arenaWarningCardDecoration(),
@@ -445,7 +447,7 @@ class _Disclaimer extends StatelessWidget {
         children: [
           Text(l10n.mobileMoneyDisclaimerTitle, style: ArenaText.h3),
           const SizedBox(height: ArenaSpacing.sm),
-          for (final i in _items)
+          for (final i in items)
             Padding(
               padding: const EdgeInsets.only(bottom: 4),
               child: Row(
