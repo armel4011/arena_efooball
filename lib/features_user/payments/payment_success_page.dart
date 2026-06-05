@@ -3,6 +3,7 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_divider.dart';
 import 'package:arena/features_user/payments/payment_method.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
@@ -41,6 +42,7 @@ class PaymentSuccessPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: ArenaColors.void_,
       body: DecoratedBox(
@@ -68,13 +70,13 @@ class PaymentSuccessPage extends StatelessWidget {
                   ),
               const SizedBox(height: ArenaSpacing.lg),
               Text(
-                'PAIEMENT RÉUSSI !',
+                l10n.paymentSuccessTitle,
                 textAlign: TextAlign.center,
                 style: ArenaText.h1.copyWith(color: ArenaColors.statusOk),
               ),
               const SizedBox(height: ArenaSpacing.sm),
               Text(
-                'Ton inscription est confirmée.',
+                l10n.paymentSuccessSubtitle,
                 textAlign: TextAlign.center,
                 style: ArenaText.body,
               ),
@@ -97,7 +99,7 @@ class PaymentSuccessPage extends StatelessWidget {
               const SizedBox(height: ArenaSpacing.xl),
               if (competitionId != null) ...[
                 ArenaButton(
-                  label: '🏆 VOIR LA COMPÉTITION',
+                  label: l10n.paymentSuccessSeeCompetition,
                   fullWidth: true,
                   size: ArenaButtonSize.large,
                   onPressed: () => context.go(
@@ -107,7 +109,7 @@ class PaymentSuccessPage extends StatelessWidget {
                 const SizedBox(height: ArenaSpacing.sm),
               ],
               ArenaButton(
-                label: "Retour à l'accueil",
+                label: l10n.paymentSuccessBackHome,
                 variant: ArenaButtonVariant.ghost,
                 fullWidth: true,
                 onPressed: onBackHome ?? () => context.go(UserRoutes.home),
@@ -165,26 +167,27 @@ class _Receipt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.lg),
       decoration: arenaSuccessCardDecoration(),
       child: Column(
         children: [
           _Row(
-            label: 'Montant',
+            label: l10n.paymentSuccessReceiptAmount,
             value: '${_formatXaf(amountXaf)} XAF',
             valueStyle: ArenaText.mono.copyWith(fontWeight: FontWeight.w700),
           ),
           const ArenaDivider(),
-          _Row(label: 'Méthode', value: method.label),
+          _Row(label: l10n.paymentSuccessReceiptMethod, value: method.label),
           const ArenaDivider(),
           _Row(
-            label: 'N° transaction',
+            label: l10n.paymentSuccessReceiptTransaction,
             value: transactionId,
             valueStyle: ArenaText.mono.copyWith(color: ArenaColors.signalBlue),
           ),
           const ArenaDivider(),
-          _Row(label: 'Date', value: dateLabel),
+          _Row(label: l10n.paymentSuccessReceiptDate, value: dateLabel),
         ],
       ),
     );
@@ -199,13 +202,14 @@ class _TournamentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.lg),
       decoration: arenaGlowCardDecoration(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('🏆 Tu es inscrit à', style: ArenaText.h3),
+          Text(l10n.paymentSuccessRegisteredLabel, style: ArenaText.h3),
           const SizedBox(height: ArenaSpacing.xs),
           Text(
             name.toUpperCase(),

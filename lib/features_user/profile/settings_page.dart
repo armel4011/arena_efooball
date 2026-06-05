@@ -8,6 +8,7 @@ import 'package:arena/features_shared/widgets/arena_card.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/language_switcher.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -30,33 +31,40 @@ class SettingsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: const ArenaAppBar(title: 'PARAMÈTRES'),
+      appBar: ArenaAppBar(title: l10n.settingsAppBarTitle),
       body: ArenaScreenBackground(
         child: SafeArea(
           child: ListView(
             padding: const EdgeInsets.all(ArenaSpacing.lg),
-            children: const [
+            children: [
               _SectionHeader(
-                label: 'PRÉFÉRENCES',
+                label: l10n.settingsSectionPreferences,
                 accent: ArenaColors.signalBlue,
               ),
-              _PreferencesSection(),
-              SizedBox(height: ArenaSpacing.lg),
-              _SectionHeader(label: 'COMPTE', accent: ArenaColors.signalBlue),
-              _AccountSection(),
-              SizedBox(height: ArenaSpacing.lg),
+              const _PreferencesSection(),
+              const SizedBox(height: ArenaSpacing.lg),
               _SectionHeader(
-                label: 'CONFIDENTIALITÉ',
+                label: l10n.settingsSectionAccount,
+                accent: ArenaColors.signalBlue,
+              ),
+              const _AccountSection(),
+              const SizedBox(height: ArenaSpacing.lg),
+              _SectionHeader(
+                label: l10n.settingsSectionPrivacy,
                 accent: ArenaColors.neonRed,
               ),
-              _PrivacySection(),
-              SizedBox(height: ArenaSpacing.lg),
-              _SectionHeader(label: 'AIDE & INFOS', accent: ArenaColors.silver),
-              _HelpSection(),
-              SizedBox(height: ArenaSpacing.lg),
-              _VersionFooter(),
-              SizedBox(height: ArenaSpacing.xxl),
+              const _PrivacySection(),
+              const SizedBox(height: ArenaSpacing.lg),
+              _SectionHeader(
+                label: l10n.settingsSectionHelp,
+                accent: ArenaColors.silver,
+              ),
+              const _HelpSection(),
+              const SizedBox(height: ArenaSpacing.lg),
+              const _VersionFooter(),
+              const SizedBox(height: ArenaSpacing.xxl),
             ],
           ),
         ),
@@ -98,9 +106,10 @@ class _VersionFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Center(
       child: Text(
-        'v1.0.0 · build 12',
+        l10n.settingsVersionFooter,
         style: ArenaText.small.copyWith(color: ArenaColors.silver),
       ),
     );
@@ -112,16 +121,17 @@ class _PreferencesSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final profile = ref.watch(currentProfileProvider).valueOrNull;
 
     return ArenaCard(
       padding: EdgeInsets.zero,
       child: Column(
         children: [
-          const ListTile(
-            leading: Icon(Icons.language, color: ArenaColors.textMuted),
-            title: Text('Langue'),
-            subtitle: LanguageSwitcher(),
+          ListTile(
+            leading: const Icon(Icons.language, color: ArenaColors.textMuted),
+            title: Text(l10n.settingsLanguageLabel),
+            subtitle: const LanguageSwitcher(),
             dense: true,
           ),
           const _Divider(),
@@ -130,7 +140,7 @@ class _PreferencesSection extends ConsumerWidget {
               Icons.payments_outlined,
               color: ArenaColors.textMuted,
             ),
-            title: const Text('Devise'),
+            title: Text(l10n.settingsCurrencyLabel),
             subtitle: Text(
               profile?.preferredCurrency ?? '—',
               style: ArenaTypography.bodyMedium.copyWith(
@@ -151,9 +161,9 @@ class _PreferencesSection extends ConsumerWidget {
               Icons.campaign_outlined,
               color: ArenaColors.textMuted,
             ),
-            title: const Text('Notifications marketing'),
+            title: Text(l10n.settingsMarketingTitle),
             subtitle: Text(
-              'Conseils, nouveaux tournois, promotions',
+              l10n.settingsMarketingSubtitle,
               style: ArenaTypography.bodySmall.copyWith(
                 color: ArenaColors.textMuted,
               ),
@@ -186,6 +196,7 @@ class _AccountSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final profile = ref.watch(currentProfileProvider).valueOrNull;
 
     return ArenaCard(
@@ -195,7 +206,7 @@ class _AccountSection extends ConsumerWidget {
           ListTile(
             leading:
                 const Icon(Icons.alternate_email, color: ArenaColors.textMuted),
-            title: const Text("Changer l'email"),
+            title: Text(l10n.settingsChangeEmailTitle),
             subtitle: Text(
               profile?.email ?? '',
               style: ArenaTypography.bodySmall.copyWith(
@@ -208,16 +219,16 @@ class _AccountSection extends ConsumerWidget {
           const _Divider(),
           ListTile(
             leading: const Icon(Icons.lock_reset, color: ArenaColors.textMuted),
-            title: const Text('Changer le mot de passe'),
+            title: Text(l10n.settingsChangePasswordTitle),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _changePassword(context, ref),
           ),
           const _Divider(),
           ListTile(
             leading: const Icon(Icons.link, color: ArenaColors.textMuted),
-            title: const Text('Méthodes de connexion'),
+            title: Text(l10n.settingsLoginMethodsTitle),
             subtitle: Text(
-              'Google / Apple — bientôt disponible',
+              l10n.settingsLoginMethodsSubtitle,
               style: ArenaTypography.bodySmall.copyWith(
                 color: ArenaColors.textMuted,
               ),
@@ -234,26 +245,27 @@ class _AccountSection extends ConsumerWidget {
   }
 
   Future<void> _changeEmail(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context);
     final controller = TextEditingController();
     final newEmail = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: ArenaColors.surface,
-        title: const Text('Nouvel email'),
+        title: Text(l10n.settingsNewEmailDialogTitle),
         content: TextField(
           controller: controller,
           keyboardType: TextInputType.emailAddress,
           autofocus: true,
-          decoration: const InputDecoration(hintText: 'nom@example.com'),
+          decoration: InputDecoration(hintText: l10n.settingsNewEmailHint),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Annuler'),
+            child: Text(l10n.settingsDialogCancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            child: const Text('Confirmer'),
+            child: Text(l10n.settingsDialogConfirm),
           ),
         ],
       ),
@@ -265,9 +277,8 @@ class _AccountSection extends ConsumerWidget {
           .updateUser(UserAttributes(email: newEmail));
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content:
-                Text('Vérifie ta boîte mail pour confirmer le changement.'),
+          SnackBar(
+            content: Text(l10n.settingsEmailChangeConfirmSnack),
           ),
         );
       }
@@ -280,26 +291,27 @@ class _AccountSection extends ConsumerWidget {
   }
 
   Future<void> _changePassword(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context);
     final controller = TextEditingController();
     final newPwd = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: ArenaColors.surface,
-        title: const Text('Nouveau mot de passe'),
+        title: Text(l10n.settingsNewPasswordDialogTitle),
         content: TextField(
           controller: controller,
           obscureText: true,
           autofocus: true,
-          decoration: const InputDecoration(hintText: '8 caractères minimum'),
+          decoration: InputDecoration(hintText: l10n.settingsNewPasswordHint),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Annuler'),
+            child: Text(l10n.settingsDialogCancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, controller.text),
-            child: const Text('Confirmer'),
+            child: Text(l10n.settingsDialogConfirm),
           ),
         ],
       ),
@@ -311,7 +323,7 @@ class _AccountSection extends ConsumerWidget {
           .updateUser(UserAttributes(password: newPwd));
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Mot de passe mis à jour.')),
+          SnackBar(content: Text(l10n.settingsPasswordUpdatedSnack)),
         );
       }
     } catch (e) {
@@ -358,6 +370,7 @@ class _PrivacySectionState extends ConsumerState<_PrivacySection> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: ArenaRadius.card,
@@ -385,11 +398,11 @@ class _PrivacySectionState extends ConsumerState<_PrivacySection> {
                       Icons.download_outlined,
                       color: ArenaColors.textMuted,
                     ),
-              title: const Text('Télécharger mes données'),
+              title: Text(l10n.settingsDownloadDataTitle),
               subtitle: Text(
                 _exporting
-                    ? 'Export en cours…'
-                    : 'Génère un fichier JSON de toutes tes données',
+                    ? l10n.settingsDownloadDataExporting
+                    : l10n.settingsDownloadDataSubtitle,
                 style: ArenaTypography.bodySmall.copyWith(
                   color: ArenaColors.textMuted,
                 ),
@@ -406,7 +419,7 @@ class _PrivacySectionState extends ConsumerState<_PrivacySection> {
               leading:
                   const Icon(Icons.delete_outline, color: ArenaColors.danger),
               title: Text(
-                'Supprimer mon compte',
+                l10n.settingsDeleteAccountTitle,
                 style: ArenaText.body.copyWith(color: ArenaColors.danger),
               ),
               trailing:
@@ -427,9 +440,10 @@ class _ExportSuccessDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final sizeKb = (result.byteSize / 1024).toStringAsFixed(1);
     return AlertDialog(
-      title: const Text('Export réussi'),
+      title: Text(l10n.settingsExportSuccessTitle),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -439,12 +453,12 @@ class _ExportSuccessDialog extends StatelessWidget {
           SelectableText(result.filePath, style: ArenaText.mono),
           const SizedBox(height: ArenaSpacing.sm),
           Text(
-            'Chemin copié dans le presse-papier.',
+            l10n.settingsExportPathCopied,
             style: ArenaText.small,
           ),
           if (result.recordCounts.isNotEmpty) ...[
             const SizedBox(height: ArenaSpacing.md),
-            Text('Contenu :', style: ArenaText.bodyMuted),
+            Text(l10n.settingsExportContentLabel, style: ArenaText.bodyMuted),
             for (final e in result.recordCounts.entries)
               Padding(
                 padding: const EdgeInsets.only(top: 2),
@@ -459,7 +473,7 @@ class _ExportSuccessDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('OK'),
+          child: Text(l10n.settingsDialogOk),
         ),
       ],
     );
@@ -471,13 +485,14 @@ class _HelpSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     return ArenaCard(
       padding: EdgeInsets.zero,
       child: Column(
         children: [
           ListTile(
             leading: const Icon(Icons.replay, color: ArenaColors.textMuted),
-            title: const Text("Revoir l'introduction"),
+            title: Text(l10n.settingsReplayIntroTitle),
             trailing: const Icon(Icons.chevron_right),
             onTap: () async {
               await ref.read(onboardingCompletedProvider.notifier).reset();
@@ -488,7 +503,7 @@ class _HelpSection extends ConsumerWidget {
           ListTile(
             leading:
                 const Icon(Icons.help_outline, color: ArenaColors.textMuted),
-            title: const Text('Support'),
+            title: Text(l10n.settingsSupportTitle),
             subtitle: Text(
               'support@arena.gg',
               style: ArenaTypography.bodySmall.copyWith(
@@ -508,9 +523,9 @@ class _HelpSection extends ConsumerWidget {
               Icons.info_outline,
               color: ArenaColors.textMuted,
             ),
-            title: const Text('À propos'),
+            title: Text(l10n.settingsAboutTitle),
             subtitle: Text(
-              'ARENA V1.0 — Plateforme de tournois e-sport mobile',
+              l10n.settingsAboutSubtitle,
               style: ArenaTypography.bodySmall.copyWith(
                 color: ArenaColors.textMuted,
               ),

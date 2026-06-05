@@ -2,6 +2,7 @@ import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/payment_repository.dart';
 import 'package:arena/features_user/payments/payment_method.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,6 +15,7 @@ class PendingPaymentBanner extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final payments = ref.watch(myPaymentsProvider).valueOrNull ?? const [];
     final pending = payments
         .where((p) => p.status == 'awaiting_admin')
@@ -35,7 +37,7 @@ class PendingPaymentBanner extends ConsumerWidget {
             paymentId: p.id,
             method: method,
             amountXaf: p.amountLocal.round(),
-            competitionName: 'Compétition',
+            competitionName: l10n.pendingPaymentCompetitionFallback,
             maskedPhone: p.payerPhone ?? '+••• •• •• ••',
           ),
         ),
@@ -68,14 +70,14 @@ class PendingPaymentBanner extends ConsumerWidget {
                   children: [
                     Text(
                       pending.length == 1
-                          ? 'Paiement en attente de validation'
+                          ? l10n.pendingPaymentSingleTitle
                           : '${pending.length} paiements en attente',
                       style: ArenaText.body
                           .copyWith(fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Tape pour vérifier le statut',
+                      l10n.pendingPaymentTapToCheck,
                       style: ArenaText.small,
                     ),
                   ],

@@ -4,6 +4,7 @@ import 'package:arena/data/models/profile.dart';
 import 'package:arena/data/repositories/notification_repository.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,7 +19,8 @@ class HomeHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final username = profile?.username ?? 'Joueur';
+    final l10n = AppLocalizations.of(context);
+    final username = profile?.username ?? l10n.homeHeaderDefaultUsername;
     final initial = username.isEmpty ? '?' : username[0].toUpperCase();
     final color = _avatarColorFor(profile?.avatarColor);
     final unread = profile == null
@@ -61,8 +63,8 @@ class HomeHeader extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 2),
-                const ArenaBadge(
-                  label: '🥉 BRONZE',
+                ArenaBadge(
+                  label: l10n.homeHeaderTierBronze,
                   variant: ArenaBadgeVariant.tierBronze,
                 ),
               ],
@@ -74,7 +76,7 @@ class HomeHeader extends ConsumerWidget {
               color: ArenaColors.silver,
               size: 20,
             ),
-            tooltip: 'Rechercher un joueur',
+            tooltip: l10n.homeHeaderSearchTooltip,
             onPressed: () => context.push(UserRoutes.friendsSearch),
           ),
           Stack(

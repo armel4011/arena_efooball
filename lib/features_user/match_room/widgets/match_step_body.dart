@@ -8,6 +8,7 @@ import 'package:arena/features_user/match_room/widgets/match_outcome_views.dart'
 import 'package:arena/features_user/match_room/widgets/room_ready_view.dart';
 import 'package:arena/features_user/match_room/widgets/score_flow_view.dart';
 import 'package:arena/features_user/match_room/widgets/share_code_form.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 /// Switche le corps de la match room selon `match.status` et le rôle
@@ -27,33 +28,33 @@ class StepBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return switch (match.status) {
-      MatchStatus.pending || MatchStatus.scheduled => _stepShareCode(),
+      MatchStatus.pending || MatchStatus.scheduled => _stepShareCode(context),
       MatchStatus.ready => RoomReadyView(match: match, role: role),
       MatchStatus.inProgress ||
       MatchStatus.scorePending ||
       MatchStatus.awaitingValidation =>
         role == MatchRole.observer
-            ? const ObserverWaitingPlaceholder(
+            ? ObserverWaitingPlaceholder(
                 icon: Icons.sports_esports,
-                title: 'Match en cours',
-                description: 'Les joueurs sont en train de jouer ou de'
-                    ' valider le score.',
+                title: l10n.stepBodyMatchInProgressTitle,
+                description: l10n.stepBodyMatchInProgressDesc,
               )
             : ScoreFlowView(match: match, role: role),
       MatchStatus.disputed => DisputedView(match: match, selfId: selfId),
       MatchStatus.completed => CompletedView(match: match, selfId: selfId),
-      MatchStatus.cancelled => const TerminalCard(
+      MatchStatus.cancelled => TerminalCard(
           icon: Icons.block,
           color: ArenaColors.silverDim,
-          title: 'MATCH ANNULÉ',
-          description: "L'admin a annulé ce match.",
+          title: l10n.stepBodyMatchCancelledTitle,
+          description: l10n.stepBodyMatchCancelledDesc,
         ),
-      MatchStatus.forfeited => const TerminalCard(
+      MatchStatus.forfeited => TerminalCard(
           icon: Icons.exit_to_app,
           color: ArenaColors.neonRed,
-          title: 'FORFAIT',
-          description: "L'un des joueurs n'a pas démarré à temps.",
+          title: l10n.stepBodyForfeitTitle,
+          description: l10n.stepBodyForfeitDesc,
         ),
     };
   }
@@ -64,23 +65,21 @@ class StepBody extends StatelessWidget {
   ///
   /// Fix item 4 prompt 2026-05-19 — avant, les 2 joueurs voyaient le
   /// formulaire en même temps, ce qui créait des conflits de saisie.
-  Widget _stepShareCode() {
+  Widget _stepShareCode(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     if (role == MatchRole.observer) {
-      return const ObserverWaitingPlaceholder(
+      return ObserverWaitingPlaceholder(
         icon: Icons.vpn_key_outlined,
-        title: 'En attente du code room',
-        description: 'Les joueurs vont créer une room dans le jeu et'
-            ' partager le code ici.',
+        title: l10n.stepBodyAwaitRoomCodeTitle,
+        description: l10n.stepBodyAwaitRoomCodeDesc,
       );
     }
     if (!role.isHomeOf(match)) {
       // AWAY player : attend que HOME envoie le code.
-      return const ObserverWaitingPlaceholder(
+      return ObserverWaitingPlaceholder(
         icon: Icons.hourglass_top,
-        title: 'En attente du code de HOME',
-        description: 'Tu es AWAY sur ce match. Le joueur à domicile '
-            "crée la room dans le jeu et t'enverra le code ici dès "
-            "qu'il l'aura partagé.",
+        title: l10n.stepBodyAwaitHomeCodeTitle,
+        description: l10n.stepBodyAwaitHomeCodeDesc,
       );
     }
     return ShareCodeForm(match: match);

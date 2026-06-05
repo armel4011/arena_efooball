@@ -9,6 +9,7 @@ import 'package:arena/features_user/match_room/widgets/forfeit_timer_card.dart';
 import 'package:arena/features_user/match_room/widgets/open_chat_link.dart';
 import 'package:arena/features_user/match_room/widgets/room_ready_view.dart'
     show CodeSharedInterstitial;
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -38,9 +39,10 @@ class _ShareCodeFormState extends ConsumerState<ShareCodeForm> {
   }
 
   Future<void> _submit() async {
+    final l10n = AppLocalizations.of(context);
     final raw = _controller.text.trim().toUpperCase();
     if (raw.length < 4 || raw.length > 12) {
-      setState(() => _error = 'Le code doit faire entre 4 et 12 caractères.');
+      setState(() => _error = l10n.shareCodeErrorLength);
       return;
     }
     final selfId = ref.read(currentSessionProvider)?.user.id;
@@ -61,7 +63,7 @@ class _ShareCodeFormState extends ConsumerState<ShareCodeForm> {
       if (!mounted) return;
       setState(() {
         _submitting = false;
-        _error = 'Impossible de partager le code : $e';
+        _error = '${l10n.shareCodeErrorSendFailed}$e';
       });
       return;
     }
@@ -72,6 +74,7 @@ class _ShareCodeFormState extends ConsumerState<ShareCodeForm> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final optimisticCode =
         ref.watch(pendingRoomCodeProvider(widget.match.id));
     if (optimisticCode != null) {
@@ -84,7 +87,7 @@ class _ShareCodeFormState extends ConsumerState<ShareCodeForm> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'CODE ROOM (HOME CRÉE)',
+          l10n.shareCodeRoomLabel,
           style: ArenaText.inputLabel,
         ),
         const SizedBox(height: ArenaSpacing.sm),
@@ -93,7 +96,7 @@ class _ShareCodeFormState extends ConsumerState<ShareCodeForm> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Saisis ton code eFootball :',
+                l10n.shareCodeEnterPrompt,
                 textAlign: TextAlign.center,
                 style: ArenaText.bodyMuted.copyWith(
                   color: ArenaColors.silver,
@@ -107,8 +110,8 @@ class _ShareCodeFormState extends ConsumerState<ShareCodeForm> {
               const SizedBox(height: ArenaSpacing.sm),
               Text(
                 widget.match.player2Id == null
-                    ? 'Ton adversaire recevra ce code au chat dès envoi.'
-                    : 'Ton adversaire reçoit ce code au chat dès envoi.',
+                    ? l10n.shareCodeOpponentWillReceive
+                    : l10n.shareCodeOpponentReceives,
                 textAlign: TextAlign.center,
                 style: ArenaText.small.copyWith(color: ArenaColors.silver),
               ),
@@ -128,7 +131,7 @@ class _ShareCodeFormState extends ConsumerState<ShareCodeForm> {
         ],
         const SizedBox(height: ArenaSpacing.lg),
         ArenaButton(
-          label: 'ENVOYER LE CODE',
+          label: l10n.shareCodeSubmitButton,
           icon: Icons.send_outlined,
           fullWidth: true,
           isLoading: _submitting,
@@ -149,6 +152,7 @@ class _CodeInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return TextField(
       controller: controller,
       enabled: enabled,
@@ -167,7 +171,7 @@ class _CodeInput extends StatelessWidget {
         _UpperCaseFormatter(),
       ],
       decoration: InputDecoration(
-        hintText: 'Ex: 8K3-TZ9',
+        hintText: l10n.shareCodeInputHint,
         hintStyle: ArenaText.body.copyWith(
           color: ArenaColors.silverDim,
           letterSpacing: 4,

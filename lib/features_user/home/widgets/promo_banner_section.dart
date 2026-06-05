@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/promo_banner.dart';
 import 'package:arena/data/repositories/promo_banner_repository.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -87,13 +88,14 @@ class PromoBannerSection extends ConsumerWidget {
   }
 
   Future<void> _launchExternal(BuildContext context, String url) async {
+    final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final uri = Uri.tryParse(url);
     if (uri == null) return;
     final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!ok) {
       messenger.showSnackBar(
-        const SnackBar(content: Text("Impossible d'ouvrir le lien.")),
+        SnackBar(content: Text(l10n.promoBannerLinkOpenError)),
       );
     }
   }

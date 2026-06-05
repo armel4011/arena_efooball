@@ -20,6 +20,7 @@ import 'package:arena/features_shared/widgets/error_state.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/chat/call_screen.dart';
 import 'package:arena/features_user/chat/messages_inbox_page.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -159,6 +160,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final selfId = ref.read(currentSessionProvider)?.user.id;
     if (selfId == null) return;
 
+    final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _sending = true);
     try {
@@ -170,15 +172,15 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       _inputCtrl.clear();
       if (queued && mounted) {
         messenger.showSnackBar(
-          const SnackBar(
-            content: Text('Hors ligne — message envoyé à la reconnexion.'),
+          SnackBar(
+            content: Text(l10n.chatOfflineQueued),
           ),
         );
       }
     } catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text("Impossible d'envoyer : $e")),
+        SnackBar(content: Text('${l10n.chatSendFailed}$e')),
       );
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -190,6 +192,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final selfId = ref.read(currentSessionProvider)?.user.id;
     if (selfId == null) return;
 
+    final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final picker = ImagePicker();
     final XFile? picked;
@@ -202,7 +205,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     } catch (e) {
       messenger.showSnackBar(
         SnackBar(
-          content: Text('Picker indisponible : ${arenaErrorMessage(e)}'),
+          content: Text('${l10n.chatPickerUnavailable}${arenaErrorMessage(e)}'),
         ),
       );
       return;
@@ -227,7 +230,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       debugPrint('[chat] upload media FAILED: $e\n$st');
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text('Échec upload : ${arenaErrorMessage(e)}')),
+        SnackBar(content: Text('${l10n.chatUploadFailed}${arenaErrorMessage(e)}')),
       );
     } finally {
       if (mounted) setState(() => _uploading = false);
@@ -236,6 +239,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   Future<void> _showAttachSheet(String channelId) async {
     if (_uploading) return;
+    final l10n = AppLocalizations.of(context);
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
       backgroundColor: ArenaColors.carbon,
@@ -248,7 +252,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 Icons.photo_library_outlined,
                 color: ArenaColors.signalBlue,
               ),
-              title: const Text('Choisir dans la galerie'),
+              title: Text(l10n.chatAttachGallery),
               onTap: () => Navigator.pop(ctx, ImageSource.gallery),
             ),
             ListTile(
@@ -256,7 +260,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 Icons.photo_camera_outlined,
                 color: ArenaColors.signalBlue,
               ),
-              title: const Text('Prendre une photo'),
+              title: Text(l10n.chatAttachCamera),
               onTap: () => Navigator.pop(ctx, ImageSource.camera),
             ),
             const SizedBox(height: ArenaSpacing.sm),
@@ -285,24 +289,22 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   Future<void> _confirmAndDeleteMessage(ChatMessage msg) async {
+    final l10n = AppLocalizations.of(context);
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: ArenaColors.carbon,
-        title: const Text('Supprimer ce message ?'),
-        content: const Text(
-          "Ce message sera marqué comme supprimé. L'autre joueur "
-          'verra "Message supprimé" à la place.',
-        ),
+        title: Text(l10n.chatDeleteDialogTitle),
+        content: Text(l10n.chatDeleteDialogContent),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Annuler'),
+            child: Text(l10n.chatDeleteDialogCancel),
           ),
           TextButton(
             style: TextButton.styleFrom(foregroundColor: ArenaColors.neonRed),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('SUPPRIMER'),
+            child: Text(l10n.chatDeleteDialogConfirm),
           ),
         ],
       ),
@@ -313,7 +315,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Échec : ${arenaErrorMessage(e)}')),
+        SnackBar(content: Text('${l10n.chatGenericFailure}${arenaErrorMessage(e)}')),
       );
     }
   }
@@ -361,6 +363,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   Widget _buildChannelBody(ChatChannel channel) {
+    final l10n = AppLocalizations.of(context);
     final selfId = ref.watch(currentSessionProvider)?.user.id;
     final messagesAsync = ref.watch(channelMessagesProvider(channel.id));
     final clearedAt =
@@ -390,10 +393,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                           m,
                     ];
               if (messages.isEmpty) {
-                return const EmptyState(
+                return EmptyState(
                   icon: Icons.chat_bubble_outline,
-                  title: 'Pas encore de message',
-                  description: 'Sois le premier à écrire ici.',
+                  title: l10n.chatEmptyTitle,
+                  description: l10n.chatEmptyDescription,
                 );
               }
               return ListView.builder(
@@ -490,15 +493,16 @@ class _ChatAppBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final username = opponent?.username ?? 'Joueur';
+    final l10n = AppLocalizations.of(context);
+    final username = opponent?.username ?? l10n.chatAppBarUsernameFallback;
     final initials = username.isEmpty ? '?' : username[0].toUpperCase();
     // Hiérarchie : typing > online > offline. Le typing implique online
     // mais on garde le label dédié pour le feedback live.
     final subtitle = peerTyping
-        ? 'typing…'
+        ? l10n.chatAppBarTyping
         : peerOnline
-            ? 'en ligne'
-            : 'hors ligne';
+            ? l10n.chatAppBarOnline
+            : l10n.chatAppBarOffline;
     final subtitleColor =
         peerOnline ? ArenaColors.statusOk : ArenaColors.silver;
 
@@ -645,6 +649,7 @@ class ChatBubble extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     if (message.type == 'room_code') {
       return _RoomCodeBubble(message: message);
     }
@@ -706,7 +711,7 @@ class ChatBubble extends ConsumerWidget {
               children: [
                 if (isDeleted)
                   Text(
-                    'Message supprimé',
+                    l10n.chatMessageDeleted,
                     style: ArenaText.body.copyWith(
                       color: isSelf
                           ? ArenaColors.bone.withValues(alpha: 0.7)
@@ -775,6 +780,7 @@ class _MediaPreview extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     if (mediaType != null && mediaType != 'image') {
       // V1: seules les images sont rendues. Video/audio en V1.5.
       return Container(
@@ -785,7 +791,10 @@ class _MediaPreview extends ConsumerWidget {
           color: ArenaColors.carbon,
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Text('Media: $mediaType (V1.5)', style: ArenaText.small),
+        child: Text(
+          '${l10n.chatMediaUnsupported}$mediaType (V1.5)',
+          style: ArenaText.small,
+        ),
       );
     }
     return FutureBuilder<String>(
@@ -853,6 +862,7 @@ class _RoomCodeBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Align(
       alignment: Alignment.center,
       child: GestureDetector(
@@ -860,9 +870,9 @@ class _RoomCodeBubble extends StatelessWidget {
           await Clipboard.setData(ClipboardData(text: message.content));
           if (!context.mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Code copié'),
-              duration: Duration(seconds: 1),
+            SnackBar(
+              content: Text(l10n.chatRoomCodeCopied),
+              duration: const Duration(seconds: 1),
             ),
           );
         },
@@ -901,7 +911,7 @@ class _RoomCodeBubble extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                'tap pour copier',
+                l10n.chatRoomCodeTapToCopy,
                 style: ArenaText.small.copyWith(
                   color: ArenaColors.gameEfoot,
                   fontSize: 9,
@@ -944,6 +954,7 @@ class ChatMessageInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: ArenaSpacing.sm,
@@ -953,7 +964,9 @@ class ChatMessageInput extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           IconButton(
-            tooltip: emojiActive ? 'Clavier' : 'Emoji',
+            tooltip: emojiActive
+                ? l10n.chatInputTooltipKeyboard
+                : l10n.chatInputTooltipEmoji,
             icon: Icon(
               emojiActive
                   ? Icons.keyboard_outlined
@@ -963,7 +976,7 @@ class ChatMessageInput extends StatelessWidget {
             onPressed: sending ? null : onToggleEmoji,
           ),
           IconButton(
-            tooltip: 'Joindre une image',
+            tooltip: l10n.chatInputTooltipAttach,
             icon: const Icon(
               Icons.attach_file_outlined,
               color: ArenaColors.silver,
@@ -973,7 +986,7 @@ class ChatMessageInput extends StatelessWidget {
           Expanded(
             child: ArenaTextField(
               controller: controller,
-              hint: 'Message…',
+              hint: l10n.chatInputHint,
               enabled: !sending,
               minLines: 1,
               maxLines: 4,

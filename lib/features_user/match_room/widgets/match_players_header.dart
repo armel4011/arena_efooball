@@ -5,6 +5,7 @@ import 'package:arena/data/models/profile.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_user/match_room/match_room_page.dart'
     show MatchRole;
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -26,6 +27,7 @@ class PlayersHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final p1IsHome = match.homePlayerId != null &&
         match.homePlayerId == match.player1Id;
     final p2IsHome = match.homePlayerId != null &&
@@ -37,7 +39,7 @@ class PlayersHeader extends StatelessWidget {
         Expanded(
           child: _PlayerSeat(
             profile: p1,
-            seatLabel: 'Joueur 1',
+            seatLabel: l10n.matchHeaderPlayer1,
             isSelf: role == MatchRole.player1,
             isHome: p1IsHome,
             fallbackColor: ArenaAvatarColor.blue,
@@ -53,7 +55,7 @@ class PlayersHeader extends StatelessWidget {
         Expanded(
           child: _PlayerSeat(
             profile: p2,
-            seatLabel: 'Joueur 2',
+            seatLabel: l10n.matchHeaderPlayer2,
             isSelf: role == MatchRole.player2,
             isHome: p2IsHome,
             fallbackColor: ArenaAvatarColor.green,
@@ -81,6 +83,7 @@ class _PlayerSeat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final username = profile?.username ?? seatLabel;
     final initial =
         username.isEmpty ? '?' : username.characters.first.toUpperCase();
@@ -112,9 +115,9 @@ class _PlayerSeat extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         if (isHome)
-          const _SeatBadge(label: 'HOME', color: ArenaColors.signalBlue)
+          _SeatBadge(label: l10n.matchHeaderBadgeHome, color: ArenaColors.signalBlue)
         else if (profile != null)
-          const _SeatBadge(label: 'AWAY', color: ArenaColors.statusWarn),
+          _SeatBadge(label: l10n.matchHeaderBadgeAway, color: ArenaColors.statusWarn),
       ],
     );
 

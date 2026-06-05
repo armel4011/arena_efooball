@@ -11,6 +11,7 @@ import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/competitions/widgets/referral_progress_card.dart';
 import 'package:arena/features_user/payments/payment_method.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -86,6 +87,7 @@ class _RegistrationConfirmPageState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     // Lot D — Récupère l'éligibilité parrainage en parallèle. Si la
     // compétition n'a pas de quota, on a `target=0` et `eligible=true`,
     // le widget n'est pas affiché et le bouton inscription reste actif.
@@ -98,7 +100,7 @@ class _RegistrationConfirmPageState
     final canSubmit = _ack && !_submitting && isEligible;
 
     return Scaffold(
-      appBar: const ArenaAppBar(title: 'CHECKOUT'),
+      appBar: ArenaAppBar(title: l10n.regConfirmAppBarTitle),
       body: ArenaScreenBackground(
         child: SafeArea(
           child: ListView(
@@ -124,7 +126,7 @@ class _RegistrationConfirmPageState
                 const SizedBox(height: ArenaSpacing.lg),
               ],
               Text(
-                'RÉPARTITION DES GAINS',
+                l10n.regConfirmPrizeDistribution,
                 style: ArenaText.monoSmall.copyWith(
                   color: ArenaColors.silver,
                   letterSpacing: 1.5,
@@ -147,7 +149,7 @@ class _RegistrationConfirmPageState
                   widget.iosStoreUrl != null) ...[
                 const SizedBox(height: ArenaSpacing.lg),
                 Text(
-                  'TÉLÉCHARGER LE JEU',
+                  l10n.regConfirmDownloadGame,
                   style: ArenaText.monoSmall.copyWith(
                     color: ArenaColors.silver,
                     letterSpacing: 1.5,
@@ -168,11 +170,12 @@ class _RegistrationConfirmPageState
               const SizedBox(height: ArenaSpacing.xl),
               ArenaButton(
                 label: hasGating && !isEligible
-                    ? '👥 PARRAINAGES INSUFFISANTS'
+                    ? l10n.regConfirmCtaReferralsInsufficient
                     : _isFree
-                        ? "M'INSCRIRE GRATUITEMENT"
-                        : 'PROCÉDER AU PAIEMENT '
-                            '· ${_formatXaf(widget.entryFeeXaf)} XAF',
+                        ? l10n.regConfirmCtaRegisterFree
+                        : '${l10n.regConfirmCtaProceedPaymentPrefix}'
+                            '${_formatXaf(widget.entryFeeXaf)}'
+                            '${l10n.regConfirmCtaXafSuffix}',
                 fullWidth: true,
                 size: ArenaButtonSize.large,
                 isLoading: _submitting,
@@ -180,7 +183,7 @@ class _RegistrationConfirmPageState
               ),
               const SizedBox(height: ArenaSpacing.sm),
               ArenaButton(
-                label: 'Annuler',
+                label: l10n.regConfirmCancel,
                 fullWidth: true,
                 variant: ArenaButtonVariant.ghost,
                 onPressed: () => Navigator.maybePop(context),
@@ -193,12 +196,13 @@ class _RegistrationConfirmPageState
   }
 
   Future<void> _onSubmit() async {
+    final l10n = AppLocalizations.of(context);
     setState(() => _submitting = true);
     try {
       if (_isFree) {
         final playerId = ref.read(currentSessionProvider)?.user.id;
         if (playerId == null) {
-          throw StateError('Aucune session — inscription impossible.');
+          throw StateError(l10n.regConfirmNoSession);
         }
         final queued =
             await ref.read(offlineAwareActionsProvider).registerFreeCompetition(
@@ -210,7 +214,7 @@ class _RegistrationConfirmPageState
           SnackBar(
             content: Text(
               queued
-                  ? 'Hors ligne — inscription enregistrée, confirmée à la reconnexion.'
+                  ? l10n.regConfirmOfflineQueued
                   : 'Inscription confirmée à ${widget.competitionName}.',
             ),
             backgroundColor:
@@ -256,7 +260,7 @@ class _RegistrationConfirmPageState
       if (!mounted) return;
       setState(() => _submitting = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur : $e')),
+        SnackBar(content: Text('${l10n.regConfirmErrorPrefix}$e')),
       );
     }
   }
@@ -270,6 +274,7 @@ class _DisplayTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return RichText(
       text: TextSpan(
         style: ArenaText.h1.copyWith(
@@ -279,9 +284,9 @@ class _DisplayTitle extends StatelessWidget {
           height: 1,
         ),
         children: [
-          const TextSpan(text: 'Confirme '),
+          TextSpan(text: l10n.regConfirmDisplayTitleStart),
           TextSpan(
-            text: 'ton inscription.',
+            text: l10n.regConfirmDisplayTitleAccent,
             style: ArenaText.serifAccent.copyWith(
               color: ArenaColors.iceCyan,
               fontSize: 22,
@@ -317,6 +322,7 @@ class _CompetitionBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(ArenaSpacing.lg),
@@ -354,7 +360,7 @@ class _CompetitionBanner extends StatelessWidget {
               ),
               const SizedBox(width: ArenaSpacing.xs),
               _Pill(
-                label: isFree ? 'GRATUIT' : 'PAYANTE',
+                label: isFree ? l10n.regConfirmPillFree : l10n.regConfirmPillPaid,
                 accent:
                     isFree ? ArenaColors.statusOk : ArenaColors.tierGoldWarm,
               ),
@@ -415,6 +421,7 @@ class _PaymentBreakdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       decoration: BoxDecoration(
         color: ArenaColors.carbon,
@@ -424,14 +431,17 @@ class _PaymentBreakdown extends StatelessWidget {
       child: Column(
         children: [
           _Row(
-            label: "Frais d'inscription",
+            label: l10n.regConfirmBreakdownFee,
             value: '${_formatXaf(entryFeeXaf)} XAF',
           ),
           const ArenaDivider(),
-          const _Row(label: 'Frais de service', value: 'Inclus'),
+          _Row(
+            label: l10n.regConfirmBreakdownService,
+            value: l10n.regConfirmBreakdownServiceIncluded,
+          ),
           const ArenaDivider(),
           _Row(
-            label: 'Total à payer',
+            label: l10n.regConfirmBreakdownTotal,
             value: '${_formatXaf(entryFeeXaf)} XAF',
             emphasis: true,
           ),
@@ -525,6 +535,7 @@ class _PrizeDistribution extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final ranks = distribution.length > kMaxRewardedRanks
         ? kMaxRewardedRanks
         : distribution.length;
@@ -550,7 +561,9 @@ class _PrizeDistribution extends StatelessWidget {
           const SizedBox(height: 2),
           Center(
             child: Text(
-              ranks <= 1 ? '1 rang récompensé' : '$ranks rangs récompensés',
+              ranks <= 1
+                  ? l10n.regConfirmRanksRewardedSingle
+                  : '$ranks${l10n.regConfirmRanksRewardedPluralSuffix}',
               style: ArenaText.small.copyWith(color: ArenaColors.silver),
             ),
           ),
@@ -650,6 +663,7 @@ class _AckTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return InkWell(
       onTap: () => onChanged(!checked),
       borderRadius: BorderRadius.circular(ArenaRadius.lg),
@@ -671,7 +685,7 @@ class _AckTile extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.only(top: 12),
                 child: Text(
-                  "J'accepte les règles du tournoi et le règlement intérieur.",
+                  l10n.regConfirmAckLabel,
                   style: ArenaText.body,
                 ),
               ),
@@ -706,21 +720,23 @@ class _StoreButtons extends StatelessWidget {
     if (uri == null) return;
     final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!ok && context.mounted) {
+      final l10n = AppLocalizations.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Impossible d'ouvrir le lien.")),
+        SnackBar(content: Text(l10n.regConfirmStoreLinkError)),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final hasAndroid = androidUrl != null && androidUrl!.isNotEmpty;
     final hasIos = iosUrl != null && iosUrl!.isNotEmpty;
     if (!hasAndroid && !hasIos) return const SizedBox.shrink();
 
     final androidBtn = hasAndroid
         ? ArenaButton(
-            label: 'Play Store',
+            label: l10n.regConfirmPlayStore,
             icon: Icons.android,
             fullWidth: true,
             variant: ArenaButtonVariant.secondary,
@@ -729,7 +745,7 @@ class _StoreButtons extends StatelessWidget {
         : null;
     final iosBtn = hasIos
         ? ArenaButton(
-            label: 'App Store',
+            label: l10n.regConfirmAppStore,
             icon: Icons.apple,
             fullWidth: true,
             variant: ArenaButtonVariant.secondary,

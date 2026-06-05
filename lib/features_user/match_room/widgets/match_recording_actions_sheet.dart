@@ -1,5 +1,6 @@
 import 'package:arena/core/services/match_recording_coordinator.dart';
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,6 +30,7 @@ class MatchRecordingActionsSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final asyncState = ref.watch(coordinatorStateProvider);
     final state = asyncState.value ?? const CoordinatorIdle();
     final coord = ref.read(matchRecordingCoordinatorProvider);
@@ -62,7 +64,7 @@ class MatchRecordingActionsSheet extends ConsumerWidget {
                   ),
                   const SizedBox(width: ArenaSpacing.sm),
                   Text(
-                    _stateLabel(state),
+                    _stateLabel(state, l10n),
                     style: ArenaText.inputLabel.copyWith(
                       color: ArenaColors.silver,
                     ),
@@ -75,7 +77,7 @@ class MatchRecordingActionsSheet extends ConsumerWidget {
                 _ActionTile(
                   icon: Icons.play_arrow,
                   color: ArenaColors.success,
-                  label: 'Continuer',
+                  label: l10n.recordingActionResume,
                   onTap: () {
                     coord.resume();
                     Navigator.of(context).pop();
@@ -85,7 +87,7 @@ class MatchRecordingActionsSheet extends ConsumerWidget {
                 _ActionTile(
                   icon: Icons.pause,
                   color: ArenaColors.warning,
-                  label: 'Pause (max 2 min)',
+                  label: l10n.recordingActionPause,
                   onTap: () {
                     coord.pause();
                     Navigator.of(context).pop();
@@ -94,13 +96,13 @@ class MatchRecordingActionsSheet extends ConsumerWidget {
               _ActionTile(
                 icon: Icons.save_alt,
                 color: ArenaColors.success,
-                label: 'Enregistrer et arrêter',
+                label: l10n.recordingActionSaveStop,
                 onTap: () => _onStopAndExport(context, coord),
               ),
               _ActionTile(
                 icon: Icons.stop_circle_outlined,
                 color: ArenaColors.danger,
-                label: 'Arrêter (forfait)',
+                label: l10n.recordingActionForfeit,
                 onTap: () async {
                   Navigator.of(context).pop();
                   await coord.declareForfeit();
@@ -113,7 +115,7 @@ class MatchRecordingActionsSheet extends ConsumerWidget {
                   vertical: ArenaSpacing.md,
                 ),
                 child: Text(
-                  'Aucun enregistrement en cours.',
+                  l10n.recordingNoRecordingInProgress,
                   style: ArenaText.bodyMuted,
                 ),
               ),
@@ -145,12 +147,12 @@ class MatchRecordingActionsSheet extends ConsumerWidget {
         CoordinatorIdle() => ArenaColors.silver,
       };
 
-  String _stateLabel(CoordinatorState s) => switch (s) {
-        CoordinatorRecording() => 'Enregistrement en cours',
-        CoordinatorPaused() => 'En pause — reprends sous 2 min',
-        CoordinatorForfeited() => 'Forfait déclaré',
-        CoordinatorStopped() => 'Enregistrement arrêté',
-        CoordinatorIdle() => 'Aucun enregistrement',
+  String _stateLabel(CoordinatorState s, AppLocalizations l10n) => switch (s) {
+        CoordinatorRecording() => l10n.recordingStateRecording,
+        CoordinatorPaused() => l10n.recordingStatePaused,
+        CoordinatorForfeited() => l10n.recordingStateForfeited,
+        CoordinatorStopped() => l10n.recordingStateStopped,
+        CoordinatorIdle() => l10n.recordingStateIdle,
       };
 }
 

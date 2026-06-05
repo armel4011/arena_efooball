@@ -8,6 +8,7 @@ import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_user/payments/payment_method.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -76,6 +77,7 @@ class _MobileMoneyDetailsPageState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final method = widget.method;
     final hasCode = widget.merchantCode.trim().isNotEmpty;
     return Scaffold(
@@ -101,7 +103,7 @@ class _MobileMoneyDetailsPageState
                 ),
               const SizedBox(height: ArenaSpacing.lg),
               Text(
-                'PAYS',
+                l10n.mobileMoneyCountryLabel,
                 style: ArenaText.monoSmall.copyWith(
                   color: ArenaColors.silver,
                   letterSpacing: 1.5,
@@ -115,7 +117,7 @@ class _MobileMoneyDetailsPageState
               ),
               const SizedBox(height: ArenaSpacing.md),
               Text(
-                'NUMÉRO ${method.label.toUpperCase()}',
+                '${l10n.mobileMoneyNumberLabel}${method.label.toUpperCase()}',
                 style: ArenaText.monoSmall.copyWith(
                   color: ArenaColors.silver,
                   letterSpacing: 1.5,
@@ -124,8 +126,7 @@ class _MobileMoneyDetailsPageState
               ),
               const SizedBox(height: ArenaSpacing.xs),
               Text(
-                'Le numéro depuis lequel tu vas payer (utile au super-admin '
-                'pour retrouver ta transaction).',
+                l10n.mobileMoneyNumberHelp,
                 style: ArenaText.small,
               ),
               const SizedBox(height: ArenaSpacing.xs),
@@ -150,7 +151,7 @@ class _MobileMoneyDetailsPageState
               if (_phoneValid) ...[
                 const SizedBox(height: ArenaSpacing.xs),
                 Text(
-                  '✓ Numéro valide ${method.label}',
+                  '${l10n.mobileMoneyPhoneValid}${method.label}',
                   style:
                       ArenaText.bodyMuted.copyWith(color: ArenaColors.statusOk),
                 ),
@@ -162,8 +163,8 @@ class _MobileMoneyDetailsPageState
               const SizedBox(height: ArenaSpacing.xl),
               ArenaButton(
                 label: _submitting
-                    ? 'ENVOI…'
-                    : "J'AI PAYÉ ${_formatXaf(widget.amountXaf)} XAF",
+                    ? l10n.mobileMoneySubmitSending
+                    : '${l10n.mobileMoneySubmitPaid}${_formatXaf(widget.amountXaf)} XAF',
                 fullWidth: true,
                 size: ArenaButtonSize.large,
                 isLoading: _submitting,
@@ -180,8 +181,9 @@ class _MobileMoneyDetailsPageState
   Future<void> _copyCode(BuildContext context) async {
     await Clipboard.setData(ClipboardData(text: widget.merchantCode));
     if (!context.mounted) return;
+    final l10n = AppLocalizations.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Code marchand copié.')),
+      SnackBar(content: Text(l10n.mobileMoneyCodeCopied)),
     );
   }
 
@@ -194,12 +196,10 @@ class _MobileMoneyDetailsPageState
     final uri = Uri.parse('tel:$ussd');
     final ok = await launchUrl(uri);
     if (!ok && context.mounted) {
+      final l10n = AppLocalizations.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            "Impossible d'ouvrir le composeur. Copie le code et compose-le "
-            'à la main.',
-          ),
+        SnackBar(
+          content: Text(l10n.mobileMoneyDialerError),
         ),
       );
     }
@@ -230,22 +230,25 @@ class _MobileMoneyDetailsPageState
     } on PostgrestException catch (e, st) {
       await Sentry.captureException(e, stackTrace: st);
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
       setState(() => _submitting = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Erreur lors de l'envoi : ${e.message}")),
+        SnackBar(content: Text('${l10n.mobileMoneySubmitError}${e.message}')),
       );
     } on SocketException catch (e) {
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
       setState(() => _submitting = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Pas de connexion : $e')),
+        SnackBar(content: Text('${l10n.mobileMoneyNoConnection}$e')),
       );
     } catch (e, st) {
       await Sentry.captureException(e, stackTrace: st);
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
       setState(() => _submitting = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Erreur lors de l'envoi : $e")),
+        SnackBar(content: Text('${l10n.mobileMoneySubmitError}$e')),
       );
     }
   }
@@ -266,15 +269,19 @@ class _Hero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Center(
       child: Column(
         children: [
           PaymentMethodLogo(method: method, size: 70),
           const SizedBox(height: ArenaSpacing.sm),
-          Text('Paiement ${method.label}', style: ArenaText.h3),
+          Text(
+            '${l10n.mobileMoneyHeroPayment}${method.label}',
+            style: ArenaText.h3,
+          ),
           const SizedBox(height: 2),
           Text(
-            'Pour ${_formatXaf(amountXaf)} XAF',
+            '${l10n.mobileMoneyHeroForAmount}${_formatXaf(amountXaf)} XAF',
             style: ArenaText.bodyMuted,
           ),
         ],
@@ -298,6 +305,7 @@ class _MerchantCodeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.lg),
       decoration: BoxDecoration(
@@ -315,7 +323,7 @@ class _MerchantCodeCard extends StatelessWidget {
             children: [
               Text('📱', style: ArenaText.h3),
               const SizedBox(width: 6),
-              Text('Code marchand', style: ArenaText.h3),
+              Text(l10n.mobileMoneyMerchantCodeTitle, style: ArenaText.h3),
             ],
           ),
           const SizedBox(height: ArenaSpacing.sm),
@@ -346,7 +354,7 @@ class _MerchantCodeCard extends StatelessWidget {
             children: [
               Expanded(
                 child: ArenaButton(
-                  label: '📋 COPIER',
+                  label: l10n.mobileMoneyCopyButton,
                   variant: ArenaButtonVariant.secondary,
                   onPressed: onCopy,
                 ),
@@ -354,7 +362,7 @@ class _MerchantCodeCard extends StatelessWidget {
               const SizedBox(width: ArenaSpacing.sm),
               Expanded(
                 child: ArenaButton(
-                  label: '📞 EXÉCUTER',
+                  label: l10n.mobileMoneyExecuteButton,
                   onPressed: onDial,
                 ),
               ),
@@ -377,18 +385,17 @@ class _MissingCodeBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.md),
       decoration: arenaDangerCardDecoration(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('⚠ Code marchand manquant', style: ArenaText.h3),
+          Text(l10n.mobileMoneyMissingCodeTitle, style: ArenaText.h3),
           const SizedBox(height: ArenaSpacing.xs),
           Text(
-            "L'admin n'a pas encore configuré de code marchand pour "
-            'cette méthode sur cette compétition. Choisis une autre '
-            'méthode ou contacte le support.',
+            l10n.mobileMoneyMissingCodeBody,
             style: ArenaText.body,
           ),
         ],
@@ -429,13 +436,14 @@ class _Disclaimer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.lg),
       decoration: arenaWarningCardDecoration(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('⚠ Avant de continuer', style: ArenaText.h3),
+          Text(l10n.mobileMoneyDisclaimerTitle, style: ArenaText.h3),
           const SizedBox(height: ArenaSpacing.sm),
           for (final i in _items)
             Padding(

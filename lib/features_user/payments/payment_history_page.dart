@@ -7,6 +7,7 @@ import 'package:arena/features_shared/widgets/arena_badge.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_user/payments/payment_method.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,11 +25,12 @@ class PaymentHistoryPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final paymentsAsync = ref.watch(myPaymentsProvider);
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        appBar: const ArenaAppBar(title: 'HISTORIQUE'),
+        appBar: ArenaAppBar(title: l10n.paymentHistoryAppBarTitle),
         body: ArenaScreenBackground(
           child: SafeArea(
             child: Column(
@@ -42,8 +44,10 @@ class PaymentHistoryPage extends ConsumerWidget {
                           child: CircularProgressIndicator(),
                         ),
                         error: (e, _) => Center(
-                          child:
-                              Text('Erreur : $e', style: ArenaText.bodyMuted),
+                          child: Text(
+                            '${l10n.paymentHistoryErrorPrefix}$e',
+                            style: ArenaText.bodyMuted,
+                          ),
                         ),
                         data: (list) => _PaymentList(items: list),
                       ),
@@ -65,6 +69,7 @@ class _HistoryTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: ArenaSpacing.lg),
       child: TabBar(
@@ -74,9 +79,9 @@ class _HistoryTabs extends StatelessWidget {
         unselectedLabelColor: ArenaColors.silver,
         indicatorColor: ArenaColors.signalBlue,
         indicatorWeight: 2,
-        tabs: const [
-          Tab(text: 'PAIEMENTS'),
-          Tab(text: 'GAINS'),
+        tabs: [
+          Tab(text: l10n.paymentHistoryTabPayments),
+          Tab(text: l10n.paymentHistoryTabGains),
         ],
       ),
     );
@@ -91,19 +96,23 @@ class _GainsTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final payoutsAsync = ref.watch(myPayoutsProvider);
     return payoutsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) =>
-          Center(child: Text('Erreur : $e', style: ArenaText.bodyMuted)),
+      error: (e, _) => Center(
+        child: Text(
+          '${l10n.paymentHistoryErrorPrefix}$e',
+          style: ArenaText.bodyMuted,
+        ),
+      ),
       data: (list) {
         if (list.isEmpty) {
           return Center(
             child: Padding(
               padding: const EdgeInsets.all(ArenaSpacing.xl),
               child: Text(
-                'Aucun gain pour le moment. Remporte une compétition pour '
-                'recevoir un versement !',
+                l10n.paymentHistoryGainsEmpty,
                 textAlign: TextAlign.center,
                 style: ArenaText.bodyMuted,
               ),
@@ -135,13 +144,16 @@ class _PayoutCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final amount = NumberFormat('#,##0', 'fr_FR')
         .format(payout.amountLocal)
         .replaceAll(',', ' ');
     final (badge, variant) = switch (payout) {
-      final p when p.isPaid => ('VERSÉ', ArenaBadgeVariant.success),
-      final p when p.isClaimed => ('EN ATTENTE', ArenaBadgeVariant.warn),
-      _ => ('À RÉCLAMER', ArenaBadgeVariant.danger),
+      final p when p.isPaid =>
+        (l10n.paymentHistoryBadgePaid, ArenaBadgeVariant.success),
+      final p when p.isClaimed =>
+        (l10n.paymentHistoryBadgePending, ArenaBadgeVariant.warn),
+      _ => (l10n.paymentHistoryBadgeToClaim, ArenaBadgeVariant.danger),
     };
     final canClaim = payout.isPending && !payout.isClaimed;
 
@@ -165,8 +177,8 @@ class _PayoutCard extends ConsumerWidget {
                   children: [
                     Text(
                       payout.rank != null
-                          ? 'Gain · rang ${payout.rank}'
-                          : 'Gain de compétition',
+                          ? '${l10n.paymentHistoryGainRanked}${payout.rank}'
+                          : l10n.paymentHistoryGainGeneric,
                       style:
                           ArenaText.body.copyWith(fontWeight: FontWeight.w600),
                     ),
@@ -199,7 +211,7 @@ class _PayoutCard extends ConsumerWidget {
           if (canClaim) ...[
             const SizedBox(height: ArenaSpacing.sm),
             ArenaButton(
-              label: 'RÉCLAMER MON GAIN',
+              label: l10n.paymentHistoryClaimButton,
               fullWidth: true,
               onPressed: () => _claim(context, ref),
             ),
@@ -210,6 +222,7 @@ class _PayoutCard extends ConsumerWidget {
   }
 
   Future<void> _claim(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context);
     final result = await showModalBottomSheet<({String phone, String method})>(
       context: context,
       backgroundColor: ArenaColors.carbon,
@@ -226,14 +239,14 @@ class _PayoutCard extends ConsumerWidget {
       ref.invalidate(myPayoutsProvider);
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Gain réclamé — le staff va procéder au versement.'),
+        SnackBar(
+          content: Text(l10n.paymentHistoryClaimSuccess),
         ),
       );
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Échec : $e')),
+        SnackBar(content: Text('${l10n.paymentHistoryClaimFailPrefix}$e')),
       );
     }
   }
@@ -261,6 +274,7 @@ class _ClaimSheetState extends State<_ClaimSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: EdgeInsets.only(
         left: ArenaSpacing.lg,
@@ -272,10 +286,10 @@ class _ClaimSheetState extends State<_ClaimSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Réclamer mon gain', style: ArenaText.h3),
+          Text(l10n.paymentHistoryClaimSheetTitle, style: ArenaText.h3),
           const SizedBox(height: ArenaSpacing.xs),
           Text(
-            'Indique le numéro Mobile Money sur lequel recevoir ton versement.',
+            l10n.paymentHistoryClaimSheetSubtitle,
             style: ArenaText.bodyMuted,
           ),
           const SizedBox(height: ArenaSpacing.md),
@@ -283,7 +297,7 @@ class _ClaimSheetState extends State<_ClaimSheet> {
             children: [
               Expanded(
                 child: _MethodChip(
-                  label: 'MTN MoMo',
+                  label: l10n.paymentHistoryClaimMethodMtn,
                   selected: _method == 'MTN_MOMO',
                   onTap: () => setState(() => _method = 'MTN_MOMO'),
                 ),
@@ -291,7 +305,7 @@ class _ClaimSheetState extends State<_ClaimSheet> {
               const SizedBox(width: ArenaSpacing.sm),
               Expanded(
                 child: _MethodChip(
-                  label: 'Orange Money',
+                  label: l10n.paymentHistoryClaimMethodOrange,
                   selected: _method == 'ORANGE_MONEY',
                   onTap: () => setState(() => _method = 'ORANGE_MONEY'),
                 ),
@@ -303,19 +317,19 @@ class _ClaimSheetState extends State<_ClaimSheet> {
             controller: _phone,
             keyboardType: TextInputType.phone,
             style: ArenaText.body,
-            decoration: const InputDecoration(
-              hintText: 'Numéro Mobile Money (ex. +237 6XX XX XX XX)',
+            decoration: InputDecoration(
+              hintText: l10n.paymentHistoryClaimPhoneHint,
             ),
           ),
           const SizedBox(height: ArenaSpacing.lg),
           ArenaButton(
-            label: 'CONFIRMER',
+            label: l10n.paymentHistoryClaimConfirm,
             fullWidth: true,
             onPressed: () {
               final phone = _phone.text.trim();
               if (phone.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Numéro requis.')),
+                  SnackBar(content: Text(l10n.paymentHistoryClaimPhoneRequired)),
                 );
                 return;
               }
@@ -374,12 +388,13 @@ class _PaymentList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     if (items.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(ArenaSpacing.xl),
           child: Text(
-            'Aucun paiement pour le moment.',
+            l10n.paymentHistoryEmptyPayments,
             textAlign: TextAlign.center,
             style: ArenaText.bodyMuted,
           ),
@@ -427,6 +442,7 @@ class _NetBalanceFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         ArenaSpacing.lg,
@@ -453,7 +469,7 @@ class _NetBalanceFooter extends StatelessWidget {
         child: Row(
           children: [
             Text(
-              'SOLDE NET',
+              l10n.paymentHistoryNetBalanceLabel,
               style: ArenaText.monoSmall.copyWith(
                 color: ArenaColors.bone,
                 letterSpacing: 1.5,
@@ -485,7 +501,8 @@ class _TxCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final spec = _spec(payment.status);
+    final l10n = AppLocalizations.of(context);
+    final spec = _spec(l10n, payment.status);
     final dateLabel = DateFormat('dd/MM HH:mm').format(
       payment.createdAt.toLocal(),
     );
@@ -528,7 +545,7 @@ class _TxCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Inscription compétition',
+                  l10n.paymentHistoryTxTitle,
                   style: ArenaText.body.copyWith(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 2),
@@ -564,6 +581,7 @@ class _TxCard extends StatelessWidget {
   }
 
   void _resume(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final method = PaymentMethod.fromCode(payment.payerMethod ?? 'MTN_MOMO');
     context.push(
       UserRoutes.paymentProcessing,
@@ -571,7 +589,7 @@ class _TxCard extends StatelessWidget {
         paymentId: payment.id,
         method: method,
         amountXaf: payment.amountLocal.round(),
-        competitionName: 'Compétition',
+        competitionName: l10n.paymentHistoryResumeCompetition,
         maskedPhone: payment.payerPhone ?? '+••• •• •• ••',
       ),
     );
@@ -585,7 +603,7 @@ class _TxCard extends StatelessWidget {
     String badge,
     ArenaBadgeVariant badgeVariant,
     bool isFail,
-  }) _spec(String status) {
+  }) _spec(AppLocalizations l10n, String status) {
     switch (status) {
       case 'succeeded':
         return (
@@ -593,7 +611,7 @@ class _TxCard extends StatelessWidget {
           iconColor: ArenaColors.brandMtnMomo,
           tint: const Color(0x33FFA500), // brandMtnMomo @ 20% alpha
           amountColor: ArenaColors.neonRed,
-          badge: 'PAYÉ',
+          badge: l10n.paymentHistoryTxBadgePaid,
           badgeVariant: ArenaBadgeVariant.success,
           isFail: false,
         );
@@ -605,7 +623,7 @@ class _TxCard extends StatelessWidget {
           iconColor: ArenaColors.signalBlue,
           tint: const Color(0x33007BFF),
           amountColor: ArenaColors.silver,
-          badge: 'EN ATTENTE',
+          badge: l10n.paymentHistoryTxBadgePending,
           badgeVariant: ArenaBadgeVariant.warn,
           isFail: false,
         );
@@ -615,7 +633,7 @@ class _TxCard extends StatelessWidget {
           iconColor: ArenaColors.signalBlue,
           tint: const Color(0x33007BFF),
           amountColor: ArenaColors.silver,
-          badge: 'REMBOURSEMENT',
+          badge: l10n.paymentHistoryTxBadgeRefund,
           badgeVariant: ArenaBadgeVariant.warn,
           isFail: false,
         );
@@ -625,7 +643,7 @@ class _TxCard extends StatelessWidget {
           iconColor: ArenaColors.statusOk,
           tint: const Color(0x3300C2A8),
           amountColor: ArenaColors.silverDim,
-          badge: 'REMBOURSÉ',
+          badge: l10n.paymentHistoryTxBadgeRefunded,
           badgeVariant: ArenaBadgeVariant.success,
           isFail: true,
         );
@@ -637,7 +655,7 @@ class _TxCard extends StatelessWidget {
           iconColor: ArenaColors.neonRed,
           tint: const Color(0x33FF2D55),
           amountColor: ArenaColors.silverDim,
-          badge: 'ÉCHEC',
+          badge: l10n.paymentHistoryTxBadgeFailed,
           badgeVariant: ArenaBadgeVariant.danger,
           isFail: true,
         );

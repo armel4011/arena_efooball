@@ -4,6 +4,7 @@ import 'package:arena/data/models/match_stream.dart';
 import 'package:arena/data/repositories/match_stream_repository.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
 import 'package:arena/features_user/home/widgets/home_error_row.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -18,10 +19,12 @@ class LiveStreamsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final async = ref.watch(activePublicStreamsProvider);
     return async.when(
       loading: () => const _LiveLoadingCard(),
-      error: (e, _) => HomeErrorRow(message: 'Erreur : $e'),
+      error: (e, _) =>
+          HomeErrorRow(message: '${l10n.liveStreamsErrorPrefix}$e'),
       data: (streams) {
         if (streams.isEmpty) return const _LiveEmptyCard();
         return _LiveStreamCard(
@@ -56,6 +59,7 @@ class _LiveStreamCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final matchId = stream.matchId;
     final gradient = _palettes[matchId.hashCode.abs() % _palettes.length];
 
@@ -95,8 +99,8 @@ class _LiveStreamCard extends StatelessWidget {
               left: 10,
               child: Row(
                 children: [
-                  const ArenaBadge(
-                    label: 'LIVE',
+                  ArenaBadge(
+                    label: l10n.liveStreamsBadgeLive,
                     variant: ArenaBadgeVariant.live,
                   ),
                   if (allCount > 1) ...[
@@ -141,7 +145,7 @@ class _LiveStreamCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Tape pour regarder en direct',
+                    l10n.liveStreamsTapToWatch,
                     style: ArenaText.small.copyWith(
                       color: ArenaColors.bone.withValues(alpha: 0.85),
                     ),
@@ -183,28 +187,31 @@ class _LiveLoadingCard extends StatelessWidget {
 class _LiveEmptyCard extends StatelessWidget {
   const _LiveEmptyCard();
   @override
-  Widget build(BuildContext context) => Container(
-        height: 110,
-        decoration: BoxDecoration(
-          color: ArenaColors.carbon,
-          borderRadius: BorderRadius.circular(ArenaRadius.lg),
-          border: Border.all(color: ArenaColors.border),
-        ),
-        alignment: Alignment.center,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.tv_off_outlined,
-              color: ArenaColors.silver,
-              size: 20,
-            ),
-            const SizedBox(width: ArenaSpacing.sm),
-            Text(
-              'Aucun live en cours',
-              style: ArenaText.bodyMuted,
-            ),
-          ],
-        ),
-      );
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Container(
+      height: 110,
+      decoration: BoxDecoration(
+        color: ArenaColors.carbon,
+        borderRadius: BorderRadius.circular(ArenaRadius.lg),
+        border: Border.all(color: ArenaColors.border),
+      ),
+      alignment: Alignment.center,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.tv_off_outlined,
+            color: ArenaColors.silver,
+            size: 20,
+          ),
+          const SizedBox(width: ArenaSpacing.sm),
+          Text(
+            l10n.liveStreamsEmptyState,
+            style: ArenaText.bodyMuted,
+          ),
+        ],
+      ),
+    );
+  }
 }

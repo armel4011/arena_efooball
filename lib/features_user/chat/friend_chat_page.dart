@@ -17,6 +17,7 @@ import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/chat/call_screen.dart';
 import 'package:arena/features_user/chat/chat_page.dart';
 import 'package:arena/features_user/chat/messages_inbox_page.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -56,6 +57,7 @@ class _FriendChatPageState extends ConsumerState<FriendChatPage> {
     if (text.isEmpty) return;
     final selfId = ref.read(currentSessionProvider)?.user.id;
     if (selfId == null) return;
+    final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _sending = true);
     try {
@@ -67,15 +69,17 @@ class _FriendChatPageState extends ConsumerState<FriendChatPage> {
       _inputCtrl.clear();
       if (queued && mounted) {
         messenger.showSnackBar(
-          const SnackBar(
-            content: Text('Hors ligne — message envoyé à la reconnexion.'),
+          SnackBar(
+            content: Text(l10n.friendChatOfflineQueued),
           ),
         );
       }
     } catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text('Impossible : ${arenaErrorMessage(e)}')),
+        SnackBar(
+          content: Text('${l10n.friendChatSendFailed}${arenaErrorMessage(e)}'),
+        ),
       );
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -86,6 +90,7 @@ class _FriendChatPageState extends ConsumerState<FriendChatPage> {
     if (_uploading) return;
     final selfId = ref.read(currentSessionProvider)?.user.id;
     if (selfId == null) return;
+    final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final XFile? picked;
     try {
@@ -96,7 +101,9 @@ class _FriendChatPageState extends ConsumerState<FriendChatPage> {
       );
     } catch (e) {
       messenger.showSnackBar(
-        SnackBar(content: Text('Picker : ${arenaErrorMessage(e)}')),
+        SnackBar(
+          content: Text('${l10n.friendChatPickerFailed}${arenaErrorMessage(e)}'),
+        ),
       );
       return;
     }
@@ -112,7 +119,9 @@ class _FriendChatPageState extends ConsumerState<FriendChatPage> {
     } catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text('Échec : ${arenaErrorMessage(e)}')),
+        SnackBar(
+          content: Text('${l10n.friendChatGenericFailure}${arenaErrorMessage(e)}'),
+        ),
       );
     } finally {
       if (mounted) setState(() => _uploading = false);
@@ -120,6 +129,7 @@ class _FriendChatPageState extends ConsumerState<FriendChatPage> {
   }
 
   Future<void> _showAttachSheet(String channelId) async {
+    final l10n = AppLocalizations.of(context);
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
       backgroundColor: ArenaColors.carbon,
@@ -132,7 +142,7 @@ class _FriendChatPageState extends ConsumerState<FriendChatPage> {
                 Icons.photo_library_outlined,
                 color: ArenaColors.signalBlue,
               ),
-              title: const Text('Choisir dans la galerie'),
+              title: Text(l10n.friendChatAttachGallery),
               onTap: () => Navigator.pop(ctx, ImageSource.gallery),
             ),
             ListTile(
@@ -140,7 +150,7 @@ class _FriendChatPageState extends ConsumerState<FriendChatPage> {
                 Icons.photo_camera_outlined,
                 color: ArenaColors.signalBlue,
               ),
-              title: const Text('Prendre une photo'),
+              title: Text(l10n.friendChatAttachCamera),
               onTap: () => Navigator.pop(ctx, ImageSource.camera),
             ),
             const SizedBox(height: ArenaSpacing.sm),
@@ -170,23 +180,22 @@ class _FriendChatPageState extends ConsumerState<FriendChatPage> {
   }
 
   Future<void> _confirmAndDelete(ChatMessage msg) async {
+    final l10n = AppLocalizations.of(context);
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: ArenaColors.carbon,
-        title: const Text('Supprimer ce message ?'),
-        content: const Text(
-          'Ton ami verra «Message supprimé» à la place.',
-        ),
+        title: Text(l10n.friendChatDeleteDialogTitle),
+        content: Text(l10n.friendChatDeleteDialogContent),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Annuler'),
+            child: Text(l10n.friendChatDeleteDialogCancel),
           ),
           TextButton(
             style: TextButton.styleFrom(foregroundColor: ArenaColors.neonRed),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('SUPPRIMER'),
+            child: Text(l10n.friendChatDeleteDialogConfirm),
           ),
         ],
       ),
@@ -197,7 +206,9 @@ class _FriendChatPageState extends ConsumerState<FriendChatPage> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Échec : ${arenaErrorMessage(e)}')),
+        SnackBar(
+          content: Text('${l10n.friendChatGenericFailure}${arenaErrorMessage(e)}'),
+        ),
       );
     }
   }
@@ -241,6 +252,7 @@ class _FriendChatPageState extends ConsumerState<FriendChatPage> {
   }
 
   Widget _buildBody(ChatChannel channel) {
+    final l10n = AppLocalizations.of(context);
     final selfId = ref.watch(currentSessionProvider)?.user.id;
     final msgsAsync = ref.watch(channelMessagesProvider(channel.id));
     final clearedAt =
@@ -265,10 +277,10 @@ class _FriendChatPageState extends ConsumerState<FriendChatPage> {
                           m,
                     ];
               if (messages.isEmpty) {
-                return const EmptyState(
+                return EmptyState(
                   icon: Icons.chat_bubble_outline,
-                  title: 'Démarre la conversation',
-                  description: 'Envoie un premier message à ton ami.',
+                  title: l10n.friendChatEmptyTitle,
+                  description: l10n.friendChatEmptyDescription,
                 );
               }
               return ListView.builder(
@@ -378,7 +390,8 @@ class _FriendChatAppBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final username = peer?.username ?? 'Ami';
+    final l10n = AppLocalizations.of(context);
+    final username = peer?.username ?? l10n.friendChatUsernameFallback;
     final initials = username.isEmpty ? '?' : username[0].toUpperCase();
     return Container(
       height: 56,
@@ -437,7 +450,7 @@ class _FriendChatAppBar extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
-                          'Ami',
+                          l10n.friendChatSubtitleFriend,
                           style: ArenaText.small.copyWith(
                             color: ArenaColors.silver,
                           ),

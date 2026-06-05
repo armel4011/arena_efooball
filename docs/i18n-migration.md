@@ -31,19 +31,18 @@
      `_xFor(AppLocalizations l10n)` (cf. `OnboardingPage._slidesFor`).
 5. `flutter analyze` → 0 issue, puis tester le switch de langue (RTL auto pour ar).
 
-## Restant
-~85 écrans à migrer (l'onboarding est fait). Avancer par lots cohérents
-(auth, profil, compétitions, paiements/gains, chat, admin…). Chaque écran suit
-les 5 étapes ci-dessus — c'est mécanique, pas de décision.
-
 ## Fait
-- ✅ **onboarding** (`onboarding_page.dart`) : 4 slides + CTA + dialogue de
-  sortie, fr/en/ar.
-- ✅ **flux connexion** : `login_user_screen.dart` + `forgot_password_page.dart`
-  (clés `auth*` partagées + `login*`/`forgotPassword*`), fr/en/ar.
+- ✅ **onboarding** + **flux connexion** (pilotes manuels, PR #50/#51).
+- ✅ **TOUT `features_user`** (~62 écrans) migré en masse via run multi-agents
+  (extraction → fusion ARB centralisée → câblage) : **789 clés** fr/en/ar,
+  **718 chaînes câblées**. Outil de fusion : `scripts/i18n_merge.mjs`.
 
-### Reste du flux auth (à faire)
-`register_user_screen.dart` (689 l.), `cgu_acceptance_page.dart`,
-`reset_password_page.dart`, `reset_password_code_page.dart`,
-`splash_user_screen.dart`, `banned_account_page.dart`,
-`link_existing_account_page.dart` — réutiliser les clés `auth*` déjà créées.
+## Restant
+1. **~55 chaînes laissées en dur** (sûreté) : méthodes statiques sans
+   `BuildContext`, validateurs, defaults de constructeur const. À reprendre en
+   passant le `l10n`/`context` en paramètre.
+2. **~69 chaînes interpolées** (`'... $x ...'`) différées → à convertir en
+   **placeholders ICU** dans les ARB (`"{count}"`) puis `l10n.x(count)`.
+3. **Admin** (`features_admin` mobile + `features_admin_desktop`, ~68 écrans) :
+   hors scope (outils internes staff) — à décider.
+4. **Relecture humaine** des traductions auto en/ar (surtout arabe) avant prod.

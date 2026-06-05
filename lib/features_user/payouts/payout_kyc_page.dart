@@ -3,6 +3,7 @@ import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_stepper.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
@@ -32,16 +33,18 @@ class _PayoutKycPageState extends State<PayoutKycPage> {
   bool _captured = false;
 
   static const _stepCount = 3;
-  static const _stepTitles = <String>[
-    "Pièce d'identité (recto)",
-    "Pièce d'identité (verso)",
-    'Selfie de vérification',
-  ];
+
+  List<String> _stepTitles(AppLocalizations l10n) => <String>[
+        l10n.payoutKycStepIdRecto,
+        l10n.payoutKycStepIdVerso,
+        l10n.payoutKycStepSelfie,
+      ];
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: const ArenaAppBar(title: 'VÉRIFIER'),
+      appBar: ArenaAppBar(title: l10n.payoutKycAppBarTitle),
       body: ArenaScreenBackground(
         child: SafeArea(
           child: ListView(
@@ -54,7 +57,7 @@ class _PayoutKycPageState extends State<PayoutKycPage> {
               ArenaStepper(totalSteps: _stepCount, currentStep: _step),
               const SizedBox(height: ArenaSpacing.sm),
               Text(
-                'ÉTAPE ${(_step + 1).toString().padLeft(2, '0')}/$_stepCount · ${_stepTitles[_step].toUpperCase()}',
+                'ÉTAPE ${(_step + 1).toString().padLeft(2, '0')}/$_stepCount · ${_stepTitles(l10n)[_step].toUpperCase()}',
                 style: ArenaText.monoSmall.copyWith(
                   color: ArenaColors.statusWarn,
                   letterSpacing: 1.5,
@@ -63,7 +66,7 @@ class _PayoutKycPageState extends State<PayoutKycPage> {
               ),
               const SizedBox(height: ArenaSpacing.lg),
               Text(
-                'DOCUMENTS ACCEPTÉS',
+                l10n.payoutKycAcceptedDocsLabel,
                 style: ArenaText.monoSmall.copyWith(
                   color: ArenaColors.silver,
                   letterSpacing: 1.5,
@@ -87,8 +90,8 @@ class _PayoutKycPageState extends State<PayoutKycPage> {
               const SizedBox(height: ArenaSpacing.xl),
               ArenaButton(
                 label: _step == _stepCount - 1
-                    ? 'ENVOYER POUR VÉRIFICATION'
-                    : 'SUIVANT (recto requis)',
+                    ? l10n.payoutKycSubmitForReview
+                    : l10n.payoutKycNextRectoRequired,
                 fullWidth: true,
                 size: ArenaButtonSize.large,
                 onPressed: _captured
@@ -119,6 +122,7 @@ class _PendingAmountCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.lg),
       decoration: arenaWarningCardDecoration(),
@@ -126,13 +130,12 @@ class _PendingAmountCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '💰 Gain de ${_formatXaf(amountXaf)} XAF',
+            l10n.payoutKycPendingGain(_formatXaf(amountXaf)),
             style: ArenaText.h3,
           ),
           const SizedBox(height: ArenaSpacing.sm),
           Text(
-            'Pour ce montant, on doit vérifier ton identité avant le payout. '
-            "C'est rapide (sous 24h).",
+            l10n.payoutKycPendingExplain,
             style: ArenaText.body,
           ),
         ],
@@ -144,14 +147,16 @@ class _PendingAmountCard extends StatelessWidget {
 class _AcceptedDocs extends StatelessWidget {
   const _AcceptedDocs();
 
-  static const _docs = <(String, String)>[
-    ('🪪', "Carte d'identité nationale"),
-    ('📘', 'Passeport'),
-    ('🚗', 'Permis de conduire'),
-  ];
+  List<(String, String)> _docs(AppLocalizations l10n) => <(String, String)>[
+        ('🪪', l10n.payoutKycDocNationalId),
+        ('📘', l10n.payoutKycDocPassport),
+        ('🚗', l10n.payoutKycDocDriverLicense),
+      ];
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final docs = _docs(l10n);
     return Container(
       decoration: BoxDecoration(
         color: ArenaColors.carbon,
@@ -160,7 +165,7 @@ class _AcceptedDocs extends StatelessWidget {
       ),
       child: Column(
         children: [
-          for (var i = 0; i < _docs.length; i++)
+          for (var i = 0; i < docs.length; i++)
             Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: ArenaSpacing.md,
@@ -169,12 +174,12 @@ class _AcceptedDocs extends StatelessWidget {
               child: Row(
                 children: [
                   Text(
-                    _docs[i].$1,
+                    docs[i].$1,
                     style: const TextStyle(fontSize: 18),
                   ),
                   const SizedBox(width: ArenaSpacing.sm),
                   Expanded(
-                    child: Text(_docs[i].$2, style: ArenaText.body),
+                    child: Text(docs[i].$2, style: ArenaText.body),
                   ),
                 ],
               ),
@@ -198,6 +203,7 @@ class _CaptureCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     if (captured) {
       return Container(
         padding: const EdgeInsets.all(ArenaSpacing.lg),
@@ -210,10 +216,10 @@ class _CaptureCard extends StatelessWidget {
               color: ArenaColors.statusOk,
             ),
             const SizedBox(height: ArenaSpacing.sm),
-            Text('Photo capturée', style: ArenaText.h3),
+            Text(l10n.payoutKycPhotoCaptured, style: ArenaText.h3),
             const SizedBox(height: ArenaSpacing.sm),
             ArenaButton(
-              label: 'REPRENDRE',
+              label: l10n.payoutKycRetake,
               variant: ArenaButtonVariant.secondary,
               onPressed: onRetake,
             ),
@@ -237,18 +243,18 @@ class _CaptureCard extends StatelessWidget {
           const Text('📷', style: TextStyle(fontSize: 42)),
           const SizedBox(height: ArenaSpacing.sm),
           Text(
-            'Photographier le recto',
+            l10n.payoutKycPhotographFront,
             style: ArenaText.body.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 4),
           Text(
-            'Bonne lumière, photo nette, pas de reflets',
+            l10n.payoutKycCaptureHint,
             textAlign: TextAlign.center,
             style: ArenaText.bodyMuted,
           ),
           const SizedBox(height: ArenaSpacing.md),
           ArenaButton(
-            label: '📸 PRENDRE EN PHOTO',
+            label: l10n.payoutKycTakePhoto,
             onPressed: onCapture,
           ),
         ],
@@ -262,6 +268,7 @@ class _SecurityNote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.md),
       decoration: arenaGlowCardDecoration(),
@@ -271,12 +278,11 @@ class _SecurityNote extends StatelessWidget {
           children: [
             const TextSpan(text: '🔒 '),
             TextSpan(
-              text: 'Sécurité : ',
+              text: l10n.payoutKycSecurityLabel,
               style: ArenaText.body.copyWith(fontWeight: FontWeight.w700),
             ),
-            const TextSpan(
-              text: 'tes documents sont chiffrés et utilisés uniquement '
-                  'pour la vérification réglementaire.',
+            TextSpan(
+              text: l10n.payoutKycSecurityNote,
             ),
           ],
         ),

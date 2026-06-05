@@ -13,6 +13,7 @@ import 'package:arena/features_shared/widgets/google_sign_in_button.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/auth/widgets/auth_error_banner.dart';
 import 'package:arena/features_user/auth/widgets/auth_failure_message.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -251,14 +252,15 @@ class _AccountStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return _StepShell(
-      title: 'CRÉE\nTON COMPTE',
-      subtitle: 'Email + mot de passe (8 caractères minimum).',
+      title: l10n.registerAccountStepTitle,
+      subtitle: l10n.registerAccountStepSubtitle,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           GoogleSignInButton(
-            label: "S'inscrire avec Google",
+            label: l10n.registerGoogleSignUp,
             fullWidth: true,
             isLoading: googleLoading,
             onPressed: isLoading ? null : onGoogle,
@@ -267,7 +269,7 @@ class _AccountStep extends StatelessWidget {
           const _OrDivider(),
           const SizedBox(height: ArenaSpacing.md),
           ArenaTextField(
-            label: 'EMAIL',
+            label: l10n.registerEmailLabel,
             hint: 'joueur@arena.app',
             controller: emailCtrl,
             keyboardType: TextInputType.emailAddress,
@@ -279,7 +281,7 @@ class _AccountStep extends StatelessWidget {
           ),
           const SizedBox(height: ArenaSpacing.md),
           ArenaTextField(
-            label: 'MOT DE PASSE',
+            label: l10n.registerPasswordLabel,
             controller: passwordCtrl,
             obscureText: true,
             textInputAction: TextInputAction.next,
@@ -291,7 +293,7 @@ class _AccountStep extends StatelessWidget {
           ),
           const SizedBox(height: ArenaSpacing.md),
           ArenaTextField(
-            label: 'CONFIRMER LE MOT DE PASSE',
+            label: l10n.registerPasswordConfirmLabel,
             controller: passwordConfirmCtrl,
             obscureText: true,
             textInputAction: TextInputAction.done,
@@ -302,7 +304,7 @@ class _AccountStep extends StatelessWidget {
           ),
           const SizedBox(height: ArenaSpacing.xl),
           ArenaButton(
-            label: 'CONTINUER',
+            label: l10n.registerAccountContinueButton,
             fullWidth: true,
             size: ArenaButtonSize.large,
             onPressed: _canSubmit ? onNext : null,
@@ -367,15 +369,16 @@ class _ProfileStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return _StepShell(
-      title: 'TON\nPROFIL',
-      subtitle: 'Pseudo + pays + acceptation des CGU.',
+      title: l10n.registerProfileStepTitle,
+      subtitle: l10n.registerProfileStepSubtitle,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           ArenaTextField(
-            label: 'PSEUDO',
-            hint: '3 à 20 caractères',
+            label: l10n.registerUsernameLabel,
+            hint: l10n.registerUsernameHint,
             controller: usernameCtrl,
             textInputAction: TextInputAction.next,
             prefixIcon: Icons.person_outline,
@@ -392,7 +395,7 @@ class _ProfileStep extends StatelessWidget {
           const SizedBox(height: ArenaSpacing.md),
           ArenaTextField(
             label: 'WHATSAPP ($_dialCode)',
-            hint: 'Ex. 07 07 07 07 07',
+            hint: l10n.registerWhatsappHint,
             helper: 'Le code pays $_dialCode est ajouté automatiquement.',
             controller: whatsappCtrl,
             keyboardType: TextInputType.phone,
@@ -404,10 +407,10 @@ class _ProfileStep extends StatelessWidget {
             ],
             errorText: whatsappCtrl.text.isEmpty || _isWhatsappValid
                 ? null
-                : 'Numéro WhatsApp invalide.',
+                : l10n.registerWhatsappInvalid,
           ),
           const SizedBox(height: ArenaSpacing.md),
-          Text("COULEUR D'AVATAR", style: ArenaText.inputLabel),
+          Text(l10n.registerAvatarColorLabel, style: ArenaText.inputLabel),
           const SizedBox(height: ArenaSpacing.sm),
           _AvatarColorPicker(
             initial: initial,
@@ -417,10 +420,9 @@ class _ProfileStep extends StatelessWidget {
           ),
           const SizedBox(height: ArenaSpacing.md),
           ArenaTextField(
-            label: 'CODE DE PARRAINAGE (OPTIONNEL)',
-            hint: 'Ex. ARN-3F9A',
-            helper: "Le code d'un ami ARENA. Te permet d'apparaître dans ses "
-                "parrainages — laisser vide si tu n'en as pas.",
+            label: l10n.registerReferralCodeLabel,
+            hint: l10n.registerReferralCodeHint,
+            helper: l10n.registerReferralCodeHelper,
             controller: referralCodeCtrl,
             prefixIcon: Icons.group_outlined,
             enabled: !isLoading,
@@ -431,20 +433,19 @@ class _ProfileStep extends StatelessWidget {
           ),
           const SizedBox(height: ArenaSpacing.md),
           _ConsentTile(
-            title: "J'accepte les Conditions Générales d'Utilisation",
+            title: l10n.registerCguConsent,
             value: cgu,
             onChanged: isLoading ? null : onCgu,
             mandatory: true,
           ),
           _ConsentTile(
-            title: "J'accepte la Politique de Confidentialité",
+            title: l10n.registerPrivacyConsent,
             value: privacy,
             onChanged: isLoading ? null : onPrivacy,
             mandatory: true,
           ),
           _ConsentTile(
-            title:
-                "J'accepte de recevoir les communications marketing (optionnel)",
+            title: l10n.registerMarketingConsent,
             value: marketing,
             onChanged: isLoading ? null : onMarketing,
           ),
@@ -454,7 +455,7 @@ class _ProfileStep extends StatelessWidget {
           ],
           const SizedBox(height: ArenaSpacing.xl),
           ArenaButton(
-            label: 'CRÉER MON COMPTE',
+            label: l10n.registerCreateAccountButton,
             fullWidth: true,
             size: ArenaButtonSize.large,
             isLoading: isLoading,
@@ -514,10 +515,11 @@ class _CountryPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('PAYS', style: ArenaTypography.labelMedium),
+        Text(l10n.registerCountryLabel, style: ArenaTypography.labelMedium),
         const SizedBox(height: ArenaSpacing.sm),
         DropdownButtonFormField<String>(
           initialValue: selected,
@@ -606,9 +608,10 @@ class _SuccessStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return _StepShell(
-      title: 'COMPTE\nCRÉÉ',
-      subtitle: 'Bienvenue sur ARENA. Tu es prêt à rejoindre les tournois.',
+      title: l10n.registerSuccessTitle,
+      subtitle: l10n.registerSuccessSubtitle,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -622,7 +625,7 @@ class _SuccessStep extends StatelessWidget {
           ),
           const SizedBox(height: ArenaSpacing.xxl),
           ArenaButton(
-            label: 'CONTINUER',
+            label: l10n.registerSuccessContinueButton,
             fullWidth: true,
             size: ArenaButtonSize.large,
             onPressed: () => context.go(UserRoutes.home),
@@ -674,13 +677,14 @@ class _OrDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         const Expanded(child: Divider(color: ArenaColors.border, height: 1)),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: ArenaSpacing.md),
-          child: Text('OU', style: ArenaText.small),
+          child: Text(l10n.registerOrDivider, style: ArenaText.small),
         ),
         const Expanded(child: Divider(color: ArenaColors.border, height: 1)),
       ],

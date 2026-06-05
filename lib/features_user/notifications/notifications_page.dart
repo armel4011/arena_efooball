@@ -7,6 +7,7 @@ import 'package:arena/data/repositories/notification_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -32,15 +33,16 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final profile = ref.watch(currentProfileProvider).valueOrNull;
     final userId = profile?.id;
 
     return Scaffold(
       appBar: ArenaAppBar(
-        title: 'Notifications',
+        title: l10n.notificationsTitle,
         actions: [
           IconButton(
-            tooltip: 'Marquer tout comme lu',
+            tooltip: l10n.notificationsMarkAllReadTooltip,
             icon: const Icon(
               Icons.done_all,
               color: ArenaColors.silver,
@@ -71,8 +73,9 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
       await repo.markAllRead(userId);
     } catch (_) {
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Impossible de tout marquer comme lu.')),
+        SnackBar(content: Text(l10n.notificationsMarkAllReadError)),
       );
     }
   }
@@ -113,6 +116,7 @@ class _NotificationsList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final stream = ref.watch(userNotificationsProvider(userId));
 
     return stream.when(
@@ -121,7 +125,7 @@ class _NotificationsList extends ConsumerWidget {
         child: Padding(
           padding: const EdgeInsets.all(ArenaSpacing.lg),
           child: Text(
-            'Erreur de chargement.\n$e',
+            '${l10n.notificationsLoadError}$e',
             textAlign: TextAlign.center,
             style: ArenaText.bodyMuted,
           ),
@@ -172,11 +176,12 @@ class _SignedOutPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(ArenaSpacing.lg),
         child: Text(
-          'Connecte-toi pour voir tes notifications.',
+          l10n.notificationsSignedOut,
           textAlign: TextAlign.center,
           style: ArenaText.bodyMuted,
         ),
@@ -190,6 +195,7 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: ArenaSpacing.xxl),
       child: Column(
@@ -201,7 +207,7 @@ class _EmptyState extends StatelessWidget {
           ),
           const SizedBox(height: ArenaSpacing.md),
           Text(
-            'Aucune notification pour le moment.',
+            l10n.notificationsEmpty,
             style: ArenaText.bodyMuted,
             textAlign: TextAlign.center,
           ),

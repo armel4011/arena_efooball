@@ -1,6 +1,7 @@
 import 'package:arena/core/services/manual_video_upload_service.dart';
 import 'package:arena/core/services/recording_uploader.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -32,6 +33,7 @@ class _ManualUploadButtonState extends ConsumerState<ManualUploadButton> {
   Future<void> _onTap() async {
     setState(() => _busy = true);
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context);
     try {
       final outcome =
           await ref.read(manualVideoUploadServiceProvider).pickAndUpload(
@@ -44,7 +46,7 @@ class _ManualUploadButtonState extends ConsumerState<ManualUploadButton> {
         return;
       }
       messenger.showSnackBar(
-        const SnackBar(content: Text('Vidéo envoyée. Merci !')),
+        SnackBar(content: Text(l10n.manualUploadSuccess)),
       );
     } on RecordingUploadException catch (e) {
       if (!mounted) return;

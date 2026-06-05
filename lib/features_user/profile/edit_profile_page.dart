@@ -8,6 +8,7 @@ import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/profile/avatar_palette.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -82,9 +83,10 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       _whatsappCtrl.text.isEmpty || isLocalPhoneValid(_whatsappCtrl.text);
 
   Future<void> _save() async {
+    final l10n = AppLocalizations.of(context);
     if (!(_formKey.currentState?.validate() ?? false)) return;
     if (!_isWhatsappValid) {
-      setState(() => _error = 'Numéro WhatsApp invalide.');
+      setState(() => _error = l10n.editProfileWhatsappInvalidError);
       return;
     }
     final profile = ref.read(currentProfileProvider).valueOrNull;
@@ -112,7 +114,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       ref.invalidate(currentProfileProvider);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profil mis à jour.')),
+        SnackBar(content: Text(l10n.editProfileUpdatedSnack)),
       );
       context.pop();
     } catch (e) {
@@ -127,6 +129,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final profile = ref.watch(currentProfileProvider).valueOrNull;
     final initial = (profile?.username.isNotEmpty ?? false)
         ? profile!.username[0].toUpperCase()
@@ -135,7 +138,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
 
     return Scaffold(
       appBar: ArenaAppBar(
-        title: 'MODIFIER',
+        title: l10n.editProfileAppBarTitle,
         actions: [
           IconButton(
             icon: const Icon(
@@ -143,7 +146,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
               color: ArenaColors.statusOk,
               size: 22,
             ),
-            tooltip: 'Enregistrer',
+            tooltip: l10n.editProfileSaveTooltip,
             onPressed: _saving ? null : _save,
           ),
         ],
@@ -188,14 +191,14 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                 const SizedBox(height: 4),
                 Center(
                   child: Text(
-                    'Couleur modifiable ci-dessous',
+                    l10n.editProfileColorEditableHint,
                     style: ArenaText.small.copyWith(
                       color: ArenaColors.signalBlue,
                     ),
                   ),
                 ),
                 const SizedBox(height: ArenaSpacing.lg),
-                const _Caption("NOM D'UTILISATEUR"),
+                _Caption(l10n.editProfileUsernameCaption),
                 const SizedBox(height: ArenaSpacing.xs),
                 ArenaTextField(
                   controller: _usernameCtrl,
@@ -203,13 +206,17 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                   textInputAction: TextInputAction.next,
                   validator: (v) {
                     final value = v?.trim() ?? '';
-                    if (value.length < 3) return 'Minimum 3 caractères';
-                    if (value.length > 20) return 'Maximum 20 caractères';
+                    if (value.length < 3) {
+                      return l10n.editProfileUsernameMinError;
+                    }
+                    if (value.length > 20) {
+                      return l10n.editProfileUsernameMaxError;
+                    }
                     return null;
                   },
                 ),
                 const SizedBox(height: ArenaSpacing.lg),
-                const _Caption('PAYS'),
+                _Caption(l10n.editProfileCountryCaption),
                 const SizedBox(height: ArenaSpacing.xs),
                 ArenaCard(
                   padding: const EdgeInsets.symmetric(
@@ -236,7 +243,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                   ),
                 ),
                 const SizedBox(height: ArenaSpacing.lg),
-                const _Caption('COULEUR AVATAR'),
+                _Caption(l10n.editProfileAvatarColorCaption),
                 const SizedBox(height: ArenaSpacing.xs),
                 _ColorPicker(
                   selected: _avatarColor,
@@ -246,7 +253,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                 _Caption('WHATSAPP (${dialCodeFor(_countryCode)})'),
                 const SizedBox(height: ArenaSpacing.xs),
                 ArenaTextField(
-                  hint: 'Ex. 07 07 07 07 07',
+                  hint: l10n.editProfileWhatsappHint,
                   helper: 'Le code pays ${dialCodeFor(_countryCode)} est ajouté'
                       ' automatiquement.',
                   controller: _whatsappCtrl,
@@ -255,7 +262,8 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                   inputFormatters: [
                     FilteringTextInputFormatter.allow(RegExp(r'[\d\s]')),
                   ],
-                  errorText: _isWhatsappValid ? null : 'Numéro invalide.',
+                  errorText:
+                      _isWhatsappValid ? null : l10n.editProfileWhatsappInvalidErrorText,
                 ),
                 if (_error != null) ...[
                   const SizedBox(height: ArenaSpacing.md),
@@ -268,7 +276,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                 ],
                 const SizedBox(height: ArenaSpacing.xl),
                 ArenaButton(
-                  label: 'ENREGISTRER',
+                  label: l10n.editProfileSaveButton,
                   isLoading: _saving,
                   fullWidth: true,
                   onPressed: _saving ? null : _save,

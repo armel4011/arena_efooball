@@ -6,6 +6,7 @@ import 'package:arena/features_shared/widgets/arena_bracket_tree.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:arena/features_shared/widgets/error_state.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -30,6 +31,7 @@ class BracketView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final async = ref.watch(competitionMatchesProvider(competitionId));
 
     return ArenaScreenBackground(
@@ -42,11 +44,10 @@ class BracketView extends ConsumerWidget {
         ),
         data: (matches) {
           if (matches.isEmpty) {
-            return const EmptyState(
+            return EmptyState(
               icon: Icons.account_tree_outlined,
-              title: 'Bracket pas encore généré',
-              description: "Le bracket s'affichera ici dès que l'admin aura"
-                  ' clôturé les inscriptions et lancé le tirage.',
+              title: l10n.bracketEmptyTitle,
+              description: l10n.bracketEmptyDescription,
             );
           }
 
@@ -98,7 +99,7 @@ class BracketView extends ConsumerWidget {
                 ),
                 const SizedBox(height: ArenaSpacing.sm),
                 Text(
-                  '↔ pince pour zoomer · glisse pour naviguer',
+                  l10n.bracketZoomHint,
                   textAlign: TextAlign.center,
                   style: ArenaText.small.copyWith(color: ArenaColors.silver),
                 ),

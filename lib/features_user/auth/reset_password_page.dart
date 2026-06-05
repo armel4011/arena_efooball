@@ -10,6 +10,7 @@ import 'package:arena/features_user/auth/reset_password_code_page.dart'
     show ResetPasswordCodePage;
 import 'package:arena/features_user/auth/widgets/auth_error_banner.dart';
 import 'package:arena/features_user/auth/widgets/auth_failure_message.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -41,14 +42,15 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
   }
 
   String? _validatePassword(String? v) {
-    if (v == null || v.isEmpty) return 'Mot de passe requis';
-    if (v.length < 8) return 'Minimum 8 caractères';
+    final l10n = AppLocalizations.of(context);
+    if (v == null || v.isEmpty) return l10n.resetPwPasswordRequired;
+    if (v.length < 8) return l10n.resetPwMinChars;
     return null;
   }
 
   String? _validateConfirm(String? v) {
     if (v != _passwordCtrl.text) {
-      return 'Les mots de passe ne correspondent pas';
+      return AppLocalizations.of(context).resetPwPasswordsDontMatch;
     }
     return null;
   }
@@ -63,6 +65,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final state = ref.watch(resetPasswordControllerProvider);
     final isLoading = state.isLoading;
     final passwordChanged = state.value ?? false;
@@ -86,21 +89,20 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
-                          'NOUVEAU MOT DE PASSE',
+                          l10n.resetPwTitle,
                           style: ArenaTypography.displayMedium,
                         ),
                         const SizedBox(height: ArenaSpacing.sm),
                         Text(
-                          'Choisis un mot de passe solide. Il sera utilisé'
-                          ' pour ta prochaine connexion.',
+                          l10n.resetPwSubtitle,
                           style: ArenaTypography.bodyMedium.copyWith(
                             color: ArenaColors.textMuted,
                           ),
                         ),
                         const SizedBox(height: ArenaSpacing.xl),
                         ArenaTextField(
-                          label: 'NOUVEAU MOT DE PASSE',
-                          hint: 'Au moins 8 caractères',
+                          label: l10n.resetPwNewPasswordLabel,
+                          hint: l10n.resetPwNewPasswordHint,
                           controller: _passwordCtrl,
                           obscureText: _obscure1,
                           textInputAction: TextInputAction.next,
@@ -121,8 +123,8 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                         ),
                         const SizedBox(height: ArenaSpacing.md),
                         ArenaTextField(
-                          label: 'CONFIRMER',
-                          hint: 'Retape ton mot de passe',
+                          label: l10n.resetPwConfirmLabel,
+                          hint: l10n.resetPwConfirmHint,
                           controller: _confirmCtrl,
                           obscureText: _obscure2,
                           textInputAction: TextInputAction.done,
@@ -147,7 +149,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                         ],
                         const SizedBox(height: ArenaSpacing.lg),
                         ArenaButton(
-                          label: 'METTRE À JOUR',
+                          label: l10n.resetPwUpdateButton,
                           fullWidth: true,
                           size: ArenaButtonSize.large,
                           isLoading: isLoading,
@@ -168,6 +170,7 @@ class _SuccessView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -189,13 +192,13 @@ class _SuccessView extends StatelessWidget {
         ),
         const SizedBox(height: ArenaSpacing.lg),
         Text(
-          'MOT DE PASSE MIS À JOUR',
+          l10n.resetPwSuccessTitle,
           style: ArenaTypography.displayMedium,
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: ArenaSpacing.sm),
         Text(
-          'Tu peux maintenant te connecter avec ton nouveau mot de passe.',
+          l10n.resetPwSuccessSubtitle,
           style: ArenaTypography.bodyMedium.copyWith(
             color: ArenaColors.textMuted,
           ),
@@ -203,7 +206,7 @@ class _SuccessView extends StatelessWidget {
         ),
         const SizedBox(height: ArenaSpacing.xl),
         ArenaButton(
-          label: 'SE CONNECTER',
+          label: l10n.resetPwLoginButton,
           fullWidth: true,
           size: ArenaButtonSize.large,
           onPressed: () => context.go(UserRoutes.login),

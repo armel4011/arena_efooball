@@ -1,5 +1,6 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/referral_repository.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,6 +24,7 @@ class ReferralProgressCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final eligibilityAsync =
         ref.watch(referralEligibilityProvider(competitionId));
     final codeAsync = ref.watch(myReferralCodeProvider);
@@ -49,7 +51,7 @@ class ReferralProgressCard extends ConsumerWidget {
               const SizedBox(width: ArenaSpacing.xs),
               Expanded(
                 child: Text(
-                  'Parrainage requis',
+                  l10n.referralCardTitle,
                   style: ArenaText.h3.copyWith(
                     color: ArenaColors.signalBlue,
                   ),
@@ -100,6 +102,7 @@ class _ProgressBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final eg = eligibility;
     final ratio =
         eg.target == 0 ? 1.0 : (eg.current / eg.target).clamp(0.0, 1.0);
@@ -122,7 +125,7 @@ class _ProgressBlock extends StatelessWidget {
             Expanded(
               child: Text(
                 eg.eligible
-                    ? "✓ Quota atteint — tu peux t'inscrire !"
+                    ? l10n.referralQuotaReached
                     : 'Encore ${eg.target - eg.current} ami(s) à parrainer',
                 style: ArenaText.body.copyWith(color: color),
               ),
@@ -170,6 +173,7 @@ class _ReferralCodeCopy extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.md),
       decoration: BoxDecoration(
@@ -181,7 +185,7 @@ class _ReferralCodeCopy extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'TON CODE',
+            l10n.referralYourCodeLabel,
             style: ArenaText.small.copyWith(
               color: ArenaColors.silver,
               letterSpacing: 1,
@@ -204,7 +208,7 @@ class _ReferralCodeCopy extends StatelessWidget {
                     color: ArenaColors.signalBlue,
                   ),
                   label: Text(
-                    'Copier',
+                    l10n.referralCopyButton,
                     style: ArenaText.button
                         .copyWith(color: ArenaColors.signalBlue),
                   ),
@@ -223,7 +227,7 @@ class _ReferralCodeCopy extends StatelessWidget {
                     color: ArenaColors.bone,
                   ),
                   label: Text(
-                    'Partager',
+                    l10n.referralShareButton,
                     style: ArenaText.button.copyWith(color: ArenaColors.bone),
                   ),
                   style: FilledButton.styleFrom(

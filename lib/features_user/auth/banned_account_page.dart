@@ -7,6 +7,7 @@ import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_user/auth/widgets/auth_error_banner.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -40,12 +41,13 @@ class _BannedAccountPageState extends ConsumerState<BannedAccountPage> {
   }
 
   Future<void> _submit() async {
+    final l10n = AppLocalizations.of(context);
     final userId = ref.read(currentSessionProvider)?.user.id;
     if (userId == null) return;
     final text = _messageCtrl.text.trim();
     if (text.length < 10) {
       setState(
-        () => _error = 'Détaillez votre requête (10 caractères minimum).',
+        () => _error = l10n.bannedMinLengthError,
       );
       return;
     }
@@ -61,8 +63,7 @@ class _BannedAccountPageState extends ConsumerState<BannedAccountPage> {
       ref.invalidate(myReintegrationRequestProvider);
     } catch (e) {
       setState(
-        () => _error =
-            "Échec de l'envoi. Vérifiez votre connexion et réessayez.",
+        () => _error = l10n.bannedSendError,
       );
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -76,11 +77,12 @@ class _BannedAccountPageState extends ConsumerState<BannedAccountPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final requestAsync = ref.watch(myReintegrationRequestProvider);
 
     return Scaffold(
-      appBar: const ArenaAppBar(
-        title: 'Compte suspendu',
+      appBar: ArenaAppBar(
+        title: l10n.bannedAppBarTitle,
         showBack: false,
       ),
       body: SafeArea(
@@ -104,7 +106,7 @@ class _BannedAccountPageState extends ConsumerState<BannedAccountPage> {
             ),
             const SizedBox(height: ArenaSpacing.xl),
             ArenaButton(
-              label: 'SE DÉCONNECTER',
+              label: l10n.bannedSignOut,
               variant: ArenaButtonVariant.secondary,
               fullWidth: true,
               onPressed: _submitting ? null : _signOut,
@@ -127,6 +129,7 @@ class _BannedAccountPageState extends ConsumerState<BannedAccountPage> {
   }
 
   Widget _buildFormSection({ReintegrationRequest? previousRejection}) {
+    final l10n = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -134,18 +137,16 @@ class _BannedAccountPageState extends ConsumerState<BannedAccountPage> {
           _RejectedCard(request: previousRejection),
           const SizedBox(height: ArenaSpacing.md),
         ],
-        Text('📨 ARENA REQUÊTE', style: ArenaText.h3),
+        Text(l10n.bannedArenaRequestTitle, style: ArenaText.h3),
         const SizedBox(height: ArenaSpacing.xs),
         Text(
-          'Explique pourquoi tu penses que ton bannissement devrait être '
-          "reconsidéré. L'équipe Arena Requête analyse chaque demande "
-          'sous 48 heures.',
+          l10n.bannedArenaRequestIntro,
           style: ArenaText.bodyMuted,
         ),
         const SizedBox(height: ArenaSpacing.sm),
         ArenaTextField(
           controller: _messageCtrl,
-          hint: 'Décris ton cas (10 caractères minimum)…',
+          hint: l10n.bannedMessageHint,
           minLines: 5,
           maxLines: 10,
           maxLength: 2000,
@@ -156,7 +157,9 @@ class _BannedAccountPageState extends ConsumerState<BannedAccountPage> {
         ],
         const SizedBox(height: ArenaSpacing.sm),
         ArenaButton(
-          label: _submitting ? 'ENVOI…' : '✉️ ENVOYER MA REQUÊTE',
+          label: _submitting
+              ? l10n.bannedSendingLabel
+              : l10n.bannedSendRequestLabel,
           fullWidth: true,
           size: ArenaButtonSize.large,
           isLoading: _submitting,
@@ -172,6 +175,7 @@ class _BanHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.lg),
       decoration: BoxDecoration(
@@ -192,7 +196,7 @@ class _BanHeader extends StatelessWidget {
               const SizedBox(width: ArenaSpacing.sm),
               Expanded(
                 child: Text(
-                  'Compte définitivement banni',
+                  l10n.bannedPermanentTitle,
                   style: ArenaText.h3.copyWith(color: ArenaColors.neonRed),
                 ),
               ),
@@ -200,8 +204,7 @@ class _BanHeader extends StatelessWidget {
           ),
           const SizedBox(height: ArenaSpacing.sm),
           Text(
-            "Tu as été reconnu coupable d'un litige à 3 reprises. "
-            'Conformément à la règle ARENA, ton compte est désactivé.',
+            l10n.bannedPermanentBody,
             style: ArenaText.body,
           ),
         ],
@@ -216,6 +219,7 @@ class _PendingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final overdue = request.isOverdue;
     final accent = overdue ? ArenaColors.statusWarn : ArenaColors.signalBlue;
     return Container(
@@ -238,8 +242,8 @@ class _PendingCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   overdue
-                      ? 'Analyse en retard (> 48h)'
-                      : "Requête en cours d'analyse",
+                      ? l10n.bannedOverdueTitle
+                      : l10n.bannedPendingTitle,
                   style: ArenaText.h3.copyWith(color: accent),
                 ),
               ),
@@ -247,17 +251,11 @@ class _PendingCard extends StatelessWidget {
           ),
           const SizedBox(height: ArenaSpacing.sm),
           Text(
-            overdue
-                ? 'Ta requête est ouverte depuis plus de 48 heures. '
-                    "L'équipe Arena Requête est notifiée — merci pour ta "
-                    'patience.'
-                : "L'équipe Arena Requête a 48 heures pour analyser ta "
-                    "demande. Tu seras notifié dès qu'une décision est "
-                    'prise.',
+            overdue ? l10n.bannedOverdueBody : l10n.bannedPendingBody,
             style: ArenaText.bodyMuted,
           ),
           const SizedBox(height: ArenaSpacing.sm),
-          Text('Ton message', style: ArenaText.inputLabel),
+          Text(l10n.bannedYourMessageLabel, style: ArenaText.inputLabel),
           const SizedBox(height: 4),
           Text(request.message, style: ArenaText.body),
         ],
@@ -272,6 +270,7 @@ class _RejectedCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.md),
       decoration: BoxDecoration(
@@ -283,20 +282,19 @@ class _RejectedCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '❌ Requête précédente refusée',
+            l10n.bannedRejectedTitle,
             style: ArenaText.h3.copyWith(color: ArenaColors.neonRed),
           ),
           if (request.resolutionReason != null &&
               request.resolutionReason!.isNotEmpty) ...[
             const SizedBox(height: ArenaSpacing.xs),
-            Text('Motif', style: ArenaText.inputLabel),
+            Text(l10n.bannedReasonLabel, style: ArenaText.inputLabel),
             const SizedBox(height: 2),
             Text(request.resolutionReason!, style: ArenaText.body),
           ],
           const SizedBox(height: ArenaSpacing.sm),
           Text(
-            'Tu peux soumettre une nouvelle requête avec des éléments '
-            'supplémentaires ci-dessous.',
+            l10n.bannedRejectedBody,
             style: ArenaText.bodyMuted,
           ),
         ],
@@ -311,6 +309,7 @@ class _ApprovedCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.md),
       decoration: BoxDecoration(
@@ -322,13 +321,12 @@ class _ApprovedCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '✅ Réintégration approuvée',
+            l10n.bannedApprovedTitle,
             style: ArenaText.h3.copyWith(color: ArenaColors.statusOk),
           ),
           const SizedBox(height: ArenaSpacing.xs),
           Text(
-            'Bon retour sur ARENA ! Reconnecte-toi pour accéder à ton '
-            'compte.',
+            l10n.bannedApprovedBody,
             style: ArenaText.body,
           ),
         ],

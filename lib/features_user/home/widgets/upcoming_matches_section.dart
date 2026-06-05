@@ -9,6 +9,7 @@ import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/home/widgets/home_error_row.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -21,6 +22,7 @@ class UpcomingMatchesScroller extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final me = ref.watch(currentSessionProvider)?.user.id;
     final matchesAsync = ref.watch(myActiveMatchesProvider);
 
@@ -31,9 +33,9 @@ class UpcomingMatchesScroller extends ConsumerWidget {
         error: (e, _) => HomeErrorRow(message: 'Erreur : $e'),
         data: (matches) {
           if (matches.isEmpty || me == null) {
-            return const _ScrollerEmpty(
+            return _ScrollerEmpty(
               icon: Icons.event_available_outlined,
-              label: 'Aucun match programmé',
+              label: l10n.upcomingMatchesEmpty,
             );
           }
           final opponentIds = <String>{
@@ -76,14 +78,15 @@ class _UpcomingMatchCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (badgeLabel, badgeVariant, glow) = _resolveBadge(match);
-    final opponentName = opponent?.username ?? 'En attente';
+    final l10n = AppLocalizations.of(context);
+    final (badgeLabel, badgeVariant, glow) = _resolveBadge(match, l10n);
+    final opponentName = opponent?.username ?? l10n.upcomingMatchOpponentWaiting;
     final opponentInitial =
         opponentName.isEmpty ? '?' : opponentName[0].toUpperCase();
     final opponentColor = opponent == null
         ? ArenaAvatarColor.blue
         : _avatarFromHex(opponent!.avatarColor);
-    final phaseLabel = _phaseLabel(match);
+    final phaseLabel = _phaseLabel(match, l10n);
 
     return InkWell(
       onTap: () => context.push(UserRoutes.matchPath(match.id)),
@@ -107,7 +110,7 @@ class _UpcomingMatchCard extends StatelessWidget {
                 const Spacer(),
                 if (match.status == MatchStatus.inProgress)
                   Text(
-                    'LIVE',
+                    l10n.upcomingMatchLive,
                     style: ArenaText.bodyMuted.copyWith(
                       color: ArenaColors.neonRed,
                       fontWeight: FontWeight.w800,
@@ -142,35 +145,38 @@ class _UpcomingMatchCard extends StatelessWidget {
     );
   }
 
-  static (String, ArenaBadgeVariant, bool) _resolveBadge(ArenaMatch m) {
+  static (String, ArenaBadgeVariant, bool) _resolveBadge(
+    ArenaMatch m,
+    AppLocalizations l10n,
+  ) {
     if (m.status == MatchStatus.inProgress ||
         m.status == MatchStatus.scorePending) {
-      return ('EN COURS', ArenaBadgeVariant.live, true);
+      return (l10n.upcomingBadgeInProgress, ArenaBadgeVariant.live, true);
     }
     final at = m.scheduledAt;
     if (at == null) {
-      return ('À PLANIFIER', ArenaBadgeVariant.warn, false);
+      return (l10n.upcomingBadgeToSchedule, ArenaBadgeVariant.warn, false);
     }
     final now = DateTime.now();
     final diff = at.difference(now);
     if (diff.isNegative) {
-      return ('PRÊT', ArenaBadgeVariant.info, true);
+      return (l10n.upcomingBadgeReady, ArenaBadgeVariant.info, true);
     }
     if (diff.inHours < 3) return ('DANS ${diff.inHours}H', ArenaBadgeVariant.info, true);
     if (diff.inHours < 24) return ('DANS ${diff.inHours}H', ArenaBadgeVariant.info, false);
-    if (diff.inDays < 2) return ('DEMAIN', ArenaBadgeVariant.warn, false);
+    if (diff.inDays < 2) return (l10n.upcomingBadgeTomorrow, ArenaBadgeVariant.warn, false);
     return ('DANS ${diff.inDays}J', ArenaBadgeVariant.warn, false);
   }
 
-  static String _phaseLabel(ArenaMatch m) {
-    if (m.round == null) return 'Match';
+  static String _phaseLabel(ArenaMatch m, AppLocalizations l10n) {
+    if (m.round == null) return l10n.upcomingPhaseMatch;
     final r = m.round!;
     return switch (r) {
-      1 => 'Finale',
-      2 => 'Demi-finale',
-      3 => 'Quart de finale',
-      4 => '8e de finale',
-      5 => '16e de finale',
+      1 => l10n.upcomingPhaseFinal,
+      2 => l10n.upcomingPhaseSemiFinal,
+      3 => l10n.upcomingPhaseQuarterFinal,
+      4 => l10n.upcomingPhaseRoundOf16,
+      5 => l10n.upcomingPhaseRoundOf32,
       _ => 'Round $r',
     };
   }

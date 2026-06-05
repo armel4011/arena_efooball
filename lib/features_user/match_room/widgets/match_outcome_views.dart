@@ -5,6 +5,7 @@ import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_user/match_room/widgets/manual_upload_button.dart';
 import 'package:arena/features_user/match_room/widgets/match_room_internals.dart';
 import 'package:arena/features_user/match_room/widgets/score_edit_dialog.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -26,6 +27,7 @@ class CompletedView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final s1 = match.score1 ?? 0;
     final s2 = match.score2 ?? 0;
     return Container(
@@ -39,7 +41,7 @@ class CompletedView extends StatelessWidget {
             size: 56,
           ),
           const SizedBox(height: ArenaSpacing.sm),
-          Text('SCORE FINAL', style: ArenaText.inputLabel),
+          Text(l10n.outcomeFinalScore, style: ArenaText.inputLabel),
           const SizedBox(height: ArenaSpacing.sm),
           Text(
             '$s1 — $s2',
@@ -48,7 +50,7 @@ class CompletedView extends StatelessWidget {
           const SizedBox(height: ArenaSpacing.sm),
           Text(
             match.winnerId == null
-                ? 'Match nul.'
+                ? l10n.outcomeDraw
                 : 'Gagnant : Joueur ${match.winnerId!.substring(0, 6)}…',
             style: ArenaText.bodyMuted,
           ),
@@ -88,6 +90,7 @@ class _DisputedViewState extends ConsumerState<DisputedView> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     if (!_isPlayer) {
       return _buildBanner();
     }
@@ -130,7 +133,7 @@ class _DisputedViewState extends ConsumerState<DisputedView> {
             ),
             const SizedBox(height: ArenaSpacing.lg),
             ArenaButton(
-              label: 'MODIFIER MON SCORE',
+              label: l10n.outcomeEditMyScore,
               icon: Icons.edit_outlined,
               fullWidth: true,
               onPressed: () => _openEditDialog(
@@ -228,6 +231,7 @@ class _DisputedViewState extends ConsumerState<DisputedView> {
   }
 
   Widget _buildBanner() {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.lg),
       decoration: arenaDangerCardDecoration(),
@@ -236,14 +240,12 @@ class _DisputedViewState extends ConsumerState<DisputedView> {
           const Icon(Icons.gavel, color: ArenaColors.neonRed, size: 40),
           const SizedBox(height: ArenaSpacing.sm),
           Text(
-            'LITIGE EN COURS',
+            l10n.outcomeDisputeInProgress,
             style: ArenaText.inputLabel.copyWith(color: ArenaColors.neonRed),
           ),
           const SizedBox(height: ArenaSpacing.sm),
           Text(
-            "Vos scores ne concordent pas. Si tu t'es trompé, corrige-le ;"
-            ' sinon attends que ton adversaire corrige le sien. Sans accord,'
-            ' un admin tranchera à partir des preuves.',
+            l10n.outcomeDisputeExplanation,
             textAlign: TextAlign.center,
             style: ArenaText.bodyMuted,
           ),
@@ -268,11 +270,12 @@ class _SubmittedScoresGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Row(
       children: [
         Expanded(
           child: _ScoreSubmissionCard(
-            label: selfIsPlayer1 ? 'TOI' : 'JOUEUR 1',
+            label: selfIsPlayer1 ? l10n.outcomeScoreCardYou : l10n.outcomeScoreCardPlayer1,
             highlight: selfIsPlayer1,
             payload: (p1Sub?['payload'] as Map?)?.cast<String, dynamic>(),
           ),
@@ -280,7 +283,7 @@ class _SubmittedScoresGrid extends StatelessWidget {
         const SizedBox(width: ArenaSpacing.md),
         Expanded(
           child: _ScoreSubmissionCard(
-            label: selfIsPlayer1 ? 'JOUEUR 2' : 'TOI',
+            label: selfIsPlayer1 ? l10n.outcomeScoreCardPlayer2 : l10n.outcomeScoreCardYou,
             highlight: !selfIsPlayer1,
             payload: (p2Sub?['payload'] as Map?)?.cast<String, dynamic>(),
           ),

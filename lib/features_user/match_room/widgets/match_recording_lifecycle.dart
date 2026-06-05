@@ -13,6 +13,7 @@ import 'package:arena/data/models/match_stream.dart';
 import 'package:arena/data/repositories/match_repository.dart';
 import 'package:arena/data/repositories/match_stream_repository.dart';
 import 'package:arena/features_user/match_room/widgets/match_recording_actions_sheet.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform, kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
@@ -184,6 +185,7 @@ class _MatchRecordingLifecycleState
   /// `_onOverlayAction.goLive`), donc plus aucune MediaProjection
   /// concurrente. Snackbar success / error pour informer le user.
   Future<void> _goLive(String matchId) async {
+    final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.maybeOf(context);
     try {
       await ref
@@ -191,9 +193,9 @@ class _MatchRecordingLifecycleState
           .joinAsBroadcaster(matchId: matchId);
       if (!mounted || messenger == null) return;
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Diffusion live démarrée.'),
-          duration: Duration(seconds: 3),
+        SnackBar(
+          content: Text(l10n.recordingLiveStreamStarted),
+          duration: const Duration(seconds: 3),
         ),
       );
     } catch (e, st) {
@@ -245,6 +247,7 @@ class _MatchRecordingLifecycleState
   }
 
   Future<void> _exportRecording(String path) async {
+    final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.maybeOf(context);
     final uri = await ref.read(galleryExporterProvider).saveVideoToGallery(path);
     if (kDebugMode) {
@@ -255,8 +258,8 @@ class _MatchRecordingLifecycleState
       SnackBar(
         content: Text(
           uri != null
-              ? 'Replay enregistré dans Téléchargements › ARENA'
-              : "Replay disponible dans le cache de l'app",
+              ? l10n.recordingReplaySavedDownloads
+              : l10n.recordingReplayInCache,
         ),
         duration: const Duration(seconds: 4),
       ),
@@ -264,9 +267,12 @@ class _MatchRecordingLifecycleState
   }
 
   String _bundleErrorMessage(RecordingPermissionsBundle bundle) {
+    final l10n = AppLocalizations.of(context);
     final missing = <String>[];
-    if (!bundle.microphone.isGranted) missing.add('micro');
-    if (!bundle.notifications.isGranted) missing.add('notifications');
+    if (!bundle.microphone.isGranted) missing.add(l10n.recordingPermMissingMic);
+    if (!bundle.notifications.isGranted) {
+      missing.add(l10n.recordingPermMissingNotifications);
+    }
     final list = missing.join(' + ');
     if (bundle.microphone.needsSettings ||
         bundle.notifications.needsSettings) {
@@ -276,15 +282,16 @@ class _MatchRecordingLifecycleState
   }
 
   String _overlayErrorMessage(PermissionOutcome outcome) {
+    final l10n = AppLocalizations.of(context);
     if (outcome.needsSettings) {
-      return 'Active "Afficher au-dessus des autres apps" pour ARENA '
-          'dans Paramètres > Apps > Accès spécial';
+      return l10n.recordingPermOverlayNeedsSettings;
     }
-    return 'Overlay refusé — retape JE SUIS DANS LA ROOM après activation';
+    return l10n.recordingPermOverlayDenied;
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     if (!_isAndroidNative || !_isPlayer) {
       return const SizedBox.shrink();
     }
@@ -379,21 +386,21 @@ class _MatchRecordingLifecycleState
       CoordinatorRecording() => _LifecycleBanner(
           icon: Icons.fiber_manual_record,
           color: ArenaColors.danger,
-          text: 'Enregistrement anti-triche en cours\nTape pour les actions',
+          text: l10n.recordingBannerRecording,
           onTap: openSheet,
         ),
       CoordinatorPaused() => _LifecycleBanner(
           icon: Icons.pause_circle_outline,
           color: ArenaColors.warning,
-          text: 'Match en pause — tape pour reprendre ou arrêter',
+          text: l10n.recordingBannerPaused,
           onTap: openSheet,
         ),
       CoordinatorForfeited(reason: final r) => _LifecycleBanner(
           icon: Icons.flag_outlined,
           color: ArenaColors.danger,
           text: r == 'pause_grace_expired'
-              ? 'Forfait : pause dépassée'
-              : 'Forfait déclaré',
+              ? l10n.recordingBannerForfeitPauseExpired
+              : l10n.recordingBannerForfeitDeclared,
         ),
       _ => const SizedBox.shrink(),
     };

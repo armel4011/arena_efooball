@@ -6,6 +6,7 @@ import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_user/payments/payment_failed_page.dart';
 import 'package:arena/features_user/payments/payment_method.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -86,6 +87,7 @@ class _PaymentProcessingPageState extends ConsumerState<PaymentProcessingPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final accent = widget.method.brandColor;
     ref.watch(paymentByIdProvider(widget.paymentId)).whenData((rec) {
       if (rec != null) _handleStatus(context, rec);
@@ -93,7 +95,7 @@ class _PaymentProcessingPageState extends ConsumerState<PaymentProcessingPage> {
     return Scaffold(
       backgroundColor: ArenaColors.void_,
       appBar: ArenaAppBar(
-        title: 'STATUT PAIEMENT',
+        title: l10n.paymentProcessingAppBarTitle,
         onBack: () => _leaveScreen(context),
       ),
       body: ArenaScreenBackground(
@@ -108,7 +110,7 @@ class _PaymentProcessingPageState extends ConsumerState<PaymentProcessingPage> {
               const SizedBox(height: ArenaSpacing.md),
               Center(
                 child: Text(
-                  'EN ATTENTE DE VALIDATION',
+                  l10n.paymentProcessingWaitingTitle,
                   textAlign: TextAlign.center,
                   style: ArenaText.h1.copyWith(fontSize: 22),
                 ),
@@ -116,8 +118,8 @@ class _PaymentProcessingPageState extends ConsumerState<PaymentProcessingPage> {
               const SizedBox(height: ArenaSpacing.sm),
               Center(
                 child: Text(
-                  'Le super-admin vérifie la réception du paiement '
-                  'sur son compte ${widget.method.label}.',
+                  '${l10n.paymentProcessingWaitingSubtitle}'
+                  '${widget.method.label}.',
                   textAlign: TextAlign.center,
                   style: ArenaText.bodyMuted,
                 ),
@@ -150,22 +152,20 @@ class _PaymentProcessingPageState extends ConsumerState<PaymentProcessingPage> {
                   border: Border.all(color: ArenaColors.border),
                 ),
                 child: Text(
-                  '💡 Tu peux fermer cette page : la transaction reste '
-                  'en attente côté admin. Tu reviendras vérifier le statut '
-                  'depuis "Historique paiements" ou la bannière sur la home.',
+                  l10n.paymentProcessingInfoNote,
                   style: ArenaText.small,
                 ),
               ),
               const SizedBox(height: ArenaSpacing.lg),
               ArenaButton(
-                label: 'QUITTER (LA TRANSACTION CONTINUE)',
+                label: l10n.paymentProcessingLeaveButton,
                 variant: ArenaButtonVariant.secondary,
                 fullWidth: true,
                 onPressed: () => _leaveScreen(context),
               ),
               const SizedBox(height: ArenaSpacing.sm),
               ArenaButton(
-                label: 'Annuler la transaction',
+                label: l10n.paymentProcessingCancelButton,
                 variant: ArenaButtonVariant.ghost,
                 fullWidth: true,
                 onPressed: () => _confirmCancel(context),
@@ -189,25 +189,22 @@ class _PaymentProcessingPageState extends ConsumerState<PaymentProcessingPage> {
   }
 
   Future<void> _confirmCancel(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: ArenaColors.carbon,
-        title: const Text('Annuler le paiement ?'),
-        content: const Text(
-          'Si tu as déjà payé sur Mobile Money, attends la validation '
-          "plutôt que d'annuler ici (sinon l'admin n'inscrira pas "
-          'ton compte).',
-        ),
+        title: Text(l10n.paymentProcessingCancelDialogTitle),
+        content: Text(l10n.paymentProcessingCancelDialogBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Rester'),
+            child: Text(l10n.paymentProcessingCancelDialogStay),
           ),
           TextButton(
             style: TextButton.styleFrom(foregroundColor: ArenaColors.neonRed),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Annuler quand même'),
+            child: Text(l10n.paymentProcessingCancelDialogConfirm),
           ),
         ],
       ),
@@ -236,6 +233,7 @@ class _PaymentRecap extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.lg),
       decoration: BoxDecoration(
@@ -245,16 +243,16 @@ class _PaymentRecap extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _Row(label: 'Compétition', value: competitionName),
+          _Row(label: l10n.paymentProcessingRecapCompetition, value: competitionName),
           const SizedBox(height: 4),
-          _Row(label: 'Montant', value: '${_formatXaf(amountXaf)} XAF'),
+          _Row(label: l10n.paymentProcessingRecapAmount, value: '${_formatXaf(amountXaf)} XAF'),
           const SizedBox(height: 4),
-          _Row(label: 'Méthode', value: method.label),
+          _Row(label: l10n.paymentProcessingRecapMethod, value: method.label),
           const SizedBox(height: 4),
-          _Row(label: 'Ton numéro', value: maskedPhone),
+          _Row(label: l10n.paymentProcessingRecapPhone, value: maskedPhone),
           const SizedBox(height: 4),
           _Row(
-            label: 'Référence',
+            label: l10n.paymentProcessingRecapReference,
             value: 'ARENA-${paymentId.substring(0, 8).toUpperCase()}',
             mono: true,
           ),

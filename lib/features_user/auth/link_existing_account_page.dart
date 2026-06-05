@@ -3,6 +3,7 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -29,6 +30,7 @@ class LinkExistingAccountPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final emailLine = email == null
         ? "L'adresse e-mail de ce compte $providerLabel est déjà"
             ' utilisée par un compte ARENA.'
@@ -36,7 +38,7 @@ class LinkExistingAccountPage extends StatelessWidget {
             ' (mot de passe).';
 
     return Scaffold(
-      appBar: const ArenaAppBar(title: 'Lier les comptes'),
+      appBar: ArenaAppBar(title: l10n.linkAccountAppBarTitle),
       body: ArenaScreenBackground(
         child: SafeArea(
           child: SingleChildScrollView(
@@ -56,7 +58,7 @@ class LinkExistingAccountPage extends StatelessWidget {
                           const SizedBox(width: ArenaSpacing.sm),
                           Expanded(
                             child: Text(
-                              'Compte déjà existant',
+                              l10n.linkAccountExistsTitle,
                               style: ArenaText.h3,
                             ),
                           ),
@@ -69,7 +71,7 @@ class LinkExistingAccountPage extends StatelessWidget {
                 ),
                 const SizedBox(height: ArenaSpacing.lg),
                 Text(
-                  'MÉTHODES EXISTANTES',
+                  l10n.linkAccountExistingMethodsLabel,
                   style: ArenaText.inputLabel,
                 ),
                 const SizedBox(height: ArenaSpacing.sm),
@@ -89,13 +91,13 @@ class LinkExistingAccountPage extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Email + mot de passe',
+                              l10n.linkAccountEmailPasswordMethod,
                               style: ArenaText.body
                                   .copyWith(fontWeight: FontWeight.w700),
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'Choisis comment continuer ci-dessous.',
+                              l10n.linkAccountChooseContinue,
                               style: ArenaText.bodyMuted,
                             ),
                           ],
@@ -106,15 +108,15 @@ class LinkExistingAccountPage extends StatelessWidget {
                 ),
                 const SizedBox(height: ArenaSpacing.xl),
                 ArenaButton(
-                  label: '🔗 LIER LES DEUX COMPTES',
+                  label: l10n.linkAccountLinkBothButton,
                   fullWidth: true,
                   size: ArenaButtonSize.large,
                   onPressed: () {
                     // PHASE 2.3 — wire to AuthRepository.linkProviderToCurrentUser
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
+                      SnackBar(
                         content: Text(
-                          'Disponible en PHASE 2.3 (social login Google/Apple).',
+                          l10n.linkAccountPhaseSnack,
                         ),
                       ),
                     );
@@ -122,7 +124,7 @@ class LinkExistingAccountPage extends StatelessWidget {
                 ),
                 const SizedBox(height: ArenaSpacing.sm),
                 ArenaButton(
-                  label: 'ME CONNECTER AVEC MOT DE PASSE',
+                  label: l10n.linkAccountLoginPasswordButton,
                   fullWidth: true,
                   size: ArenaButtonSize.large,
                   variant: ArenaButtonVariant.secondary,
@@ -130,7 +132,7 @@ class LinkExistingAccountPage extends StatelessWidget {
                 ),
                 const SizedBox(height: ArenaSpacing.sm),
                 ArenaButton(
-                  label: 'Annuler',
+                  label: l10n.linkAccountCancelButton,
                   variant: ArenaButtonVariant.ghost,
                   fullWidth: true,
                   onPressed: () => context.go(UserRoutes.login),

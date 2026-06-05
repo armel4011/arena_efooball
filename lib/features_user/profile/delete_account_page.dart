@@ -8,6 +8,7 @@ import 'package:arena/features_shared/widgets/arena_card.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -118,19 +119,19 @@ class _DeleteAccountPageState extends ConsumerState<DeleteAccountPage> {
     }
   }
 
-  static const _stepLabels = <String>[
-    'AVERTISSEMENT',
-    'GAINS EN ATTENTE',
-    'CONFIRMATION',
-    'TERMINÉ',
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final stepLabels = <String>[
+      l10n.deleteAccountStepWarning,
+      l10n.deleteAccountStepPendingEarnings,
+      l10n.deleteAccountStepConfirmation,
+      l10n.deleteAccountStepDone,
+    ];
     final stepNum = (_step + 1).toString().padLeft(2, '0');
     return Scaffold(
       appBar: ArenaAppBar(
-        title: 'SUPPRIMER',
+        title: l10n.deleteAccountAppBarTitle,
         showBack: _step != 3,
         onBack: _step == 3
             ? null
@@ -154,7 +155,7 @@ class _DeleteAccountPageState extends ConsumerState<DeleteAccountPage> {
                 // Caption mono rouge "ÉTAPE 03/04 · CONFIRMATION"
                 // (maquette #27 `m-text-caption color: var(--neon-red)`).
                 Text(
-                  'ÉTAPE $stepNum/04 · ${_stepLabels[_step]}',
+                  'ÉTAPE $stepNum/04 · ${stepLabels[_step]}',
                   style: ArenaText.monoSmall.copyWith(
                     color: ArenaColors.neonRed,
                     letterSpacing: 1.5,
@@ -225,15 +226,15 @@ class _StepWarning extends StatelessWidget {
   const _StepWarning({required this.onContinue});
   final VoidCallback onContinue;
 
-  static const _losses = <(IconData, String)>[
-    (Icons.history, 'Tout ton historique de matchs et de tournois'),
-    (Icons.emoji_events_outlined, 'Tes badges et accomplissements'),
-    (Icons.chat_bubble_outline, 'Tes conversations et chats de match'),
-    (Icons.payments_outlined, 'Tes méthodes de paiement enregistrées'),
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final losses = <(IconData, String)>[
+      (Icons.history, l10n.deleteAccountLossHistory),
+      (Icons.emoji_events_outlined, l10n.deleteAccountLossBadges),
+      (Icons.chat_bubble_outline, l10n.deleteAccountLossChats),
+      (Icons.payments_outlined, l10n.deleteAccountLossPaymentMethods),
+    ];
     return ListView(
       children: [
         Row(
@@ -246,7 +247,7 @@ class _StepWarning extends StatelessWidget {
             const SizedBox(width: ArenaSpacing.sm),
             Expanded(
               child: Text(
-                'Cette action est irréversible',
+                l10n.deleteAccountIrreversibleTitle,
                 style: ArenaTypography.headlineMedium
                     .copyWith(color: ArenaColors.danger),
               ),
@@ -255,27 +256,27 @@ class _StepWarning extends StatelessWidget {
         ),
         const SizedBox(height: ArenaSpacing.md),
         Text(
-          'En supprimant ton compte, tu vas perdre :',
+          l10n.deleteAccountLossIntro,
           style: ArenaTypography.bodyLarge,
         ),
         const SizedBox(height: ArenaSpacing.md),
         ArenaCard(
           child: Column(
             children: [
-              for (var i = 0; i < _losses.length; i++) ...[
+              for (var i = 0; i < losses.length; i++) ...[
                 Row(
                   children: [
-                    Icon(_losses[i].$1, color: ArenaColors.textMuted),
+                    Icon(losses[i].$1, color: ArenaColors.textMuted),
                     const SizedBox(width: ArenaSpacing.md),
                     Expanded(
                       child: Text(
-                        _losses[i].$2,
+                        losses[i].$2,
                         style: ArenaTypography.bodyMedium,
                       ),
                     ),
                   ],
                 ),
-                if (i < _losses.length - 1)
+                if (i < losses.length - 1)
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: ArenaSpacing.sm),
                     child: Divider(height: 1, color: ArenaColors.border),
@@ -286,16 +287,12 @@ class _StepWarning extends StatelessWidget {
         ),
         const SizedBox(height: ArenaSpacing.md),
         Text(
-          'Ton compte sera désactivé immédiatement, puis anonymisé '
-          '(données personnelles effacées) sous 30 jours. Les pièces '
-          'comptables légales (paiements) sont conservées sous forme '
-          'anonymisée. Pendant ce délai, tu peux contacter le support pour '
-          'annuler.',
+          l10n.deleteAccountRetentionNotice,
           style: ArenaTypography.bodySmall,
         ),
         const SizedBox(height: ArenaSpacing.xl),
         ArenaButton(
-          label: 'JE COMPRENDS, CONTINUER',
+          label: l10n.deleteAccountUnderstandContinue,
           variant: ArenaButtonVariant.danger,
           fullWidth: true,
           onPressed: onContinue,
@@ -319,6 +316,7 @@ class _StepPending extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     if (checking) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -328,21 +326,19 @@ class _StepPending extends StatelessWidget {
           const Icon(Icons.payments, size: 48, color: ArenaColors.warning),
           const SizedBox(height: ArenaSpacing.md),
           Text(
-            'Tu as des gains en attente',
+            l10n.deleteAccountHasPendingTitle,
             style: ArenaTypography.headlineMedium
                 .copyWith(color: ArenaColors.warning),
           ),
           const SizedBox(height: ArenaSpacing.md),
           Text(
-            'Récupère tes paiements en attente avant de supprimer ton '
-            "compte. Une fois supprimé, ces fonds ne pourront plus t'être "
-            'envoyés.',
+            l10n.deleteAccountHasPendingBody,
             textAlign: TextAlign.center,
             style: ArenaTypography.bodyMedium,
           ),
           const Spacer(),
           ArenaButton(
-            label: 'RETOUR',
+            label: l10n.deleteAccountBack,
             variant: ArenaButtonVariant.secondary,
             fullWidth: true,
             onPressed: () => context.pop(),
@@ -359,13 +355,12 @@ class _StepPending extends StatelessWidget {
         ),
         const SizedBox(height: ArenaSpacing.md),
         Text(
-          'Aucun gain en attente',
+          l10n.deleteAccountNoPendingTitle,
           style: ArenaTypography.headlineMedium,
         ),
         const SizedBox(height: ArenaSpacing.md),
         Text(
-          'Tu peux poursuivre la suppression sans risque de perdre des '
-          'paiements en cours.',
+          l10n.deleteAccountNoPendingBody,
           textAlign: TextAlign.center,
           style: ArenaTypography.bodyMedium,
         ),
@@ -382,7 +377,7 @@ class _StepPending extends StatelessWidget {
         ],
         const Spacer(),
         ArenaButton(
-          label: 'CONTINUER',
+          label: l10n.deleteAccountContinue,
           variant: ArenaButtonVariant.danger,
           fullWidth: true,
           onPressed: onContinue,
@@ -413,31 +408,31 @@ class _StepConfirm extends StatefulWidget {
 }
 
 class _StepConfirmState extends State<_StepConfirm> {
-  static const _confirmWord = 'SUPPRIMER';
-
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final confirmWord = l10n.deleteAccountConfirmWord;
     final canSubmit = widget.passwordCtrl.text.length >= 8 &&
-        widget.confirmCtrl.text.trim().toUpperCase() == _confirmWord &&
+        widget.confirmCtrl.text.trim().toUpperCase() == confirmWord &&
         !widget.submitting;
 
     return ListView(
       children: [
         Text(
-          'Confirme la suppression',
+          l10n.deleteAccountConfirmTitle,
           style: ArenaTypography.headlineMedium
               .copyWith(color: ArenaColors.danger),
         ),
         const SizedBox(height: ArenaSpacing.lg),
         ArenaTextField(
-          label: 'Mot de passe',
+          label: l10n.deleteAccountPasswordLabel,
           controller: widget.passwordCtrl,
           obscureText: true,
           onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: ArenaSpacing.md),
         ArenaTextField(
-          label: 'Tape "$_confirmWord" pour confirmer',
+          label: 'Tape "$confirmWord" pour confirmer',
           controller: widget.confirmCtrl,
           inputFormatters: [
             FilteringTextInputFormatter.allow(RegExp('[A-Za-z]')),
@@ -447,7 +442,7 @@ class _StepConfirmState extends State<_StepConfirm> {
         ),
         const SizedBox(height: ArenaSpacing.md),
         ArenaTextField(
-          label: 'Raison (optionnel)',
+          label: l10n.deleteAccountReasonLabel,
           controller: widget.reasonCtrl,
           maxLines: 3,
           minLines: 2,
@@ -462,7 +457,7 @@ class _StepConfirmState extends State<_StepConfirm> {
         ],
         const SizedBox(height: ArenaSpacing.xl),
         ArenaButton(
-          label: 'SUPPRIMER DÉFINITIVEMENT',
+          label: l10n.deleteAccountDeletePermanently,
           variant: ArenaButtonVariant.danger,
           isLoading: widget.submitting,
           fullWidth: true,
@@ -478,26 +473,26 @@ class _StepDone extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Column(
       children: [
         const SizedBox(height: ArenaSpacing.xxl),
         const Icon(Icons.check_circle, size: 64, color: ArenaColors.success),
         const SizedBox(height: ArenaSpacing.lg),
         Text(
-          'Compte désactivé',
+          l10n.deleteAccountDoneTitle,
           style: ArenaTypography.headlineMedium,
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: ArenaSpacing.md),
         Text(
-          'Ton compte sera anonymisé (données personnelles effacées) sous '
-          "30 jours. Contacte le support si tu changes d'avis.",
+          l10n.deleteAccountDoneBody,
           style: ArenaTypography.bodyMedium,
           textAlign: TextAlign.center,
         ),
         const Spacer(),
         ArenaButton(
-          label: "RETOUR À L'ACCUEIL",
+          label: l10n.deleteAccountBackToHome,
           fullWidth: true,
           onPressed: () => context.go(UserRoutes.splash),
         ),

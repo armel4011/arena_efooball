@@ -4,6 +4,7 @@ import 'package:arena/core/services/agora_call_service.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/call_record.dart';
 import 'package:arena/data/repositories/call_repository.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -86,7 +87,8 @@ class _CallScreenState extends ConsumerState<CallScreen> {
         id = call.id;
       } catch (_) {
         if (mounted) {
-          setState(() => _override = "Impossible de lancer l'appel.");
+          final l10n = AppLocalizations.of(context);
+          setState(() => _override = l10n.callPlaceCallFailed);
         }
         return;
       }
@@ -134,7 +136,8 @@ class _CallScreenState extends ConsumerState<CallScreen> {
   void _onRingTimeout() {
     final id = _callId;
     if (_closing || _override != null || id == null) return;
-    setState(() => _override = 'Pas de réponse.');
+    final l10n = AppLocalizations.of(context);
+    setState(() => _override = l10n.callNoAnswer);
     unawaited(_svc.hangup());
     unawaited(_callRepo.markMissed(id));
   }
@@ -145,34 +148,37 @@ class _CallScreenState extends ConsumerState<CallScreen> {
     // L'appel a quitté l'état sonnerie : le garde-fou n'a plus lieu d'être.
     if (!c.isRinging) _ringTimeout?.cancel();
     if (c.isLive || _closing || _override != null) return;
+    final l10n = AppLocalizations.of(context);
     setState(
       () => _override = switch (c.status) {
-        CallStatus.declined => 'Appel refusé.',
-        CallStatus.missed => 'Pas de réponse.',
-        _ => 'Appel terminé.',
+        CallStatus.declined => l10n.callDeclined,
+        CallStatus.missed => l10n.callNoAnswer,
+        _ => l10n.callEnded,
       },
     );
     unawaited(_svc.hangup());
   }
 
   String _statusLabel(CallSnapshot s) {
+    final l10n = AppLocalizations.of(context);
     switch (s.state) {
       case CallState.idle:
       case CallState.connecting:
-        return 'Connexion en cours…';
+        return l10n.callStatusConnecting;
       case CallState.ringing:
-        return 'Sonnerie…';
+        return l10n.callStatusRinging;
       case CallState.connected:
-        return 'En appel';
+        return l10n.callStatusConnected;
       case CallState.ended:
-        return 'Appel terminé';
+        return l10n.callStatusEnded;
       case CallState.failed:
-        return s.errorMessage ?? "Échec de l'appel";
+        return s.errorMessage ?? l10n.callStatusFailed;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final id = _callId;
     if (id != null) {
       ref.listen<AsyncValue<CallRecord?>>(
@@ -220,7 +226,9 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                       _CallControl(
                         icon: s.micMuted ? Icons.mic_off : Icons.mic,
                         active: s.micMuted,
-                        label: s.micMuted ? 'Réactiver' : 'Couper',
+                        label: s.micMuted
+                            ? l10n.callControlUnmute
+                            : l10n.callControlMute,
                         onTap: _svc.toggleMute,
                       ),
                       _HangupButton(onTap: _hangup),
@@ -229,7 +237,9 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                             ? Icons.volume_up
                             : Icons.volume_down,
                         active: s.speakerOn,
-                        label: s.speakerOn ? 'Haut-parleur' : 'Écouteur',
+                        label: s.speakerOn
+                            ? l10n.callControlSpeaker
+                            : l10n.callControlEarpiece,
                         onTap: _svc.toggleSpeaker,
                       ),
                     ],
@@ -238,7 +248,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                   _CallControl(
                     icon: Icons.close,
                     active: false,
-                    label: 'Fermer',
+                    label: l10n.callControlClose,
                     onTap: () => Navigator.of(context).pop(),
                   ),
                 const SizedBox(height: 40),

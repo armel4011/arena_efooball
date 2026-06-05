@@ -8,6 +8,7 @@ import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_card.dart';
 import 'package:arena/features_user/profile/avatar_palette.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -68,9 +69,10 @@ class _FriendsSearchPageState extends ConsumerState<FriendsSearchPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: ArenaColors.void_,
-      appBar: const ArenaAppBar(title: 'Rechercher'),
+      appBar: ArenaAppBar(title: l10n.friendsSearchAppBarTitle),
       body: Padding(
         padding: const EdgeInsets.all(ArenaSpacing.lg),
         child: Column(
@@ -81,7 +83,7 @@ class _FriendsSearchPageState extends ConsumerState<FriendsSearchPage> {
               onChanged: _onChanged,
               style: ArenaText.body.copyWith(color: ArenaColors.bone),
               decoration: InputDecoration(
-                hintText: "Nom d'utilisateur",
+                hintText: l10n.friendsSearchHint,
                 hintStyle: ArenaTypography.bodyMedium.copyWith(
                   color: ArenaColors.textMuted,
                 ),
@@ -110,6 +112,7 @@ class _ResultList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return results.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Padding(
@@ -123,7 +126,7 @@ class _ResultList extends StatelessWidget {
         if (profiles.isEmpty) {
           return Center(
             child: Text(
-              'Tape au moins 2 caractères pour chercher.',
+              l10n.friendsSearchPrompt,
               textAlign: TextAlign.center,
               style: ArenaTypography.bodyMedium.copyWith(
                 color: ArenaColors.textMuted,

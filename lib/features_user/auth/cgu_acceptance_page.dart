@@ -9,6 +9,7 @@ import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/auth/widgets/auth_error_banner.dart';
 import 'package:arena/features_user/auth/widgets/auth_failure_message.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -80,6 +81,7 @@ class _CguAcceptancePageState extends ConsumerState<CguAcceptancePage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final state = ref.watch(acceptCguControllerProvider);
     final isLoading = state.isLoading;
     final errorMessage =
@@ -107,12 +109,12 @@ class _CguAcceptancePageState extends ConsumerState<CguAcceptancePage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'COMPLÈTE TON\nPROFIL',
+                  l10n.cguCompleteProfileTitle,
                   style: ArenaTypography.displayMedium,
                 ),
                 const SizedBox(height: ArenaSpacing.sm),
                 Text(
-                  'Quelques infos manquantes avant de pouvoir jouer.',
+                  l10n.cguCompleteProfileSubtitle,
                   style: ArenaTypography.bodyMedium.copyWith(
                     color: ArenaColors.textMuted,
                   ),
@@ -126,7 +128,7 @@ class _CguAcceptancePageState extends ConsumerState<CguAcceptancePage> {
                 const SizedBox(height: ArenaSpacing.md),
                 ArenaTextField(
                   label: 'WHATSAPP (${dialCodeFor(_countryCode)})',
-                  hint: 'Ex. 07 07 07 07 07',
+                  hint: l10n.cguWhatsappHint,
                   helper: 'Le code pays ${dialCodeFor(_countryCode)} est ajouté'
                       ' automatiquement.',
                   controller: _whatsappCtrl,
@@ -139,16 +141,16 @@ class _CguAcceptancePageState extends ConsumerState<CguAcceptancePage> {
                   ],
                   errorText: _whatsappCtrl.text.isEmpty || _isWhatsappValid
                       ? null
-                      : 'Numéro WhatsApp invalide.',
+                      : l10n.cguWhatsappInvalid,
                 ),
                 const SizedBox(height: ArenaSpacing.lg),
                 _DocLink(
-                  label: "Lire les Conditions Générales d'Utilisation",
+                  label: l10n.cguReadTermsLink,
                   onTap: () => _showDocPlaceholder(context, 'CGU'),
                 ),
                 const SizedBox(height: ArenaSpacing.sm),
                 _DocLink(
-                  label: 'Lire la politique de confidentialité',
+                  label: l10n.cguReadPrivacyLink,
                   onTap: () => _showDocPlaceholder(context, 'Confidentialité'),
                 ),
                 const SizedBox(height: ArenaSpacing.lg),
@@ -157,7 +159,7 @@ class _CguAcceptancePageState extends ConsumerState<CguAcceptancePage> {
                   onChanged: isLoading
                       ? null
                       : (v) => setState(() => _cguChecked = v ?? false),
-                  title: "J'accepte les CGU et la politique de confidentialité",
+                  title: l10n.cguAcceptTermsConsent,
                   required: true,
                 ),
                 const SizedBox(height: ArenaSpacing.sm),
@@ -166,9 +168,7 @@ class _CguAcceptancePageState extends ConsumerState<CguAcceptancePage> {
                   onChanged: isLoading
                       ? null
                       : (v) => setState(() => _marketingChecked = v ?? false),
-                  title:
-                      "J'accepte de recevoir des informations sur les nouveaux"
-                      ' tournois (optionnel)',
+                  title: l10n.cguMarketingConsent,
                 ),
                 if (errorMessage != null) ...[
                   const SizedBox(height: ArenaSpacing.md),
@@ -176,7 +176,7 @@ class _CguAcceptancePageState extends ConsumerState<CguAcceptancePage> {
                 ],
                 const SizedBox(height: ArenaSpacing.xl),
                 ArenaButton(
-                  label: 'CONTINUER',
+                  label: l10n.cguContinueButton,
                   fullWidth: true,
                   size: ArenaButtonSize.large,
                   isLoading: isLoading,
@@ -189,7 +189,7 @@ class _CguAcceptancePageState extends ConsumerState<CguAcceptancePage> {
                       : () async {
                           await ref.read(signOutProvider)();
                         },
-                  child: const Text('Refuser et se déconnecter'),
+                  child: Text(l10n.cguRefuseSignOut),
                 ),
               ],
             ),
@@ -200,20 +200,20 @@ class _CguAcceptancePageState extends ConsumerState<CguAcceptancePage> {
   }
 
   void _showDocPlaceholder(BuildContext context, String docName) {
+    final l10n = AppLocalizations.of(context);
     // PHASE 9 — replace with WebView pointing to the hosted docs URL
     // (linked from app_config.cgu_url / app_config.privacy_url).
     showDialog<void>(
       context: context,
       builder: (_) => AlertDialog(
         title: Text(docName),
-        content: const Text(
-          'La version complète sera affichée ici (PHASE 9 — '
-          'AboutPage + WebView vers les docs hébergés).',
+        content: Text(
+          l10n.cguDocPlaceholderBody,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
+            child: Text(l10n.cguDialogOk),
           ),
         ],
       ),
@@ -234,10 +234,11 @@ class _CountryPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('PAYS', style: ArenaTypography.labelMedium),
+        Text(l10n.cguCountryLabel, style: ArenaTypography.labelMedium),
         const SizedBox(height: ArenaSpacing.sm),
         DropdownButtonFormField<String>(
           initialValue: selected,

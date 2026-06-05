@@ -8,6 +8,7 @@ import 'package:arena/features_user/match_room/match_room_page.dart'
 import 'package:arena/features_user/match_room/widgets/cyan_dashed_container.dart';
 import 'package:arena/features_user/match_room/widgets/forfeit_timer_card.dart';
 import 'package:arena/features_user/match_room/widgets/open_chat_link.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -70,45 +71,43 @@ class _RoomReadyViewState extends ConsumerState<RoomReadyView> {
       await repo.markInProgress(widget.match.id);
     } catch (e) {
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
       setState(() => _submitting = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Impossible de marquer démarré : $e')),
+        SnackBar(content: Text('${l10n.roomReadyMarkStartedError}$e')),
       );
     }
   }
 
   Future<void> _copyCode(String code) async {
+    final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     await Clipboard.setData(ClipboardData(text: code));
     if (!mounted) return;
     messenger.showSnackBar(
-      const SnackBar(
-        content: Text('Code copié dans le presse-papier'),
-        duration: Duration(seconds: 2),
+      SnackBar(
+        content: Text(l10n.roomReadyCodeCopied),
+        duration: const Duration(seconds: 2),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final code = widget.match.roomCode;
     final isPlayer = widget.role != MatchRole.observer;
     final hint = switch (widget.role) {
-      MatchRole.observer =>
-        'Les joueurs vont rejoindre la room et démarrer le match.',
-      _ when _isHome =>
-        'Tu as partagé le code. En attente que ton adversaire rejoigne, '
-            'puis confirmez le démarrage.',
-      _ =>
-        'Rejoins la room dans le jeu avec ce code, puis confirme une fois'
-            ' que les deux joueurs sont dedans.',
+      MatchRole.observer => l10n.roomReadyHintObserver,
+      _ when _isHome => l10n.roomReadyHintHome,
+      _ => l10n.roomReadyHintAway,
     };
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'CODE DE LA ROOM',
+          l10n.roomReadyCodeLabel,
           style: ArenaText.inputLabel,
         ),
         const SizedBox(height: ArenaSpacing.sm),
@@ -128,7 +127,7 @@ class _RoomReadyViewState extends ConsumerState<RoomReadyView> {
                   if (code != null)
                     IconButton(
                       icon: const Icon(Icons.copy_outlined, size: 18),
-                      tooltip: 'Copier le code',
+                      tooltip: l10n.roomReadyCopyTooltip,
                       color: ArenaColors.silver,
                       onPressed: () => _copyCode(code),
                     ),
@@ -149,19 +148,18 @@ class _RoomReadyViewState extends ConsumerState<RoomReadyView> {
         ],
         if (isPlayer) ...[
           const SizedBox(height: ArenaSpacing.lg),
-          Text('NOM DE TON ÉQUIPE', style: ArenaText.inputLabel),
+          Text(l10n.roomReadyTeamNameLabel, style: ArenaText.inputLabel),
           const SizedBox(height: ArenaSpacing.sm),
           ArenaTextField(
             controller: _teamCtrl,
-            hint: 'Ex. Real Madrid, FC Barcelone…',
+            hint: l10n.roomReadyTeamNameHint,
             maxLength: 40,
-            helper: "Obligatoire — l'équipe que tu utilises pour ce match. "
-                "Visible par l'admin en cas de litige anti-triche.",
+            helper: l10n.roomReadyTeamNameHelper,
             onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: ArenaSpacing.md),
           ArenaButton(
-            label: 'JE SUIS DANS LA ROOM',
+            label: l10n.roomReadyInRoomButton,
             icon: Icons.play_arrow_rounded,
             fullWidth: true,
             isLoading: _submitting,
@@ -190,10 +188,11 @@ class CodeSharedInterstitial extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('CODE DE LA ROOM', style: ArenaText.inputLabel),
+        Text(l10n.roomReadyCodeLabel, style: ArenaText.inputLabel),
         const SizedBox(height: ArenaSpacing.sm),
         CyanDashedContainer(
           child: Column(
@@ -205,7 +204,7 @@ class CodeSharedInterstitial extends StatelessWidget {
               ),
               const SizedBox(height: ArenaSpacing.xs),
               Text(
-                'CODE PARTAGÉ',
+                l10n.roomReadyCodeSharedBadge,
                 style: ArenaText.inputLabel.copyWith(
                   color: ArenaColors.statusOk,
                 ),
@@ -224,7 +223,7 @@ class CodeSharedInterstitial extends StatelessWidget {
               ),
               const SizedBox(height: ArenaSpacing.xs),
               Text(
-                'Synchronisation avec ton adversaire…',
+                l10n.roomReadySyncingHint,
                 textAlign: TextAlign.center,
                 style: ArenaText.small.copyWith(color: ArenaColors.silver),
               ),

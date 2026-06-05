@@ -8,6 +8,7 @@ import 'package:arena/features_user/chat/messages_inbox_page.dart';
 import 'package:arena/features_user/competitions/competitions_list_page.dart';
 import 'package:arena/features_user/home/home_page.dart';
 import 'package:arena/features_user/profile/player_profile_page.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -55,7 +56,7 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
       onPopInvokedWithResult: _handleSystemBack,
       child: Scaffold(
         appBar: ArenaAppBar(
-          title: _titleForIndex(_currentIndex),
+          title: _titleForIndex(context, _currentIndex),
           actions: [
             if (_currentIndex == 2) const InboxComposeAction(),
           ],
@@ -88,12 +89,13 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
     final last = _lastBackPressedAt;
     if (last == null || now.difference(last).inSeconds >= 2) {
       _lastBackPressedAt = now;
+      final l10n = AppLocalizations.of(context);
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
-          const SnackBar(
-            content: Text('Appuie encore pour quitter ARENA'),
-            duration: Duration(seconds: 2),
+          SnackBar(
+            content: Text(l10n.mainLayoutExitConfirm),
+            duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -102,13 +104,16 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
     SystemNavigator.pop();
   }
 
-  String _titleForIndex(int i) => switch (i) {
-        0 => 'ACCUEIL',
-        1 => 'COMPÉTITIONS',
-        2 => 'MESSAGES',
-        3 => 'PROFIL',
-        _ => 'ARENA',
-      };
+  String _titleForIndex(BuildContext context, int i) {
+    final l10n = AppLocalizations.of(context);
+    return switch (i) {
+      0 => l10n.mainLayoutTitleHome,
+      1 => l10n.mainLayoutTitleCompetitions,
+      2 => l10n.mainLayoutTitleMessages,
+      3 => l10n.mainLayoutTitleProfile,
+      _ => 'ARENA',
+    };
+  }
 }
 
 class _GlowingNavBar extends StatelessWidget {
@@ -123,6 +128,7 @@ class _GlowingNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
+    final l10n = AppLocalizations.of(context);
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -172,26 +178,26 @@ class _GlowingNavBar extends StatelessWidget {
           child: NavigationBar(
             selectedIndex: currentIndex,
             onDestinationSelected: onChanged,
-            destinations: const [
+            destinations: [
               NavigationDestination(
-                icon: Icon(Icons.home_outlined),
-                selectedIcon: Icon(Icons.home),
-                label: 'Accueil',
+                icon: const Icon(Icons.home_outlined),
+                selectedIcon: const Icon(Icons.home),
+                label: l10n.mainLayoutNavHome,
               ),
               NavigationDestination(
-                icon: Icon(Icons.sports_esports_outlined),
-                selectedIcon: Icon(Icons.sports_esports),
-                label: 'Compétitions',
+                icon: const Icon(Icons.sports_esports_outlined),
+                selectedIcon: const Icon(Icons.sports_esports),
+                label: l10n.mainLayoutNavCompetitions,
               ),
               NavigationDestination(
-                icon: Icon(Icons.chat_bubble_outline),
-                selectedIcon: Icon(Icons.chat_bubble),
-                label: 'Chat',
+                icon: const Icon(Icons.chat_bubble_outline),
+                selectedIcon: const Icon(Icons.chat_bubble),
+                label: l10n.mainLayoutNavChat,
               ),
               NavigationDestination(
-                icon: Icon(Icons.person_outline),
-                selectedIcon: Icon(Icons.person),
-                label: 'Profil',
+                icon: const Icon(Icons.person_outline),
+                selectedIcon: const Icon(Icons.person),
+                label: l10n.mainLayoutNavProfile,
               ),
             ],
           ),

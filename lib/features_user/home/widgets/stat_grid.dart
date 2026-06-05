@@ -1,5 +1,6 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/profile.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 /// Grille 3-colonnes "Tes stats" affichée en bas de la home :
@@ -12,6 +13,7 @@ class StatGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final stats = profile?.stats ?? const <String, dynamic>{};
     final wins = _asInt(stats['wins']);
     final losses = _asInt(stats['losses']);
@@ -23,14 +25,14 @@ class StatGrid extends StatelessWidget {
         Expanded(
           child: _StatTile(
             value: '$played',
-            label: 'Matchs',
+            label: l10n.statGridMatchesLabel,
           ),
         ),
         const SizedBox(width: ArenaSpacing.sm),
         Expanded(
           child: _StatTile(
             value: '$wins/$losses/$draws',
-            label: 'V/D/N',
+            label: l10n.statGridWdlLabel,
             valueColor: ArenaColors.statusOk,
           ),
         ),
@@ -38,7 +40,7 @@ class StatGrid extends StatelessWidget {
         Expanded(
           child: _StatTile(
             value: played == 0 ? '—' : '$winRate%',
-            label: 'Win rate',
+            label: l10n.statGridWinRateLabel,
           ),
         ),
       ],
