@@ -75,7 +75,7 @@ class AdminCompetitionActionsTab extends ConsumerWidget {
         ],
         const SizedBox(height: ArenaSpacing.xs),
         ArenaButton(
-          label: '🚫 ANNULER (refund all)',
+          label: '🚫 ANNULER LA COMPÉTITION',
           variant: ArenaButtonVariant.danger,
           fullWidth: true,
           onPressed: () => _cancel(context, ref),
@@ -158,8 +158,9 @@ class AdminCompetitionActionsTab extends ConsumerWidget {
         backgroundColor: ArenaColors.carbon,
         title: Text('Annuler la compétition ?', style: ArenaText.h3),
         content: Text(
-          "L'opération est irréversible côté joueurs. Les remboursements "
-          'seront déclenchés en PHASE 11bis.',
+          "L'opération est irréversible côté joueurs. Les joueurs ayant payé "
+          'leur inscription seront notifiés et remboursés manuellement '
+          '(Mobile Money) par le staff.',
           style: ArenaText.bodyMuted,
         ),
         actions: [
@@ -177,12 +178,17 @@ class AdminCompetitionActionsTab extends ConsumerWidget {
     );
     if (ok != true) return;
     try {
-      await ref
+      final notified = await ref
           .read(adminCompetitionsRepositoryProvider)
           .cancel(competition.id);
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('« ${competition.name} » annulée.')),
+        SnackBar(
+          content: Text(
+            '« ${competition.name} » annulée — '
+            '$notified joueur(s) payeur(s) notifié(s).',
+          ),
+        ),
       );
     } catch (e) {
       if (!context.mounted) return;

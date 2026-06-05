@@ -4,6 +4,20 @@
 > mais sortis du lot de correctifs rapides car ils touchent de l'argent réel et
 > une obligation légale → ils demandent une **décision produit** avant code.
 
+## ✅ État d'implémentation (2026-06-05)
+
+- **C-1 — décision retenue : Option 1 (anonymiser + conserver la compta).**
+  Livré : colonne `profiles.anonymized_at`, RPC `anonymize_deleted_account(uuid)`
+  (scrub PII, service_role only), et réécriture de la cron `cleanup-deleted-accounts`
+  (anonymise le profile + scrub auth.users email/metadata + ban login, au lieu de
+  `deleteUser`). Les lignes payments/payouts survivent anonymisées. Idempotent via
+  `anonymized_at IS NULL`.
+- **C-2 — livré : Option 1 (stop-the-bleeding).** Label « refund all » trompeur
+  corrigé, texte de confirmation honnête, et RPC `cancel_competition(uuid)` qui
+  annule + **notifie** chaque joueur ayant payé (push + inbox) qu'un remboursement
+  manuel suivra. **Reste à faire (Option 2, cible V1)** : file de remboursement
+  traçable (marquer les paiements `refunded` une fois le P2P effectué).
+
 ---
 
 ## C-1 · La suppression de compte RGPD échoue pour tout utilisateur ayant joué/payé
