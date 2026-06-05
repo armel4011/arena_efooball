@@ -24,6 +24,7 @@ class PayoutRecord {
     this.payeeMethod,
     this.claimedAt,
     this.validatedAt,
+    this.competitionName,
   });
 
   factory PayoutRecord.fromJson(Map<String, dynamic> row) {
@@ -44,6 +45,9 @@ class PayoutRecord {
           ? null
           : DateTime.parse(row['validated_at'] as String),
       createdAt: DateTime.parse(row['created_at'] as String),
+      // Nom de compétition embarqué (`*, competitions(name)`) pour la file admin.
+      competitionName: (row['competitions'] as Map<String, dynamic>?)?['name']
+          as String?,
     );
   }
 
@@ -63,6 +67,9 @@ class PayoutRecord {
   final DateTime? claimedAt;
   final DateTime? validatedAt;
   final DateTime createdAt;
+
+  /// Nom de la compétition (présent seulement sur la file admin embarquée).
+  final String? competitionName;
 
   /// Le gagnant a fourni son numéro de retrait (en attente de versement).
   bool get isClaimed => payeePhone != null && payeePhone!.isNotEmpty;
@@ -121,6 +128,20 @@ class PayoutRepository {
     return (res as num?)?.toInt() ?? 0;
   }
 
+  /// File globale des versements à traiter (super-admin) : tous les payouts
+  /// encore `pending_admin_validation`, réclamés d'abord (numéro fourni →
+  /// prêts à payer), puis ceux en attente de réclamation.
+  Future<List<PayoutRecord>> listPendingGlobal({int limit = 200}) async {
+    final rows = await _client
+        .from(_table)
+        .select('*, competitions(name)')
+        .eq('status', 'pending_admin_validation')
+        .order('claimed_at', ascending: false, nullsFirst: false)
+        .order('created_at')
+        .limit(limit);
+    return [for (final row in rows) PayoutRecord.fromJson(row)];
+  }
+
   /// Liste les versements d'une compétition (file admin), du plus récent.
   Future<List<PayoutRecord>> listByCompetition(String competitionId) async {
     final rows = await _client
@@ -157,4 +178,10 @@ final myPayoutsProvider = FutureProvider.autoDispose<List<PayoutRecord>>((ref) {
 final payoutsByCompetitionProvider = FutureProvider.autoDispose
     .family<List<PayoutRecord>, String>((ref, competitionId) {
   return ref.watch(payoutRepositoryProvider).listByCompetition(competitionId);
+});
+
+/// File globale des versements à traiter (écran admin `/super/payouts`).
+final pendingPayoutsProvider =
+    FutureProvider.autoDispose<List<PayoutRecord>>((ref) {
+  return ref.watch(payoutRepositoryProvider).listPendingGlobal();
 });

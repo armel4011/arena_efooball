@@ -229,6 +229,13 @@ class AdminDashboardPage extends ConsumerWidget {
                   ),
                   const SizedBox(height: ArenaSpacing.xs),
                   ArenaButton(
+                    label: '💰 VERSEMENTS GAINS',
+                    fullWidth: true,
+                    variant: ArenaButtonVariant.secondary,
+                    onPressed: () => context.push(AdminRoutes.superPayouts),
+                  ),
+                  const SizedBox(height: ArenaSpacing.xs),
+                  ArenaButton(
                     label: 'REVENUE PLATEFORME',
                     fullWidth: true,
                     variant: ArenaButtonVariant.secondary,
