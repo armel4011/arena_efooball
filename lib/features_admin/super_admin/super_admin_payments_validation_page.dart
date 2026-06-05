@@ -36,7 +36,7 @@ class _SuperAdminPaymentsValidationPageState
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         appBar: const ArenaAppBar(title: 'Validation paiements'),
         body: ArenaScreenBackground(
@@ -45,12 +45,15 @@ class _SuperAdminPaymentsValidationPageState
             child: Column(
               children: [
                 const TabBar(
+                  isScrollable: true,
+                  tabAlignment: TabAlignment.center,
                   labelColor: ArenaColors.bone,
                   unselectedLabelColor: ArenaColors.silver,
                   indicatorColor: ArenaColors.signalBlue,
                   indicatorWeight: 2,
                   tabs: [
                     Tab(text: 'EN ATTENTE'),
+                    Tab(text: 'REMBOURSEMENTS'),
                     Tab(text: 'HISTORIQUE'),
                   ],
                 ),
@@ -58,6 +61,7 @@ class _SuperAdminPaymentsValidationPageState
                   child: TabBarView(
                     children: [
                       _PendingList(onValidate: _validate, onReject: _reject),
+                      _RefundList(onRefund: _markRefunded),
                       const _HistoryList(),
                     ],
                   ),
@@ -207,6 +211,187 @@ class _SuperAdminPaymentsValidationPageState
         SnackBar(content: Text('Erreur : ${arenaErrorMessage(e)}')),
       );
     }
+  }
+
+  Future<void> _markRefunded(AdminPaymentRow row) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: ArenaColors.carbon,
+        title: const Text('Confirmer le remboursement ?'),
+        content: Text(
+          'Confirme avoir rembourse ${_xaf(row.payment.amountLocal)} '
+          '${row.payment.currency} a ${row.username} sur le '
+          '${_methodLabel(row.payment.payerMethod)} '
+          '${row.payment.payerPhone ?? "—"}.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: ArenaColors.statusOk),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('MARQUER REMBOURSÉ'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    try {
+      await ref
+          .read(adminPaymentsRepositoryProvider)
+          .markRefunded(row.payment.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Remboursement marqué · ${row.username} notifié.'),
+          backgroundColor: ArenaColors.statusOk,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur : ${arenaErrorMessage(e)}')),
+      );
+    }
+  }
+}
+
+/// Onglet REMBOURSEMENTS — paiements `refund_pending` (compétition annulée)
+/// à rembourser manuellement via Mobile Money.
+class _RefundList extends ConsumerWidget {
+  const _RefundList({required this.onRefund});
+
+  final Future<void> Function(AdminPaymentRow) onRefund;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(adminRefundPendingProvider);
+    return async.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(ArenaSpacing.lg),
+          child: Text('Erreur : $e', style: ArenaText.bodyMuted),
+        ),
+      ),
+      data: (list) {
+        if (list.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(ArenaSpacing.xl),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('💸', style: ArenaText.h1.copyWith(fontSize: 48)),
+                  const SizedBox(height: ArenaSpacing.sm),
+                  Text('Aucun remboursement en attente.', style: ArenaText.body),
+                ],
+              ),
+            ),
+          );
+        }
+        return ListView.separated(
+          padding: const EdgeInsets.all(ArenaSpacing.lg),
+          itemCount: list.length,
+          separatorBuilder: (_, __) => const SizedBox(height: ArenaSpacing.sm),
+          itemBuilder: (_, i) => _RefundCard(
+            row: list[i],
+            onRefund: () => onRefund(list[i]),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _RefundCard extends StatelessWidget {
+  const _RefundCard({required this.row, required this.onRefund});
+
+  final AdminPaymentRow row;
+  final VoidCallback onRefund;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = row.payment;
+    return Container(
+      padding: const EdgeInsets.all(ArenaSpacing.md),
+      decoration: BoxDecoration(
+        color: ArenaColors.carbon,
+        borderRadius: BorderRadius.circular(ArenaRadius.lg),
+        border: Border.all(color: ArenaColors.statusWarn.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            row.username,
+            style: ArenaText.body.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 4),
+          Text(row.competitionName, style: ArenaText.bodyMuted),
+          const SizedBox(height: ArenaSpacing.sm),
+          Container(
+            padding: const EdgeInsets.all(ArenaSpacing.sm),
+            decoration: BoxDecoration(
+              color: ArenaColors.surface,
+              borderRadius: BorderRadius.circular(ArenaRadius.md),
+            ),
+            child: Column(
+              children: [
+                _kv(
+                  'A rembourser',
+                  '${_xaf(p.amountLocal)} ${p.currency}',
+                  emphasize: true,
+                ),
+                _kv('Méthode', _methodLabel(p.payerMethod)),
+                _kv('Numéro', p.payerPhone ?? '—', mono: true),
+                _kv(
+                  'Référence',
+                  'ARENA-${p.id.substring(0, 8).toUpperCase()}',
+                  mono: true,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: ArenaSpacing.sm),
+          ArenaButton(
+            label: '✓ MARQUER REMBOURSÉ',
+            fullWidth: true,
+            onPressed: onRefund,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _kv(
+    String key,
+    String value, {
+    bool mono = false,
+    bool emphasize = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(key, style: ArenaText.bodyMuted),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: (mono ? ArenaText.mono : ArenaText.body).copyWith(
+                color: emphasize ? ArenaColors.statusWarn : null,
+                fontWeight: emphasize ? FontWeight.w700 : null,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

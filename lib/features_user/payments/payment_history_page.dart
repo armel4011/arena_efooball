@@ -609,6 +609,26 @@ class _TxCard extends StatelessWidget {
           badgeVariant: ArenaBadgeVariant.warn,
           isFail: false,
         );
+      case 'refund_pending':
+        return (
+          glyph: '↩',
+          iconColor: ArenaColors.signalBlue,
+          tint: const Color(0x33007BFF),
+          amountColor: ArenaColors.silver,
+          badge: 'REMBOURSEMENT',
+          badgeVariant: ArenaBadgeVariant.warn,
+          isFail: false,
+        );
+      case 'refunded':
+        return (
+          glyph: '↩',
+          iconColor: ArenaColors.statusOk,
+          tint: const Color(0x3300C2A8),
+          amountColor: ArenaColors.silverDim,
+          badge: 'REMBOURSÉ',
+          badgeVariant: ArenaBadgeVariant.success,
+          isFail: true,
+        );
       case 'rejected':
       case 'failed':
       default:
