@@ -234,6 +234,13 @@ class AdminDashboardPage extends ConsumerWidget {
                     variant: ArenaButtonVariant.secondary,
                     onPressed: () => context.push(AdminRoutes.superRevenue),
                   ),
+                  const SizedBox(height: ArenaSpacing.xs),
+                  ArenaButton(
+                    label: '🖼 ESPACE PUBLICITAIRE',
+                    fullWidth: true,
+                    variant: ArenaButtonVariant.secondary,
+                    onPressed: () => context.push(AdminRoutes.superPromoBanner),
+                  ),
                 ],
                 const SizedBox(height: ArenaSpacing.lg),
                 Text(

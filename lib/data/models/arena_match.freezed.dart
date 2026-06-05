@@ -35,6 +35,8 @@ mixin _$ArenaMatch {
   MatchStatus get status => throw _privateConstructorUsedError;
   String? get homePlayerId => throw _privateConstructorUsedError;
   String? get roomCode => throw _privateConstructorUsedError;
+  String? get player1TeamName => throw _privateConstructorUsedError;
+  String? get player2TeamName => throw _privateConstructorUsedError;
   String? get nextMatchId => throw _privateConstructorUsedError;
   DateTime? get scheduledAt => throw _privateConstructorUsedError;
   DateTime? get startedAt => throw _privateConstructorUsedError;
@@ -73,6 +75,8 @@ abstract class $ArenaMatchCopyWith<$Res> {
       @MatchStatusConverter() MatchStatus status,
       String? homePlayerId,
       String? roomCode,
+      String? player1TeamName,
+      String? player2TeamName,
       String? nextMatchId,
       DateTime? scheduledAt,
       DateTime? startedAt,
@@ -110,6 +114,8 @@ class _$ArenaMatchCopyWithImpl<$Res, $Val extends ArenaMatch>
     Object? status = null,
     Object? homePlayerId = freezed,
     Object? roomCode = freezed,
+    Object? player1TeamName = freezed,
+    Object? player2TeamName = freezed,
     Object? nextMatchId = freezed,
     Object? scheduledAt = freezed,
     Object? startedAt = freezed,
@@ -174,6 +180,14 @@ class _$ArenaMatchCopyWithImpl<$Res, $Val extends ArenaMatch>
           ? _value.roomCode
           : roomCode // ignore: cast_nullable_to_non_nullable
               as String?,
+      player1TeamName: freezed == player1TeamName
+          ? _value.player1TeamName
+          : player1TeamName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      player2TeamName: freezed == player2TeamName
+          ? _value.player2TeamName
+          : player2TeamName // ignore: cast_nullable_to_non_nullable
+              as String?,
       nextMatchId: freezed == nextMatchId
           ? _value.nextMatchId
           : nextMatchId // ignore: cast_nullable_to_non_nullable
@@ -225,6 +239,8 @@ abstract class _$$ArenaMatchImplCopyWith<$Res>
       @MatchStatusConverter() MatchStatus status,
       String? homePlayerId,
       String? roomCode,
+      String? player1TeamName,
+      String? player2TeamName,
       String? nextMatchId,
       DateTime? scheduledAt,
       DateTime? startedAt,
@@ -260,6 +276,8 @@ class __$$ArenaMatchImplCopyWithImpl<$Res>
     Object? status = null,
     Object? homePlayerId = freezed,
     Object? roomCode = freezed,
+    Object? player1TeamName = freezed,
+    Object? player2TeamName = freezed,
     Object? nextMatchId = freezed,
     Object? scheduledAt = freezed,
     Object? startedAt = freezed,
@@ -324,6 +342,14 @@ class __$$ArenaMatchImplCopyWithImpl<$Res>
           ? _value.roomCode
           : roomCode // ignore: cast_nullable_to_non_nullable
               as String?,
+      player1TeamName: freezed == player1TeamName
+          ? _value.player1TeamName
+          : player1TeamName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      player2TeamName: freezed == player2TeamName
+          ? _value.player2TeamName
+          : player2TeamName // ignore: cast_nullable_to_non_nullable
+              as String?,
       nextMatchId: freezed == nextMatchId
           ? _value.nextMatchId
           : nextMatchId // ignore: cast_nullable_to_non_nullable
@@ -370,6 +396,8 @@ class _$ArenaMatchImpl extends _ArenaMatch {
       @MatchStatusConverter() this.status = MatchStatus.pending,
       this.homePlayerId,
       this.roomCode,
+      this.player1TeamName,
+      this.player2TeamName,
       this.nextMatchId,
       this.scheduledAt,
       this.startedAt,
@@ -412,6 +440,10 @@ class _$ArenaMatchImpl extends _ArenaMatch {
   @override
   final String? roomCode;
   @override
+  final String? player1TeamName;
+  @override
+  final String? player2TeamName;
+  @override
   final String? nextMatchId;
   @override
   final DateTime? scheduledAt;
@@ -426,7 +458,7 @@ class _$ArenaMatchImpl extends _ArenaMatch {
 
   @override
   String toString() {
-    return 'ArenaMatch(id: $id, competitionId: $competitionId, phaseId: $phaseId, groupId: $groupId, round: $round, matchNumber: $matchNumber, player1Id: $player1Id, player2Id: $player2Id, score1: $score1, score2: $score2, winnerId: $winnerId, status: $status, homePlayerId: $homePlayerId, roomCode: $roomCode, nextMatchId: $nextMatchId, scheduledAt: $scheduledAt, startedAt: $startedAt, finishedAt: $finishedAt, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'ArenaMatch(id: $id, competitionId: $competitionId, phaseId: $phaseId, groupId: $groupId, round: $round, matchNumber: $matchNumber, player1Id: $player1Id, player2Id: $player2Id, score1: $score1, score2: $score2, winnerId: $winnerId, status: $status, homePlayerId: $homePlayerId, roomCode: $roomCode, player1TeamName: $player1TeamName, player2TeamName: $player2TeamName, nextMatchId: $nextMatchId, scheduledAt: $scheduledAt, startedAt: $startedAt, finishedAt: $finishedAt, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -455,6 +487,10 @@ class _$ArenaMatchImpl extends _ArenaMatch {
                 other.homePlayerId == homePlayerId) &&
             (identical(other.roomCode, roomCode) ||
                 other.roomCode == roomCode) &&
+            (identical(other.player1TeamName, player1TeamName) ||
+                other.player1TeamName == player1TeamName) &&
+            (identical(other.player2TeamName, player2TeamName) ||
+                other.player2TeamName == player2TeamName) &&
             (identical(other.nextMatchId, nextMatchId) ||
                 other.nextMatchId == nextMatchId) &&
             (identical(other.scheduledAt, scheduledAt) ||
@@ -487,6 +523,8 @@ class _$ArenaMatchImpl extends _ArenaMatch {
         status,
         homePlayerId,
         roomCode,
+        player1TeamName,
+        player2TeamName,
         nextMatchId,
         scheduledAt,
         startedAt,
@@ -527,6 +565,8 @@ abstract class _ArenaMatch extends ArenaMatch {
       @MatchStatusConverter() final MatchStatus status,
       final String? homePlayerId,
       final String? roomCode,
+      final String? player1TeamName,
+      final String? player2TeamName,
       final String? nextMatchId,
       final DateTime? scheduledAt,
       final DateTime? startedAt,
@@ -567,6 +607,10 @@ abstract class _ArenaMatch extends ArenaMatch {
   String? get homePlayerId;
   @override
   String? get roomCode;
+  @override
+  String? get player1TeamName;
+  @override
+  String? get player2TeamName;
   @override
   String? get nextMatchId;
   @override

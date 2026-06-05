@@ -24,6 +24,8 @@ _$ArenaMatchImpl _$$ArenaMatchImplFromJson(Map<String, dynamic> json) =>
           : const MatchStatusConverter().fromJson(json['status'] as String?),
       homePlayerId: json['home_player_id'] as String?,
       roomCode: json['room_code'] as String?,
+      player1TeamName: json['player1_team_name'] as String?,
+      player2TeamName: json['player2_team_name'] as String?,
       nextMatchId: json['next_match_id'] as String?,
       scheduledAt: json['scheduled_at'] == null
           ? null
@@ -60,6 +62,10 @@ Map<String, dynamic> _$$ArenaMatchImplToJson(_$ArenaMatchImpl instance) =>
         'status': value,
       if (instance.homePlayerId case final value?) 'home_player_id': value,
       if (instance.roomCode case final value?) 'room_code': value,
+      if (instance.player1TeamName case final value?)
+        'player1_team_name': value,
+      if (instance.player2TeamName case final value?)
+        'player2_team_name': value,
       if (instance.nextMatchId case final value?) 'next_match_id': value,
       if (instance.scheduledAt?.toIso8601String() case final value?)
         'scheduled_at': value,

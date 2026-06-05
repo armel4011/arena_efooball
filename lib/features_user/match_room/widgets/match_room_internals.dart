@@ -61,24 +61,10 @@ Future<void> resolveSubmissions({
 
   try {
     if (concordant) {
-      String? winner;
-      if (viaPenA && pen1A != null && pen2A != null) {
-        if (pen1A > pen2A) {
-          winner = match.player1Id;
-        } else if (pen2A > pen1A) {
-          winner = match.player2Id;
-        }
-      } else if (s1A > s2A) {
-        winner = match.player1Id;
-      } else if (s2A > s1A) {
-        winner = match.player2Id;
-      }
-      await repo.commitScore(
-        matchId: match.id,
-        scoreP1: s1A,
-        scoreP2: s2A,
-        winnerId: winner,
-      );
+      // Le vainqueur et le score sont (re)calculés côté serveur par
+      // `finalize_match_score`, qui revérifie la concordance des deux
+      // soumissions — le client n'envoie que l'id du match.
+      await repo.commitScore(matchId: match.id);
     } else {
       await repo.flagDisputed(match.id);
     }
