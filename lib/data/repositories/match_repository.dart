@@ -204,22 +204,19 @@ class MatchRepository {
     });
   }
 
-  /// Two concordant submissions → commit the result on the `matches`
-  /// row: scores, winner, status. [winnerId] may be null on a draw —
-  /// the caller decides which side wins (or it's a tie in round-robin).
-  Future<void> commitScore({
-    required String matchId,
-    required int scoreP1,
-    required int scoreP2,
-    String? winnerId,
-  }) async {
-    await _client.from(_table).update({
-      'score1': scoreP1,
-      'score2': scoreP2,
-      'winner_id': winnerId,
-      'status': 'completed',
-      'finished_at': DateTime.now().toUtc().toIso8601String(),
-    }).eq('id', matchId);
+  /// Two concordant submissions → finalize the result server-side.
+  ///
+  /// Delegates to the `finalize_match_score` RPC (SECURITY DEFINER): the
+  /// server re-reads both `score_submitted` events, re-checks they agree,
+  /// computes the winner and writes score/winner/status itself. Direct
+  /// client UPDATEs of those columns are now blocked by the
+  /// `guard_matches_protected_columns` trigger — passing scores from the
+  /// client would be ignored anyway, so we only send the match id.
+  Future<void> commitScore({required String matchId}) async {
+    await _client.rpc<void>(
+      'finalize_match_score',
+      params: {'p_match_id': matchId},
+    );
   }
 
   /// Two players posted disagreeing scores → flip to `disputed`. The
@@ -228,34 +225,30 @@ class MatchRepository {
     await _client.from(_table).update({'status': 'disputed'}).eq('id', matchId);
   }
 
-  /// Marks the match as forfeited by [forfeitingPlayerId]: status flips
-  /// to `forfeited`, the winner becomes [opponentId], and the
-  /// `finished_at` timestamp is stamped now.
+  /// Declares a forfeit by the current player via the `forfeit_match` RPC
+  /// (SECURITY DEFINER): the server checks the caller is one of the two
+  /// players, awards the win to the opponent, flips `status` to
+  /// `forfeited`, stamps `finished_at`, and logs a `forfeit` event. A
+  /// player can therefore only ever forfeit on their own behalf — direct
+  /// client writes of `status`/`winner_id` are blocked by the
+  /// `guard_matches_protected_columns` trigger.
   ///
   /// PHASE 8.5 — triggered either by the player tapping "Arrêter
-  /// (forfait)" in the overlay's long-press menu, or automatically
-  /// when the 2-minute pause grace expires. We also drop a
-  /// `forfeit_declared` event into `match_events` so the admin can
-  /// trace why the row flipped.
+  /// (forfait)" in the overlay's long-press menu, or automatically when
+  /// the 2-minute pause grace expires. [forfeitingPlayerId] / [opponentId]
+  /// are kept for caller compatibility but the server derives both from
+  /// the authenticated identity and the match row.
   Future<void> markForfeit({
     required String matchId,
     required String forfeitingPlayerId,
     required String opponentId,
     String? reason,
   }) async {
-    await _client.from(_table).update({
-      'status': 'forfeited',
-      'winner_id': opponentId,
-      'finished_at': DateTime.now().toUtc().toIso8601String(),
-    }).eq('id', matchId);
-
-    await recordEvent(
-      matchId: matchId,
-      type: 'forfeit_declared',
-      byProfileId: forfeitingPlayerId,
-      payload: {
-        'opponent_id': opponentId,
-        if (reason != null) 'reason': reason,
+    await _client.rpc<void>(
+      'forfeit_match',
+      params: {
+        'p_match_id': matchId,
+        if (reason != null) 'p_reason': reason,
       },
     );
   }
