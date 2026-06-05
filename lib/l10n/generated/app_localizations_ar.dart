@@ -92,6 +92,49 @@ class AppLocalizationsAr extends AppLocalizations {
       'يمكنك إعادة مشاهدتها لاحقًا من الملف الشخصي ← إعادة المقدمة.';
 
   @override
+  String get authEmailLabel => 'البريد الإلكتروني';
+
+  @override
+  String get authEmailHint => 'joueur@arena.app';
+
+  @override
+  String get authPasswordLabel => 'كلمة المرور';
+
+  @override
+  String get authForgotPassword => 'نسيت كلمة المرور؟';
+
+  @override
+  String get authOr => 'أو';
+
+  @override
+  String get authContinueGoogle => 'المتابعة بحساب Google';
+
+  @override
+  String get authSignUp => 'إنشاء حساب';
+
+  @override
+  String get loginTitle => 'تسجيل الدخول';
+
+  @override
+  String get loginSubtitle => 'تابع رحلتك على أرينا.';
+
+  @override
+  String get loginSubmit => 'تسجيل الدخول';
+
+  @override
+  String get loginNoAccount => 'ليس لديك حساب؟ ';
+
+  @override
+  String get forgotPasswordTitle => 'نسيت كلمة المرور';
+
+  @override
+  String get forgotPasswordSubtitle =>
+      'أدخل البريد الإلكتروني المرتبط بحسابك، وسنرسل إليك رمزًا من 6 أرقام لإعادة تعيين كلمة المرور.';
+
+  @override
+  String get forgotPasswordSubmit => 'إرسال الرمز';
+
+  @override
   String get languageFrench => 'Français';
 
   @override

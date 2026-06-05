@@ -92,6 +92,49 @@ class AppLocalizationsEn extends AppLocalizations {
       'You can replay it later from Profile > Replay intro.';
 
   @override
+  String get authEmailLabel => 'EMAIL';
+
+  @override
+  String get authEmailHint => 'joueur@arena.app';
+
+  @override
+  String get authPasswordLabel => 'PASSWORD';
+
+  @override
+  String get authForgotPassword => 'Forgot password?';
+
+  @override
+  String get authOr => 'OR';
+
+  @override
+  String get authContinueGoogle => 'Continue with Google';
+
+  @override
+  String get authSignUp => 'Sign up';
+
+  @override
+  String get loginTitle => 'LOG IN';
+
+  @override
+  String get loginSubtitle => 'Continue your journey on ARENA.';
+
+  @override
+  String get loginSubmit => 'LOG IN';
+
+  @override
+  String get loginNoAccount => 'No account yet? ';
+
+  @override
+  String get forgotPasswordTitle => 'FORGOT PASSWORD';
+
+  @override
+  String get forgotPasswordSubtitle =>
+      'Enter the email linked to your account; we\'ll send a 6-digit code to reset your password.';
+
+  @override
+  String get forgotPasswordSubmit => 'SEND CODE';
+
+  @override
   String get languageFrench => 'Français';
 
   @override

@@ -39,3 +39,11 @@ les 5 étapes ci-dessus — c'est mécanique, pas de décision.
 ## Fait
 - ✅ **onboarding** (`onboarding_page.dart`) : 4 slides + CTA + dialogue de
   sortie, fr/en/ar.
+- ✅ **flux connexion** : `login_user_screen.dart` + `forgot_password_page.dart`
+  (clés `auth*` partagées + `login*`/`forgotPassword*`), fr/en/ar.
+
+### Reste du flux auth (à faire)
+`register_user_screen.dart` (689 l.), `cgu_acceptance_page.dart`,
+`reset_password_page.dart`, `reset_password_code_page.dart`,
+`splash_user_screen.dart`, `banned_account_page.dart`,
+`link_existing_account_page.dart` — réutiliser les clés `auth*` déjà créées.

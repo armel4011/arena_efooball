@@ -7,6 +7,7 @@ import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/auth/widgets/auth_error_banner.dart';
 import 'package:arena/features_user/auth/widgets/auth_failure_message.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -97,24 +98,24 @@ class _RequestForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Form(
       key: formKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('MOT DE PASSE OUBLIÉ', style: ArenaTypography.displayMedium),
+          Text(l10n.forgotPasswordTitle, style: ArenaTypography.displayMedium),
           const SizedBox(height: ArenaSpacing.sm),
           Text(
-            "Entre l'adresse e-mail liée à ton compte, on t'envoie un code"
-            ' à 6 chiffres pour réinitialiser ton mot de passe.',
+            l10n.forgotPasswordSubtitle,
             style: ArenaTypography.bodyMedium.copyWith(
               color: ArenaColors.textMuted,
             ),
           ),
           const SizedBox(height: ArenaSpacing.xl),
           ArenaTextField(
-            label: 'EMAIL',
-            hint: 'joueur@arena.app',
+            label: l10n.authEmailLabel,
+            hint: l10n.authEmailHint,
             controller: emailCtrl,
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.done,
@@ -127,7 +128,7 @@ class _RequestForm extends StatelessWidget {
           ],
           const SizedBox(height: ArenaSpacing.lg),
           ArenaButton(
-            label: 'ENVOYER LE CODE',
+            label: l10n.forgotPasswordSubmit,
             fullWidth: true,
             size: ArenaButtonSize.large,
             isLoading: isLoading,

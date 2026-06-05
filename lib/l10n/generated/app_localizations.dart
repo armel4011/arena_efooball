@@ -256,6 +256,90 @@ abstract class AppLocalizations {
   /// **'Tu peux la revoir plus tard depuis Profil > Revoir l\'introduction.'**
   String get onboardingExitBody;
 
+  /// No description provided for @authEmailLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'EMAIL'**
+  String get authEmailLabel;
+
+  /// No description provided for @authEmailHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'joueur@arena.app'**
+  String get authEmailHint;
+
+  /// No description provided for @authPasswordLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'MOT DE PASSE'**
+  String get authPasswordLabel;
+
+  /// No description provided for @authForgotPassword.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mot de passe oublié ?'**
+  String get authForgotPassword;
+
+  /// No description provided for @authOr.
+  ///
+  /// In fr, this message translates to:
+  /// **'OU'**
+  String get authOr;
+
+  /// No description provided for @authContinueGoogle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Continuer avec Google'**
+  String get authContinueGoogle;
+
+  /// No description provided for @authSignUp.
+  ///
+  /// In fr, this message translates to:
+  /// **'S\'inscrire'**
+  String get authSignUp;
+
+  /// No description provided for @loginTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'CONNEXION'**
+  String get loginTitle;
+
+  /// No description provided for @loginSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Continue ton parcours sur ARENA.'**
+  String get loginSubtitle;
+
+  /// No description provided for @loginSubmit.
+  ///
+  /// In fr, this message translates to:
+  /// **'SE CONNECTER'**
+  String get loginSubmit;
+
+  /// No description provided for @loginNoAccount.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pas encore inscrit ? '**
+  String get loginNoAccount;
+
+  /// No description provided for @forgotPasswordTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'MOT DE PASSE OUBLIÉ'**
+  String get forgotPasswordTitle;
+
+  /// No description provided for @forgotPasswordSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Entre l\'adresse e-mail liée à ton compte, on t\'envoie un code à 6 chiffres pour réinitialiser ton mot de passe.'**
+  String get forgotPasswordSubtitle;
+
+  /// No description provided for @forgotPasswordSubmit.
+  ///
+  /// In fr, this message translates to:
+  /// **'ENVOYER LE CODE'**
+  String get forgotPasswordSubmit;
+
   /// No description provided for @languageFrench.
   ///
   /// In fr, this message translates to:

@@ -8,6 +8,7 @@ import 'package:arena/features_shared/widgets/google_sign_in_button.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/auth/widgets/auth_error_banner.dart';
 import 'package:arena/features_user/auth/widgets/auth_failure_message.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -48,6 +49,7 @@ class _LoginUserScreenState extends ConsumerState<LoginUserScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final state = ref.watch(signInControllerProvider);
     final googleState = ref.watch(googleSsoControllerProvider);
     final isLoading = state.isLoading || googleState.isLoading;
@@ -73,18 +75,18 @@ class _LoginUserScreenState extends ConsumerState<LoginUserScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text('CONNEXION', style: ArenaTypography.displayMedium),
+                  Text(l10n.loginTitle, style: ArenaTypography.displayMedium),
                   const SizedBox(height: ArenaSpacing.sm),
                   Text(
-                    'Continue ton parcours sur ARENA.',
+                    l10n.loginSubtitle,
                     style: ArenaTypography.bodyMedium.copyWith(
                       color: ArenaColors.textMuted,
                     ),
                   ),
                   const SizedBox(height: ArenaSpacing.xl),
                   ArenaTextField(
-                    label: 'EMAIL',
-                    hint: 'joueur@arena.app',
+                    label: l10n.authEmailLabel,
+                    hint: l10n.authEmailHint,
                     controller: _emailCtrl,
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
@@ -93,7 +95,7 @@ class _LoginUserScreenState extends ConsumerState<LoginUserScreen> {
                   ),
                   const SizedBox(height: ArenaSpacing.md),
                   ArenaTextField(
-                    label: 'MOT DE PASSE',
+                    label: l10n.authPasswordLabel,
                     hint: '••••••••',
                     controller: _passwordCtrl,
                     obscureText: _obscure,
@@ -116,7 +118,7 @@ class _LoginUserScreenState extends ConsumerState<LoginUserScreen> {
                       onPressed: isLoading
                           ? null
                           : () => context.goNamed('user.forgotPassword'),
-                      child: const Text('Mot de passe oublié ?'),
+                      child: Text(l10n.authForgotPassword),
                     ),
                   ),
                   if (errorMessage != null) ...[
@@ -125,7 +127,7 @@ class _LoginUserScreenState extends ConsumerState<LoginUserScreen> {
                   ],
                   const SizedBox(height: ArenaSpacing.lg),
                   ArenaButton(
-                    label: 'SE CONNECTER',
+                    label: l10n.loginSubmit,
                     fullWidth: true,
                     size: ArenaButtonSize.large,
                     isLoading: isLoading,
@@ -135,7 +137,7 @@ class _LoginUserScreenState extends ConsumerState<LoginUserScreen> {
                   const _OrDivider(),
                   const SizedBox(height: ArenaSpacing.md),
                   GoogleSignInButton(
-                    label: 'Continuer avec Google',
+                    label: l10n.authContinueGoogle,
                     fullWidth: true,
                     isLoading: googleState.isLoading,
                     onPressed: isLoading ? null : _submitGoogle,
@@ -145,7 +147,7 @@ class _LoginUserScreenState extends ConsumerState<LoginUserScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        'Pas encore inscrit ? ',
+                        l10n.loginNoAccount,
                         style: ArenaTypography.bodyMedium.copyWith(
                           color: ArenaColors.textMuted,
                         ),
@@ -155,7 +157,7 @@ class _LoginUserScreenState extends ConsumerState<LoginUserScreen> {
                             ? null
                             : () => context.goNamed('user.register'),
                         child: Text(
-                          "S'inscrire",
+                          l10n.authSignUp,
                           style: ArenaTypography.labelLarge.copyWith(
                             color: Theme.of(context).colorScheme.primary,
                           ),
@@ -184,7 +186,7 @@ class _OrDivider extends StatelessWidget {
         const Expanded(child: Divider(color: ArenaColors.border, height: 1)),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: ArenaSpacing.md),
-          child: Text('OU', style: ArenaText.small),
+          child: Text(AppLocalizations.of(context).authOr, style: ArenaText.small),
         ),
         const Expanded(child: Divider(color: ArenaColors.border, height: 1)),
       ],

@@ -43,6 +43,23 @@
   "onboardingExitTitle": "Quitter l'introduction ?",
   "onboardingExitBody": "Tu peux la revoir plus tard depuis Profil > Revoir l'introduction.",
 
+  "authEmailLabel": "EMAIL",
+  "authEmailHint": "joueur@arena.app",
+  "authPasswordLabel": "MOT DE PASSE",
+  "authForgotPassword": "Mot de passe oublié ?",
+  "authOr": "OU",
+  "authContinueGoogle": "Continuer avec Google",
+  "authSignUp": "S'inscrire",
+
+  "loginTitle": "CONNEXION",
+  "loginSubtitle": "Continue ton parcours sur ARENA.",
+  "loginSubmit": "SE CONNECTER",
+  "loginNoAccount": "Pas encore inscrit ? ",
+
+  "forgotPasswordTitle": "MOT DE PASSE OUBLIÉ",
+  "forgotPasswordSubtitle": "Entre l'adresse e-mail liée à ton compte, on t'envoie un code à 6 chiffres pour réinitialiser ton mot de passe.",
+  "forgotPasswordSubmit": "ENVOYER LE CODE",
+
   "languageFrench": "Français",
   "languageEnglish": "English",
   "languageArabic": "العربية",
