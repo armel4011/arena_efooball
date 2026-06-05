@@ -15,7 +15,6 @@ import 'package:arena/features_admin/competitions_admin/create_competition_page.
 import 'package:arena/features_admin/dashboard/admin_dashboard_page.dart';
 import 'package:arena/features_admin/disputes_admin/admin_disputes_page.dart';
 import 'package:arena/features_admin/matches_admin/admin_matches_list_page.dart';
-import 'package:arena/features_admin/payouts_admin/admin_payouts_page.dart';
 import 'package:arena/features_admin/profile_admin/admin_profile_page.dart';
 import 'package:arena/features_admin/streams_admin/admin_stream_moderation_page.dart';
 import 'package:arena/features_admin/streams_admin/admin_watch_stream_page.dart';
@@ -260,11 +259,6 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => AdminWatchStreamPage(
           matchId: state.pathParameters['matchId'] ?? '',
         ),
-      ),
-      GoRoute(
-        path: AdminRoutes.payouts,
-        name: 'admin.payouts',
-        builder: (context, state) => const AdminPayoutsPage(),
       ),
       GoRoute(
         path: AdminRoutes.disputes,

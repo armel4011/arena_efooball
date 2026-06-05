@@ -238,6 +238,8 @@ _NotificationCategory _categorize(ArenaNotification n) {
     case 'stream_live':
       return _NotificationCategory.match;
     case 'payout_received':
+    case 'payout_available':
+    case 'payout_paid':
     case 'payment_completed':
       return _NotificationCategory.earning;
     default:
@@ -458,6 +460,8 @@ _NotifVisual _visualFor(ArenaNotification n) {
     case 'competition_starting':
       return const _NotifVisual(emoji: '🏆', color: ArenaColors.tierGoldWarm);
     case 'payout_received':
+    case 'payout_available':
+    case 'payout_paid':
     case 'payment_completed':
       return const _NotifVisual(emoji: '💰', color: ArenaColors.statusOk);
     case 'dispute_opened':
