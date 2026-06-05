@@ -9,7 +9,7 @@ class AppLocalizationsAr extends AppLocalizations {
   AppLocalizationsAr([String locale = 'ar']) : super(locale);
 
   @override
-  String get appName => 'أرينا';
+  String get appName => 'ARENA';
 
   @override
   String get commonContinue => 'متابعة';
@@ -48,14 +48,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get commonError => 'حدث خطأ';
 
   @override
-  String get onboardingSlide1Title => 'بطولات الرياضات الإلكترونية الأفريقية';
+  String get onboardingSlide1Title =>
+      'بطولات الرياضات الإلكترونية لعموم أفريقيا';
 
   @override
   String get onboardingSlide1Body =>
-      'مرحبًا بك في أرينا، المنصة رقم 1 لبطولات eFootball وFIFA Mobile وFC Mobile في أفريقيا.';
+      'مرحبًا بك في ARENA، المنصة رقم 1 لبطولات eFootball وFIFA Mobile وFC Mobile في أفريقيا.';
 
   @override
-  String get onboardingSlide2Title => 'أقواس إقصاء، مواجهات حقيقية';
+  String get onboardingSlide2Title => 'جداول الإقصاء، مواجهات حقيقية';
 
   @override
   String get onboardingSlide2Body =>
@@ -66,7 +67,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get onboardingSlide3Body =>
-      'شارك رمز غرفتك داخل اللعبة، تواجها، ثم أكّدا النتيجة معًا في أرينا.';
+      'شارك رمز غرفتك داخل اللعبة، تواجها، ثم أكّدا النتيجة معًا في ARENA.';
 
   @override
   String get onboardingSlide4Title => 'مكافآت تُدفع مباشرة';
@@ -116,7 +117,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get loginTitle => 'تسجيل الدخول';
 
   @override
-  String get loginSubtitle => 'تابع رحلتك على أرينا.';
+  String get loginSubtitle => 'تابع رحلتك على ARENA.';
 
   @override
   String get loginSubmit => 'تسجيل الدخول';
@@ -161,11 +162,11 @@ class AppLocalizationsAr extends AppLocalizations {
   String get bannedSignOut => 'تسجيل الخروج';
 
   @override
-  String get bannedArenaRequestTitle => '📨 طلب أرينا';
+  String get bannedArenaRequestTitle => '📨 طلب ARENA';
 
   @override
   String get bannedArenaRequestIntro =>
-      'اشرح لماذا تعتقد أنه يجب إعادة النظر في حظرك. يراجع فريق طلب أرينا كل طلب خلال 48 ساعة.';
+      'اشرح لماذا تعتقد أنه يجب إعادة النظر في حظرك. يراجع فريق طلب ARENA كل طلب خلال 48 ساعة.';
 
   @override
   String get bannedMessageHint => 'صِف حالتك (10 أحرف كحد أدنى)…';
@@ -181,7 +182,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get bannedPermanentBody =>
-      'لقد وُجدت مذنبًا في نزاع 3 مرات. وفقًا لقاعدة أرينا، تم تعطيل حسابك.';
+      'لقد وُجدت مذنبًا في نزاع 3 مرات. وفقًا لقاعدة ARENA، تم تعطيل حسابك.';
 
   @override
   String get bannedOverdueTitle => 'المراجعة متأخرة (> 48 ساعة)';
@@ -191,11 +192,11 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get bannedOverdueBody =>
-      'طلبك مفتوح منذ أكثر من 48 ساعة. تم إخطار فريق طلب أرينا — شكرًا على صبرك.';
+      'طلبك مفتوح منذ أكثر من 48 ساعة. تم إخطار فريق طلب ARENA — شكرًا على صبرك.';
 
   @override
   String get bannedPendingBody =>
-      'لدى فريق طلب أرينا 48 ساعة لمراجعة طلبك. سيتم إخطارك بمجرد اتخاذ القرار.';
+      'لدى فريق طلب ARENA 48 ساعة لمراجعة طلبك. سيتم إخطارك بمجرد اتخاذ القرار.';
 
   @override
   String get bannedYourMessageLabel => 'رسالتك';
@@ -215,7 +216,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get bannedApprovedBody =>
-      'مرحبًا بعودتك إلى أرينا! سجّل الدخول مرة أخرى للوصول إلى حسابك.';
+      'مرحبًا بعودتك إلى ARENA! سجّل الدخول مرة أخرى للوصول إلى حسابك.';
 
   @override
   String get cguCompleteProfileTitle => 'أكمل\nملفك الشخصي';
@@ -356,7 +357,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get registerReferralCodeHelper =>
-      'رمز صديق في أرينا. يتيح لك الظهور ضمن إحالاته — اتركه فارغًا إذا لم يكن لديك واحد.';
+      'رمز صديق في ARENA. يتيح لك الظهور ضمن قائمة إحالاته — اتركه فارغًا إذا لم يكن لديك واحد.';
 
   @override
   String get registerCguConsent => 'أوافق على الشروط والأحكام';
@@ -379,7 +380,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get registerSuccessSubtitle =>
-      'مرحبًا بك في أرينا. أنت جاهز للانضمام إلى البطولات.';
+      'مرحبًا بك في ARENA. أنت جاهز للانضمام إلى البطولات.';
 
   @override
   String get registerSuccessContinueButton => 'متابعة';
@@ -468,7 +469,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get splashStatTournaments => 'بطولات';
 
   @override
-  String get splashStatXaf => 'فرنك أفريقي';
+  String get splashStatXaf => 'XAF';
 
   @override
   String get bracketEmptyTitle => 'لم يتم إنشاء الشجرة بعد';
@@ -1035,10 +1036,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get regConfirmBreakdownTotal => 'الإجمالي المستحق';
 
   @override
-  String get regConfirmRanksRewardedSingle => 'مركز واحد مكافأ';
+  String get regConfirmRanksRewardedSingle => 'مركز واحد يحصل على مكافأة';
 
   @override
-  String get regConfirmRanksRewardedPluralSuffix => ' مراكز مكافأة';
+  String get regConfirmRanksRewardedPluralSuffix => ' مراكز تحصل على مكافأة';
 
   @override
   String get regConfirmAckLabel => 'أوافق على قواعد البطولة واللائحة الداخلية.';
@@ -1425,7 +1426,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get scoreEditViaPenaltiesLabel => 'حُسمت بركلات الترجيح';
 
   @override
-  String get scoreEditMyPenLabel => 'ركلاتي';
+  String get scoreEditMyPenLabel => 'ركلات ترجيحي';
 
   @override
   String get scoreEditOppPenLabel => 'ركلات الخصم';
@@ -1601,7 +1602,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get mobileMoneyDefaultCountry => '🇨🇲 الكاميرون';
 
   @override
-  String get mobileMoneyCountryLabel => 'البلد';
+  String get mobileMoneyCountryLabel => 'الدولة';
 
   @override
   String get mobileMoneyNumberLabel => 'رقم ';
@@ -1946,7 +1947,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String payoutKycPendingGain(Object amount) {
-    return '💰 أرباح بقيمة $amount فرنك';
+    return '💰 أرباح بقيمة $amount XAF';
   }
 
   @override
@@ -2449,7 +2450,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get settingsLoginMethodsTitle => 'طرق تسجيل الدخول';
 
   @override
-  String get settingsLoginMethodsSubtitle => 'جوجل / آبل — قريبًا';
+  String get settingsLoginMethodsSubtitle => 'Google / Apple — قريبًا';
 
   @override
   String get settingsNewEmailDialogTitle => 'بريد إلكتروني جديد';
@@ -2604,7 +2605,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get watchStreamConnecting => 'جارٍ الاتصال…';
 
   @override
-  String get watchStreamWaitingBroadcaster => 'في انتظار المُذيع…';
+  String get watchStreamWaitingBroadcaster => 'في انتظار الباث…';
 
   @override
   String get watchStreamSpectatorChat => 'دردشة المشاهدين';
@@ -2823,7 +2824,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String editProfileWhatsappHelper(Object dialCode) {
-    return 'تتم إضافة رمز الدولة $dialCode تلقائياً.';
+    return 'تتم إضافة رمز الدولة $dialCode تلقائيًا.';
   }
 
   @override
@@ -2883,7 +2884,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String playerProfileReferralCountPlural(Object count) {
-    return '$count مدعوّون';
+    return '$count مدعوّين';
   }
 
   @override
@@ -3053,7 +3054,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get matchStepResult => 'النتيجة';
 
   @override
-  String get activeCompetitionsEmpty => 'لا توجد مسابقة نشطة لهذا الفلتر.';
+  String get activeCompetitionsEmpty => 'لا توجد منافسة نشطة لهذا الفلتر.';
 
   @override
   String get filterAll => 'الكل';
