@@ -8,6 +8,7 @@ import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:arena/features_shared/widgets/error_state.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -36,11 +37,12 @@ class _MatchHistoryPageState extends ConsumerState<MatchHistoryPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final profile = ref.watch(currentProfileProvider).valueOrNull;
     if (profile == null) {
-      return const Scaffold(
-        appBar: ArenaAppBar(title: 'Historique'),
-        body: ArenaScreenBackground(
+      return Scaffold(
+        appBar: ArenaAppBar(title: l10n.matchHistoryAppBarLoadingTitle),
+        body: const ArenaScreenBackground(
           child: Center(child: CircularProgressIndicator()),
         ),
       );
@@ -49,14 +51,13 @@ class _MatchHistoryPageState extends ConsumerState<MatchHistoryPage> {
     final matchesAsync = ref.watch(playerMatchHistoryProvider(profile.id));
 
     return Scaffold(
-      appBar: const ArenaAppBar(title: 'HISTORIQUE'),
+      appBar: ArenaAppBar(title: l10n.matchHistoryAppBarTitle),
       body: ArenaScreenBackground(
         child: SafeArea(
           child: matchesAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (err, _) => ErrorState(
-              description: 'Impossible de charger ton historique. '
-                  'Vérifie ta connexion.',
+              description: l10n.matchHistoryError,
               onRetry: () =>
                   ref.invalidate(playerMatchHistoryProvider(profile.id)),
             ),
@@ -157,24 +158,32 @@ class _FilterChips extends StatelessWidget {
   final Map<_Filter, int> counts;
   final ValueChanged<_Filter> onChanged;
 
-  static const _options = <(_Filter, String, Color)>[
-    (_Filter.all, 'Tous', ArenaColors.signalBlue),
-    (_Filter.wins, 'V', ArenaColors.statusOk),
-    (_Filter.losses, 'D', ArenaColors.neonRed),
-    (_Filter.ongoing, 'En cours', ArenaColors.statusWarn),
+  static const _options = <(_Filter, Color)>[
+    (_Filter.all, ArenaColors.signalBlue),
+    (_Filter.wins, ArenaColors.statusOk),
+    (_Filter.losses, ArenaColors.neonRed),
+    (_Filter.ongoing, ArenaColors.statusWarn),
   ];
+
+  String _labelFor(_Filter f, AppLocalizations l10n) => switch (f) {
+        _Filter.all => l10n.matchHistoryFilterAll,
+        _Filter.wins => l10n.matchHistoryFilterWins,
+        _Filter.losses => l10n.matchHistoryFilterLosses,
+        _Filter.ongoing => l10n.matchHistoryFilterOngoing,
+      };
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return SizedBox(
       height: 36,
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: ArenaSpacing.lg),
         children: [
-          for (final (f, label, accent) in _options) ...[
+          for (final (f, accent) in _options) ...[
             _Chip(
-              label: label,
+              label: _labelFor(f, l10n),
               count: counts[f] ?? 0,
               accent: accent,
               active: f == current,
@@ -253,10 +262,11 @@ class _MatchList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     if (matches.isEmpty) {
-      return const EmptyState(
-        title: 'Aucun match',
-        description: 'Tes matchs apparaîtront ici dès la première compétition.',
+      return EmptyState(
+        title: l10n.matchHistoryEmptyTitle,
+        description: l10n.matchHistoryEmptyDescription,
         icon: Icons.history,
       );
     }

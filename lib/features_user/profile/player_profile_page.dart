@@ -11,6 +11,7 @@ import 'package:arena/features_shared/widgets/arena_card.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/profile/avatar_palette.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -46,7 +47,7 @@ class PlayerProfilePage extends ConsumerWidget {
           if (profile == null) {
             return Center(
               child: Text(
-                'Profil indisponible. Reconnecte-toi.',
+                AppLocalizations.of(context).playerProfileUnavailable,
                 style: ArenaText.bodyMuted,
               ),
             );
@@ -76,6 +77,7 @@ class _ProfileBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final statsAsync = ref.watch(playerStatsProvider(profile.id));
     final recentAsync = ref.watch(playerRecentMatchesProvider(profile.id));
 
@@ -89,7 +91,7 @@ class _ProfileBody extends ConsumerWidget {
           _StatsRow(stats: statsAsync),
           const SizedBox(height: ArenaSpacing.lg),
           Text(
-            '🏆 SUCCÈS',
+            l10n.playerProfileSuccessHeader,
             style: ArenaText.monoSmall.copyWith(
               color: ArenaColors.silver,
               letterSpacing: 1.5,
@@ -104,7 +106,7 @@ class _ProfileBody extends ConsumerWidget {
           const _ReferralBadgeCard(),
           const SizedBox(height: ArenaSpacing.lg),
           Text(
-            'MATCHS RÉCENTS',
+            l10n.playerProfileRecentMatchesHeader,
             style: ArenaText.monoSmall.copyWith(
               color: ArenaColors.silver,
               letterSpacing: 1.5,
@@ -115,7 +117,7 @@ class _ProfileBody extends ConsumerWidget {
           _RecentMatches(playerId: profile.id, asyncMatches: recentAsync),
           const SizedBox(height: ArenaSpacing.xl),
           ArenaButton(
-            label: 'PARAMÈTRES',
+            label: l10n.playerProfileSettingsButton,
             icon: Icons.settings_outlined,
             variant: ArenaButtonVariant.secondary,
             fullWidth: true,
@@ -123,7 +125,7 @@ class _ProfileBody extends ConsumerWidget {
           ),
           const SizedBox(height: ArenaSpacing.sm),
           ArenaButton(
-            label: 'SE DÉCONNECTER',
+            label: l10n.playerProfileSignOutButton,
             icon: Icons.logout,
             variant: ArenaButtonVariant.ghost,
             fullWidth: true,
@@ -147,6 +149,7 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final color = AvatarPalette.colorFromHex(profile.avatarColor);
     final initial =
         profile.username.isEmpty ? '?' : profile.username[0].toUpperCase();
@@ -199,11 +202,11 @@ class _Header extends StatelessWidget {
             ),
             const SizedBox(height: 2),
             Text(
-              '$country · Inscrit en $joinedAt',
+              '$country · ${l10n.playerProfileJoinedPrefix} $joinedAt',
               style: ArenaText.small.copyWith(color: ArenaColors.silver),
             ),
             const SizedBox(height: 8),
-            const _TierBadge(label: '🥉 BRONZE'),
+            _TierBadge(label: l10n.playerProfileTierBronze),
           ],
         ),
         Positioned(
@@ -215,7 +218,7 @@ class _Header extends StatelessWidget {
               color: ArenaColors.silver,
               size: 20,
             ),
-            tooltip: 'Modifier',
+            tooltip: l10n.playerProfileEditTooltip,
             onPressed: () => context.push(UserRoutes.profileEdit),
           ),
         ),
@@ -301,6 +304,7 @@ class _StatsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return stats.when(
       loading: () => const SizedBox(
         height: 80,
@@ -318,7 +322,7 @@ class _StatsRow extends StatelessWidget {
             Expanded(
               child: _MiniStatCard(
                 value: '${s.wins}',
-                label: 'Victoires',
+                label: l10n.playerProfileStatWins,
                 color: ArenaColors.statusOk,
               ),
             ),
@@ -326,7 +330,7 @@ class _StatsRow extends StatelessWidget {
             Expanded(
               child: _MiniStatCard(
                 value: '${s.losses}',
-                label: 'Défaites',
+                label: l10n.playerProfileStatLosses,
                 color: ArenaColors.neonRed,
               ),
             ),
@@ -334,7 +338,7 @@ class _StatsRow extends StatelessWidget {
             Expanded(
               child: _MiniStatCard(
                 value: pct,
-                label: 'Win rate',
+                label: l10n.playerProfileStatWinRate,
                 color: ArenaColors.signalBlue,
                 glow: true,
               ),
@@ -490,6 +494,7 @@ class _RecentMatches extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return asyncMatches.when(
       loading: () => const ArenaCard(
         child: SizedBox(
@@ -507,7 +512,7 @@ class _RecentMatches extends StatelessWidget {
         if (matches.isEmpty) {
           return ArenaCard(
             child: Text(
-              'Aucun match complété pour le moment.',
+              l10n.playerProfileNoCompletedMatches,
               style: ArenaTypography.bodyMedium.copyWith(
                 color: ArenaColors.textMuted,
               ),
@@ -582,6 +587,7 @@ class _FriendsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final pendingAsync = ref.watch(incomingFriendRequestsCountProvider);
     final friendsAsync = ref.watch(acceptedFriendsProvider);
 
@@ -618,7 +624,10 @@ class _FriendsSection extends ConsumerWidget {
               children: [
                 Row(
                   children: [
-                    Text('Mes amis', style: ArenaTypography.bodyMedium),
+                    Text(
+                      l10n.playerProfileFriendsTitle,
+                      style: ArenaTypography.bodyMedium,
+                    ),
                     if (pending > 0) ...[
                       const SizedBox(width: ArenaSpacing.sm),
                       _PendingBadge(count: pending),
@@ -628,7 +637,7 @@ class _FriendsSection extends ConsumerWidget {
                 const SizedBox(height: 2),
                 Text(
                   friendsCount == 0
-                      ? 'Aucun ami pour le moment'
+                      ? l10n.playerProfileNoFriends
                       : '$friendsCount ami${friendsCount > 1 ? 's' : ''}',
                   style: ArenaTypography.bodySmall.copyWith(
                     color: ArenaColors.textMuted,
@@ -676,10 +685,11 @@ class _ResultBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final (label, color) = switch (result) {
-      _Outcome.win => ('V', ArenaColors.success),
-      _Outcome.loss => ('D', ArenaColors.danger),
-      _Outcome.draw => ('N', ArenaColors.textMuted),
+      _Outcome.win => (l10n.playerProfileResultWin, ArenaColors.success),
+      _Outcome.loss => (l10n.playerProfileResultLoss, ArenaColors.danger),
+      _Outcome.draw => (l10n.playerProfileResultDraw, ArenaColors.textMuted),
     };
     return Container(
       width: 32,
@@ -722,6 +732,7 @@ class _ReferralBadgeCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final codeAsync = ref.watch(myReferralCodeProvider);
     final countAsync = ref.watch(myReferralCountProvider);
 
@@ -743,7 +754,7 @@ class _ReferralBadgeCard extends ConsumerWidget {
               const SizedBox(width: ArenaSpacing.sm),
               Expanded(
                 child: Text(
-                  'Mon parrainage',
+                  l10n.playerProfileReferralTitle,
                   style: ArenaTypography.titleMedium,
                 ),
               ),
@@ -776,9 +787,9 @@ class _ReferralBadgeCard extends ConsumerWidget {
                 await Clipboard.setData(ClipboardData(text: code));
                 if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Code parrainage copié'),
-                    duration: Duration(seconds: 1),
+                  SnackBar(
+                    content: Text(l10n.playerProfileReferralCodeCopied),
+                    duration: const Duration(seconds: 1),
                   ),
                 );
               },
@@ -815,14 +826,12 @@ class _ReferralBadgeCard extends ConsumerWidget {
             )
           else
             Text(
-              'Génération du code en cours…',
+              l10n.playerProfileReferralCodeGenerating,
               style: ArenaText.bodyMuted,
             ),
           const SizedBox(height: ArenaSpacing.sm),
           Text(
-            'Partage ton code pour parrainer des amis. Une fois ton '
-            'quota atteint, tu accèdes automatiquement aux compétitions '
-            'gratuites avec récompense conditionnée.',
+            l10n.playerProfileReferralExplainer,
             style: ArenaText.small.copyWith(color: ArenaColors.silver),
           ),
         ],

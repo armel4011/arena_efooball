@@ -15,6 +15,7 @@ import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -38,12 +39,13 @@ class MessagesInboxPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    final l10n = AppLocalizations.of(context);
+    return Scaffold(
       appBar: ArenaAppBar(
-        title: 'MESSAGES',
-        actions: [InboxComposeAction()],
+        title: l10n.inboxAppBarTitle,
+        actions: const [InboxComposeAction()],
       ),
-      body: ArenaScreenBackground(child: MessagesInboxBody()),
+      body: const ArenaScreenBackground(child: MessagesInboxBody()),
     );
   }
 }
@@ -88,8 +90,9 @@ class InboxComposeAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return IconButton(
-      tooltip: 'Rechercher un joueur',
+      tooltip: l10n.inboxComposeTooltip,
       icon: const Icon(Icons.edit_outlined, color: ArenaColors.gameEfoot),
       onPressed: () => context.push(UserRoutes.friendsSearch),
     );
@@ -101,6 +104,7 @@ class _InboxTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         ArenaSpacing.lg,
@@ -115,9 +119,9 @@ class _InboxTabs extends StatelessWidget {
         unselectedLabelColor: ArenaColors.silver,
         indicatorColor: ArenaColors.signalBlue,
         indicatorWeight: 2,
-        tabs: const [
-          Tab(text: 'DIRECT'),
-          Tab(text: 'TOURNOIS'),
+        tabs: [
+          Tab(text: l10n.inboxTabDirect),
+          Tab(text: l10n.inboxTabTournaments),
         ],
       ),
     );
@@ -133,6 +137,7 @@ class _DirectTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final me = ref.watch(currentSessionProvider)?.user.id;
     final matchesAsync = ref.watch(myAllMatchesProvider);
     final openedIdsAsync = ref.watch(myOpenedMatchChannelIdsProvider);
@@ -158,19 +163,19 @@ class _DirectTab extends ConsumerWidget {
       },
       child: matchesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => _ErrorList(message: 'Erreur : $e'),
+        error: (e, _) => _ErrorList(message: '${l10n.inboxErrorPrefix}$e'),
         data: (matches) {
           if (me == null) {
-            return const EmptyState(
+            return EmptyState(
               icon: Icons.chat_bubble_outline,
-              title: 'Aucune conversation',
-              description: 'Reconnecte-toi pour voir tes conversations.',
+              title: l10n.inboxNoConversationsTitle,
+              description: l10n.inboxNoConversationsDesc,
             );
           }
           // Filtre : ne garde que les matchs dont la chat a été initiée.
           return openedIdsAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => _ErrorList(message: 'Erreur : $e'),
+            error: (e, _) => _ErrorList(message: '${l10n.inboxErrorPrefix}$e'),
             data: (openedIds) {
               final conversations = [
                 for (final m in matches)
@@ -206,7 +211,7 @@ class _DirectTab extends ConsumerWidget {
               final items = <_InboxItem>[
                 const _InboxItem.arenaTeam(),
                 if (friendChannels.isNotEmpty)
-                  const _InboxItem.sectionHeader('AMIS'),
+                  _InboxItem.sectionHeader(l10n.inboxSectionFriends),
                 for (final fc in friendChannels)
                   _InboxItem.friend(
                     fc,
@@ -214,7 +219,7 @@ class _DirectTab extends ConsumerWidget {
                     unread: unreadCounts[fc.channelId] ?? 0,
                   ),
                 if (conversations.isNotEmpty && friendChannels.isNotEmpty)
-                  const _InboxItem.sectionHeader('MATCHS'),
+                  _InboxItem.sectionHeader(l10n.inboxSectionMatches),
                 for (var i = 0; i < conversations.length; i++)
                   _InboxItem.match(
                     conversations[i],
@@ -249,9 +254,7 @@ class _DirectTab extends ConsumerWidget {
                         vertical: ArenaSpacing.xl,
                       ),
                       child: Text(
-                        "Aucune conversation pour l'instant.\n"
-                        'Ouvre une discussion depuis la salle de match\n'
-                        "ou depuis l'onglet Amis.",
+                        l10n.inboxEmptyHint,
                         style: ArenaText.small.copyWith(
                           color: ArenaColors.silver,
                         ),
@@ -347,24 +350,22 @@ class _DirectTab extends ConsumerWidget {
 
   /// Dialog de confirmation simple (réutilisable).
   Future<bool> _confirmDelete(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: ArenaColors.carbon,
-        title: const Text('Supprimer cette conversation ?'),
-        content: const Text(
-          'La conversation sera retirée de ton inbox. Tu peux la retrouver '
-          'en rouvrant le chat plus tard.',
-        ),
+        title: Text(l10n.inboxDeleteDialogTitle),
+        content: Text(l10n.inboxDeleteDialogContent),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Annuler'),
+            child: Text(l10n.inboxDeleteCancel),
           ),
           TextButton(
             style: TextButton.styleFrom(foregroundColor: ArenaColors.neonRed),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('SUPPRIMER'),
+            child: Text(l10n.inboxDeleteConfirm),
           ),
         ],
       ),
@@ -380,6 +381,7 @@ class _DirectTab extends ConsumerWidget {
     WidgetRef ref,
     String matchId,
   ) async {
+    final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final confirmed = await _confirmDelete(context);
     if (!confirmed) return false;
@@ -395,7 +397,9 @@ class _DirectTab extends ConsumerWidget {
       return true;
     } catch (e) {
       messenger.showSnackBar(
-        SnackBar(content: Text('Échec : ${arenaErrorMessage(e)}')),
+        SnackBar(
+          content: Text('${l10n.inboxDeleteFailure}${arenaErrorMessage(e)}'),
+        ),
       );
       return false;
     }
@@ -407,6 +411,7 @@ class _DirectTab extends ConsumerWidget {
     WidgetRef ref,
     String channelId,
   ) async {
+    final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final confirmed = await _confirmDelete(context);
     if (!confirmed) return false;
@@ -416,7 +421,9 @@ class _DirectTab extends ConsumerWidget {
       return true;
     } catch (e) {
       messenger.showSnackBar(
-        SnackBar(content: Text('Échec : ${arenaErrorMessage(e)}')),
+        SnackBar(
+          content: Text('${l10n.inboxDeleteFailure}${arenaErrorMessage(e)}'),
+        ),
       );
       return false;
     }
@@ -450,7 +457,8 @@ class _MatchThreadRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final opponentName = opponent?.username ?? 'En attente';
+    final l10n = AppLocalizations.of(context);
+    final opponentName = opponent?.username ?? l10n.inboxOpponentWaiting;
     final initials = opponentName.isEmpty ? '?' : opponentName[0].toUpperCase();
     final color = _avatarFor(opponent?.avatarColor);
     final subtitle = _subtitleFor(match);
@@ -615,6 +623,7 @@ class _CompetitionsTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final registeredAsync = ref.watch(myRegisteredCompetitionIdsProvider);
     final compsAsync = ref.watch(competitionsListProvider(null));
 
@@ -625,30 +634,28 @@ class _CompetitionsTab extends ConsumerWidget {
       },
       child: registeredAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => _ErrorList(message: 'Erreur : $e'),
+        error: (e, _) => _ErrorList(message: '${l10n.inboxErrorPrefix}$e'),
         data: (ids) {
           if (ids.isEmpty) {
-            return const EmptyState(
+            return EmptyState(
               icon: Icons.emoji_events_outlined,
-              title: 'Aucune compétition active',
-              description: 'Les fils de discussion liés à tes compétitions '
-                  'apparaîtront ici dès que tu rejoindras un tournoi.',
+              title: l10n.inboxNoActiveCompTitle,
+              description: l10n.inboxNoActiveCompDesc,
             );
           }
           return compsAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => _ErrorList(message: 'Erreur : $e'),
+            error: (e, _) => _ErrorList(message: '${l10n.inboxErrorPrefix}$e'),
             data: (all) {
               final mine = [
                 for (final c in all)
                   if (ids.contains(c.id)) c,
               ];
               if (mine.isEmpty) {
-                return const EmptyState(
+                return EmptyState(
                   icon: Icons.hourglass_empty,
-                  title: 'En attente',
-                  description: "Tu es inscrit mais les compétitions n'ont pas "
-                      'encore été chargées.',
+                  title: l10n.inboxWaitingTitle,
+                  description: l10n.inboxWaitingDesc,
                 );
               }
               return ListView.separated(
@@ -678,6 +685,7 @@ class _CompetitionThreadRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final c = competition;
     final emoji = switch (c.game.value) {
       'efootball' => '⚽',
@@ -686,12 +694,12 @@ class _CompetitionThreadRow extends StatelessWidget {
       _ => '🏆',
     };
     final statusLabel = switch (c.status.value) {
-      'registration_open' => 'Inscriptions ouvertes',
-      'registration_closed' => 'Inscriptions fermées',
-      'ongoing' => 'En cours',
-      'completed' => 'Terminée',
-      'cancelled' => 'Annulée',
-      _ => 'Brouillon',
+      'registration_open' => l10n.inboxCompRegistrationOpen,
+      'registration_closed' => l10n.inboxCompRegistrationClosed,
+      'ongoing' => l10n.inboxCompOngoing,
+      'completed' => l10n.inboxCompCompleted,
+      'cancelled' => l10n.inboxCompCancelled,
+      _ => l10n.inboxCompDraft,
     };
     return Material(
       color: Colors.transparent,
@@ -834,7 +842,8 @@ class _FriendThreadRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final username = peer?.username ?? 'Ami';
+    final l10n = AppLocalizations.of(context);
+    final username = peer?.username ?? l10n.inboxFriendDefaultName;
     final initials = username.isEmpty ? '?' : username[0].toUpperCase();
     return Material(
       color: Colors.transparent,
@@ -870,7 +879,7 @@ class _FriendThreadRow extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Discuter avec ton ami',
+                      l10n.inboxChatWithFriend,
                       style: ArenaText.small.copyWith(
                         color: ArenaColors.silver,
                       ),
@@ -904,6 +913,7 @@ class _ArenaTeamRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final me = ref.watch(currentSessionProvider)?.user.id;
     final repo = ref.read(adminChatRepositoryProvider);
     return StreamBuilder<List<AdminChatMessage>>(
@@ -950,7 +960,7 @@ class _ArenaTeamRow extends ConsumerWidget {
                         Row(
                           children: [
                             Text(
-                              'Équipe ARENA',
+                              l10n.inboxArenaTeam,
                               style: ArenaText.small.copyWith(
                                 color: ArenaColors.bone,
                                 fontWeight: FontWeight.w700,
@@ -967,7 +977,7 @@ class _ArenaTeamRow extends ConsumerWidget {
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
-                                'OFFICIEL',
+                                l10n.inboxArenaOfficialBadge,
                                 style: ArenaText.small.copyWith(
                                   color: ArenaColors.bone,
                                   fontWeight: FontWeight.w700,

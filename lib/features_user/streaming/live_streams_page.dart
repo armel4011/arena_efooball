@@ -6,6 +6,7 @@ import 'package:arena/data/repositories/match_stream_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -22,11 +23,12 @@ class LiveStreamsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final streamsAsync = ref.watch(activePublicStreamsProvider);
 
     return Scaffold(
       backgroundColor: ArenaColors.void_,
-      appBar: const ArenaAppBar(title: 'LIVE NOW'),
+      appBar: ArenaAppBar(title: l10n.liveStreamsAppBarTitle),
       body: ArenaScreenBackground(
         accent: ArenaColors.neonRed,
         child: streamsAsync.when(
@@ -37,7 +39,7 @@ class LiveStreamsPage extends ConsumerWidget {
             child: Padding(
               padding: const EdgeInsets.all(ArenaSpacing.lg),
               child: Text(
-                'Erreur: $e',
+                '${l10n.liveStreamsErrorPrefixV2}$e',
                 style: ArenaText.body.copyWith(color: ArenaColors.danger),
                 textAlign: TextAlign.center,
               ),
@@ -45,11 +47,9 @@ class LiveStreamsPage extends ConsumerWidget {
           ),
           data: (streams) {
             if (streams.isEmpty) {
-              return const EmptyState(
-                title: 'Aucun match en direct',
-                description:
-                    "Les diffusions live apparaissent ici dès qu'un admin "
-                    'sélectionne un match pour la diffusion.',
+              return EmptyState(
+                title: l10n.liveStreamsEmptyTitle,
+                description: l10n.liveStreamsEmptyDescription,
                 icon: Icons.live_tv_outlined,
               );
             }
@@ -122,6 +122,7 @@ class _LiveStreamCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     // Deterministic gradient per matchId hash — gives each stream its
     // own colour identity in the absence of game-type metadata.
     final palette = _palettes[stream.matchId.hashCode.abs() % _palettes.length];
@@ -191,7 +192,8 @@ class _LiveStreamCard extends ConsumerWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Diffusé par ${stream.playerId.substring(0, 8)}…',
+                    '${l10n.liveStreamsBroadcastByPrefix}'
+                    '${stream.playerId.substring(0, 8)}…',
                     style: ArenaText.small.copyWith(
                       color: ArenaColors.bone.withValues(alpha: 0.85),
                     ),

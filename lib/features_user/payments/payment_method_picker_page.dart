@@ -3,6 +3,7 @@ import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_user/payments/payment_method.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
@@ -35,8 +36,9 @@ class _PaymentMethodPickerPageState extends State<PaymentMethodPickerPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: const ArenaAppBar(title: 'PAIEMENT'),
+      appBar: ArenaAppBar(title: l10n.paymentPickerAppBarTitle),
       body: ArenaScreenBackground(
         child: SafeArea(
           child: ListView(
@@ -48,7 +50,7 @@ class _PaymentMethodPickerPageState extends State<PaymentMethodPickerPage> {
               ).animate().fadeIn(duration: ArenaDurations.medium),
               const SizedBox(height: ArenaSpacing.lg),
               Text(
-                '📱 MOBILE MONEY',
+                l10n.paymentPickerMobileMoneySection,
                 style: ArenaText.monoSmall.copyWith(
                   color: ArenaColors.silver,
                   letterSpacing: 1.5,
@@ -74,14 +76,13 @@ class _PaymentMethodPickerPageState extends State<PaymentMethodPickerPage> {
                   border: Border.all(color: ArenaColors.border),
                 ),
                 child: Text(
-                  '₿ Crypto + Wave + Moov disponibles en V2 (passerelles '
-                  'automatiques CinetPay / NowPayments).',
+                  l10n.paymentPickerV2Notice,
                   style: ArenaText.small,
                 ),
               ),
               const SizedBox(height: ArenaSpacing.xl),
               ArenaButton(
-                label: 'CONTINUER →',
+                label: l10n.paymentPickerContinueButton,
                 fullWidth: true,
                 size: ArenaButtonSize.large,
                 onPressed: () {
@@ -112,6 +113,7 @@ class _AmountCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.lg),
       decoration: arenaGlowCardDecoration(),
@@ -119,7 +121,7 @@ class _AmountCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
-            'MONTANT À PAYER',
+            l10n.paymentPickerAmountLabel,
             style: ArenaText.monoSmall.copyWith(
               color: ArenaColors.silver,
               letterSpacing: 1.5,

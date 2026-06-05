@@ -11,6 +11,7 @@ import 'package:arena/features_user/home/widgets/pending_payment_banner.dart';
 import 'package:arena/features_user/home/widgets/promo_banner_section.dart';
 import 'package:arena/features_user/home/widgets/stat_grid.dart';
 import 'package:arena/features_user/home/widgets/upcoming_matches_section.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -35,6 +36,7 @@ class HomePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final profile = ref.watch(currentProfileProvider).valueOrNull;
 
     return ArenaScreenBackground(
@@ -54,15 +56,15 @@ class HomePage extends ConsumerWidget {
             const PendingPaymentBanner(),
             const PromoBannerSection(),
             const SizedBox(height: ArenaSpacing.lg),
-            const _SectionCaption(
-              label: '⚡ PROCHAIN MATCH',
+            _SectionCaption(
+              label: l10n.homeSectionNextMatch,
               color: ArenaColors.signalBlue,
             ),
             const SizedBox(height: ArenaSpacing.sm),
             const UpcomingMatchesScroller(),
             const SizedBox(height: ArenaSpacing.xl),
             _SectionCaption(
-              label: 'EN DIRECT',
+              label: l10n.homeSectionLive,
               color: ArenaColors.neonRed,
               showDot: true,
               trailing: _ViewAllLink(
@@ -75,15 +77,15 @@ class HomePage extends ConsumerWidget {
               child: LiveStreamsSection(),
             ),
             const SizedBox(height: ArenaSpacing.xl),
-            const _SectionCaption(
-              label: '★ TOURNOIS ACTIFS',
+            _SectionCaption(
+              label: l10n.homeSectionActiveTournaments,
               color: ArenaColors.gold,
             ),
             const SizedBox(height: ArenaSpacing.sm),
             const ActiveCompetitionsSection(),
             const SizedBox(height: ArenaSpacing.xl),
-            const _SectionCaption(
-              label: '📊 TES STATS',
+            _SectionCaption(
+              label: l10n.homeSectionYourStats,
               color: ArenaColors.silver,
             ),
             const SizedBox(height: ArenaSpacing.sm),
@@ -201,6 +203,7 @@ class _ViewAllLink extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
@@ -210,7 +213,7 @@ class _ViewAllLink extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Tout voir',
+              l10n.homeViewAllLink,
               style: ArenaText.monoSmall.copyWith(
                 color: ArenaColors.silver,
                 letterSpacing: 1,

@@ -12,6 +12,7 @@ import 'package:arena/features_user/match_room/match_room_providers.dart';
 import 'package:arena/features_user/match_room/widgets/match_room_internals.dart';
 import 'package:arena/features_user/match_room/widgets/open_chat_link.dart';
 import 'package:arena/features_user/match_room/widgets/score_edit_dialog.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -61,10 +62,11 @@ class _ScoreFlowViewState extends ConsumerState<ScoreFlowView> {
   bool get _isKnockout => widget.match.groupId == null;
 
   Future<void> _submit() async {
+    final l10n = AppLocalizations.of(context);
     final my = int.tryParse(_myScoreCtrl.text.trim());
     final opp = int.tryParse(_oppScoreCtrl.text.trim());
     if (my == null || opp == null || my < 0 || my > 99 || opp < 0 || opp > 99) {
-      setState(() => _error = 'Scores attendus entre 0 et 99.');
+      setState(() => _error = l10n.scoreFlowErrorRange);
       return;
     }
 
@@ -73,8 +75,7 @@ class _ScoreFlowViewState extends ConsumerState<ScoreFlowView> {
     if (_viaPenalties) {
       if (my != opp) {
         setState(() {
-          _error = 'Le score réglementaire doit être à égalité avant'
-              ' les tirs au but.';
+          _error = l10n.scoreFlowErrorTieBeforePens;
         });
         return;
       }
@@ -86,12 +87,12 @@ class _ScoreFlowViewState extends ConsumerState<ScoreFlowView> {
           oppPen < 0 ||
           myPen > 30 ||
           oppPen > 30) {
-        setState(() => _error = 'Tirs au but attendus entre 0 et 30.');
+        setState(() => _error = l10n.scoreFlowErrorPensRange);
         return;
       }
       if (myPen == oppPen) {
         setState(() {
-          _error = 'Les tirs au but ne peuvent pas finir à égalité.';
+          _error = l10n.scoreFlowErrorPensTie;
         });
         return;
       }
@@ -126,7 +127,7 @@ class _ScoreFlowViewState extends ConsumerState<ScoreFlowView> {
       if (!mounted) return;
       setState(() {
         _submitting = false;
-        _error = 'Impossible de soumettre : $e';
+        _error = '${l10n.scoreFlowSubmitError}$e';
       });
       return;
     }
@@ -179,9 +180,11 @@ class _ScoreFlowViewState extends ConsumerState<ScoreFlowView> {
       });
     } catch (e) {
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
       setState(() {
         _pickingProof = false;
-        _proofError = e is FormatException ? e.message : 'Upload impossible : $e';
+        _proofError =
+            e is FormatException ? e.message : '${l10n.scoreFlowProofUploadError}$e';
       });
     }
   }
@@ -206,8 +209,9 @@ class _ScoreFlowViewState extends ConsumerState<ScoreFlowView> {
       repo: ref.read(matchRepositoryProvider),
       onError: (e) {
         if (!mounted) return;
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur de résolution : $e')),
+          SnackBar(content: Text('${l10n.scoreFlowResolutionError}$e')),
         );
       },
     );
@@ -215,12 +219,13 @@ class _ScoreFlowViewState extends ConsumerState<ScoreFlowView> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final selfId = ref.watch(currentSessionProvider)?.user.id;
     if (selfId == null) {
-      return const EmptyState(
+      return EmptyState(
         icon: Icons.lock_outline,
-        title: 'Session expirée',
-        description: 'Reconnecte-toi pour saisir un score.',
+        title: l10n.scoreFlowSessionExpiredTitle,
+        description: l10n.scoreFlowSessionExpiredDescription,
       );
     }
 
@@ -270,17 +275,17 @@ class _ScoreFlowViewState extends ConsumerState<ScoreFlowView> {
   }
 
   Widget _buildForm() {
+    final l10n = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'SAISIS LE SCORE FINAL',
+          l10n.scoreFlowEnterFinalScoreLabel,
           style: ArenaText.inputLabel,
         ),
         const SizedBox(height: ArenaSpacing.sm),
         Text(
-          'Entre les buts de chaque côté. Si vos deux saisies'
-          ' concordent, le match est validé automatiquement.',
+          l10n.scoreFlowEnterFinalScoreHint,
           style: ArenaText.bodyMuted,
         ),
         const SizedBox(height: ArenaSpacing.lg),
@@ -288,7 +293,7 @@ class _ScoreFlowViewState extends ConsumerState<ScoreFlowView> {
           children: [
             Expanded(
               child: ScoreField(
-                label: 'Mon score',
+                label: l10n.scoreFlowMyScoreLabel,
                 controller: _myScoreCtrl,
                 enabled: !_submitting,
                 action: TextInputAction.next,
@@ -297,7 +302,7 @@ class _ScoreFlowViewState extends ConsumerState<ScoreFlowView> {
             const SizedBox(width: ArenaSpacing.md),
             Expanded(
               child: ScoreField(
-                label: 'Score adversaire',
+                label: l10n.scoreFlowOppScoreLabel,
                 controller: _oppScoreCtrl,
                 enabled: !_submitting,
                 action: _isKnockout
@@ -311,11 +316,11 @@ class _ScoreFlowViewState extends ConsumerState<ScoreFlowView> {
           const SizedBox(height: ArenaSpacing.md),
           SwitchListTile.adaptive(
             title: Text(
-              'Match décidé aux tirs au but',
+              l10n.scoreFlowViaPenaltiesTitle,
               style: ArenaText.body,
             ),
             subtitle: Text(
-              'À cocher uniquement si le score réglementaire est à égalité.',
+              l10n.scoreFlowViaPenaltiesSubtitle,
               style: ArenaText.small.copyWith(color: ArenaColors.silver),
             ),
             value: _viaPenalties,
@@ -336,7 +341,7 @@ class _ScoreFlowViewState extends ConsumerState<ScoreFlowView> {
               children: [
                 Expanded(
                   child: ScoreField(
-                    label: 'Mes tirs au but',
+                    label: l10n.scoreFlowMyPenLabel,
                     controller: _myPenCtrl,
                     enabled: !_submitting,
                     action: TextInputAction.next,
@@ -345,7 +350,7 @@ class _ScoreFlowViewState extends ConsumerState<ScoreFlowView> {
                 const SizedBox(width: ArenaSpacing.md),
                 Expanded(
                   child: ScoreField(
-                    label: 'Tirs adversaire',
+                    label: l10n.scoreFlowOppPenLabel,
                     controller: _oppPenCtrl,
                     enabled: !_submitting,
                     action: TextInputAction.done,
@@ -373,7 +378,7 @@ class _ScoreFlowViewState extends ConsumerState<ScoreFlowView> {
         ],
         const SizedBox(height: ArenaSpacing.lg),
         ArenaButton(
-          label: 'SOUMETTRE LE SCORE',
+          label: l10n.scoreFlowSubmitButton,
           icon: Icons.check_circle_outline,
           fullWidth: true,
           isLoading: _submitting,
@@ -386,6 +391,7 @@ class _ScoreFlowViewState extends ConsumerState<ScoreFlowView> {
   }
 
   Widget _buildAfterSubmit(Map<String, dynamic> mine, bool bothSubmitted) {
+    final l10n = AppLocalizations.of(context);
     final pl = (mine['payload'] as Map?)?.cast<String, dynamic>() ?? {};
     final s1 = pl['score1'] as int? ?? 0;
     final s2 = pl['score2'] as int? ?? 0;
@@ -412,29 +418,29 @@ class _ScoreFlowViewState extends ConsumerState<ScoreFlowView> {
           const SizedBox(height: ArenaSpacing.sm),
           Text(
             bothSubmitted
-                ? 'VALIDATION EN COURS'
-                : 'EN ATTENTE DE TON ADVERSAIRE',
+                ? l10n.scoreFlowValidationInProgress
+                : l10n.scoreFlowWaitingOpponent,
             style: ArenaText.inputLabel.copyWith(
               color: ArenaColors.statusWarn,
             ),
           ),
           const SizedBox(height: ArenaSpacing.sm),
           Text(
-            'Tu as soumis : $myGoals — $oppGoals',
+            '${l10n.scoreFlowYouSubmitted}$myGoals — $oppGoals',
             style: ArenaText.h2,
           ),
           if (viaPen && myPen != null && oppPen != null) ...[
             const SizedBox(height: 4),
             Text(
-              'Aux tirs au but : $myPen — $oppPen',
+              '${l10n.scoreFlowOnPenalties}$myPen — $oppPen',
               style: ArenaText.small.copyWith(color: ArenaColors.silver),
             ),
           ],
           const SizedBox(height: ArenaSpacing.sm),
           Text(
             bothSubmitted
-                ? 'On compare les scores des deux joueurs…'
-                : "Ton adversaire n'a pas encore saisi son score.",
+                ? l10n.scoreFlowComparingScores
+                : l10n.scoreFlowOpponentNotSubmitted,
             textAlign: TextAlign.center,
             style: ArenaText.small.copyWith(color: ArenaColors.silver),
           ),
@@ -471,6 +477,7 @@ class _ProofAttachmentBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final attached = proof != null;
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.md),
@@ -502,8 +509,8 @@ class _ProofAttachmentBlock extends StatelessWidget {
               Expanded(
                 child: Text(
                   attached
-                      ? 'Preuve attachée'
-                      : 'Joins une photo ou vidéo (recommandé)',
+                      ? l10n.scoreFlowProofAttached
+                      : l10n.scoreFlowProofPrompt,
                   style: ArenaText.inputLabel.copyWith(
                     color: attached ? ArenaColors.success : ArenaColors.bone,
                   ),
@@ -515,8 +522,7 @@ class _ProofAttachmentBlock extends StatelessWidget {
           Text(
             attached
                 ? '${proof!.displayName} · ${_humanSize(proof!.bytes)}'
-                : "Capture d'écran de l'écran de fin du match ou clip de "
-                    'la dernière action — utile en cas de litige.',
+                : l10n.scoreFlowProofHelper,
             style: ArenaText.small.copyWith(color: ArenaColors.silver),
           ),
           if (error != null) ...[
@@ -536,7 +542,7 @@ class _ProofAttachmentBlock extends StatelessWidget {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
                 const SizedBox(width: ArenaSpacing.sm),
-                Text('Upload en cours…', style: ArenaText.bodyMuted),
+                Text(l10n.scoreFlowUploading, style: ArenaText.bodyMuted),
               ],
             )
           else if (attached)
@@ -545,14 +551,14 @@ class _ProofAttachmentBlock extends StatelessWidget {
                 Expanded(
                   child: OutlinedButton.icon(
                     icon: const Icon(Icons.swap_horiz, size: 16),
-                    label: const Text('Remplacer'),
+                    label: Text(l10n.scoreFlowReplaceButton),
                     onPressed: submitting ? null : onPick,
                   ),
                 ),
                 const SizedBox(width: ArenaSpacing.sm),
                 IconButton(
                   icon: const Icon(Icons.close, color: ArenaColors.silver),
-                  tooltip: 'Retirer la preuve',
+                  tooltip: l10n.scoreFlowRemoveProofTooltip,
                   onPressed: submitting ? null : onClear,
                 ),
               ],
@@ -560,7 +566,7 @@ class _ProofAttachmentBlock extends StatelessWidget {
           else
             OutlinedButton.icon(
               icon: const Icon(Icons.attach_file, size: 16),
-              label: const Text('Choisir un fichier'),
+              label: Text(l10n.scoreFlowChooseFileButton),
               onPressed: submitting ? null : onPick,
             ),
         ],

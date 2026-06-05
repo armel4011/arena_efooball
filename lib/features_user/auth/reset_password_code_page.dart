@@ -10,6 +10,7 @@ import 'package:arena/features_user/auth/reset_password_page.dart'
     show ResetPasswordPage;
 import 'package:arena/features_user/auth/widgets/auth_error_banner.dart';
 import 'package:arena/features_user/auth/widgets/auth_failure_message.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -76,12 +77,13 @@ class _ResetPasswordCodePageState extends ConsumerState<ResetPasswordCodePage> {
     if (!mounted) return;
     setState(() => _resending = false);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Nouveau code envoyé.')),
+      SnackBar(content: Text(AppLocalizations.of(context).resetCodeNewCodeSent)),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final state = ref.watch(verifyPasswordResetCodeControllerProvider);
     final isLoading = state.isLoading;
     final errorMessage =
@@ -100,12 +102,12 @@ class _ResetPasswordCodePageState extends ConsumerState<ResetPasswordCodePage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'VÉRIFICATION',
+                  l10n.resetCodeTitle,
                   style: ArenaTypography.displayMedium,
                 ),
                 const SizedBox(height: ArenaSpacing.sm),
                 Text(
-                  'Saisis le code à 6 chiffres envoyé à',
+                  l10n.resetCodeSubtitle,
                   style: ArenaTypography.bodyMedium.copyWith(
                     color: ArenaColors.textMuted,
                   ),
@@ -117,7 +119,7 @@ class _ResetPasswordCodePageState extends ConsumerState<ResetPasswordCodePage> {
                 ),
                 const SizedBox(height: ArenaSpacing.xl),
                 ArenaTextField(
-                  label: 'CODE',
+                  label: l10n.resetCodeFieldLabel,
                   hint: '••••••',
                   controller: _codeCtrl,
                   keyboardType: TextInputType.number,
@@ -133,7 +135,7 @@ class _ResetPasswordCodePageState extends ConsumerState<ResetPasswordCodePage> {
                 ],
                 const SizedBox(height: ArenaSpacing.lg),
                 ArenaButton(
-                  label: 'VÉRIFIER',
+                  label: l10n.resetCodeVerifyButton,
                   fullWidth: true,
                   size: ArenaButtonSize.large,
                   isLoading: isLoading,
@@ -144,7 +146,9 @@ class _ResetPasswordCodePageState extends ConsumerState<ResetPasswordCodePage> {
                   child: TextButton(
                     onPressed: isLoading || _resending ? null : _resend,
                     child: Text(
-                      _resending ? 'Envoi en cours…' : 'Renvoyer le code',
+                      _resending
+                          ? l10n.resetCodeResending
+                          : l10n.resetCodeResendButton,
                     ),
                   ),
                 ),

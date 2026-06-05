@@ -6,6 +6,7 @@ import 'package:arena/data/repositories/standings_repository.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:arena/features_shared/widgets/error_state.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -21,6 +22,7 @@ class GroupStandingsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final async = ref.watch(competitionStandingsProvider(competitionId));
 
     return ArenaScreenBackground(
@@ -33,11 +35,10 @@ class GroupStandingsPage extends ConsumerWidget {
         ),
         data: (buckets) {
           if (buckets.isEmpty) {
-            return const EmptyState(
+            return EmptyState(
               icon: Icons.table_chart_outlined,
-              title: 'Pas encore de classement',
-              description: "Le classement s'affichera dès que les premières"
-                  ' rencontres seront jouées.',
+              title: l10n.groupStandingsEmptyTitle,
+              description: l10n.groupStandingsEmptyDescription,
             );
           }
           // Item 5 prompt 2026-05-19 — résout les profils des joueurs
@@ -81,6 +82,7 @@ class _GroupTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: ArenaSpacing.lg),
       child: Column(
@@ -110,20 +112,45 @@ class _GroupTable extends StatelessWidget {
                   fontSize: 11,
                 ),
                 dataTextStyle: ArenaTypography.bodyMedium,
-                columns: const [
-                  DataColumn(label: Text('#')),
-                  DataColumn(label: Text('JOUEUR')),
-                  DataColumn(label: Text('J'), numeric: true),
-                  DataColumn(label: Text('V'), numeric: true),
-                  DataColumn(label: Text('N'), numeric: true),
-                  DataColumn(label: Text('D'), numeric: true),
-                  DataColumn(label: Text('BP'), numeric: true),
-                  DataColumn(label: Text('BC'), numeric: true),
-                  DataColumn(label: Text('Diff'), numeric: true),
-                  DataColumn(label: Text('Pts'), numeric: true),
+                columns: [
+                  const DataColumn(label: Text('#')),
+                  DataColumn(label: Text(l10n.groupStandingsColPlayer)),
+                  DataColumn(
+                    label: Text(l10n.groupStandingsColPlayed),
+                    numeric: true,
+                  ),
+                  DataColumn(
+                    label: Text(l10n.groupStandingsColWins),
+                    numeric: true,
+                  ),
+                  DataColumn(
+                    label: Text(l10n.groupStandingsColDraws),
+                    numeric: true,
+                  ),
+                  DataColumn(
+                    label: Text(l10n.groupStandingsColLosses),
+                    numeric: true,
+                  ),
+                  DataColumn(
+                    label: Text(l10n.groupStandingsColGoalsFor),
+                    numeric: true,
+                  ),
+                  DataColumn(
+                    label: Text(l10n.groupStandingsColGoalsAgainst),
+                    numeric: true,
+                  ),
+                  DataColumn(
+                    label: Text(l10n.groupStandingsColDiff),
+                    numeric: true,
+                  ),
+                  DataColumn(
+                    label: Text(l10n.groupStandingsColPoints),
+                    numeric: true,
+                  ),
                 ],
                 rows: [
-                  for (final r in bucket.rows) _row(r, bucket.rows.length),
+                  for (final r in bucket.rows)
+                    _row(r, bucket.rows.length, l10n),
                 ],
               ),
             ),
@@ -133,10 +160,11 @@ class _GroupTable extends StatelessWidget {
     );
   }
 
-  DataRow _row(GroupStandingRow r, int total) {
+  DataRow _row(GroupStandingRow r, int total, AppLocalizations l10n) {
     final pid = r.profileId;
     final peer = peers[pid];
-    final label = peer?.username ?? 'Joueur ${pid.substring(0, 6)}…';
+    final label = peer?.username ??
+        '${l10n.groupStandingsPlayerFallback}${pid.substring(0, 6)}…';
     final pos = r.position ?? bucket.rows.indexOf(r) + 1;
     final isLeader = pos == 1;
     return DataRow(

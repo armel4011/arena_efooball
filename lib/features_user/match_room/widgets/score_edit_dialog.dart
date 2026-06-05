@@ -1,5 +1,6 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -106,10 +107,11 @@ class _EditScoreDialogState extends State<EditScoreDialog> {
   }
 
   void _submit() {
+    final l10n = AppLocalizations.of(context);
     final my = int.tryParse(_myCtrl.text.trim());
     final opp = int.tryParse(_oppCtrl.text.trim());
     if (my == null || opp == null || my < 0 || my > 99 || opp < 0 || opp > 99) {
-      setState(() => _error = 'Scores attendus entre 0 et 99.');
+      setState(() => _error = l10n.scoreEditErrorRange);
       return;
     }
     int? myPen;
@@ -117,7 +119,7 @@ class _EditScoreDialogState extends State<EditScoreDialog> {
     if (_viaPen) {
       if (my != opp) {
         setState(
-          () => _error = 'Score réglementaire à égalité avant les tirs au but.',
+          () => _error = l10n.scoreEditErrorTieBeforePens,
         );
         return;
       }
@@ -129,12 +131,12 @@ class _EditScoreDialogState extends State<EditScoreDialog> {
           oppPen < 0 ||
           myPen > 30 ||
           oppPen > 30) {
-        setState(() => _error = 'Tirs au but attendus entre 0 et 30.');
+        setState(() => _error = l10n.scoreEditErrorPensRange);
         return;
       }
       if (myPen == oppPen) {
         setState(
-          () => _error = 'Les tirs au but ne peuvent pas finir à égalité.',
+          () => _error = l10n.scoreEditErrorPensTie,
         );
         return;
       }
@@ -152,9 +154,10 @@ class _EditScoreDialogState extends State<EditScoreDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return AlertDialog(
       backgroundColor: ArenaColors.surface,
-      title: Text('Corriger ton score', style: ArenaText.h2),
+      title: Text(l10n.scoreEditDialogTitle, style: ArenaText.h2),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -163,7 +166,7 @@ class _EditScoreDialogState extends State<EditScoreDialog> {
             children: [
               Expanded(
                 child: ScoreField(
-                  label: 'Mon score',
+                  label: l10n.scoreEditMyScoreLabel,
                   controller: _myCtrl,
                   enabled: true,
                   action: TextInputAction.next,
@@ -172,7 +175,7 @@ class _EditScoreDialogState extends State<EditScoreDialog> {
               const SizedBox(width: ArenaSpacing.md),
               Expanded(
                 child: ScoreField(
-                  label: 'Adversaire',
+                  label: l10n.scoreEditOpponentLabel,
                   controller: _oppCtrl,
                   enabled: true,
                   action: widget.knockout
@@ -185,7 +188,7 @@ class _EditScoreDialogState extends State<EditScoreDialog> {
           if (widget.knockout) ...[
             const SizedBox(height: ArenaSpacing.sm),
             SwitchListTile.adaptive(
-              title: Text('Décidé aux tirs au but', style: ArenaText.body),
+              title: Text(l10n.scoreEditViaPenaltiesLabel, style: ArenaText.body),
               value: _viaPen,
               contentPadding: EdgeInsets.zero,
               onChanged: (v) => setState(() => _viaPen = v),
@@ -195,7 +198,7 @@ class _EditScoreDialogState extends State<EditScoreDialog> {
                 children: [
                   Expanded(
                     child: ScoreField(
-                      label: 'Mes TAB',
+                      label: l10n.scoreEditMyPenLabel,
                       controller: _myPenCtrl,
                       enabled: true,
                       action: TextInputAction.next,
@@ -204,7 +207,7 @@ class _EditScoreDialogState extends State<EditScoreDialog> {
                   const SizedBox(width: ArenaSpacing.md),
                   Expanded(
                     child: ScoreField(
-                      label: 'TAB adv.',
+                      label: l10n.scoreEditOppPenLabel,
                       controller: _oppPenCtrl,
                       enabled: true,
                       action: TextInputAction.done,
@@ -225,10 +228,10 @@ class _EditScoreDialogState extends State<EditScoreDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Annuler'),
+          child: Text(l10n.scoreEditCancelButton),
         ),
         ArenaButton(
-          label: 'RENVOYER',
+          label: l10n.scoreEditResendButton,
           icon: Icons.send_outlined,
           onPressed: _submit,
         ),

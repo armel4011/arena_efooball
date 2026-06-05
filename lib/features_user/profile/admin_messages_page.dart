@@ -5,6 +5,7 @@ import 'package:arena/features_admin/super_admin/admin_chat_thread_page.dart'
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -25,15 +26,16 @@ class AdminMessagesPage extends ConsumerWidget {
     }
     final async = ref.watch(userAdminMessagesProvider);
     final repo = ref.read(adminChatRepositoryProvider);
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: const ArenaAppBar(title: 'Messages ARENA'),
+      appBar: ArenaAppBar(title: l10n.adminMessagesAppBarTitle),
       body: ArenaScreenBackground(
         child: SafeArea(
           child: async.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(
               child: Text(
-                'Erreur : $e',
+                l10n.adminMessagesError(e),
                 style: ArenaText.bodyMuted,
                 textAlign: TextAlign.center,
               ),
@@ -44,7 +46,7 @@ class AdminMessagesPage extends ConsumerWidget {
                   child: Padding(
                     padding: const EdgeInsets.all(ArenaSpacing.xl),
                     child: Text(
-                      "Aucun message de la part d'ARENA.",
+                      l10n.adminMessagesEmpty,
                       style: ArenaText.bodyMuted,
                       textAlign: TextAlign.center,
                     ),

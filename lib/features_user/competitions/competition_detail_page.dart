@@ -13,6 +13,7 @@ import 'package:arena/features_shared/widgets/error_state.dart';
 import 'package:arena/features_user/bracket/bracket_view_page.dart';
 import 'package:arena/features_user/bracket/group_standings_page.dart';
 import 'package:arena/features_user/competitions/widgets/referral_progress_card.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -41,6 +42,7 @@ class CompetitionDetailPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final async = ref.watch(competitionByIdProvider(competitionId));
     final registeredIds =
         ref.watch(myRegisteredCompetitionIdsProvider).valueOrNull ??
@@ -48,7 +50,7 @@ class CompetitionDetailPage extends ConsumerWidget {
     final isRegistered = registeredIds.contains(competitionId);
 
     return Scaffold(
-      appBar: const ArenaAppBar(title: 'COMPÉTITION'),
+      appBar: ArenaAppBar(title: l10n.compDetailAppBarTitle),
       body: ArenaScreenBackground(
         child: async.when(
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -59,10 +61,10 @@ class CompetitionDetailPage extends ConsumerWidget {
           ),
           data: (c) {
             if (c == null) {
-              return const EmptyState(
+              return EmptyState(
                 icon: Icons.search_off_outlined,
-                title: 'Compétition introuvable',
-                description: 'Elle a peut-être été supprimée par un admin.',
+                title: l10n.compDetailNotFoundTitle,
+                description: l10n.compDetailNotFoundDesc,
               );
             }
             // Gate : sans inscription confirmée, on n'expose pas les
@@ -232,13 +234,15 @@ class _GatedDetailView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final c = competition;
     final isFree = c.isFree;
     final accent = isFree ? ArenaColors.statusOk : ArenaColors.tierGoldWarm;
     final canRegister = c.canRegister;
     final ctaLabel = isFree
-        ? "S'INSCRIRE GRATUITEMENT"
-        : "S'INSCRIRE · ${_money(c.registrationFee)} ${c.registrationCurrency}";
+        ? l10n.compDetailCtaRegisterFree
+        : '${l10n.compDetailCtaRegisterPaidPrefix}'
+            '${_money(c.registrationFee)} ${c.registrationCurrency}';
 
     return SafeArea(
       child: Column(
@@ -274,8 +278,7 @@ class _GatedDetailView extends ConsumerWidget {
                     horizontal: ArenaSpacing.lg,
                   ),
                   child: Text(
-                    '🔒 Bracket, matches en direct et chat 1-on-1 sont '
-                    'réservés aux joueurs inscrits.',
+                    l10n.compDetailGatedLockNotice,
                     style: ArenaText.small.copyWith(
                       color: ArenaColors.silver,
                     ),
@@ -295,7 +298,7 @@ class _GatedDetailView extends ConsumerWidget {
               ArenaSpacing.md,
             ),
             child: ArenaButton(
-              label: canRegister ? ctaLabel : 'INSCRIPTIONS FERMÉES',
+              label: canRegister ? ctaLabel : l10n.compDetailRegistrationsClosed,
               variant: canRegister
                   ? ArenaButtonVariant.primary
                   : ArenaButtonVariant.secondary,
@@ -345,10 +348,11 @@ class _GatedPrizeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final c = competition;
     final isFree = c.isFree;
     final prize = isFree
-        ? 'GRATUIT'
+        ? l10n.compDetailPrizeFree
         : '${_money(c.prizePoolLocal)} '
             '${c.prizePoolCurrency ?? c.registrationCurrency}';
 
@@ -363,7 +367,7 @@ class _GatedPrizeCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
-            isFree ? 'INSCRIPTION LIBRE' : 'À GAGNER',
+            isFree ? l10n.compDetailPrizeFreeLabel : l10n.compDetailPrizeToWinLabel,
             style: ArenaText.monoSmall.copyWith(
               color: accent,
               fontWeight: FontWeight.w700,
@@ -398,6 +402,7 @@ class _DetailBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return DefaultTabController(
       length: 4,
       child: Column(
@@ -414,25 +419,29 @@ class _DetailBody extends StatelessWidget {
             indicatorColor: ArenaColors.signalBlue,
             indicatorWeight: 2,
             tabs: [
-              const Tab(text: 'INFOS'),
-              const Tab(text: 'PARTICIP.'),
+              Tab(text: l10n.compDetailTabInfos),
+              Tab(text: l10n.compDetailTabParticipants),
               // L'onglet 2 montre le bracket pour une élimination directe,
               // mais le classement des poules pour groups_then_knockout
               // et round_robin — d'où le label dynamique.
-              Tab(text: _phaseTabLabel(competition.format)),
-              const Tab(text: 'CLASSEMENT'),
+              Tab(
+                text:
+                    competition.format == TournamentFormat.singleElimination
+                        ? l10n.compDetailTabBracket
+                        : l10n.compDetailTabGroups,
+              ),
+              Tab(text: l10n.compDetailTabRanking),
             ],
           ),
           Expanded(
             child: TabBarView(
               children: [
                 _InfosTab(competition: competition),
-                const _DeferredTab(
+                _DeferredTab(
                   phase: 'PHASE 4.E',
                   icon: Icons.people_outline,
-                  title: 'Liste des participants',
-                  description: 'La liste des inscrits avec avatars et stats'
-                      ' arrivera ici. Source : table `registrations`.',
+                  title: l10n.compDetailParticipantsTitle,
+                  description: l10n.compDetailParticipantsDesc,
                 ),
                 // Fix item 5 (2026-05-19) : `isBracket` est true pour
                 // groups_then_knockout aussi → la GroupStandingsPage
@@ -462,15 +471,16 @@ class _InfosTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final c = competition;
     final dateLabel =
         DateFormat('EEEE d MMM y · HH:mm', 'fr').format(c.startDate.toLocal());
     final prizeLabel = c.prizePoolLocal > 0
         ? '${_money(c.prizePoolLocal)} '
             '${c.prizePoolCurrency ?? c.registrationCurrency}'
-        : 'Aucune';
+        : l10n.compDetailInfoPrizeNone;
     final feeLabel = c.registrationFee == 0
-        ? 'Gratuit'
+        ? l10n.compDetailInfoFeeFree
         : '${_money(c.registrationFee)} ${c.registrationCurrency}';
     final hasDescription =
         c.description != null && c.description!.trim().isNotEmpty;
@@ -480,37 +490,38 @@ class _InfosTab extends StatelessWidget {
       children: [
         _InfoRow(
           emoji: '💰',
-          label: 'Récompense',
+          label: l10n.compDetailInfoPrizeLabel,
           value: prizeLabel,
           valueColor: c.prizePoolLocal > 0 ? ArenaColors.tierGoldWarm : null,
           mono: true,
         ),
         _InfoRow(
           emoji: '💸',
-          label: "Frais d'inscription",
+          label: l10n.compDetailInfoFeeLabel,
           value: feeLabel,
           valueColor: c.registrationFee == 0 ? ArenaColors.statusOk : null,
           mono: c.registrationFee != 0,
         ),
         _InfoRow(
           emoji: '🎮',
-          label: 'Format',
+          label: l10n.compDetailInfoFormatLabel,
           value: _formatLabel(c.format),
         ),
         _InfoRow(
           emoji: '📅',
-          label: 'Démarrage',
+          label: l10n.compDetailInfoStartLabel,
           value: dateLabel,
         ),
         _InfoRow(
           emoji: '🏟',
-          label: 'Capacité',
-          value: '${c.currentPlayers}/${c.maxPlayers} joueurs',
+          label: l10n.compDetailInfoCapacityLabel,
+          value: '${c.currentPlayers}/${c.maxPlayers}'
+              '${l10n.compDetailInfoCapacitySuffix}',
         ),
         if (hasDescription) ...[
           const SizedBox(height: ArenaSpacing.md),
           Text(
-            '📝 DESCRIPTION',
+            l10n.compDetailDescriptionHeader,
             style: ArenaText.monoSmall.copyWith(
               color: ArenaColors.silver,
               letterSpacing: 1.5,
@@ -617,6 +628,7 @@ class _RankingTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final async = ref.watch(competitionRankingProvider(competition.id));
 
     return async.when(
@@ -628,19 +640,17 @@ class _RankingTab extends ConsumerWidget {
       ),
       data: (entries) {
         if (entries.isEmpty) {
-          return const EmptyState(
+          return EmptyState(
             icon: Icons.emoji_events_outlined,
-            title: 'Aucun participant',
-            description: "Personne n'est encore inscrit à cette "
-                'compétition.',
+            title: l10n.compDetailRankingNoParticipantTitle,
+            description: l10n.compDetailRankingNoParticipantDesc,
           );
         }
         if (!entries.any((e) => e.finalRank != null)) {
-          return const EmptyState(
+          return EmptyState(
             icon: Icons.emoji_events_outlined,
-            title: 'Classement pas encore publié',
-            description: 'Les organisateurs publieront le classement '
-                'final une fois la compétition terminée.',
+            title: l10n.compDetailRankingNotPublishedTitle,
+            description: l10n.compDetailRankingNotPublishedDesc,
           );
         }
         return RefreshIndicator(
@@ -672,6 +682,7 @@ class _RankingEntryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final rank = entry.finalRank;
     final dist = competition.prizeDistribution;
     final hasPrize =
@@ -726,8 +737,9 @@ class _RankingEntryRow extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     rank == null
-                        ? 'Non classé'
-                        : '${prizeRankLabel(rank - 1)} place',
+                        ? l10n.compDetailRankingUnranked
+                        : '${prizeRankLabel(rank - 1)}'
+                            '${l10n.compDetailRankingPlaceSuffix}',
                     style: ArenaText.bodyMuted,
                   ),
                 ],
@@ -767,10 +779,3 @@ String _formatLabel(TournamentFormat f) => switch (f) {
       TournamentFormat.groupsThenKnockout => 'Poules + élimination',
       TournamentFormat.roundRobin => 'Round robin',
     };
-
-/// Label de l'onglet 2 du détail compétition. Élimination directe →
-/// "BRACKET" (arbre KO) ; sinon "POULES" (classement de groupes /
-/// round-robin).
-String _phaseTabLabel(TournamentFormat format) {
-  return format == TournamentFormat.singleElimination ? 'BRACKET' : 'POULES';
-}

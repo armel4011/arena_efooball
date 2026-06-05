@@ -13,6 +13,7 @@ import 'package:arena/features_user/match_room/widgets/match_recording_lifecycle
 import 'package:arena/features_user/match_room/widgets/match_step_body.dart';
 import 'package:arena/features_user/match_room/widgets/match_step_indicator.dart';
 import 'package:arena/features_user/streaming/start_streaming_banner.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -58,6 +59,7 @@ class MatchRoomPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef widgetRef) {
+    final l10n = AppLocalizations.of(context);
     final async = widgetRef.watch(matchByIdProvider(matchId));
     final selfId = widgetRef.watch(currentSessionProvider)?.user.id;
     final loadedMatch = async.value;
@@ -75,7 +77,7 @@ class MatchRoomPage extends ConsumerWidget {
       child: Scaffold(
         appBar: ArenaAppBar(
           title: switch (async.value?.matchNumber) {
-            null => 'MATCH',
+            null => l10n.matchRoomTitleDefault,
             final n => 'MATCH #$n',
           },
           onBack: () {
@@ -93,7 +95,7 @@ class MatchRoomPage extends ConsumerWidget {
                   Icons.chat_bubble_outline,
                   color: ArenaColors.gameEfoot,
                 ),
-                tooltip: 'Chat avec ton adversaire',
+                tooltip: l10n.matchRoomChatTooltip,
                 onPressed: () =>
                     context.push(UserRoutes.matchChatPath(matchId)),
               ),
@@ -108,10 +110,10 @@ class MatchRoomPage extends ConsumerWidget {
             ),
             data: (m) {
               if (m == null) {
-                return const EmptyState(
+                return EmptyState(
                   icon: Icons.search_off_outlined,
-                  title: 'Match introuvable',
-                  description: 'Le match a peut-être été annulé par un admin.',
+                  title: l10n.matchRoomNotFoundTitle,
+                  description: l10n.matchRoomNotFoundDescription,
                 );
               }
               final role = MatchRole.resolve(match: m, selfId: selfId);

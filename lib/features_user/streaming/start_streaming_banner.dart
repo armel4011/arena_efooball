@@ -3,6 +3,7 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/match_stream_repository.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -22,6 +23,7 @@ class StartStreamingBanner extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final streamsAsync = ref.watch(matchStreamsByMatchProvider(matchId));
     final myId = ref.watch(currentSessionProvider)?.user.id;
 
@@ -69,9 +71,9 @@ class StartStreamingBanner extends ConsumerWidget {
                 child: Text(
                   isMine
                       ? (alreadyStreaming
-                          ? 'Tu diffuses ce match en direct'
-                          : 'Ce match est sélectionné pour la diffusion live')
-                      : 'Match diffusé en direct',
+                          ? l10n.startStreamingAlreadyLive
+                          : l10n.startStreamingSelected)
+                      : l10n.startStreamingOpponentLive,
                   style: ArenaText.body.copyWith(
                     color: ArenaColors.text,
                     fontWeight: FontWeight.w600,
@@ -81,14 +83,16 @@ class StartStreamingBanner extends ConsumerWidget {
               if (isMine && !alreadyStreaming) ...[
                 const SizedBox(width: ArenaSpacing.sm),
                 ArenaButton(
-                  label: 'Démarrer',
+                  label: l10n.startStreamingStartButton,
                   onPressed: () async {
                     final svc = ref.read(agoraStreamingServiceProvider);
                     try {
                       await svc.joinAsBroadcaster(matchId: matchId);
                       if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Diffusion démarrée.')),
+                        SnackBar(
+                          content: Text(l10n.startStreamingStartedSnack),
+                        ),
                       );
                     } catch (e) {
                       if (!context.mounted) return;

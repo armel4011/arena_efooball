@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
@@ -199,6 +200,7 @@ class _LongPressMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Align(
       alignment: Alignment.bottomCenter,
       child: ClipRect(
@@ -224,21 +226,21 @@ class _LongPressMenu extends StatelessWidget {
                   ),
                 ),
                 ArenaButton(
-                  label: '▶ Continuer',
+                  label: l10n.matchOverlayContinue,
                   variant: ArenaButtonVariant.secondary,
                   fullWidth: true,
                   onPressed: () => Navigator.maybePop(context),
                 ),
                 const SizedBox(height: ArenaSpacing.xs),
                 ArenaButton(
-                  label: '⏸ Pause recording',
+                  label: l10n.matchOverlayPauseRecording,
                   variant: ArenaButtonVariant.secondary,
                   fullWidth: true,
                   onPressed: () {},
                 ),
                 const SizedBox(height: ArenaSpacing.xs),
                 ArenaButton(
-                  label: '🛑 Arrêter (forfait)',
+                  label: l10n.matchOverlayStopForfeit,
                   variant: ArenaButtonVariant.danger,
                   fullWidth: true,
                   onPressed: () {},

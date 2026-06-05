@@ -6,6 +6,7 @@ import 'package:arena/data/models/profile.dart';
 import 'package:arena/data/models/stream_comment.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:arena/data/repositories/stream_comment_repository.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -68,6 +69,7 @@ class _WatchStreamPageState extends ConsumerState<WatchStreamPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final state = ref.watch(agoraStreamingServiceProvider).stateStream;
 
     return Scaffold(
@@ -98,8 +100,8 @@ class _WatchStreamPageState extends ConsumerState<WatchStreamPage> {
                                         .read(agoraStreamingServiceProvider)
                                         .engine;
                                     if (engine == null) {
-                                      return const _PlaceholderLayer(
-                                        text: 'Connexion en cours…',
+                                      return _PlaceholderLayer(
+                                        text: l10n.watchStreamConnecting,
                                       );
                                     }
                                     return AgoraVideoView(
@@ -117,8 +119,8 @@ class _WatchStreamPageState extends ConsumerState<WatchStreamPage> {
                                       text: 'Échec : ${s.reason}',
                                     );
                                   }
-                                  return const _PlaceholderLayer(
-                                    text: 'En attente du diffuseur…',
+                                  return _PlaceholderLayer(
+                                    text: l10n.watchStreamWaitingBroadcaster,
                                   );
                                 },
                               ),
@@ -258,6 +260,7 @@ class _SpectatorChatState extends ConsumerState<_SpectatorChat> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final commentsAsync = ref.watch(streamCommentsProvider(widget.matchId));
     final viewersAsync = ref.watch(matchViewerCountProvider(widget.matchId));
     final viewers = viewersAsync.maybeWhen(data: (n) => n, orElse: () => 0);
@@ -278,7 +281,7 @@ class _SpectatorChatState extends ConsumerState<_SpectatorChat> {
             Row(
               children: [
                 Text(
-                  'SPECTATOR CHAT',
+                  l10n.watchStreamSpectatorChat,
                   style: ArenaText.monoSmall.copyWith(
                     color: ArenaColors.silver,
                     letterSpacing: 1.8,
@@ -317,7 +320,7 @@ class _SpectatorChatState extends ConsumerState<_SpectatorChat> {
                 ),
                 error: (e, _) => Center(
                   child: Text(
-                    'Chat indisponible',
+                    l10n.watchStreamChatUnavailable,
                     style: ArenaText.small.copyWith(color: ArenaColors.silver),
                   ),
                 ),
@@ -325,7 +328,7 @@ class _SpectatorChatState extends ConsumerState<_SpectatorChat> {
                   if (comments.isEmpty) {
                     return Center(
                       child: Text(
-                        'Sois le premier à commenter !',
+                        l10n.watchStreamChatEmpty,
                         style: ArenaText.small.copyWith(
                           color: ArenaColors.silver,
                         ),
@@ -446,6 +449,7 @@ class _ChatInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
@@ -460,7 +464,7 @@ class _ChatInput extends StatelessWidget {
               enabled: !sending,
               style: ArenaText.body.copyWith(color: ArenaColors.bone),
               decoration: InputDecoration(
-                hintText: 'Envoie un message…',
+                hintText: l10n.watchStreamChatHint,
                 hintStyle: ArenaText.body.copyWith(color: ArenaColors.silver),
                 border: InputBorder.none,
                 isCollapsed: true,
@@ -608,6 +612,7 @@ class _LiveBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
@@ -633,7 +638,7 @@ class _LiveBadge extends StatelessWidget {
           ),
           const SizedBox(width: 7),
           Text(
-            'LIVE',
+            l10n.watchStreamLiveBadge,
             style: ArenaText.monoSmall.copyWith(
               color: ArenaColors.bone,
               fontWeight: FontWeight.w700,

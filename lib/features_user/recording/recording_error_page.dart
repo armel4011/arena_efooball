@@ -2,6 +2,7 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
@@ -28,17 +29,17 @@ class RecordingErrorPage extends StatelessWidget {
   final VoidCallback? onForfeit;
   final VoidCallback? onContactSupport;
 
-  static const _solutions = <String>[
-    'Va dans Paramètres → Apps → ARENA',
-    'Active "Affichage par-dessus les autres apps"',
-    'Désactive le Battery Saver pour ARENA',
-    'Autorise ARENA en arrière-plan',
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final solutions = <String>[
+      l10n.recordingErrorSolutionStep1,
+      l10n.recordingErrorSolutionStep2,
+      l10n.recordingErrorSolutionStep3,
+      l10n.recordingErrorSolutionStep4,
+    ];
     return Scaffold(
-      appBar: const ArenaAppBar(title: 'Erreur enregistrement'),
+      appBar: ArenaAppBar(title: l10n.recordingErrorAppBarTitle),
       body: ArenaScreenBackground(
         child: SafeArea(
           child: ListView(
@@ -49,13 +50,13 @@ class RecordingErrorPage extends StatelessWidget {
                   ),
               const SizedBox(height: ArenaSpacing.md),
               Text(
-                'RECORDING IMPOSSIBLE',
+                l10n.recordingErrorHeadline,
                 textAlign: TextAlign.center,
                 style: ArenaText.h1.copyWith(color: ArenaColors.neonRed),
               ),
               const SizedBox(height: ArenaSpacing.sm),
               Text(
-                'Sans recording, le match ne peut pas démarrer (anti-cheat).',
+                l10n.recordingErrorAntiCheatNotice,
                 textAlign: TextAlign.center,
                 style: ArenaText.body,
               ),
@@ -64,21 +65,24 @@ class RecordingErrorPage extends StatelessWidget {
                   .animate(delay: 100.ms)
                   .fadeIn(duration: ArenaDurations.medium),
               const SizedBox(height: ArenaSpacing.lg),
-              Text('SOLUTIONS', style: ArenaText.inputLabel),
+              Text(
+                l10n.recordingErrorSolutionsLabel,
+                style: ArenaText.inputLabel,
+              ),
               const SizedBox(height: ArenaSpacing.sm),
-              const _SolutionsCard(solutions: _solutions)
+              _SolutionsCard(solutions: solutions)
                   .animate(delay: 200.ms)
                   .fadeIn(duration: ArenaDurations.medium),
               const SizedBox(height: ArenaSpacing.xl),
               ArenaButton(
-                label: '↻ RÉESSAYER',
+                label: l10n.recordingErrorRetryButton,
                 fullWidth: true,
                 size: ArenaButtonSize.large,
                 onPressed: onRetry ?? () => Navigator.maybePop(context),
               ),
               const SizedBox(height: ArenaSpacing.sm),
               ArenaButton(
-                label: '🏳 FORFAIT (perdre)',
+                label: l10n.recordingErrorForfeitButton,
                 variant: ArenaButtonVariant.danger,
                 fullWidth: true,
                 onPressed: onForfeit,
@@ -88,7 +92,7 @@ class RecordingErrorPage extends StatelessWidget {
                 child: TextButton(
                   onPressed: onContactSupport,
                   child: Text(
-                    'Contacter le support',
+                    l10n.recordingErrorContactSupport,
                     style:
                         ArenaText.body.copyWith(color: ArenaColors.signalBlue),
                   ),
@@ -133,24 +137,25 @@ class _CauseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.lg),
       decoration: arenaDangerCardDecoration(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('⚠️ Cause détectée', style: ArenaText.h3),
+          Text(l10n.recordingErrorCauseTitle, style: ArenaText.h3),
           const SizedBox(height: ArenaSpacing.sm),
           RichText(
             text: TextSpan(
               style: ArenaText.bodyMuted,
               children: [
-                const TextSpan(text: 'Permission '),
+                TextSpan(text: l10n.recordingErrorCausePermissionPrefix),
                 TextSpan(
                   text: cause,
                   style: ArenaText.mono.copyWith(color: ArenaColors.neonRed),
                 ),
-                const TextSpan(text: ' manquante.'),
+                TextSpan(text: l10n.recordingErrorCausePermissionSuffix),
               ],
             ),
           ),

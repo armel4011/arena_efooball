@@ -7,6 +7,7 @@ import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_card.dart';
 import 'package:arena/features_user/profile/avatar_palette.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -46,14 +47,15 @@ class _FriendsPageState extends ConsumerState<FriendsPage>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: ArenaColors.void_,
       appBar: ArenaAppBar(
-        title: 'Mes amis',
+        title: l10n.friendsAppBarTitle,
         actions: [
           IconButton(
             icon: const Icon(Icons.search, color: ArenaColors.bone),
-            tooltip: 'Rechercher',
+            tooltip: l10n.friendsSearchTooltip,
             onPressed: () => context.push(UserRoutes.friendsSearch),
           ),
         ],
@@ -65,10 +67,10 @@ class _FriendsPageState extends ConsumerState<FriendsPage>
             labelColor: ArenaColors.bone,
             unselectedLabelColor: ArenaColors.textMuted,
             indicatorColor: ArenaColors.primary,
-            tabs: const [
-              Tab(text: 'Amis'),
-              Tab(text: 'Demandes'),
-              Tab(text: 'Bloqués'),
+            tabs: [
+              Tab(text: l10n.friendsTabFriends),
+              Tab(text: l10n.friendsTabRequests),
+              Tab(text: l10n.friendsTabBlocked),
             ],
           ),
           Expanded(
@@ -96,6 +98,7 @@ class _FriendsTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final async = ref.watch(acceptedFriendsProvider);
     return RefreshIndicator(
       onRefresh: () async {
@@ -107,10 +110,10 @@ class _FriendsTab extends ConsumerWidget {
         error: (e, _) => _ErrorList(message: 'Erreur : $e'),
         data: (rows) {
           if (rows.isEmpty) {
-            return const _EmptyState(
+            return _EmptyState(
               icon: Icons.group_outlined,
-              label: 'Aucun ami pour le moment.',
-              hint: 'Touche la loupe en haut pour en rechercher.',
+              label: l10n.friendsEmptyLabel,
+              hint: l10n.friendsEmptyHint,
             );
           }
           return ListView.builder(
@@ -156,6 +159,7 @@ class _FriendsTab extends ConsumerWidget {
     Friendship f,
     Profile peer,
   ) async {
+    final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -164,11 +168,11 @@ class _FriendsTab extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Annuler'),
+            child: Text(l10n.friendsRemoveCancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Confirmer'),
+            child: Text(l10n.friendsRemoveConfirm),
           ),
         ],
       ),
@@ -200,6 +204,7 @@ class _RequestsTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final incomingAsync = ref.watch(incomingFriendRequestsProvider);
     final outgoingAsync = ref.watch(outgoingFriendRequestsProvider);
 
@@ -216,13 +221,15 @@ class _RequestsTab extends ConsumerWidget {
       child: ListView(
         padding: const EdgeInsets.all(ArenaSpacing.lg),
         children: [
-          const _SectionLabel(text: 'REÇUES'),
+          _SectionLabel(text: l10n.friendsSectionReceived),
           const SizedBox(height: ArenaSpacing.sm),
           incomingAsync.when(
             loading: () => const _LoadingRow(),
             error: (e, _) => _ErrorList(message: 'Erreur : $e'),
             data: (rows) {
-              if (rows.isEmpty) return const _SmallEmpty('Aucune demande.');
+              if (rows.isEmpty) {
+                return _SmallEmpty(l10n.friendsNoRequests);
+              }
               return Column(
                 children: [
                   for (final (f, peer) in rows)
@@ -260,14 +267,14 @@ class _RequestsTab extends ConsumerWidget {
             },
           ),
           const SizedBox(height: ArenaSpacing.xl),
-          const _SectionLabel(text: 'ENVOYÉES'),
+          _SectionLabel(text: l10n.friendsSectionSent),
           const SizedBox(height: ArenaSpacing.sm),
           outgoingAsync.when(
             loading: () => const _LoadingRow(),
             error: (e, _) => _ErrorList(message: 'Erreur : $e'),
             data: (rows) {
               if (rows.isEmpty) {
-                return const _SmallEmpty('Aucune demande en attente.');
+                return _SmallEmpty(l10n.friendsNoPendingRequests);
               }
               return Column(
                 children: [
@@ -277,7 +284,7 @@ class _RequestsTab extends ConsumerWidget {
                       child: _PeerRow(
                         profile: peer,
                         trailing: _RowAction(
-                          label: 'Annuler',
+                          label: l10n.friendsCancelRequest,
                           icon: Icons.undo,
                           variant: ArenaButtonVariant.ghost,
                           onPressed: () =>
@@ -354,6 +361,7 @@ class _BlockedTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final async = ref.watch(blockedByMeProvider);
     return RefreshIndicator(
       onRefresh: () async {
@@ -365,9 +373,9 @@ class _BlockedTab extends ConsumerWidget {
         error: (e, _) => _ErrorList(message: 'Erreur : $e'),
         data: (rows) {
           if (rows.isEmpty) {
-            return const _EmptyState(
+            return _EmptyState(
               icon: Icons.block_outlined,
-              label: 'Aucun joueur bloqué.',
+              label: l10n.friendsBlockedEmptyLabel,
             );
           }
           return ListView.builder(
@@ -378,7 +386,7 @@ class _BlockedTab extends ConsumerWidget {
               return _PeerRow(
                 profile: peer,
                 trailing: _RowAction(
-                  label: 'Débloquer',
+                  label: l10n.friendsUnblockAction,
                   icon: Icons.lock_open,
                   variant: ArenaButtonVariant.secondary,
                   onPressed: () => _unblock(ctx, ref, peer).then((ok) {

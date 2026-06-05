@@ -10,6 +10,7 @@ import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_card.dart';
 import 'package:arena/features_user/profile/avatar_palette.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -27,16 +28,17 @@ class PublicProfilePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final profileAsync = ref.watch(publicProfileByUsernameProvider(username));
     return Scaffold(
       backgroundColor: ArenaColors.void_,
-      appBar: const ArenaAppBar(title: 'Profil'),
+      appBar: ArenaAppBar(title: l10n.publicProfileAppBarTitle),
       body: profileAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => _ErrorState(message: 'Erreur : $e'),
         data: (profile) {
           if (profile == null) {
-            return const _ErrorState(message: 'Joueur introuvable.');
+            return _ErrorState(message: l10n.publicProfilePlayerNotFound);
           }
           return _PublicProfileBody(profile: profile);
         },
@@ -79,6 +81,7 @@ class _PublicProfileBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final me = ref.watch(currentSessionProvider)?.user.id;
     final friendshipAsync = me == null
         ? const AsyncValue<Friendship?>.data(null)
@@ -109,7 +112,10 @@ class _PublicProfileBody extends ConsumerWidget {
           if (!isSelf) const SizedBox(height: ArenaSpacing.lg),
           _StatsCard(stats: profile.stats),
           const SizedBox(height: ArenaSpacing.lg),
-          Text('MATCHS RÉCENTS', style: ArenaTypography.labelMedium),
+          Text(
+            l10n.publicProfileRecentMatchesHeader,
+            style: ArenaTypography.labelMedium,
+          ),
           const SizedBox(height: ArenaSpacing.sm),
           _RecentMatches(playerId: profile.id, asyncMatches: recentAsync),
           const SizedBox(height: ArenaSpacing.xl),
@@ -231,13 +237,14 @@ class _FriendCtaSectionState extends ConsumerState<_FriendCtaSection> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final repo = ref.read(friendsRepositoryProvider);
     final p = widget.profile;
 
     switch (widget.state) {
       case FriendCtaState.none:
         return ArenaButton(
-          label: 'AJOUTER EN AMI',
+          label: l10n.publicProfileCtaAddFriend,
           icon: Icons.person_add_alt_1_outlined,
           variant: ArenaButtonVariant.primary,
           fullWidth: true,
@@ -251,8 +258,8 @@ class _FriendCtaSectionState extends ConsumerState<_FriendCtaSection> {
         final fid = widget.friendshipAsync.value?.id;
         return Column(
           children: [
-            const ArenaButton(
-              label: 'DEMANDE ENVOYÉE',
+            ArenaButton(
+              label: l10n.publicProfileCtaRequestSent,
               icon: Icons.schedule,
               variant: ArenaButtonVariant.secondary,
               fullWidth: true,
@@ -260,7 +267,7 @@ class _FriendCtaSectionState extends ConsumerState<_FriendCtaSection> {
             ),
             const SizedBox(height: ArenaSpacing.sm),
             ArenaButton(
-              label: 'ANNULER',
+              label: l10n.publicProfileCtaCancel,
               icon: Icons.close,
               variant: ArenaButtonVariant.ghost,
               fullWidth: true,
@@ -269,7 +276,7 @@ class _FriendCtaSectionState extends ConsumerState<_FriendCtaSection> {
                   ? null
                   : () => _run(
                         () => repo.decline(fid),
-                        success: 'Demande annulée',
+                        success: l10n.publicProfileRequestCancelled,
                       ),
             ),
           ],
@@ -280,7 +287,7 @@ class _FriendCtaSectionState extends ConsumerState<_FriendCtaSection> {
           children: [
             Expanded(
               child: ArenaButton(
-                label: 'ACCEPTER',
+                label: l10n.publicProfileCtaAccept,
                 icon: Icons.check,
                 variant: ArenaButtonVariant.primary,
                 isLoading: _busy,
@@ -295,7 +302,7 @@ class _FriendCtaSectionState extends ConsumerState<_FriendCtaSection> {
             const SizedBox(width: ArenaSpacing.sm),
             Expanded(
               child: ArenaButton(
-                label: 'REFUSER',
+                label: l10n.publicProfileCtaDecline,
                 icon: Icons.close,
                 variant: ArenaButtonVariant.ghost,
                 isLoading: _busy,
@@ -303,7 +310,7 @@ class _FriendCtaSectionState extends ConsumerState<_FriendCtaSection> {
                     ? null
                     : () => _run(
                           () => repo.decline(fid),
-                          success: 'Demande refusée',
+                          success: l10n.publicProfileRequestDeclined,
                         ),
               ),
             ),
@@ -312,8 +319,8 @@ class _FriendCtaSectionState extends ConsumerState<_FriendCtaSection> {
       case FriendCtaState.friends:
         return Column(
           children: [
-            const ArenaButton(
-              label: 'AMI',
+            ArenaButton(
+              label: l10n.publicProfileCtaFriend,
               icon: Icons.check_circle_outline,
               variant: ArenaButtonVariant.secondary,
               fullWidth: true,
@@ -324,30 +331,29 @@ class _FriendCtaSectionState extends ConsumerState<_FriendCtaSection> {
               children: [
                 Expanded(
                   child: ArenaButton(
-                    label: 'RETIRER',
+                    label: l10n.publicProfileCtaRemove,
                     icon: Icons.person_remove_outlined,
                     variant: ArenaButtonVariant.ghost,
                     isLoading: _busy,
                     onPressed: () => _confirmAndRun(
                       title: 'Retirer ${p.username} ?',
                       action: () => repo.remove(p.id),
-                      successMsg: 'Ami retiré',
+                      successMsg: l10n.publicProfileFriendRemoved,
                     ),
                   ),
                 ),
                 const SizedBox(width: ArenaSpacing.sm),
                 Expanded(
                   child: ArenaButton(
-                    label: 'BLOQUER',
+                    label: l10n.publicProfileCtaBlock,
                     icon: Icons.block,
                     variant: ArenaButtonVariant.danger,
                     isLoading: _busy,
                     onPressed: () => _confirmAndRun(
                       title: 'Bloquer ${p.username} ?',
-                      detail:
-                          'Vous ne pourrez plus échanger en chat de match.',
+                      detail: l10n.publicProfileBlockConfirmDetail,
                       action: () => repo.block(p.id),
-                      successMsg: 'Joueur bloqué',
+                      successMsg: l10n.publicProfilePlayerBlocked,
                     ),
                   ),
                 ),
@@ -357,19 +363,19 @@ class _FriendCtaSectionState extends ConsumerState<_FriendCtaSection> {
         );
       case FriendCtaState.blockedByMe:
         return ArenaButton(
-          label: 'DÉBLOQUER',
+          label: l10n.publicProfileCtaUnblock,
           icon: Icons.lock_open,
           variant: ArenaButtonVariant.secondary,
           fullWidth: true,
           isLoading: _busy,
           onPressed: () => _run(
             () => repo.unblock(p.id),
-            success: 'Joueur débloqué',
+            success: l10n.publicProfilePlayerUnblocked,
           ),
         );
       case FriendCtaState.blockedByThem:
-        return const ArenaButton(
-          label: 'INDISPONIBLE',
+        return ArenaButton(
+          label: l10n.publicProfileCtaUnavailable,
           icon: Icons.block,
           variant: ArenaButtonVariant.ghost,
           fullWidth: true,
@@ -384,6 +390,7 @@ class _FriendCtaSectionState extends ConsumerState<_FriendCtaSection> {
     required String successMsg,
     String? detail,
   }) async {
+    final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -394,11 +401,11 @@ class _FriendCtaSectionState extends ConsumerState<_FriendCtaSection> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Annuler'),
+            child: Text(l10n.publicProfileDialogCancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Confirmer'),
+            child: Text(l10n.publicProfileDialogConfirm),
           ),
         ],
       ),
@@ -429,27 +436,28 @@ class _StatsCard extends StatelessWidget {
     final total = wins + losses + draws;
     final ratio = total == 0 ? 0.0 : wins / total;
     final pct = (ratio * 100).round();
+    final l10n = AppLocalizations.of(context);
 
     return ArenaCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('STATS', style: ArenaTypography.labelMedium),
+          Text(l10n.publicProfileStatsHeader, style: ArenaTypography.labelMedium),
           const SizedBox(height: ArenaSpacing.sm),
           Row(
             children: [
               _StatTile(
-                label: 'V',
+                label: l10n.publicProfileStatWin,
                 value: '$wins',
                 color: ArenaColors.success,
               ),
               _StatTile(
-                label: 'D',
+                label: l10n.publicProfileStatLoss,
                 value: '$losses',
                 color: ArenaColors.danger,
               ),
               _StatTile(
-                label: 'N',
+                label: l10n.publicProfileStatDraw,
                 value: '$draws',
                 color: ArenaColors.textMuted,
               ),
@@ -460,7 +468,7 @@ class _StatsCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Taux de victoire',
+                l10n.publicProfileWinRateLabel,
                 style: ArenaTypography.bodySmall.copyWith(
                   color: ArenaColors.textMuted,
                 ),
@@ -487,14 +495,14 @@ class _StatsCard extends StatelessWidget {
             children: [
               Expanded(
                 child: _GoalLine(
-                  label: 'Buts marqués',
+                  label: l10n.publicProfileGoalsScored,
                   value: goalsScored,
                   color: ArenaColors.success,
                 ),
               ),
               Expanded(
                 child: _GoalLine(
-                  label: 'Buts encaissés',
+                  label: l10n.publicProfileGoalsConceded,
                   value: goalsConceded,
                   color: ArenaColors.danger,
                 ),
@@ -582,6 +590,7 @@ class _RecentMatches extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return asyncMatches.when(
       loading: () => const ArenaCard(
         child: SizedBox(
@@ -599,7 +608,7 @@ class _RecentMatches extends StatelessWidget {
         if (matches.isEmpty) {
           return ArenaCard(
             child: Text(
-              'Aucun match complété pour le moment.',
+              l10n.publicProfileNoCompletedMatches,
               style: ArenaTypography.bodyMedium.copyWith(
                 color: ArenaColors.textMuted,
               ),
@@ -672,10 +681,11 @@ class _ResultBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final (label, color) = switch (result) {
-      _Outcome.win => ('V', ArenaColors.success),
-      _Outcome.loss => ('D', ArenaColors.danger),
-      _Outcome.draw => ('N', ArenaColors.textMuted),
+      _Outcome.win => (l10n.publicProfileResultWin, ArenaColors.success),
+      _Outcome.loss => (l10n.publicProfileResultLoss, ArenaColors.danger),
+      _Outcome.draw => (l10n.publicProfileResultDraw, ArenaColors.textMuted),
     };
     return Container(
       width: 32,

@@ -11,6 +11,7 @@ import 'package:arena/features_shared/widgets/error_state.dart';
 import 'package:arena/features_user/competitions/widgets/competition_filter_chips.dart';
 import 'package:arena/features_user/competitions/widgets/competition_list_card.dart';
 import 'package:arena/features_user/payments/payment_method.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -40,6 +41,7 @@ class _CompetitionsListPageState extends ConsumerState<CompetitionsListPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final async = ref.watch(competitionsListProvider(_game));
 
     return ArenaScreenBackground(
@@ -65,7 +67,7 @@ class _CompetitionsListPageState extends ConsumerState<CompetitionsListPage> {
                   TextButton(
                     onPressed: _resetAll,
                     child: Text(
-                      'Réinitialiser',
+                      l10n.compListReset,
                       style: ArenaText.small.copyWith(
                         color: ArenaColors.signalBlue,
                       ),
@@ -91,10 +93,10 @@ class _CompetitionsListPageState extends ConsumerState<CompetitionsListPage> {
                   return EmptyState(
                     icon: Icons.sports_esports_outlined,
                     title: _game == null
-                        ? 'Aucune compétition'
-                        : 'Aucune compétition sur ${_game!.label}',
-                    description: 'De nouveaux tournois sont publiés chaque'
-                        ' semaine. Reviens bientôt !',
+                        ? l10n.compListEmptyTitleAll
+                        : '${l10n.compListEmptyTitleGamePrefix}'
+                            '${_game!.label}',
+                    description: l10n.compListEmptyDesc,
                   );
                 }
                 final registeredIds =
@@ -144,10 +146,11 @@ class _CompetitionsListPageState extends ConsumerState<CompetitionsListPage> {
   // ─── Filter helpers (mapping page state ↔ ArenaFilterMenu) ──────────
 
   List<ArenaFilterSection> _buildSections() {
+    final l10n = AppLocalizations.of(context);
     return [
       ArenaFilterSection(
         id: 'game',
-        title: 'Jeu',
+        title: l10n.compListFilterGame,
         mode: ArenaFilterMode.radio,
         options: [
           for (final g in GameType.values)
@@ -156,7 +159,7 @@ class _CompetitionsListPageState extends ConsumerState<CompetitionsListPage> {
       ),
       ArenaFilterSection(
         id: 'status',
-        title: 'Statut',
+        title: l10n.compListFilterStatus,
         mode: ArenaFilterMode.radio,
         options: [
           for (final b in StatusBucket.values)
@@ -165,7 +168,7 @@ class _CompetitionsListPageState extends ConsumerState<CompetitionsListPage> {
       ),
       ArenaFilterSection(
         id: 'pricing',
-        title: 'Tarif',
+        title: l10n.compListFilterPricing,
         mode: ArenaFilterMode.radio,
         options: [
           for (final p in PricingBucket.values)

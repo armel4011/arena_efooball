@@ -1,5 +1,6 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
@@ -15,6 +16,7 @@ class SplashUserScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: ArenaColors.void_,
       body: DecoratedBox(
@@ -41,7 +43,7 @@ class SplashUserScreen extends StatelessWidget {
                     .slideY(begin: 0.1, end: 0, curve: Curves.easeOutCubic),
                 const SizedBox(height: 6),
                 Text(
-                  'e-sport panafricain',
+                  l10n.splashTagline,
                   style: ArenaText.serifTagline,
                   textAlign: TextAlign.center,
                 )
@@ -54,7 +56,7 @@ class SplashUserScreen extends StatelessWidget {
                     .slideY(begin: 0.1, end: 0, curve: Curves.easeOutCubic),
                 const Spacer(flex: 2),
                 ArenaButton(
-                  label: 'SE CONNECTER',
+                  label: l10n.splashLoginButton,
                   fullWidth: true,
                   size: ArenaButtonSize.large,
                   onPressed: () => context.goNamed('user.login'),
@@ -64,7 +66,7 @@ class SplashUserScreen extends StatelessWidget {
                     .slideY(begin: 0.2, end: 0, curve: Curves.easeOutCubic),
                 const SizedBox(height: ArenaSpacing.sm),
                 ArenaButton(
-                  label: 'CRÉER UN COMPTE',
+                  label: l10n.splashCreateAccountButton,
                   fullWidth: true,
                   size: ArenaButtonSize.large,
                   variant: ArenaButtonVariant.secondary,
@@ -75,7 +77,7 @@ class SplashUserScreen extends StatelessWidget {
                     .slideY(begin: 0.2, end: 0, curve: Curves.easeOutCubic),
                 const SizedBox(height: ArenaSpacing.lg),
                 Text(
-                  'v1.0 — ARENA Cameroun',
+                  l10n.splashVersionLabel,
                   style: ArenaText.small,
                   textAlign: TextAlign.center,
                 )
@@ -96,6 +98,7 @@ class _StatGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(
         vertical: ArenaSpacing.md,
@@ -106,22 +109,22 @@ class _StatGrid extends StatelessWidget {
         borderRadius: BorderRadius.circular(ArenaRadius.lg),
         border: Border.all(color: ArenaColors.border),
       ),
-      child: const Row(
+      child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _StatCol(
             value: '12 048',
-            label: 'joueurs',
+            label: l10n.splashStatPlayers,
             color: ArenaColors.signalBlue,
           ),
           _StatCol(
             value: '342',
-            label: 'tournois',
+            label: l10n.splashStatTournaments,
             color: ArenaColors.statusOk,
           ),
           _StatCol(
             value: '1.2M',
-            label: 'XAF',
+            label: l10n.splashStatXaf,
             color: ArenaColors.neonRed,
           ),
         ],

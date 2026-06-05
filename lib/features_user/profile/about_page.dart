@@ -1,6 +1,7 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
@@ -28,8 +29,9 @@ class AboutPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: const ArenaAppBar(title: 'À PROPOS'),
+      appBar: ArenaAppBar(title: l10n.aboutAppBarTitle),
       body: ArenaScreenBackground(
         child: SafeArea(
           child: ListView(
@@ -58,7 +60,7 @@ class AboutPage extends StatelessWidget {
               const SizedBox(height: 4),
               Center(
                 child: Text(
-                  'Made in Cameroon 🇨🇲',
+                  l10n.aboutMadeInCameroon,
                   style: ArenaText.serifAccent.copyWith(
                     color: ArenaColors.iceCyan,
                     fontSize: 14,
@@ -73,7 +75,7 @@ class AboutPage extends StatelessWidget {
                   .fadeIn(duration: ArenaDurations.medium),
               const SizedBox(height: ArenaSpacing.lg),
               Text(
-                'LIENS',
+                l10n.aboutLinksLabel,
                 style: ArenaText.monoSmall.copyWith(
                   color: ArenaColors.silver,
                   letterSpacing: 1.5,
@@ -87,7 +89,7 @@ class AboutPage extends StatelessWidget {
               const SizedBox(height: ArenaSpacing.xl),
               Center(
                 child: Text(
-                  'Built with',
+                  l10n.aboutBuiltWith,
                   style: ArenaText.serifAccent.copyWith(
                     color: ArenaColors.pearl,
                     fontSize: 14,
@@ -137,6 +139,7 @@ class _MissionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.lg),
       decoration: BoxDecoration(
@@ -147,12 +150,10 @@ class _MissionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('📜 Notre mission', style: ArenaText.h3),
+          Text(l10n.aboutMissionTitle, style: ArenaText.h3),
           const SizedBox(height: ArenaSpacing.sm),
           Text(
-            "ARENA démocratise l'e-sport mobile en Afrique en offrant des "
-            'tournois équitables, des gains en mobile money, et une '
-            'expérience premium aux passionnés de football virtuel.',
+            l10n.aboutMissionBody,
             style: ArenaText.body,
           ),
         ],
@@ -222,9 +223,10 @@ class _LinksCard extends StatelessWidget {
 
   void _onLinkTap(BuildContext context, _AboutLink link) {
     // Real handlers (url_launcher / in-app webview) ship in PHASE 12.5.
+    final l10n = AppLocalizations.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${link.label} arrive en PHASE 12.5'),
+        content: Text(l10n.aboutLinkComingSoon(link.label)),
       ),
     );
   }

@@ -2,6 +2,7 @@ import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_user/payments/payment_method.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
@@ -35,19 +36,16 @@ class PaymentFailedPage extends StatelessWidget {
   final VoidCallback? onRetry;
   final VoidCallback? onContactSupport;
 
-  String get _causeMessage {
+  String _causeMessage(AppLocalizations l10n) {
     switch (reason) {
       case PaymentFailReason.rejected:
         return adminReason?.trim().isNotEmpty ?? false
-            ? 'Le super-admin a refusé ton paiement : $adminReason'
-            : 'Le super-admin a refusé ton paiement (montant incorrect '
-                'ou transaction introuvable sur le compte marchand).';
+            ? '${l10n.paymentFailedRejectedWithReason}$adminReason'
+            : l10n.paymentFailedRejectedGeneric;
       case PaymentFailReason.network:
-        return "Problème réseau pendant l'envoi. Aucun débit n'a été "
-            'effectué côté ARENA.';
+        return l10n.paymentFailedNetwork;
       case PaymentFailReason.unknown:
-        return "Le paiement n'a pas pu être confirmé. Réessaie ou "
-            'contacte le support.';
+        return l10n.paymentFailedUnknown;
     }
   }
 
@@ -62,29 +60,30 @@ class PaymentFailedPage extends StatelessWidget {
     }
   }
 
-  List<String> get _solutions {
+  List<String> _solutions(AppLocalizations l10n) {
     switch (reason) {
       case PaymentFailReason.rejected:
         return [
-          'Vérifie le montant exact + le code marchand',
-          'Recommence depuis la page Inscription',
-          "Contacte le support si tu penses que c'est une erreur",
+          l10n.paymentFailedSolutionCheckAmount,
+          l10n.paymentFailedSolutionRetryFromSignup,
+          l10n.paymentFailedSolutionContactIfError,
         ];
       case PaymentFailReason.network:
         return [
-          'Vérifie ta connexion Internet',
-          'Recommence depuis la page Inscription',
+          l10n.paymentFailedSolutionCheckInternet,
+          l10n.paymentFailedSolutionRetryFromSignup,
         ];
       case PaymentFailReason.unknown:
         return [
-          'Recommence depuis la page Inscription',
-          'Contacte le support ARENA',
+          l10n.paymentFailedSolutionRetryFromSignup,
+          l10n.paymentFailedSolutionContactSupport,
         ];
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: ArenaColors.void_,
       body: DecoratedBox(
@@ -119,27 +118,27 @@ class PaymentFailedPage extends StatelessWidget {
                   ),
               const SizedBox(height: ArenaSpacing.lg),
               Text(
-                _title,
+                _title(l10n),
                 textAlign: TextAlign.center,
                 style: ArenaText.h1.copyWith(color: ArenaColors.neonRed),
               ),
               const SizedBox(height: ArenaSpacing.sm),
               Text(
-                "Ton compte n'a pas été inscrit.",
+                l10n.paymentFailedAccountNotRegistered,
                 textAlign: TextAlign.center,
                 style: ArenaText.body,
               ),
               const SizedBox(height: ArenaSpacing.lg),
-              _CauseCard(message: _causeMessage, code: _errorCode)
+              _CauseCard(message: _causeMessage(l10n), code: _errorCode)
                   .animate(delay: 200.ms)
                   .fadeIn(duration: ArenaDurations.medium),
               const SizedBox(height: ArenaSpacing.md),
-              _SolutionsCard(items: _solutions)
+              _SolutionsCard(items: _solutions(l10n))
                   .animate(delay: 300.ms)
                   .fadeIn(duration: ArenaDurations.medium),
               const SizedBox(height: ArenaSpacing.xl),
               ArenaButton(
-                label: '↻ RECOMMENCER',
+                label: l10n.paymentFailedRetryButton,
                 fullWidth: true,
                 size: ArenaButtonSize.large,
                 onPressed: onRetry ?? () => context.go(UserRoutes.home),
@@ -149,7 +148,7 @@ class PaymentFailedPage extends StatelessWidget {
                 child: TextButton(
                   onPressed: onContactSupport,
                   child: Text(
-                    'Contacter le support ARENA',
+                    l10n.paymentFailedContactSupportLink,
                     style: ArenaText.body.copyWith(
                       color: ArenaColors.signalBlue,
                     ),
@@ -163,13 +162,13 @@ class PaymentFailedPage extends StatelessWidget {
     );
   }
 
-  String get _title {
+  String _title(AppLocalizations l10n) {
     switch (reason) {
       case PaymentFailReason.rejected:
-        return 'PAIEMENT REFUSÉ';
+        return l10n.paymentFailedTitleRejected;
       case PaymentFailReason.network:
       case PaymentFailReason.unknown:
-        return 'PAIEMENT ÉCHOUÉ';
+        return l10n.paymentFailedTitleFailed;
     }
   }
 }
@@ -211,13 +210,14 @@ class _CauseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.lg),
       decoration: arenaDangerCardDecoration(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('⚠ Cause', style: ArenaText.h3),
+          Text(l10n.paymentFailedCauseTitle, style: ArenaText.h3),
           const SizedBox(height: ArenaSpacing.sm),
           Text(message, style: ArenaText.body),
           const SizedBox(height: ArenaSpacing.sm),
@@ -225,7 +225,7 @@ class _CauseCard extends StatelessWidget {
             text: TextSpan(
               style: ArenaText.bodyMuted,
               children: [
-                const TextSpan(text: 'Code erreur : '),
+                TextSpan(text: l10n.paymentFailedErrorCodeLabel),
                 TextSpan(
                   text: code,
                   style: ArenaText.mono.copyWith(color: ArenaColors.neonRed),
@@ -245,6 +245,7 @@ class _SolutionsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.lg),
       decoration: BoxDecoration(
@@ -255,7 +256,7 @@ class _SolutionsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('💡 Solutions', style: ArenaText.h3),
+          Text(l10n.paymentFailedSolutionsTitle, style: ArenaText.h3),
           const SizedBox(height: ArenaSpacing.sm),
           for (final s in items)
             Padding(
