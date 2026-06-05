@@ -2620,4 +2620,349 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get watchStreamLiveBadge => 'مباشر';
+
+  @override
+  String bannedLoadStateError(Object error) {
+    return 'تعذر تحميل حالة الطلب: $error';
+  }
+
+  @override
+  String cguWhatsappLabel(Object dialCode) {
+    return 'واتساب ($dialCode)';
+  }
+
+  @override
+  String cguWhatsappHelper(Object dialCode) {
+    return 'تتم إضافة رمز الدولة $dialCode تلقائيًا.';
+  }
+
+  @override
+  String cguConsentRequiredSuffix(Object title) {
+    return '$title *';
+  }
+
+  @override
+  String linkAccountEmailLineNoEmail(Object providerLabel) {
+    return 'عنوان البريد الإلكتروني لحساب $providerLabel هذا مستخدم بالفعل من قبل حساب أرينا.';
+  }
+
+  @override
+  String linkAccountEmailLineWithEmail(Object email) {
+    return '$email مستخدم بالفعل من قبل حساب أرينا (كلمة المرور).';
+  }
+
+  @override
+  String registerStepperTitle(Object step) {
+    return 'الخطوة $step / 3';
+  }
+
+  @override
+  String registerWhatsappLabel(Object dialCode) {
+    return 'واتساب ($dialCode)';
+  }
+
+  @override
+  String registerWhatsappHelper(Object dialCode) {
+    return 'تتم إضافة رمز الدولة $dialCode تلقائيًا.';
+  }
+
+  @override
+  String bracketCaption(Object playerCount) {
+    return 'إقصاء مباشر · $playerCount لاعبًا';
+  }
+
+  @override
+  String referralCardDescription(Object referralQuota) {
+    return 'يجب عليك إحالة $referralQuota من الأصدقاء للتسجيل في هذه المسابقة المجانية. شارك رمزك معهم لينشئوا حساب ARENA الخاص بهم.';
+  }
+
+  @override
+  String referralProgressError(Object error) {
+    return 'تعذر التحقق من تقدمك: $error';
+  }
+
+  @override
+  String referralFriendsRemaining(Object count) {
+    return '$count من الأصدقاء المتبقين للإحالة';
+  }
+
+  @override
+  String referralCodeCopied(Object code) {
+    return 'تم نسخ الرمز $code إلى الحافظة';
+  }
+
+  @override
+  String referralShareMessage(Object code) {
+    return 'انضم إليّ على ARENA! بطولات الرياضات الإلكترونية المجانية على الهاتف مع جوائز. استخدم رمز الإحالة الخاص بي عند التسجيل: $code';
+  }
+
+  @override
+  String liveStreamsOthersCount(Object count) {
+    return '+$count أخرى';
+  }
+
+  @override
+  String pendingPaymentMultipleTitle(Object count) {
+    return '$count دفعات قيد الانتظار';
+  }
+
+  @override
+  String upcomingMatchesError(Object error) {
+    return 'خطأ: $error';
+  }
+
+  @override
+  String upcomingMatchVsOpponent(Object opponentName) {
+    return 'ضد $opponentName';
+  }
+
+  @override
+  String upcomingBadgeInHours(Object hours) {
+    return 'خلال $hours س';
+  }
+
+  @override
+  String upcomingBadgeInDays(Object days) {
+    return 'خلال $days ي';
+  }
+
+  @override
+  String upcomingPhaseRound(Object round) {
+    return 'الجولة $round';
+  }
+
+  @override
+  String matchRoomTitleNumbered(Object number) {
+    return 'مباراة #$number';
+  }
+
+  @override
+  String manualUploadFailure(Object message) {
+    return 'فشل: $message';
+  }
+
+  @override
+  String manualUploadError(Object error) {
+    return 'خطأ: $error';
+  }
+
+  @override
+  String outcomeWinner(Object winner) {
+    return 'الفائز: اللاعب $winner…';
+  }
+
+  @override
+  String outcomeResubmitError(Object error) {
+    return 'تعذّرت إعادة الإرسال: $error';
+  }
+
+  @override
+  String outcomeScoreShootout(Object pen1, Object pen2) {
+    return 'ركلات الترجيح $pen1 — $pen2';
+  }
+
+  @override
+  String matchHeaderSelfSuffix(Object username) {
+    return '$username · أنت';
+  }
+
+  @override
+  String recordingLiveStreamError(Object error) {
+    return 'تعذّر بدء البث: $error';
+  }
+
+  @override
+  String recordingPermBundleNeedsSettings(Object list) {
+    return 'اسمح بـ $list في الإعدادات > التطبيقات > ARENA';
+  }
+
+  @override
+  String recordingPermBundleDenied(Object list) {
+    return 'تم رفض إذن $list — اضغط مجددًا على \"أنا في الغرفة\"';
+  }
+
+  @override
+  String recordingBannerUnavailable(Object error) {
+    return 'التسجيل غير متاح — $error\nاضغط هنا لإعادة المحاولة.';
+  }
+
+  @override
+  String notificationsTimeMinutesAgo(Object minutes) {
+    return 'منذ $minutes دقيقة';
+  }
+
+  @override
+  String notificationsTimeHoursAgo(Object hours) {
+    return 'منذ $hours ساعة';
+  }
+
+  @override
+  String mobileMoneyDialHelp(Object method) {
+    return 'اطلب هذا الرمز على $method الخاص بك، وادفع المبلغ بالضبط، ثم عُد هنا واضغط \"لقد دفعت\".';
+  }
+
+  @override
+  String deleteAccountStepCaption(Object stepNum, Object stepLabel) {
+    return 'الخطوة $stepNum/04 · $stepLabel';
+  }
+
+  @override
+  String deleteAccountCheckErrorNote(Object checkError) {
+    return 'ملاحظة: التحقق غير حاسم (الجدول غير متوفر). التفاصيل: $checkError';
+  }
+
+  @override
+  String deleteAccountTypeToConfirmLabel(Object confirmWord) {
+    return 'اكتب \"$confirmWord\" للتأكيد';
+  }
+
+  @override
+  String editProfileWhatsappCaption(Object dialCode) {
+    return 'واتساب ($dialCode)';
+  }
+
+  @override
+  String editProfileWhatsappHelper(Object dialCode) {
+    return 'تتم إضافة رمز الدولة $dialCode تلقائياً.';
+  }
+
+  @override
+  String friendsErrorMessage(Object error) {
+    return 'خطأ: $error';
+  }
+
+  @override
+  String friendsRemoveDialogTitle(Object username) {
+    return 'إزالة $username؟';
+  }
+
+  @override
+  String friendsAcceptedSnack(Object username) {
+    return '$username الآن صديقك';
+  }
+
+  @override
+  String friendsUnblockedSnack(Object username) {
+    return 'تم إلغاء حظر $username';
+  }
+
+  @override
+  String friendsSearchErrorMessage(Object error) {
+    return 'خطأ: $error';
+  }
+
+  @override
+  String playerProfileError(Object error) {
+    return 'خطأ: $error';
+  }
+
+  @override
+  String playerProfileStatsError(Object error) {
+    return 'الإحصائيات غير متاحة ($error)';
+  }
+
+  @override
+  String playerProfileMatchRowError(Object error) {
+    return 'خطأ: $error';
+  }
+
+  @override
+  String playerProfileFriendsCountSingular(Object friendsCount) {
+    return '$friendsCount صديق';
+  }
+
+  @override
+  String playerProfileFriendsCountPlural(Object friendsCount) {
+    return '$friendsCount أصدقاء';
+  }
+
+  @override
+  String playerProfileReferralCountSingular(Object count) {
+    return '$count مدعوّ';
+  }
+
+  @override
+  String playerProfileReferralCountPlural(Object count) {
+    return '$count مدعوّون';
+  }
+
+  @override
+  String publicProfileError(Object error) {
+    return 'خطأ: $error';
+  }
+
+  @override
+  String publicProfileRequestSent(Object username) {
+    return 'تم إرسال الطلب إلى $username';
+  }
+
+  @override
+  String publicProfileNowFriend(Object username) {
+    return '$username الآن صديقك';
+  }
+
+  @override
+  String publicProfileRemoveConfirmTitle(Object username) {
+    return 'إزالة $username؟';
+  }
+
+  @override
+  String publicProfileBlockConfirmTitle(Object username) {
+    return 'حظر $username؟';
+  }
+
+  @override
+  String publicProfileWinRateValue(Object pct, Object total) {
+    return '$pct% ($total مباريات)';
+  }
+
+  @override
+  String publicProfileMatchRowError(Object error) {
+    return 'خطأ: $error';
+  }
+
+  @override
+  String settingsMarketingError(Object error) {
+    return 'خطأ: $error';
+  }
+
+  @override
+  String settingsEmailChangeError(Object error) {
+    return 'خطأ: $error';
+  }
+
+  @override
+  String settingsPasswordChangeError(Object error) {
+    return 'خطأ: $error';
+  }
+
+  @override
+  String settingsExportError(Object error) {
+    return 'تعذّر التصدير: $error';
+  }
+
+  @override
+  String settingsExportFileLabel(Object sizeKb) {
+    return 'الملف ($sizeKb ك.ب):';
+  }
+
+  @override
+  String startStreamingErrorSnack(Object error) {
+    return 'خطأ: $error';
+  }
+
+  @override
+  String watchStreamFailed(Object reason) {
+    return 'فشل: $reason';
+  }
+
+  @override
+  String watchStreamChatSendError(Object error) {
+    return 'خطأ في الإرسال: $error';
+  }
+
+  @override
+  String watchStreamViewersWatching(Object viewers) {
+    return '$viewers يشاهدون';
+  }
 }

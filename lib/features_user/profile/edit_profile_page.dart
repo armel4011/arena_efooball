@@ -250,12 +250,11 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                   onChanged: (v) => setState(() => _avatarColor = v),
                 ),
                 const SizedBox(height: ArenaSpacing.lg),
-                _Caption('WHATSAPP (${dialCodeFor(_countryCode)})'),
+                _Caption(l10n.editProfileWhatsappCaption(dialCodeFor(_countryCode))),
                 const SizedBox(height: ArenaSpacing.xs),
                 ArenaTextField(
                   hint: l10n.editProfileWhatsappHint,
-                  helper: 'Le code pays ${dialCodeFor(_countryCode)} est ajouté'
-                      ' automatiquement.',
+                  helper: l10n.editProfileWhatsappHelper(dialCodeFor(_countryCode)),
                   controller: _whatsappCtrl,
                   keyboardType: TextInputType.phone,
                   textInputAction: TextInputAction.done,

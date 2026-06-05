@@ -127,10 +127,9 @@ class _CguAcceptancePageState extends ConsumerState<CguAcceptancePage> {
                 ),
                 const SizedBox(height: ArenaSpacing.md),
                 ArenaTextField(
-                  label: 'WHATSAPP (${dialCodeFor(_countryCode)})',
+                  label: l10n.cguWhatsappLabel(dialCodeFor(_countryCode)),
                   hint: l10n.cguWhatsappHint,
-                  helper: 'Le code pays ${dialCodeFor(_countryCode)} est ajouté'
-                      ' automatiquement.',
+                  helper: l10n.cguWhatsappHelper(dialCodeFor(_countryCode)),
                   controller: _whatsappCtrl,
                   keyboardType: TextInputType.phone,
                   textInputAction: TextInputAction.done,
@@ -282,6 +281,7 @@ class _ConsentTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return InkWell(
       onTap: onChanged == null ? null : () => onChanged!(!value),
       borderRadius: ArenaRadius.button,
@@ -305,7 +305,7 @@ class _ConsentTile extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.only(top: 12),
                 child: Text(
-                  required ? '$title *' : title,
+                  required ? l10n.cguConsentRequiredSuffix(title) : title,
                   style: ArenaTypography.bodyMedium,
                 ),
               ),

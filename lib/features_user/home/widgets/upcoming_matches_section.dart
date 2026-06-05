@@ -30,7 +30,7 @@ class UpcomingMatchesScroller extends ConsumerWidget {
       height: 110,
       child: matchesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => HomeErrorRow(message: 'Erreur : $e'),
+        error: (e, _) => HomeErrorRow(message: l10n.upcomingMatchesError(e)),
         data: (matches) {
           if (matches.isEmpty || me == null) {
             return _ScrollerEmpty(
@@ -129,7 +129,7 @@ class _UpcomingMatchCard extends StatelessWidget {
                 const SizedBox(width: ArenaSpacing.xs),
                 Expanded(
                   child: Text(
-                    'vs $opponentName',
+                    l10n.upcomingMatchVsOpponent(opponentName),
                     style: ArenaText.body
                         .copyWith(fontWeight: FontWeight.w600),
                     overflow: TextOverflow.ellipsis,
@@ -162,10 +162,10 @@ class _UpcomingMatchCard extends StatelessWidget {
     if (diff.isNegative) {
       return (l10n.upcomingBadgeReady, ArenaBadgeVariant.info, true);
     }
-    if (diff.inHours < 3) return ('DANS ${diff.inHours}H', ArenaBadgeVariant.info, true);
-    if (diff.inHours < 24) return ('DANS ${diff.inHours}H', ArenaBadgeVariant.info, false);
+    if (diff.inHours < 3) return (l10n.upcomingBadgeInHours(diff.inHours), ArenaBadgeVariant.info, true);
+    if (diff.inHours < 24) return (l10n.upcomingBadgeInHours(diff.inHours), ArenaBadgeVariant.info, false);
     if (diff.inDays < 2) return (l10n.upcomingBadgeTomorrow, ArenaBadgeVariant.warn, false);
-    return ('DANS ${diff.inDays}J', ArenaBadgeVariant.warn, false);
+    return (l10n.upcomingBadgeInDays(diff.inDays), ArenaBadgeVariant.warn, false);
   }
 
   static String _phaseLabel(ArenaMatch m, AppLocalizations l10n) {
@@ -177,7 +177,7 @@ class _UpcomingMatchCard extends StatelessWidget {
       3 => l10n.upcomingPhaseQuarterFinal,
       4 => l10n.upcomingPhaseRoundOf16,
       5 => l10n.upcomingPhaseRoundOf32,
-      _ => 'Round $r',
+      _ => l10n.upcomingPhaseRound(r),
     };
   }
 

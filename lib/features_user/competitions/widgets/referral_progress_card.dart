@@ -61,9 +61,7 @@ class ReferralProgressCard extends ConsumerWidget {
           ),
           const SizedBox(height: ArenaSpacing.xs),
           Text(
-            'Tu dois parrainer $referralQuota ami(s) pour '
-            "t'inscrire à cette compétition gratuite. Partage ton code "
-            "avec eux pour qu'ils créent leur compte ARENA.",
+            l10n.referralCardDescription(referralQuota),
             style: ArenaText.small,
           ),
           const SizedBox(height: ArenaSpacing.md),
@@ -77,7 +75,7 @@ class ReferralProgressCard extends ConsumerWidget {
               ),
             ),
             error: (e, _) => Text(
-              'Impossible de vérifier ta progression : $e',
+              l10n.referralProgressError(e),
               style: ArenaText.small.copyWith(color: ArenaColors.neonRed),
             ),
             data: (eg) => _ProgressBlock(eligibility: eg),
@@ -126,7 +124,7 @@ class _ProgressBlock extends StatelessWidget {
               child: Text(
                 eg.eligible
                     ? l10n.referralQuotaReached
-                    : 'Encore ${eg.target - eg.current} ami(s) à parrainer',
+                    : l10n.referralFriendsRemaining(eg.target - eg.current),
                 style: ArenaText.body.copyWith(color: color),
               ),
             ),
@@ -154,9 +152,10 @@ class _ReferralCodeCopy extends StatelessWidget {
   Future<void> _copy(BuildContext context) async {
     await Clipboard.setData(ClipboardData(text: code));
     if (!context.mounted) return;
+    final l10n = AppLocalizations.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Code $code copié dans le presse-papier'),
+        content: Text(l10n.referralCodeCopied(code)),
         backgroundColor: ArenaColors.statusOk,
         duration: const Duration(seconds: 2),
       ),
@@ -165,8 +164,7 @@ class _ReferralCodeCopy extends StatelessWidget {
 
   Future<void> _share(AppLocalizations l10n) async {
     await Share.share(
-      "Rejoins-moi sur ARENA ! Tournois d'e-sport mobile gratuits avec "
-      "récompenses. Utilise mon code de parrainage à l'inscription : $code",
+      l10n.referralShareMessage(code),
       subject: l10n.referralShareSubject,
     );
   }

@@ -5097,6 +5097,420 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'LIVE'**
   String get watchStreamLiveBadge;
+
+  /// No description provided for @bannedLoadStateError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger l\'état de la requête : {error}'**
+  String bannedLoadStateError(Object error);
+
+  /// No description provided for @cguWhatsappLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'WHATSAPP ({dialCode})'**
+  String cguWhatsappLabel(Object dialCode);
+
+  /// No description provided for @cguWhatsappHelper.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le code pays {dialCode} est ajouté automatiquement.'**
+  String cguWhatsappHelper(Object dialCode);
+
+  /// No description provided for @cguConsentRequiredSuffix.
+  ///
+  /// In fr, this message translates to:
+  /// **'{title} *'**
+  String cguConsentRequiredSuffix(Object title);
+
+  /// No description provided for @linkAccountEmailLineNoEmail.
+  ///
+  /// In fr, this message translates to:
+  /// **'L\'adresse e-mail de ce compte {providerLabel} est déjà utilisée par un compte ARENA.'**
+  String linkAccountEmailLineNoEmail(Object providerLabel);
+
+  /// No description provided for @linkAccountEmailLineWithEmail.
+  ///
+  /// In fr, this message translates to:
+  /// **'{email} est déjà utilisé par un compte ARENA (mot de passe).'**
+  String linkAccountEmailLineWithEmail(Object email);
+
+  /// No description provided for @registerStepperTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {step} / 3'**
+  String registerStepperTitle(Object step);
+
+  /// No description provided for @registerWhatsappLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'WHATSAPP ({dialCode})'**
+  String registerWhatsappLabel(Object dialCode);
+
+  /// No description provided for @registerWhatsappHelper.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le code pays {dialCode} est ajouté automatiquement.'**
+  String registerWhatsappHelper(Object dialCode);
+
+  /// No description provided for @bracketCaption.
+  ///
+  /// In fr, this message translates to:
+  /// **'ÉLIMINATION DIRECTE · {playerCount} JOUEURS'**
+  String bracketCaption(Object playerCount);
+
+  /// No description provided for @referralCardDescription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu dois parrainer {referralQuota} ami(s) pour t\'inscrire à cette compétition gratuite. Partage ton code avec eux pour qu\'ils créent leur compte ARENA.'**
+  String referralCardDescription(Object referralQuota);
+
+  /// No description provided for @referralProgressError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de vérifier ta progression : {error}'**
+  String referralProgressError(Object error);
+
+  /// No description provided for @referralFriendsRemaining.
+  ///
+  /// In fr, this message translates to:
+  /// **'Encore {count} ami(s) à parrainer'**
+  String referralFriendsRemaining(Object count);
+
+  /// No description provided for @referralCodeCopied.
+  ///
+  /// In fr, this message translates to:
+  /// **'Code {code} copié dans le presse-papier'**
+  String referralCodeCopied(Object code);
+
+  /// No description provided for @referralShareMessage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rejoins-moi sur ARENA ! Tournois d\'e-sport mobile gratuits avec récompenses. Utilise mon code de parrainage à l\'inscription : {code}'**
+  String referralShareMessage(Object code);
+
+  /// No description provided for @liveStreamsOthersCount.
+  ///
+  /// In fr, this message translates to:
+  /// **'+{count} autres'**
+  String liveStreamsOthersCount(Object count);
+
+  /// No description provided for @pendingPaymentMultipleTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count} paiements en attente'**
+  String pendingPaymentMultipleTitle(Object count);
+
+  /// No description provided for @upcomingMatchesError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Erreur : {error}'**
+  String upcomingMatchesError(Object error);
+
+  /// No description provided for @upcomingMatchVsOpponent.
+  ///
+  /// In fr, this message translates to:
+  /// **'vs {opponentName}'**
+  String upcomingMatchVsOpponent(Object opponentName);
+
+  /// No description provided for @upcomingBadgeInHours.
+  ///
+  /// In fr, this message translates to:
+  /// **'DANS {hours}H'**
+  String upcomingBadgeInHours(Object hours);
+
+  /// No description provided for @upcomingBadgeInDays.
+  ///
+  /// In fr, this message translates to:
+  /// **'DANS {days}J'**
+  String upcomingBadgeInDays(Object days);
+
+  /// No description provided for @upcomingPhaseRound.
+  ///
+  /// In fr, this message translates to:
+  /// **'Round {round}'**
+  String upcomingPhaseRound(Object round);
+
+  /// No description provided for @matchRoomTitleNumbered.
+  ///
+  /// In fr, this message translates to:
+  /// **'MATCH #{number}'**
+  String matchRoomTitleNumbered(Object number);
+
+  /// No description provided for @manualUploadFailure.
+  ///
+  /// In fr, this message translates to:
+  /// **'Échec : {message}'**
+  String manualUploadFailure(Object message);
+
+  /// No description provided for @manualUploadError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Erreur : {error}'**
+  String manualUploadError(Object error);
+
+  /// No description provided for @outcomeWinner.
+  ///
+  /// In fr, this message translates to:
+  /// **'Gagnant : Joueur {winner}…'**
+  String outcomeWinner(Object winner);
+
+  /// No description provided for @outcomeResubmitError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de renvoyer : {error}'**
+  String outcomeResubmitError(Object error);
+
+  /// No description provided for @outcomeScoreShootout.
+  ///
+  /// In fr, this message translates to:
+  /// **'TAB {pen1} — {pen2}'**
+  String outcomeScoreShootout(Object pen1, Object pen2);
+
+  /// No description provided for @matchHeaderSelfSuffix.
+  ///
+  /// In fr, this message translates to:
+  /// **'{username} · TOI'**
+  String matchHeaderSelfSuffix(Object username);
+
+  /// No description provided for @recordingLiveStreamError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de démarrer la diffusion : {error}'**
+  String recordingLiveStreamError(Object error);
+
+  /// No description provided for @recordingPermBundleNeedsSettings.
+  ///
+  /// In fr, this message translates to:
+  /// **'Autorise {list} dans Paramètres > Apps > ARENA'**
+  String recordingPermBundleNeedsSettings(Object list);
+
+  /// No description provided for @recordingPermBundleDenied.
+  ///
+  /// In fr, this message translates to:
+  /// **'Autorisation {list} refusée — retape JE SUIS DANS LA ROOM'**
+  String recordingPermBundleDenied(Object list);
+
+  /// No description provided for @recordingBannerUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Recording indisponible — {error}\nTape ici pour réessayer.'**
+  String recordingBannerUnavailable(Object error);
+
+  /// No description provided for @notificationsTimeMinutesAgo.
+  ///
+  /// In fr, this message translates to:
+  /// **'Il y a {minutes} min'**
+  String notificationsTimeMinutesAgo(Object minutes);
+
+  /// No description provided for @notificationsTimeHoursAgo.
+  ///
+  /// In fr, this message translates to:
+  /// **'Il y a {hours} h'**
+  String notificationsTimeHoursAgo(Object hours);
+
+  /// No description provided for @mobileMoneyDialHelp.
+  ///
+  /// In fr, this message translates to:
+  /// **'Compose ce code sur ton {method}, paie le montant exact, puis reviens ici cliquer \"J\'AI PAYÉ\".'**
+  String mobileMoneyDialHelp(Object method);
+
+  /// No description provided for @deleteAccountStepCaption.
+  ///
+  /// In fr, this message translates to:
+  /// **'ÉTAPE {stepNum}/04 · {stepLabel}'**
+  String deleteAccountStepCaption(Object stepNum, Object stepLabel);
+
+  /// No description provided for @deleteAccountCheckErrorNote.
+  ///
+  /// In fr, this message translates to:
+  /// **'Note: vérification non concluante (table indisponible). Détail: {checkError}'**
+  String deleteAccountCheckErrorNote(Object checkError);
+
+  /// No description provided for @deleteAccountTypeToConfirmLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tape \"{confirmWord}\" pour confirmer'**
+  String deleteAccountTypeToConfirmLabel(Object confirmWord);
+
+  /// No description provided for @editProfileWhatsappCaption.
+  ///
+  /// In fr, this message translates to:
+  /// **'WHATSAPP ({dialCode})'**
+  String editProfileWhatsappCaption(Object dialCode);
+
+  /// No description provided for @editProfileWhatsappHelper.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le code pays {dialCode} est ajouté automatiquement.'**
+  String editProfileWhatsappHelper(Object dialCode);
+
+  /// No description provided for @friendsErrorMessage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Erreur : {error}'**
+  String friendsErrorMessage(Object error);
+
+  /// No description provided for @friendsRemoveDialogTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer {username} ?'**
+  String friendsRemoveDialogTitle(Object username);
+
+  /// No description provided for @friendsAcceptedSnack.
+  ///
+  /// In fr, this message translates to:
+  /// **'{username} est maintenant ton ami'**
+  String friendsAcceptedSnack(Object username);
+
+  /// No description provided for @friendsUnblockedSnack.
+  ///
+  /// In fr, this message translates to:
+  /// **'{username} débloqué'**
+  String friendsUnblockedSnack(Object username);
+
+  /// No description provided for @friendsSearchErrorMessage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Erreur : {error}'**
+  String friendsSearchErrorMessage(Object error);
+
+  /// No description provided for @playerProfileError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Erreur: {error}'**
+  String playerProfileError(Object error);
+
+  /// No description provided for @playerProfileStatsError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Stats indisponibles ({error})'**
+  String playerProfileStatsError(Object error);
+
+  /// No description provided for @playerProfileMatchRowError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Erreur: {error}'**
+  String playerProfileMatchRowError(Object error);
+
+  /// No description provided for @playerProfileFriendsCountSingular.
+  ///
+  /// In fr, this message translates to:
+  /// **'{friendsCount} ami'**
+  String playerProfileFriendsCountSingular(Object friendsCount);
+
+  /// No description provided for @playerProfileFriendsCountPlural.
+  ///
+  /// In fr, this message translates to:
+  /// **'{friendsCount} amis'**
+  String playerProfileFriendsCountPlural(Object friendsCount);
+
+  /// No description provided for @playerProfileReferralCountSingular.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count} invité'**
+  String playerProfileReferralCountSingular(Object count);
+
+  /// No description provided for @playerProfileReferralCountPlural.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count} invités'**
+  String playerProfileReferralCountPlural(Object count);
+
+  /// No description provided for @publicProfileError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Erreur : {error}'**
+  String publicProfileError(Object error);
+
+  /// No description provided for @publicProfileRequestSent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Demande envoyée à {username}'**
+  String publicProfileRequestSent(Object username);
+
+  /// No description provided for @publicProfileNowFriend.
+  ///
+  /// In fr, this message translates to:
+  /// **'{username} est maintenant ton ami'**
+  String publicProfileNowFriend(Object username);
+
+  /// No description provided for @publicProfileRemoveConfirmTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer {username} ?'**
+  String publicProfileRemoveConfirmTitle(Object username);
+
+  /// No description provided for @publicProfileBlockConfirmTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Bloquer {username} ?'**
+  String publicProfileBlockConfirmTitle(Object username);
+
+  /// No description provided for @publicProfileWinRateValue.
+  ///
+  /// In fr, this message translates to:
+  /// **'{pct}% ({total} matchs)'**
+  String publicProfileWinRateValue(Object pct, Object total);
+
+  /// No description provided for @publicProfileMatchRowError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Erreur: {error}'**
+  String publicProfileMatchRowError(Object error);
+
+  /// No description provided for @settingsMarketingError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Erreur: {error}'**
+  String settingsMarketingError(Object error);
+
+  /// No description provided for @settingsEmailChangeError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Erreur: {error}'**
+  String settingsEmailChangeError(Object error);
+
+  /// No description provided for @settingsPasswordChangeError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Erreur: {error}'**
+  String settingsPasswordChangeError(Object error);
+
+  /// No description provided for @settingsExportError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Export impossible : {error}'**
+  String settingsExportError(Object error);
+
+  /// No description provided for @settingsExportFileLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fichier ({sizeKb} Ko) :'**
+  String settingsExportFileLabel(Object sizeKb);
+
+  /// No description provided for @startStreamingErrorSnack.
+  ///
+  /// In fr, this message translates to:
+  /// **'Erreur: {error}'**
+  String startStreamingErrorSnack(Object error);
+
+  /// No description provided for @watchStreamFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Échec : {reason}'**
+  String watchStreamFailed(Object reason);
+
+  /// No description provided for @watchStreamChatSendError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Erreur envoi : {error}'**
+  String watchStreamChatSendError(Object error);
+
+  /// No description provided for @watchStreamViewersWatching.
+  ///
+  /// In fr, this message translates to:
+  /// **'{viewers} watching'**
+  String watchStreamViewersWatching(Object viewers);
 }
 
 class _AppLocalizationsDelegate

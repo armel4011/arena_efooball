@@ -180,7 +180,7 @@ class _PreferencesSection extends ConsumerWidget {
                     } catch (e) {
                       if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Erreur: $e')),
+                        SnackBar(content: Text(l10n.settingsMarketingError(e))),
                       );
                     }
                   },
@@ -285,7 +285,7 @@ class _AccountSection extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Erreur: $e')));
+            .showSnackBar(SnackBar(content: Text(l10n.settingsEmailChangeError(e))));
       }
     }
   }
@@ -329,7 +329,7 @@ class _AccountSection extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Erreur: $e')));
+            .showSnackBar(SnackBar(content: Text(l10n.settingsPasswordChangeError(e))));
       }
     }
   }
@@ -360,8 +360,9 @@ class _PrivacySectionState extends ConsumerState<_PrivacySection> {
       );
     } catch (e) {
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Export impossible : $e')),
+        SnackBar(content: Text(l10n.settingsExportError(e))),
       );
     } finally {
       if (mounted) setState(() => _exporting = false);
@@ -448,7 +449,7 @@ class _ExportSuccessDialog extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Fichier ($sizeKb Ko) :', style: ArenaText.bodyMuted),
+          Text(l10n.settingsExportFileLabel(sizeKb), style: ArenaText.bodyMuted),
           const SizedBox(height: 4),
           SelectableText(result.filePath, style: ArenaText.mono),
           const SizedBox(height: ArenaSpacing.sm),

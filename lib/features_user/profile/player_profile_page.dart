@@ -37,7 +37,7 @@ class PlayerProfilePage extends ConsumerWidget {
           child: Padding(
             padding: const EdgeInsets.all(ArenaSpacing.lg),
             child: Text(
-              'Erreur: $e',
+              AppLocalizations.of(context).playerProfileError(e),
               textAlign: TextAlign.center,
               style: ArenaText.body.copyWith(color: ArenaColors.danger),
             ),
@@ -311,7 +311,7 @@ class _StatsRow extends StatelessWidget {
         child: Center(child: CircularProgressIndicator()),
       ),
       error: (e, _) => Text(
-        'Stats indisponibles ($e)',
+        l10n.playerProfileStatsError(e),
         style: ArenaText.body.copyWith(color: ArenaColors.danger),
       ),
       data: (s) {
@@ -504,7 +504,7 @@ class _RecentMatches extends StatelessWidget {
       ),
       error: (e, _) => ArenaCard(
         child: Text(
-          'Erreur: $e',
+          l10n.playerProfileMatchRowError(e),
           style: ArenaText.body.copyWith(color: ArenaColors.danger),
         ),
       ),
@@ -638,7 +638,11 @@ class _FriendsSection extends ConsumerWidget {
                 Text(
                   friendsCount == 0
                       ? l10n.playerProfileNoFriends
-                      : '$friendsCount ami${friendsCount > 1 ? 's' : ''}',
+                      : friendsCount > 1
+                          ? l10n.playerProfileFriendsCountPlural(friendsCount)
+                          : l10n.playerProfileFriendsCountSingular(
+                              friendsCount,
+                            ),
                   style: ArenaTypography.bodySmall.copyWith(
                     color: ArenaColors.textMuted,
                   ),
@@ -771,7 +775,9 @@ class _ReferralBadgeCard extends ConsumerWidget {
                   ),
                 ),
                 child: Text(
-                  '$count invité${count > 1 ? 's' : ''}',
+                  count > 1
+                      ? l10n.playerProfileReferralCountPlural(count)
+                      : l10n.playerProfileReferralCountSingular(count),
                   style: ArenaTypography.labelMedium.copyWith(
                     color: ArenaColors.tierGoldWarm,
                     fontWeight: FontWeight.w700,

@@ -205,7 +205,7 @@ class _MatchRecordingLifecycleState
       if (!mounted || messenger == null) return;
       messenger.showSnackBar(
         SnackBar(
-          content: Text('Impossible de démarrer la diffusion : $e'),
+          content: Text(l10n.recordingLiveStreamError(e)),
           duration: const Duration(seconds: 4),
         ),
       );
@@ -276,9 +276,9 @@ class _MatchRecordingLifecycleState
     final list = missing.join(' + ');
     if (bundle.microphone.needsSettings ||
         bundle.notifications.needsSettings) {
-      return 'Autorise $list dans Paramètres > Apps > ARENA';
+      return l10n.recordingPermBundleNeedsSettings(list);
     }
-    return 'Autorisation $list refusée — retape JE SUIS DANS LA ROOM';
+    return l10n.recordingPermBundleDenied(list);
   }
 
   String _overlayErrorMessage(PermissionOutcome outcome) {
@@ -360,11 +360,12 @@ class _MatchRecordingLifecycleState
         MatchRecordingActionsSheet.show(context);
       });
 
-    if (_startError != null) {
+    final startError = _startError;
+    if (startError != null) {
       return _LifecycleBanner(
         icon: Icons.warning_amber_rounded,
         color: ArenaColors.warning,
-        text: 'Recording indisponible — $_startError\nTape ici pour réessayer.',
+        text: l10n.recordingBannerUnavailable(startError),
         onTap: () {
           setState(() {
             _startError = null;

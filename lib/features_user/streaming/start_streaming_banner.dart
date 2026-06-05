@@ -97,7 +97,7 @@ class StartStreamingBanner extends ConsumerWidget {
                     } catch (e) {
                       if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Erreur: $e')),
+                        SnackBar(content: Text(l10n.startStreamingErrorSnack(e))),
                       );
                     }
                   },

@@ -35,7 +35,7 @@ class PublicProfilePage extends ConsumerWidget {
       appBar: ArenaAppBar(title: l10n.publicProfileAppBarTitle),
       body: profileAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => _ErrorState(message: 'Erreur : $e'),
+        error: (e, _) => _ErrorState(message: l10n.publicProfileError(e)),
         data: (profile) {
           if (profile == null) {
             return _ErrorState(message: l10n.publicProfilePlayerNotFound);
@@ -251,7 +251,7 @@ class _FriendCtaSectionState extends ConsumerState<_FriendCtaSection> {
           isLoading: _busy,
           onPressed: () => _run(
             () => repo.sendRequest(p.id),
-            success: 'Demande envoyée à ${p.username}',
+            success: l10n.publicProfileRequestSent(p.username),
           ),
         );
       case FriendCtaState.outgoingPending:
@@ -295,7 +295,7 @@ class _FriendCtaSectionState extends ConsumerState<_FriendCtaSection> {
                     ? null
                     : () => _run(
                           () => repo.accept(fid),
-                          success: '${p.username} est maintenant ton ami',
+                          success: l10n.publicProfileNowFriend(p.username),
                         ),
               ),
             ),
@@ -336,7 +336,7 @@ class _FriendCtaSectionState extends ConsumerState<_FriendCtaSection> {
                     variant: ArenaButtonVariant.ghost,
                     isLoading: _busy,
                     onPressed: () => _confirmAndRun(
-                      title: 'Retirer ${p.username} ?',
+                      title: l10n.publicProfileRemoveConfirmTitle(p.username),
                       action: () => repo.remove(p.id),
                       successMsg: l10n.publicProfileFriendRemoved,
                     ),
@@ -350,7 +350,7 @@ class _FriendCtaSectionState extends ConsumerState<_FriendCtaSection> {
                     variant: ArenaButtonVariant.danger,
                     isLoading: _busy,
                     onPressed: () => _confirmAndRun(
-                      title: 'Bloquer ${p.username} ?',
+                      title: l10n.publicProfileBlockConfirmTitle(p.username),
                       detail: l10n.publicProfileBlockConfirmDetail,
                       action: () => repo.block(p.id),
                       successMsg: l10n.publicProfilePlayerBlocked,
@@ -474,7 +474,7 @@ class _StatsCard extends StatelessWidget {
                 ),
               ),
               Text(
-                total == 0 ? '—' : '$pct% ($total matchs)',
+                total == 0 ? '—' : l10n.publicProfileWinRateValue(pct, total),
                 style: ArenaTypography.labelMedium,
               ),
             ],
@@ -600,7 +600,7 @@ class _RecentMatches extends StatelessWidget {
       ),
       error: (e, _) => ArenaCard(
         child: Text(
-          'Erreur: $e',
+          l10n.publicProfileMatchRowError(e),
           style: ArenaText.body.copyWith(color: ArenaColors.danger),
         ),
       ),

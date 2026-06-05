@@ -34,10 +34,8 @@ class LinkExistingAccountPage extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final providerLabel = this.providerLabel ?? l10n.linkAccountDefaultProvider;
     final emailLine = email == null
-        ? "L'adresse e-mail de ce compte $providerLabel est déjà"
-            ' utilisée par un compte ARENA.'
-        : '$email est déjà utilisé par un compte ARENA'
-            ' (mot de passe).';
+        ? l10n.linkAccountEmailLineNoEmail(providerLabel)
+        : l10n.linkAccountEmailLineWithEmail(email!);
 
     return Scaffold(
       appBar: ArenaAppBar(title: l10n.linkAccountAppBarTitle),

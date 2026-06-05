@@ -500,8 +500,8 @@ String _formatTimestamp(DateTime? at, AppLocalizations l10n) {
   if (at == null) return '';
   final diff = DateTime.now().difference(at);
   if (diff.inMinutes < 1) return l10n.notificationsTimeJustNow;
-  if (diff.inMinutes < 60) return 'Il y a ${diff.inMinutes} min';
-  if (diff.inHours < 24) return 'Il y a ${diff.inHours} h';
+  if (diff.inMinutes < 60) return l10n.notificationsTimeMinutesAgo(diff.inMinutes);
+  if (diff.inHours < 24) return l10n.notificationsTimeHoursAgo(diff.inHours);
   if (diff.inDays == 1) return l10n.notificationsTimeYesterday;
   if (diff.inDays < 7) return '${diff.inDays}j';
   return '${at.day.toString().padLeft(2, '0')}/${at.month.toString().padLeft(2, '0')}';
