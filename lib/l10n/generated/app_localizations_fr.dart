@@ -92,6 +92,49 @@ class AppLocalizationsFr extends AppLocalizations {
       'Tu peux la revoir plus tard depuis Profil > Revoir l\'introduction.';
 
   @override
+  String get authEmailLabel => 'EMAIL';
+
+  @override
+  String get authEmailHint => 'joueur@arena.app';
+
+  @override
+  String get authPasswordLabel => 'MOT DE PASSE';
+
+  @override
+  String get authForgotPassword => 'Mot de passe oublié ?';
+
+  @override
+  String get authOr => 'OU';
+
+  @override
+  String get authContinueGoogle => 'Continuer avec Google';
+
+  @override
+  String get authSignUp => 'S\'inscrire';
+
+  @override
+  String get loginTitle => 'CONNEXION';
+
+  @override
+  String get loginSubtitle => 'Continue ton parcours sur ARENA.';
+
+  @override
+  String get loginSubmit => 'SE CONNECTER';
+
+  @override
+  String get loginNoAccount => 'Pas encore inscrit ? ';
+
+  @override
+  String get forgotPasswordTitle => 'MOT DE PASSE OUBLIÉ';
+
+  @override
+  String get forgotPasswordSubtitle =>
+      'Entre l\'adresse e-mail liée à ton compte, on t\'envoie un code à 6 chiffres pour réinitialiser ton mot de passe.';
+
+  @override
+  String get forgotPasswordSubmit => 'ENVOYER LE CODE';
+
+  @override
   String get languageFrench => 'Français';
 
   @override

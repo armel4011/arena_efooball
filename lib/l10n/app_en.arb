@@ -34,6 +34,23 @@
   "onboardingExitTitle": "Exit the intro?",
   "onboardingExitBody": "You can replay it later from Profile > Replay intro.",
 
+  "authEmailLabel": "EMAIL",
+  "authEmailHint": "joueur@arena.app",
+  "authPasswordLabel": "PASSWORD",
+  "authForgotPassword": "Forgot password?",
+  "authOr": "OR",
+  "authContinueGoogle": "Continue with Google",
+  "authSignUp": "Sign up",
+
+  "loginTitle": "LOG IN",
+  "loginSubtitle": "Continue your journey on ARENA.",
+  "loginSubmit": "LOG IN",
+  "loginNoAccount": "No account yet? ",
+
+  "forgotPasswordTitle": "FORGOT PASSWORD",
+  "forgotPasswordSubtitle": "Enter the email linked to your account; we'll send a 6-digit code to reset your password.",
+  "forgotPasswordSubmit": "SEND CODE",
+
   "languageFrench": "Français",
   "languageEnglish": "English",
   "languageArabic": "العربية",
