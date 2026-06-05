@@ -78,6 +78,19 @@ android {
 
     buildTypes {
         release {
+            // R8 : minification du code + shrink des ressources sur release.
+            // Réduit la taille de l'APK et complique le reverse-engineering.
+            // Les classes natives à réflexion/JNI (Agora, Firebase, Sentry,
+            // notifications, callkit) sont préservées via `proguard-rules.pro`.
+            // ⚠️ Un keep manquant ne fait PAS échouer le build R8 mais crashe
+            // au runtime — tester un APK release réel avant publication Store.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
+
             // Vraie signature release si key.properties dispo, sinon
             // fallback sur debug — l'APK reste installable mais ne sera
             // PAS publiable sur le Play Store.

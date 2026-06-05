@@ -125,15 +125,21 @@ class PaymentRepository {
         .eq('id', paymentId);
   }
 
-  /// Retourne `true` si le joueur a au moins un paiement en attente
-  /// (`status = 'pending'`). Utilisé par le flux de suppression de compte
-  /// pour bloquer la suppression tant qu'un paiement n'est pas réglé.
+  /// Retourne `true` si le joueur a au moins un paiement non réglé.
+  /// Utilisé par le flux de suppression de compte pour bloquer la
+  /// suppression tant qu'un paiement est en cours.
+  ///
+  /// Couvre les trois statuts « en vol » : `awaiting_admin` (P2P manuel V1,
+  /// en attente de validation super-admin — c'est le cas réel aujourd'hui),
+  /// plus `pending`/`processing` (passerelles CinetPay/NowPayments V2). Le
+  /// filtre sur `'pending'` seul laissait passer la suppression d'un compte
+  /// avec un paiement `awaiting_admin` non validé (fix audit P0).
   Future<bool> hasPendingPayments(String userId) async {
     final rows = await _client
         .from(_table)
         .select('id')
         .eq('user_id', userId)
-        .eq('status', 'pending')
+        .inFilter('status', const ['pending', 'processing', 'awaiting_admin'])
         .limit(1);
     return (rows as List).isNotEmpty;
   }
