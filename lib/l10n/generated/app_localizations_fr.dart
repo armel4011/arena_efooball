@@ -48,32 +48,48 @@ class AppLocalizationsFr extends AppLocalizations {
   String get commonError => 'Une erreur est survenue';
 
   @override
-  String get onboardingSlide1Title => 'BIENVENUE\nSUR ARENA';
+  String get onboardingSlide1Title => 'TOURNOIS E-SPORT PANAFRICAINS';
 
   @override
   String get onboardingSlide1Body =>
-      'La plateforme africaine de tournois e-sport mobile sur eFootball, FIFA Mobile et EA SPORTS FC Mobile.';
+      'Bienvenue sur ARENA, la plateforme #1 de tournois eFootball, FIFA Mobile et FC Mobile en Afrique.';
 
   @override
-  String get onboardingSlide2Title => 'BRACKETS\nAUTOMATIQUES';
+  String get onboardingSlide2Title => 'DES BRACKETS, DE VRAIS DUELS';
 
   @override
   String get onboardingSlide2Body =>
-      'Single élimination, phase de groupes, round robin — l’app gère le tirage et les avancées.';
+      'Élimination directe ou phase de groupes : grimpe l\'arbre du tournoi et bats tous tes adversaires pour la récompense.';
 
   @override
-  String get onboardingSlide3Title => 'CODE DE\nROOM PARTAGÉ';
+  String get onboardingSlide3Title => 'CODE DE ROOM PARTAGÉ';
 
   @override
   String get onboardingSlide3Body =>
-      'Tu partages ton code eFootball, vous jouez le match, puis vous validez le score à deux.';
+      'Tu partages ton code de room dans le jeu, vous vous affrontez, puis vous validez le score à deux dans ARENA.';
 
   @override
-  String get onboardingSlide4Title => 'GAINS DU\nTOP 4';
+  String get onboardingSlide4Title => 'RÉCOMPENSES VERSÉES DIRECT';
 
   @override
   String get onboardingSlide4Body =>
-      'Versement direct vers ton MTN MoMo, Orange Money ou Wave dès la fin du tournoi.';
+      'Obtenez des récompenses même dans des compétitions à inscription gratuite et divertissez-vous.';
+
+  @override
+  String get onboardingNext => 'SUIVANT';
+
+  @override
+  String get onboardingStart => 'COMMENCER';
+
+  @override
+  String get onboardingSkip => 'Ignorer';
+
+  @override
+  String get onboardingExitTitle => 'Quitter l\'introduction ?';
+
+  @override
+  String get onboardingExitBody =>
+      'Tu peux la revoir plus tard depuis Profil > Revoir l\'introduction.';
 
   @override
   String get languageFrench => 'Français';

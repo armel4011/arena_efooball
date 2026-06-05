@@ -1,6 +1,7 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_user/onboarding/onboarding_slide.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
@@ -20,32 +21,34 @@ class OnboardingPage extends StatefulWidget {
 
   final VoidCallback onFinish;
 
-  static const _slides = <OnboardingSlideData>[
-    OnboardingSlideData(
-      emoji: '⚽',
-      title: 'TOURNOIS E-SPORT PANAFRICAINS',
-      description: 'Bienvenue sur ARENA, la plateforme #1 de tournois '
-          'eFootball, FIFA Mobile et FC Mobile en Afrique.',
-    ),
-    OnboardingSlideData(
-      emoji: '🏆',
-      title: 'DES BRACKETS, DE VRAIS DUELS',
-      description: "Élimination directe ou phase de groupes : grimpe l'arbre"
-          ' du tournoi et bats tous tes adversaires pour la récompense.',
-    ),
-    OnboardingSlideData(
-      emoji: '📱',
-      title: 'CODE DE ROOM PARTAGÉ',
-      description: 'Tu partages ton code de room dans le jeu, vous vous'
-          ' affrontez, puis vous validez le score à deux dans ARENA.',
-    ),
-    OnboardingSlideData(
-      emoji: '💰',
-      title: 'RÉCOMPENSES VERSÉES DIRECT',
-      description: 'Obtenez des récompenses même dans des compétitions à'
-          ' inscription gratuite et divertissez-vous.',
-    ),
-  ];
+  /// Les libellés des slides viennent désormais de la l10n (ARB) — cf.
+  /// `_slidesFor(context)`. On garde juste le nombre de slides en const pour
+  /// la logique de pagination (sans dépendre du contexte).
+  static const _slideCount = 4;
+
+  /// Construit les 4 slides traduites à partir de [AppLocalizations].
+  static List<OnboardingSlideData> _slidesFor(AppLocalizations l10n) => [
+        OnboardingSlideData(
+          emoji: '⚽',
+          title: l10n.onboardingSlide1Title,
+          description: l10n.onboardingSlide1Body,
+        ),
+        OnboardingSlideData(
+          emoji: '🏆',
+          title: l10n.onboardingSlide2Title,
+          description: l10n.onboardingSlide2Body,
+        ),
+        OnboardingSlideData(
+          emoji: '📱',
+          title: l10n.onboardingSlide3Title,
+          description: l10n.onboardingSlide3Body,
+        ),
+        OnboardingSlideData(
+          emoji: '💰',
+          title: l10n.onboardingSlide4Title,
+          description: l10n.onboardingSlide4Body,
+        ),
+      ];
 
   @override
   State<OnboardingPage> createState() => _OnboardingPageState();
@@ -61,7 +64,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
     super.dispose();
   }
 
-  bool get _isLast => _currentPage == OnboardingPage._slides.length - 1;
+  bool get _isLast => _currentPage == OnboardingPage._slideCount - 1;
 
   void _next() {
     if (_isLast) {
@@ -86,23 +89,22 @@ class _OnboardingPageState extends State<OnboardingPage> {
       return;
     }
     if (!mounted) return;
+    final l10n = AppLocalizations.of(context);
     final skip = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: ArenaColors.carbon,
-        title: const Text("Quitter l'introduction ?"),
-        content: const Text(
-          "Tu peux la revoir plus tard depuis Profil > Revoir l'introduction.",
-        ),
+        title: Text(l10n.onboardingExitTitle),
+        content: Text(l10n.onboardingExitBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Continuer'),
+            child: Text(l10n.commonContinue),
           ),
           TextButton(
             style: TextButton.styleFrom(foregroundColor: ArenaColors.silver),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Ignorer'),
+            child: Text(l10n.onboardingSkip),
           ),
         ],
       ),
@@ -112,6 +114,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final slides = OnboardingPage._slidesFor(l10n);
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: _handleBack,
@@ -141,7 +145,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   controller: _controller,
                   onPageChanged: (i) => setState(() => _currentPage = i),
                   children: [
-                    for (final s in OnboardingPage._slides)
+                    for (final s in slides)
                       OnboardingSlide(data: s)
                           .animate(key: ValueKey(s.title))
                           .fadeIn(duration: ArenaDurations.medium)
@@ -158,19 +162,19 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 child: Column(
                   children: [
                     _OnboardingDots(
-                      total: OnboardingPage._slides.length,
+                      total: OnboardingPage._slideCount,
                       current: _currentPage,
                     ),
                     const SizedBox(height: ArenaSpacing.lg),
                     ArenaButton(
-                      label: _isLast ? 'COMMENCER' : 'SUIVANT',
+                      label: _isLast ? l10n.onboardingStart : l10n.onboardingNext,
                       fullWidth: true,
                       size: ArenaButtonSize.large,
                       onPressed: _next,
                     ),
                     const SizedBox(height: ArenaSpacing.xs),
                     ArenaButton(
-                      label: 'Ignorer',
+                      label: l10n.onboardingSkip,
                       fullWidth: true,
                       variant: ArenaButtonVariant.ghost,
                       onPressed: widget.onFinish,
