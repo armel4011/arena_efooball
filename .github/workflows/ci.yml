@@ -158,6 +158,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      # Le build admin (Agora Windows + Firebase + libs natives) sature
+      # les ~14 Go du runner pendant mergeNativeLibs → "No space left on
+      # device". On libère ~20-30 Go d'outils inutiles ici.
+      - name: Free up disk space (runner)
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android/sdk/ndk \
+            /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" || true
+          sudo docker image prune --all --force || true
+          df -h
+
       - name: Setup Java 17
         uses: actions/setup-java@v5
         with:
@@ -191,12 +201,47 @@ jobs:
       - name: pub get
         run: flutter pub get
 
-      - name: Build debug APK — flavor ${{ matrix.flavor }}
+      - name: Build release APK — flavor ${{ matrix.flavor }}
         # Compile toute la chaîne Android (plugins natifs Kotlin, Gradle,
         # AGP). C'est le job qui aurait attrapé sentry_flutter 9.20.0
-        # (`Unresolved reference 'SentryFlutterReplayRecorder'`). Debug :
-        # pas besoin du keystore release.
+        # (`Unresolved reference 'SentryFlutterReplayRecorder'`).
+        # Build *release* (et non debug) pour exercer en plus R8/ProGuard
+        # (minify + shrink + proguard-rules.pro) : une mauvaise règle de keep
+        # qui casse la config R8 est attrapée ici. Le keystore release étant
+        # absent en CI, la signature retombe sur debug (cf. build.gradle.kts) —
+        # l'APK n'est pas publiable mais valide toute la chaîne de build.
         run: >-
-          flutter build apk --debug
+          flutter build apk --release
           --flavor ${{ matrix.flavor }}
           --target lib/main_${{ matrix.flavor }}.dart
+
+  build-windows:
+    name: Build Windows (admin desktop)
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    # L'app desktop admin (Fluent UI, `lib/main_admin_desktop.dart`) est un
+    # livrable à part entière mais n'était couverte par AUCUN job — une
+    # régression propre au build Windows (plugin desktop, CMake, MSVC)
+    # passait inaperçue. Ce job compile la cible desktop à chaque PR.
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Stub .env (CI uses placeholders, no real secrets)
+        run: Copy-Item .env.example .env
+
+      - name: pub get
+        run: flutter pub get
+
+      - name: Build Windows (admin desktop)
+        # Les fichiers générés (freezed / *.g.dart) sont committés, donc pas
+        # de build_runner ici. Debug suffit pour valider la chaîne de build
+        # desktop ; le MSIX release reste un livrable manuel signé localement.
+        run: flutter build windows --debug --target lib/main_admin_desktop.dart
