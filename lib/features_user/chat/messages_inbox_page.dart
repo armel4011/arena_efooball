@@ -461,8 +461,8 @@ class _MatchThreadRow extends StatelessWidget {
     final opponentName = opponent?.username ?? l10n.inboxOpponentWaiting;
     final initials = opponentName.isEmpty ? '?' : opponentName[0].toUpperCase();
     final color = _avatarFor(opponent?.avatarColor);
-    final subtitle = _subtitleFor(match);
-    final timeLabel = _timeLabelFor(match);
+    final subtitle = _subtitleFor(match, l10n);
+    final timeLabel = _timeLabelFor(match, l10n);
 
     return Material(
       color: Colors.transparent,
@@ -582,28 +582,28 @@ class _MatchThreadRow extends StatelessWidget {
     return ArenaAvatarColor.blue;
   }
 
-  static String _subtitleFor(ArenaMatch m) {
+  static String _subtitleFor(ArenaMatch m, AppLocalizations l10n) {
     return switch (m.status) {
-      MatchStatus.pending => "En attente d'adversaire",
-      MatchStatus.scheduled => 'Match programmé',
-      MatchStatus.ready => 'Code de salon partagé',
-      MatchStatus.inProgress => 'En cours — appuie pour discuter',
-      MatchStatus.scorePending => 'En attente du score',
-      MatchStatus.awaitingValidation => 'Validation du score',
-      MatchStatus.disputed => 'Score contesté — admin en cours',
-      MatchStatus.completed => 'Match terminé',
-      MatchStatus.cancelled => 'Match annulé',
-      MatchStatus.forfeited => 'Forfait',
+      MatchStatus.pending => l10n.inboxMatchPending,
+      MatchStatus.scheduled => l10n.inboxMatchScheduled,
+      MatchStatus.ready => l10n.inboxMatchReady,
+      MatchStatus.inProgress => l10n.inboxMatchInProgress,
+      MatchStatus.scorePending => l10n.inboxMatchScorePending,
+      MatchStatus.awaitingValidation => l10n.inboxMatchAwaitingValidation,
+      MatchStatus.disputed => l10n.inboxMatchDisputed,
+      MatchStatus.completed => l10n.inboxMatchCompleted,
+      MatchStatus.cancelled => l10n.inboxMatchCancelled,
+      MatchStatus.forfeited => l10n.inboxMatchForfeited,
     };
   }
 
-  static String _timeLabelFor(ArenaMatch m) {
+  static String _timeLabelFor(ArenaMatch m, AppLocalizations l10n) {
     final t = m.finishedAt ?? m.scheduledAt ?? m.createdAt;
     if (t == null) return '—';
     final diff = DateTime.now().difference(t);
     if (diff.isNegative) {
       final upcoming = -diff.inHours;
-      if (upcoming < 1) return 'Bientôt';
+      if (upcoming < 1) return l10n.inboxTimeSoon;
       if (upcoming < 24) return 'Dans ${upcoming}h';
       final days = -diff.inDays;
       return 'Dans ${days}j';
@@ -922,8 +922,8 @@ class _ArenaTeamRow extends ConsumerWidget {
         final msgs = snap.data ?? const <AdminChatMessage>[];
         final last = msgs.isNotEmpty ? msgs.first : null;
         final unread = msgs.where((m) => m.isUnread).length;
-        final preview = _previewOf(last);
-        final timeLabel = last == null ? '' : _relativeTime(last.sentAt);
+        final preview = _previewOf(last, l10n);
+        final timeLabel = last == null ? '' : _relativeTime(last.sentAt, l10n);
         return Material(
           color: Colors.transparent,
           child: InkWell(
@@ -1021,17 +1021,17 @@ class _ArenaTeamRow extends ConsumerWidget {
     );
   }
 
-  static String _previewOf(AdminChatMessage? m) {
-    if (m == null) return 'Support, annonces et infos officielles';
+  static String _previewOf(AdminChatMessage? m, AppLocalizations l10n) {
+    if (m == null) return l10n.inboxArenaPreviewDefault;
     if (m.caption != null && m.caption!.isNotEmpty) return m.caption!;
     if (m.text != null && m.text!.isNotEmpty) return m.text!;
-    if (m.hasImage) return '📷 Image';
+    if (m.hasImage) return l10n.inboxArenaPreviewImage;
     return '';
   }
 
-  static String _relativeTime(DateTime t) {
+  static String _relativeTime(DateTime t, AppLocalizations l10n) {
     final diff = DateTime.now().difference(t);
-    if (diff.inMinutes < 1) return "à l'instant";
+    if (diff.inMinutes < 1) return l10n.inboxTimeJustNow;
     if (diff.inMinutes < 60) return '${diff.inMinutes}min';
     if (diff.inHours < 24) return '${diff.inHours}h';
     if (diff.inDays < 7) return '${diff.inDays}j';

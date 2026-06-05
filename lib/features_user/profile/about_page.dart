@@ -20,11 +20,11 @@ class AboutPage extends StatelessWidget {
   static const _build = '4287';
 
   static const _links = <_AboutLink>[
-    _AboutLink(emoji: '📜', label: 'CGU'),
-    _AboutLink(emoji: '🔒', label: 'Privacy Policy'),
-    _AboutLink(emoji: '🍪', label: 'Cookies'),
-    _AboutLink(emoji: '📞', label: 'Support'),
-    _AboutLink(emoji: '📱', label: 'Site arena.app', external: true),
+    _AboutLink(emoji: '📜', id: _AboutLinkId.cgu),
+    _AboutLink(emoji: '🔒', id: _AboutLinkId.privacy),
+    _AboutLink(emoji: '🍪', id: _AboutLinkId.cookies),
+    _AboutLink(emoji: '📞', id: _AboutLinkId.support),
+    _AboutLink(emoji: '📱', id: _AboutLinkId.site, external: true),
   ];
 
   @override
@@ -122,16 +122,34 @@ class AboutPage extends StatelessWidget {
   }
 }
 
+enum _AboutLinkId { cgu, privacy, cookies, support, site }
+
 class _AboutLink {
   const _AboutLink({
     required this.emoji,
-    required this.label,
+    required this.id,
     this.external = false,
   });
 
   final String emoji;
-  final String label;
+  final _AboutLinkId id;
   final bool external;
+
+  /// Localized label for the link row.
+  String labelOf(AppLocalizations l10n) {
+    switch (id) {
+      case _AboutLinkId.cgu:
+        return l10n.aboutLinkCgu;
+      case _AboutLinkId.privacy:
+        return l10n.aboutLinkPrivacy;
+      case _AboutLinkId.cookies:
+        return l10n.aboutLinkCookies;
+      case _AboutLinkId.support:
+        return l10n.aboutLinkSupport;
+      case _AboutLinkId.site:
+        return l10n.aboutLinkSite;
+    }
+  }
 }
 
 class _MissionCard extends StatelessWidget {
@@ -168,6 +186,7 @@ class _LinksCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       decoration: BoxDecoration(
         color: ArenaColors.carbon,
@@ -194,7 +213,7 @@ class _LinksCard extends StatelessWidget {
                     const SizedBox(width: ArenaSpacing.sm),
                     Expanded(
                       child: Text(
-                        links[i].label,
+                        links[i].labelOf(l10n),
                         style: ArenaText.body
                             .copyWith(fontWeight: FontWeight.w600),
                       ),
@@ -226,7 +245,7 @@ class _LinksCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(l10n.aboutLinkComingSoon(link.label)),
+        content: Text(l10n.aboutLinkComingSoon(link.labelOf(l10n))),
       ),
     );
   }

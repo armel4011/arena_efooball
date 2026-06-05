@@ -275,6 +275,7 @@ void _resumeProcessing(
 }
 
 void _openInscriptionFlow(BuildContext context, Competition c) {
+  final l10n = AppLocalizations.of(context);
   final dateLabel =
       DateFormat('dd MMM yyyy · HH:mm', 'fr').format(c.startDate.toLocal());
   context.push(
@@ -284,7 +285,7 @@ void _openInscriptionFlow(BuildContext context, Competition c) {
       gameLabel: c.game.label,
       gameEmoji: _gameEmoji(c.game),
       dateLabel: dateLabel,
-      formatLabel: _formatLabel(c.format),
+      formatLabel: _formatLabel(l10n, c.format),
       entryFeeXaf: c.registrationFee.round(),
       totalPrizeXaf: c.prizePoolLocal.round(),
       prizeDistribution: c.prizeDistribution,
@@ -300,8 +301,8 @@ String _gameEmoji(GameType g) => switch (g) {
       GameType.eaSportsFc => '🎮',
     };
 
-String _formatLabel(TournamentFormat f) => switch (f) {
-      TournamentFormat.singleElimination => 'Élimination directe',
-      TournamentFormat.groupsThenKnockout => 'Poules + élimination',
-      TournamentFormat.roundRobin => 'Round robin',
+String _formatLabel(AppLocalizations l10n, TournamentFormat f) => switch (f) {
+      TournamentFormat.singleElimination => l10n.compListFormatSingleElim,
+      TournamentFormat.groupsThenKnockout => l10n.compListFormatGroupsKnockout,
+      TournamentFormat.roundRobin => l10n.compListFormatRoundRobin,
     };

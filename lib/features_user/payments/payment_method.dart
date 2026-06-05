@@ -1,4 +1,5 @@
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 /// V1.0 supported mobile-money providers (paiement P2P manuel).
@@ -10,36 +11,48 @@ import 'package:flutter/material.dart';
 enum PaymentMethod {
   mtnMoMo(
     code: 'MTN_MOMO',
-    label: 'MTN Mobile Money',
     badge: 'MTN',
-    countriesLine: "Cameroun, Côte d'Ivoire, Bénin",
     brandColor: ArenaColors.brandMtnMomo,
     foreground: ArenaColors.bone,
   ),
   orangeMoney(
     code: 'ORANGE_MONEY',
-    label: 'Orange Money',
     badge: 'OM',
-    countriesLine: 'Cameroun, Sénégal, Mali',
     brandColor: ArenaColors.brandOrangeMoney,
     foreground: ArenaColors.bone,
   );
 
   const PaymentMethod({
     required this.code,
-    required this.label,
     required this.badge,
-    required this.countriesLine,
     required this.brandColor,
     required this.foreground,
   });
 
   final String code;
-  final String label;
   final String badge;
-  final String countriesLine;
   final Color brandColor;
   final Color foreground;
+
+  /// Localized provider label (e.g. "MTN Mobile Money" / "Orange Money").
+  String labelOf(AppLocalizations l10n) {
+    switch (this) {
+      case PaymentMethod.mtnMoMo:
+        return l10n.paymentMethodMtnLabel;
+      case PaymentMethod.orangeMoney:
+        return l10n.paymentMethodOrangeLabel;
+    }
+  }
+
+  /// Localized list of supported countries for the provider.
+  String countriesLineOf(AppLocalizations l10n) {
+    switch (this) {
+      case PaymentMethod.mtnMoMo:
+        return l10n.paymentMethodMtnCountries;
+      case PaymentMethod.orangeMoney:
+        return l10n.paymentMethodOrangeCountries;
+    }
+  }
 
   static PaymentMethod fromCode(String code) {
     return PaymentMethod.values.firstWhere(

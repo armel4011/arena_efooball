@@ -119,7 +119,8 @@ class _PaymentProcessingPageState extends ConsumerState<PaymentProcessingPage> {
               Center(
                 child: Text(
                   '${l10n.paymentProcessingWaitingSubtitle}'
-                  '${widget.method.label}.',
+                  '${widget.method.labelOf(l10n)}'
+                  '${l10n.paymentProcessingWaitingSubtitleSuffix}',
                   textAlign: TextAlign.center,
                   style: ArenaText.bodyMuted,
                 ),
@@ -247,7 +248,7 @@ class _PaymentRecap extends StatelessWidget {
           const SizedBox(height: 4),
           _Row(label: l10n.paymentProcessingRecapAmount, value: '${_formatXaf(amountXaf)} XAF'),
           const SizedBox(height: 4),
-          _Row(label: l10n.paymentProcessingRecapMethod, value: method.label),
+          _Row(label: l10n.paymentProcessingRecapMethod, value: method.labelOf(l10n)),
           const SizedBox(height: 4),
           _Row(label: l10n.paymentProcessingRecapPhone, value: maskedPhone),
           const SizedBox(height: 4),

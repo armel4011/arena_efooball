@@ -159,7 +159,8 @@ class _BannerBadges extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (statusLabel, statusColor) = _statusFor(competition.status);
+    final l10n = AppLocalizations.of(context);
+    final (statusLabel, statusColor) = _statusFor(competition.status, l10n);
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         ArenaSpacing.lg,
@@ -181,16 +182,35 @@ class _BannerBadges extends StatelessWidget {
     );
   }
 
-  static (String, Color) _statusFor(CompetitionStatus s) => switch (s) {
-        CompetitionStatus.draft => ('BROUILLON', ArenaColors.silver),
-        CompetitionStatus.registrationOpen => ('OUVERT', ArenaColors.statusOk),
+  static (String, Color) _statusFor(
+    CompetitionStatus s,
+    AppLocalizations l10n,
+  ) =>
+      switch (s) {
+        CompetitionStatus.draft => (
+            l10n.compDetailStatusDraft,
+            ArenaColors.silver,
+          ),
+        CompetitionStatus.registrationOpen => (
+            l10n.compDetailStatusOpen,
+            ArenaColors.statusOk,
+          ),
         CompetitionStatus.registrationClosed => (
-            'COMPLET',
+            l10n.compDetailStatusFull,
             ArenaColors.statusWarn,
           ),
-        CompetitionStatus.ongoing => ('EN COURS', ArenaColors.signalBlue),
-        CompetitionStatus.completed => ('TERMINÉ', ArenaColors.silver),
-        CompetitionStatus.cancelled => ('ANNULÉ', ArenaColors.neonRed),
+        CompetitionStatus.ongoing => (
+            l10n.compDetailStatusOngoing,
+            ArenaColors.signalBlue,
+          ),
+        CompetitionStatus.completed => (
+            l10n.compDetailStatusCompleted,
+            ArenaColors.silver,
+          ),
+        CompetitionStatus.cancelled => (
+            l10n.compDetailStatusCancelled,
+            ArenaColors.neonRed,
+          ),
       };
 }
 
@@ -306,7 +326,7 @@ class _GatedDetailView extends ConsumerWidget {
               onPressed: canRegister
                   ? () => context.push(
                         UserRoutes.registrationConfirmPath(c.id),
-                        extra: _confirmArgsFor(c),
+                        extra: _confirmArgsFor(c, l10n),
                       )
                   : null,
             ),
@@ -316,7 +336,10 @@ class _GatedDetailView extends ConsumerWidget {
     );
   }
 
-  static RegistrationConfirmArgs _confirmArgsFor(Competition c) {
+  static RegistrationConfirmArgs _confirmArgsFor(
+    Competition c,
+    AppLocalizations l10n,
+  ) {
     final dateLabel =
         DateFormat('d MMM yyyy · HH:mm', 'fr').format(c.startDate.toLocal());
     return RegistrationConfirmArgs(
@@ -324,7 +347,7 @@ class _GatedDetailView extends ConsumerWidget {
       gameLabel: c.game.label,
       gameEmoji: _gameEmoji(c.game),
       dateLabel: dateLabel,
-      formatLabel: _formatLabel(c.format),
+      formatLabel: _formatLabel(c.format, l10n),
       entryFeeXaf: c.registrationFee.round(),
       totalPrizeXaf: c.prizePoolLocal.round(),
       prizeDistribution: c.prizeDistribution,
@@ -505,7 +528,7 @@ class _InfosTab extends StatelessWidget {
         _InfoRow(
           emoji: '🎮',
           label: l10n.compDetailInfoFormatLabel,
-          value: _formatLabel(c.format),
+          value: _formatLabel(c.format, l10n),
         ),
         _InfoRow(
           emoji: '📅',
@@ -774,8 +797,8 @@ String _gameEmoji(GameType g) => switch (g) {
       GameType.eaSportsFc => '🎮',
     };
 
-String _formatLabel(TournamentFormat f) => switch (f) {
-      TournamentFormat.singleElimination => 'Élimination directe',
-      TournamentFormat.groupsThenKnockout => 'Poules + élimination',
-      TournamentFormat.roundRobin => 'Round robin',
+String _formatLabel(TournamentFormat f, AppLocalizations l10n) => switch (f) {
+      TournamentFormat.singleElimination => l10n.compDetailFormatSingleElim,
+      TournamentFormat.groupsThenKnockout => l10n.compDetailFormatGroupsKnockout,
+      TournamentFormat.roundRobin => l10n.compDetailFormatRoundRobin,
     };

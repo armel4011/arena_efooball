@@ -18,19 +18,21 @@ class LinkExistingAccountPage extends StatelessWidget {
   const LinkExistingAccountPage({
     super.key,
     this.email,
-    this.providerLabel = 'Google',
+    this.providerLabel,
   });
 
   /// The email returned by the social provider (best-effort hint).
   final String? email;
 
   /// Human-readable provider name displayed in the body — "Google",
-  /// "Apple", etc.
-  final String providerLabel;
+  /// "Apple", etc. Defaults to [AppLocalizations.linkAccountDefaultProvider]
+  /// when not supplied (resolved in [build] so it can be localized).
+  final String? providerLabel;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final providerLabel = this.providerLabel ?? l10n.linkAccountDefaultProvider;
     final emailLine = email == null
         ? "L'adresse e-mail de ce compte $providerLabel est déjà"
             ' utilisée par un compte ARENA.'
