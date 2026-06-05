@@ -2,12 +2,9 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/core/utils/arena_error_message.dart';
 import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/models/dispute.dart';
-import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_disputes_repository.dart';
-import 'package:arena/data/repositories/admin/admin_matches_repository.dart';
 import 'package:arena/data/repositories/match_repository.dart';
 import 'package:arena/features_admin/auth_admin/widgets/totp_gate.dart';
-import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
@@ -344,8 +341,6 @@ class _VerdictButtons extends ConsumerWidget {
       );
       return;
     }
-    final adminId = ref.read(currentSessionProvider)?.user.id;
-    if (adminId == null) return;
     final totpOk = await TotpGate.confirm(
       context,
       ref,
@@ -355,31 +350,15 @@ class _VerdictButtons extends ConsumerWidget {
     if (!context.mounted) return;
 
     try {
-      await ref.read(adminMatchesRepositoryProvider).setVerdict(
+      // Verdict + résolution du litige + audit, ATOMIQUEMENT (une transaction).
+      await ref.read(adminDisputesRepositoryProvider).resolveAtomic(
             matchId: match.id,
+            disputeId: dispute?.id,
+            justification: justification,
+            winnerId: winnerId,
             scoreP1: scoreP1,
             scoreP2: scoreP2,
-            winnerId: winnerId,
           );
-      if (dispute != null) {
-        await ref.read(adminDisputesRepositoryProvider).resolve(
-              disputeId: dispute!.id,
-              adminId: adminId,
-              resolution: justification,
-            );
-      }
-      await ref.read(adminAuditLogRepositoryProvider).record(
-        adminId: adminId,
-        action: 'dispute_resolved',
-        targetType: 'match',
-        targetId: match.id,
-        afterState: {
-          'winner_id': winnerId,
-          'score1': scoreP1,
-          'score2': scoreP2,
-          'justification': justification,
-        },
-      );
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Verdict enregistré.')),
@@ -401,8 +380,6 @@ class _VerdictButtons extends ConsumerWidget {
       );
       return;
     }
-    final adminId = ref.read(currentSessionProvider)?.user.id;
-    if (adminId == null) return;
     final totpOk = await TotpGate.confirm(
       context,
       ref,
@@ -412,22 +389,13 @@ class _VerdictButtons extends ConsumerWidget {
     if (!context.mounted) return;
 
     try {
-      await ref.read(adminMatchesRepositoryProvider).cancel(match.id);
-      if (dispute != null) {
-        await ref.read(adminDisputesRepositoryProvider).resolve(
-              disputeId: dispute!.id,
-              adminId: adminId,
-              resolution: justification,
-              status: 'cancelled',
-            );
-      }
-      await ref.read(adminAuditLogRepositoryProvider).record(
-        adminId: adminId,
-        action: 'dispute_cancelled',
-        targetType: 'match',
-        targetId: match.id,
-        afterState: {'justification': justification},
-      );
+      // Annulation du match + résolution du litige + audit, ATOMIQUEMENT.
+      await ref.read(adminDisputesRepositoryProvider).resolveAtomic(
+            matchId: match.id,
+            disputeId: dispute?.id,
+            justification: justification,
+            cancel: true,
+          );
       if (!context.mounted) return;
       Navigator.of(context).pop();
     } catch (e) {

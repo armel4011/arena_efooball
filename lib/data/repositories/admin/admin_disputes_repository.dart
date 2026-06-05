@@ -69,6 +69,34 @@ class AdminDisputesRepository {
       'resolution': resolution,
     }).eq('id', disputeId);
   }
+
+  /// Résolution ATOMIQUE via la RPC `resolve_dispute` : verdict
+  /// (score/winner/completed) OU annulation du match + résolution du litige +
+  /// trace d'audit, dans UNE seule transaction (gate `is_admin()` serveur).
+  /// Remplace l'enchaînement de 3 écritures non transactionnelles qui pouvait
+  /// laisser un litige `open` alors que le bracket avait avancé.
+  Future<void> resolveAtomic({
+    required String matchId,
+    required String justification,
+    String? disputeId,
+    bool cancel = false,
+    String? winnerId,
+    int? scoreP1,
+    int? scoreP2,
+  }) async {
+    await _client.rpc<void>(
+      'resolve_dispute',
+      params: {
+        'p_match_id': matchId,
+        'p_dispute_id': disputeId,
+        'p_justification': justification,
+        'p_cancel': cancel,
+        'p_winner_id': winnerId,
+        'p_score1': scoreP1,
+        'p_score2': scoreP2,
+      },
+    );
+  }
 }
 
 final adminDisputesRepositoryProvider =
