@@ -1,7 +1,9 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/admin/admin_competitions_repository.dart';
+import 'package:arena/data/repositories/payout_repository.dart';
 import 'package:arena/features_admin/competitions_admin/widgets/admin_competition_registrants_tab.dart'
     show registrantAvatarColor;
+import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/prize_ranks.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
@@ -19,6 +21,8 @@ class AdminCompetitionRankingTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(adminCompetitionRegistrantsProvider(competitionId));
+    final isSuperAdmin =
+        ref.watch(currentProfileProvider).valueOrNull?.isSuperAdmin ?? false;
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -86,6 +90,17 @@ class AdminCompetitionRankingTab extends ConsumerWidget {
                         'classé${ranked > 1 ? "s" : ""}',
                         style: ArenaText.inputLabel,
                       ),
+                      // Lien direct classement → versements : une fois le
+                      // classement publié, le super-admin génère les gains sans
+                      // changer d'écran (la RPC vérifie status=completed).
+                      if (isSuperAdmin && ranked > 0) ...[
+                        const SizedBox(height: ArenaSpacing.sm),
+                        ArenaButton(
+                          label: '💰 GÉNÉRER LES VERSEMENTS',
+                          fullWidth: true,
+                          onPressed: () => _generatePayouts(context, ref),
+                        ),
+                      ],
                     ],
                   ),
                 );
@@ -135,6 +150,64 @@ class AdminCompetitionRankingTab extends ConsumerWidget {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Classement calculé automatiquement.')),
+      );
+      // Enchaîne sur les versements (super-admin) : le classement venant d'être
+      // publié, on propose de générer les gains dans la foulée.
+      final isSuper =
+          ref.read(currentProfileProvider).valueOrNull?.isSuperAdmin ?? false;
+      if (isSuper && context.mounted) {
+        final gen = await showDialog<bool>(
+          context: context,
+          builder: (c) => AlertDialog(
+            backgroundColor: ArenaColors.carbon,
+            title: Text('Générer les versements ?', style: ArenaText.h3),
+            content: Text(
+              'Le classement est publié. Tu peux générer les versements des '
+              'gagnants maintenant (uniquement si la compétition est terminée).',
+              style: ArenaText.bodyMuted,
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(c).pop(false),
+                child: const Text('PLUS TARD'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(c).pop(true),
+                child: const Text('GÉNÉRER'),
+              ),
+            ],
+          ),
+        );
+        if ((gen ?? false) && context.mounted) {
+          await _generatePayouts(context, ref);
+        }
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Échec : $e')),
+      );
+    }
+  }
+
+  /// Génère les versements de la compétition (super-admin). La RPC est
+  /// idempotente et vérifie que la compétition est terminée + le classement
+  /// publié (sinon erreur explicite).
+  Future<void> _generatePayouts(BuildContext context, WidgetRef ref) async {
+    try {
+      final n = await ref.read(payoutRepositoryProvider).generate(competitionId);
+      ref
+        ..invalidate(competitionsPendingPayoutProvider)
+        ..invalidate(pendingPayoutsProvider);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            n == 0
+                ? 'Versements déjà générés (ou aucun gagnant/prix).'
+                : '$n versement(s) généré(s) — gagnants notifiés.',
+          ),
+        ),
       );
     } catch (e) {
       if (!context.mounted) return;
