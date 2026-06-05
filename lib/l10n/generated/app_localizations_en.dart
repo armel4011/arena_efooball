@@ -95,7 +95,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authEmailLabel => 'EMAIL';
 
   @override
-  String get authEmailHint => 'joueur@arena.app';
+  String get authEmailHint => 'player@arena.app';
 
   @override
   String get authPasswordLabel => 'PASSWORD';
@@ -642,7 +642,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Offline — message will be sent when you reconnect.';
 
   @override
-  String get friendChatSendFailed => 'Unable: ';
+  String get friendChatSendFailed => 'Couldn\'t send: ';
 
   @override
   String get friendChatPickerFailed => 'Picker: ';
