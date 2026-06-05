@@ -77,6 +77,32 @@ class PayoutRecord {
   bool get isPending => status == 'pending_admin_validation';
 }
 
+/// Compétition terminée avec des gains à distribuer mais sans payouts générés
+/// (file « à générer » du super-admin — génération rétroactive F-1).
+@immutable
+class PendingPayoutCompetition {
+  const PendingPayoutCompetition({
+    required this.id,
+    required this.name,
+    required this.prizePoolLocal,
+    required this.currency,
+  });
+
+  factory PendingPayoutCompetition.fromJson(Map<String, dynamic> row) {
+    return PendingPayoutCompetition(
+      id: row['id'] as String,
+      name: row['name'] as String? ?? '—',
+      prizePoolLocal: (row['prize_pool_local'] as num?)?.toDouble() ?? 0,
+      currency: row['currency'] as String? ?? 'XAF',
+    );
+  }
+
+  final String id;
+  final String name;
+  final double prizePoolLocal;
+  final String currency;
+}
+
 class PayoutRepository {
   PayoutRepository(this._client);
 
@@ -161,6 +187,16 @@ class PayoutRepository {
       params: {'p_payout_id': payoutId},
     );
   }
+
+  /// Compétitions terminées avec gains mais sans payouts générés (génération
+  /// rétroactive — RPC `competitions_pending_payout`, gate super-admin).
+  Future<List<PendingPayoutCompetition>> listCompetitionsPendingPayout() async {
+    final res = await _client.rpc<dynamic>('competitions_pending_payout');
+    return [
+      for (final r in (res as List? ?? const []))
+        PendingPayoutCompetition.fromJson(r as Map<String, dynamic>),
+    ];
+  }
 }
 
 final payoutRepositoryProvider = Provider<PayoutRepository>((ref) {
@@ -184,4 +220,10 @@ final payoutsByCompetitionProvider = FutureProvider.autoDispose
 final pendingPayoutsProvider =
     FutureProvider.autoDispose<List<PayoutRecord>>((ref) {
   return ref.watch(payoutRepositoryProvider).listPendingGlobal();
+});
+
+/// Compétitions terminées à régler (onglet « à générer » du super-admin).
+final competitionsPendingPayoutProvider =
+    FutureProvider.autoDispose<List<PendingPayoutCompetition>>((ref) {
+  return ref.watch(payoutRepositoryProvider).listCompetitionsPendingPayout();
 });

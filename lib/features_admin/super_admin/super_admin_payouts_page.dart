@@ -9,65 +9,53 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-/// F-1 · SA — File des versements de gains (P2P manuel).
+/// Au-delà de N jours après réclamation sans versement, on signale un retard.
+const _slaOverdueDays = 3;
+
+/// F-1 · SA — Versements de gains (P2P manuel).
 ///
-/// Le super-admin voit les `payouts` encore `pending_admin_validation` :
-/// d'abord ceux **réclamés** (le gagnant a fourni son numéro → prêts à payer),
-/// puis ceux en attente de réclamation. Pour un payout réclamé, le super-admin
-/// effectue le virement Mobile Money réel puis tape « MARQUER PAYÉ »
-/// (`mark_payout_paid` → status `completed` + notif au gagnant).
+/// Deux onglets :
+///   • À VERSER — payouts `pending_admin_validation` : réclamés (prêts à payer,
+///     avec badge ⏱ RETARD au-delà de [_slaOverdueDays] jours) d'abord, puis
+///     non réclamés. « MARQUER PAYÉ » → `mark_payout_paid`.
+///   • À GÉNÉRER — compétitions `completed` avec gains mais sans payouts
+///     générés (rétro / oubli). « GÉNÉRER » → `generate_payouts`.
 class SuperAdminPayoutsPage extends ConsumerWidget {
   const SuperAdminPayoutsPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(pendingPayoutsProvider);
-    return Scaffold(
-      appBar: const ArenaAppBar(title: 'Versements'),
-      body: ArenaScreenBackground(
-        accent: ArenaColors.tierGoldWarm,
-        child: SafeArea(
-          child: async.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(
-              child: Padding(
-                padding: const EdgeInsets.all(ArenaSpacing.lg),
-                child: Text('Erreur : $e', style: ArenaText.bodyMuted),
-              ),
-            ),
-            data: (list) {
-              if (list.isEmpty) {
-                return Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(ArenaSpacing.xl),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text('💰', style: ArenaText.h1.copyWith(fontSize: 48)),
-                        const SizedBox(height: ArenaSpacing.sm),
-                        Text(
-                          'Aucun versement en attente.',
-                          style: ArenaText.body,
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }
-              return RefreshIndicator(
-                onRefresh: () async => ref.invalidate(pendingPayoutsProvider),
-                child: ListView.separated(
-                  padding: const EdgeInsets.all(ArenaSpacing.lg),
-                  itemCount: list.length,
-                  separatorBuilder: (_, __) =>
-                      const SizedBox(height: ArenaSpacing.sm),
-                  itemBuilder: (_, i) => _PayoutCard(
-                    payout: list[i],
-                    onPaid: () => _markPaid(context, ref, list[i]),
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: const ArenaAppBar(title: 'Versements'),
+        body: ArenaScreenBackground(
+          accent: ArenaColors.tierGoldWarm,
+          child: SafeArea(
+            child: Column(
+              children: [
+                const TabBar(
+                  labelColor: ArenaColors.bone,
+                  unselectedLabelColor: ArenaColors.silver,
+                  indicatorColor: ArenaColors.signalBlue,
+                  indicatorWeight: 2,
+                  tabs: [
+                    Tab(text: 'À VERSER'),
+                    Tab(text: 'À GÉNÉRER'),
+                  ],
+                ),
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      _ToPayList(onPaid: (p) => _markPaid(context, ref, p)),
+                      _ToGenerateList(
+                        onGenerate: (c) => _generate(context, ref, c),
+                      ),
+                    ],
                   ),
                 ),
-              );
-            },
+              ],
+            ),
           ),
         ),
       ),
@@ -79,11 +67,7 @@ class SuperAdminPayoutsPage extends ConsumerWidget {
     WidgetRef ref,
     PayoutRecord payout,
   ) async {
-    final amount =
-        NumberFormat('#,##0', 'fr_FR').format(payout.amountLocal).replaceAll(
-              ',',
-              ' ',
-            );
+    final amount = _fmt(payout.amountLocal);
     final ok = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
@@ -125,6 +109,145 @@ class SuperAdminPayoutsPage extends ConsumerWidget {
       );
     }
   }
+
+  Future<void> _generate(
+    BuildContext context,
+    WidgetRef ref,
+    PendingPayoutCompetition comp,
+  ) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        backgroundColor: ArenaColors.carbon,
+        title: const Text('Générer les versements ?'),
+        content: Text(
+          'Crée une ligne de versement pour chaque gagnant de « ${comp.name} » '
+          'selon le classement final. Nécessite que le classement soit publié.',
+          style: ArenaText.bodyMuted,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(c, true),
+            child: const Text('GÉNÉRER'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      final n = await ref.read(payoutRepositoryProvider).generate(comp.id);
+      ref
+        ..invalidate(competitionsPendingPayoutProvider)
+        ..invalidate(pendingPayoutsProvider);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$n versement(s) généré(s) — gagnants notifiés.'),
+          backgroundColor: ArenaColors.statusOk,
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur : ${arenaErrorMessage(e)}')),
+      );
+    }
+  }
+}
+
+class _ToPayList extends ConsumerWidget {
+  const _ToPayList({required this.onPaid});
+
+  final Future<void> Function(PayoutRecord) onPaid;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(pendingPayoutsProvider);
+    return async.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(ArenaSpacing.lg),
+          child: Text('Erreur : $e', style: ArenaText.bodyMuted),
+        ),
+      ),
+      data: (list) {
+        if (list.isEmpty) {
+          return _empty('💰', 'Aucun versement en attente.');
+        }
+        return RefreshIndicator(
+          onRefresh: () async => ref.invalidate(pendingPayoutsProvider),
+          child: ListView.separated(
+            padding: const EdgeInsets.all(ArenaSpacing.lg),
+            itemCount: list.length,
+            separatorBuilder: (_, __) =>
+                const SizedBox(height: ArenaSpacing.sm),
+            itemBuilder: (_, i) =>
+                _PayoutCard(payout: list[i], onPaid: () => onPaid(list[i])),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ToGenerateList extends ConsumerWidget {
+  const _ToGenerateList({required this.onGenerate});
+
+  final Future<void> Function(PendingPayoutCompetition) onGenerate;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(competitionsPendingPayoutProvider);
+    return async.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(ArenaSpacing.lg),
+          child: Text('Erreur : $e', style: ArenaText.bodyMuted),
+        ),
+      ),
+      data: (list) {
+        if (list.isEmpty) {
+          return _empty('✅', 'Toutes les compétitions sont réglées.');
+        }
+        return RefreshIndicator(
+          onRefresh: () async =>
+              ref.invalidate(competitionsPendingPayoutProvider),
+          child: ListView.separated(
+            padding: const EdgeInsets.all(ArenaSpacing.lg),
+            itemCount: list.length,
+            separatorBuilder: (_, __) =>
+                const SizedBox(height: ArenaSpacing.sm),
+            itemBuilder: (_, i) => _CompetitionToSettleCard(
+              comp: list[i],
+              onGenerate: () => onGenerate(list[i]),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+Widget _empty(String emoji, String label) {
+  return Center(
+    child: Padding(
+      padding: const EdgeInsets.all(ArenaSpacing.xl),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(emoji, style: ArenaText.h1.copyWith(fontSize: 48)),
+          const SizedBox(height: ArenaSpacing.sm),
+          Text(label, style: ArenaText.body, textAlign: TextAlign.center),
+        ],
+      ),
+    ),
+  );
 }
 
 class _PayoutCard extends StatelessWidget {
@@ -135,19 +258,21 @@ class _PayoutCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final amount =
-        NumberFormat('#,##0', 'fr_FR').format(payout.amountLocal).replaceAll(
-              ',',
-              ' ',
-            );
+    final amount = _fmt(payout.amountLocal);
     final claimed = payout.isClaimed;
+    final overdue = claimed &&
+        payout.claimedAt != null &&
+        DateTime.now().difference(payout.claimedAt!).inDays >= _slaOverdueDays;
     final color = claimed ? ArenaColors.statusOk : ArenaColors.silver;
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.md),
       decoration: BoxDecoration(
         color: ArenaColors.carbon,
         borderRadius: BorderRadius.circular(ArenaRadius.lg),
-        border: Border.all(color: color.withValues(alpha: 0.4)),
+        border: Border.all(
+          color: (overdue ? ArenaColors.neonRed : color)
+              .withValues(alpha: 0.4),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -161,6 +286,13 @@ class _PayoutCard extends StatelessWidget {
                   style: ArenaText.body.copyWith(fontWeight: FontWeight.w700),
                 ),
               ),
+              if (overdue) ...[
+                const ArenaBadge(
+                  label: '⏱ RETARD',
+                  variant: ArenaBadgeVariant.danger,
+                ),
+                const SizedBox(width: ArenaSpacing.xs),
+              ],
               ArenaBadge(
                 label: claimed ? 'À PAYER' : 'NON RÉCLAMÉ',
                 variant:
@@ -177,14 +309,15 @@ class _PayoutCard extends StatelessWidget {
             ),
             child: Column(
               children: [
-                _kv(
-                  'Montant',
-                  '$amount ${payout.currency}',
-                  emphasize: true,
-                ),
+                _kv('Montant', '$amount ${payout.currency}', emphasize: true),
                 if (payout.rank != null) _kv('Rang', '${payout.rank}'),
                 _kv('Méthode', _methodLabel(payout.payeeMethod)),
                 _kv('Numéro retrait', payout.payeePhone ?? '—', mono: true),
+                if (claimed && payout.claimedAt != null)
+                  _kv(
+                    'Réclamé le',
+                    DateFormat('dd/MM/yyyy').format(payout.claimedAt!.toLocal()),
+                  ),
                 _kv(
                   'Référence',
                   'PAYOUT-${payout.id.substring(0, 8).toUpperCase()}',
@@ -195,11 +328,7 @@ class _PayoutCard extends StatelessWidget {
           ),
           const SizedBox(height: ArenaSpacing.sm),
           if (claimed)
-            ArenaButton(
-              label: '✓ MARQUER PAYÉ',
-              fullWidth: true,
-              onPressed: onPaid,
-            )
+            ArenaButton(label: '✓ MARQUER PAYÉ', fullWidth: true, onPressed: onPaid)
           else
             Text(
               'En attente que le gagnant réclame (saisie de son numéro).',
@@ -209,34 +338,77 @@ class _PayoutCard extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _kv(
-    String key,
-    String value, {
-    bool mono = false,
-    bool emphasize = false,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+class _CompetitionToSettleCard extends StatelessWidget {
+  const _CompetitionToSettleCard({required this.comp, required this.onGenerate});
+
+  final PendingPayoutCompetition comp;
+  final VoidCallback onGenerate;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(ArenaSpacing.md),
+      decoration: BoxDecoration(
+        color: ArenaColors.carbon,
+        borderRadius: BorderRadius.circular(ArenaRadius.lg),
+        border:
+            Border.all(color: ArenaColors.tierGoldWarm.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(key, style: ArenaText.bodyMuted),
-          Flexible(
-            child: Text(
-              value,
-              textAlign: TextAlign.end,
-              style: (mono ? ArenaText.mono : ArenaText.body).copyWith(
-                color: emphasize ? ArenaColors.tierGoldWarm : null,
-                fontWeight: emphasize ? FontWeight.w700 : null,
-              ),
-            ),
+          Text(
+            comp.name,
+            style: ArenaText.body.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Cagnotte : ${_fmt(comp.prizePoolLocal)} ${comp.currency}',
+            style: ArenaText.bodyMuted,
+          ),
+          const SizedBox(height: ArenaSpacing.sm),
+          ArenaButton(
+            label: '💰 GÉNÉRER LES VERSEMENTS',
+            fullWidth: true,
+            onPressed: onGenerate,
           ),
         ],
       ),
     );
   }
 }
+
+Widget _kv(
+  String key,
+  String value, {
+  bool mono = false,
+  bool emphasize = false,
+}) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 2),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(key, style: ArenaText.bodyMuted),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: (mono ? ArenaText.mono : ArenaText.body).copyWith(
+              color: emphasize ? ArenaColors.tierGoldWarm : null,
+              fontWeight: emphasize ? FontWeight.w700 : null,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+String _fmt(double amount) =>
+    NumberFormat('#,##0', 'fr_FR').format(amount).replaceAll(',', ' ');
 
 String _methodLabel(String? code) {
   switch (code) {
