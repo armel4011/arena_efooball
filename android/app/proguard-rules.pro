@@ -33,6 +33,26 @@
 -keep class com.hiennv.flutter_callkit_incoming.** { *; }
 -dontwarn com.hiennv.flutter_callkit_incoming.**
 
+# ----- flutter_overlay_window (overlay anti-triche Phase 8) -------------------
+# Le service est référencé PAR NOM DE CHAÎNE dans AndroidManifest.xml
+# (flutter.overlay.window.flutter_overlay_window.OverlayService) → R8 pourrait
+# le renommer/strip → ClassNotFoundException au démarrage du FGS overlay.
+-keep class flutter.overlay.window.flutter_overlay_window.** { *; }
+-dontwarn flutter.overlay.window.flutter_overlay_window.**
+
+# ----- Composants natifs ARENA (MainActivity + ArenaRecorderService Kotlin) ---
+# ArenaRecorderService (recording MediaProjection custom) est déclaré au
+# Manifest par `.ArenaRecorderService` → garder tout le package applicatif.
+-keep class com.arena.arena.** { *; }
+
+# ----- flutter_foreground_task (FGS + receivers résolus par réflexion) --------
+-keep class com.pravera.flutter_foreground_task.** { *; }
+-dontwarn com.pravera.flutter_foreground_task.**
+
+# ----- permission_handler -----------------------------------------------------
+-keep class com.baseflow.permissionhandler.** { *; }
+-dontwarn com.baseflow.permissionhandler.**
+
 # ----- Play Core (Flutter deferred components / split install) ----------------
 -keep class com.google.android.play.core.** { *; }
 -dontwarn com.google.android.play.core.**

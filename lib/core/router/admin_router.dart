@@ -157,6 +157,15 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
         return loc == AdminRoutes.totpVerify ? null : AdminRoutes.totpVerify;
       }
 
+      // Garde super-admin : les routes `/super/*` (revenus, validation des
+      // paiements, bannissements, codes d'invitation, broadcast…) exigent le
+      // rôle super_admin, pas seulement admin. Sans ce contrôle elles sont
+      // atteignables en deep-link par un admin simple ; la RLS protège la
+      // donnée côté serveur, ceci ferme l'accès UI (défense en profondeur).
+      if (loc.startsWith('/super') && !profile.isSuperAdmin) {
+        return AdminRoutes.home;
+      }
+
       // Pleinement authentifié — keep them out of the auth screens.
       if (AdminRoutes.unauthenticated.contains(loc)) {
         return AdminRoutes.home;
