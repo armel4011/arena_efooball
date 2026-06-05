@@ -11,6 +11,7 @@ import 'package:arena/data/repositories/competition_repository.dart';
 import 'package:arena/data/repositories/match_stats_repository.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/home/main_layout.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -33,7 +34,12 @@ Widget _scoped() => ProviderScope(
         playerRecentMatchesProvider
             .overrideWith((ref, _) async => const <ArenaMatch>[]),
       ],
-      child: const MaterialApp(home: MainLayout()),
+      child: const MaterialApp(
+        locale: Locale('fr'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: MainLayout(),
+      ),
     );
 
 Future<void> _pumpShallow(WidgetTester tester) async {

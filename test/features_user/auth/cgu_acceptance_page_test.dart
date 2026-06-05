@@ -1,6 +1,7 @@
 import 'package:arena/core/router/user_router.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_user/auth/cgu_acceptance_page.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -23,6 +24,9 @@ GoRouter _router(Widget body) => GoRouter(
 
 Widget _scoped() => ProviderScope(
       child: MaterialApp.router(
+        locale: const Locale('fr'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         routerConfig: _router(const CguAcceptancePage()),
       ),
     );
