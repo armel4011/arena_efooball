@@ -2,6 +2,7 @@ import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
 import 'package:arena/features_user/competitions/competitions_list_page.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -31,7 +32,12 @@ Widget _scoped(List<Competition> items) => ProviderScope(
         competitionsListProvider
             .overrideWith((ref, _) => Stream<List<Competition>>.value(items)),
       ],
-      child: const MaterialApp(home: Scaffold(body: CompetitionsListPage())),
+      child: MaterialApp(
+        locale: const Locale('fr'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const Scaffold(body: CompetitionsListPage()),
+      ),
     );
 
 void main() {

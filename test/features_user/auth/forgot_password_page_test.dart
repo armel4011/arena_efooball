@@ -2,6 +2,7 @@ import 'package:arena/core/router/user_router.dart';
 import 'package:arena/data/repositories/auth_failure.dart';
 import 'package:arena/data/repositories/auth_repository.dart';
 import 'package:arena/features_user/auth/forgot_password_page.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -42,6 +43,9 @@ Widget _scoped(AuthRepository repo) => ProviderScope(
       overrides: [authRepositoryProvider.overrideWithValue(repo)],
       child: MaterialApp.router(
         routerConfig: _router(const ForgotPasswordPage()),
+        locale: const Locale('fr'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
       ),
     );
 

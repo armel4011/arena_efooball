@@ -17,6 +17,7 @@ import 'package:arena/core/services/onboarding_service.dart';
 import 'package:arena/features_admin/auth_admin/splash_admin_screen.dart';
 import 'package:arena/features_user/auth/splash_user_screen.dart';
 import 'package:arena/features_user/onboarding/onboarding_page.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -51,6 +52,9 @@ Future<Widget> _routerHost({
         return MaterialApp.router(
           routerConfig: router,
           debugShowCheckedModeBanner: false,
+          locale: const Locale('fr'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
         );
       },
     ),

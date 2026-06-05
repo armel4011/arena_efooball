@@ -5,6 +5,7 @@ import 'package:arena/data/models/chat_message.dart';
 import 'package:arena/data/repositories/chat_repository.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/chat/chat_page.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -140,8 +141,11 @@ Widget _scoped({
       ),
       if (repo != null) chatRepositoryProvider.overrideWithValue(repo),
     ],
-    child: const MaterialApp(
-      home: ChatPage(matchId: _matchId),
+    child: MaterialApp(
+      locale: const Locale('fr'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: const ChatPage(matchId: _matchId),
     ),
   );
 }

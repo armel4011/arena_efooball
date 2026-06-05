@@ -6,6 +6,7 @@ import 'package:arena/data/repositories/competition_repository.dart';
 import 'package:arena/data/repositories/match_repository.dart';
 import 'package:arena/data/repositories/standings_repository.dart';
 import 'package:arena/features_user/competitions/competition_detail_page.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -51,6 +52,9 @@ Widget _scoped({
             .overrideWith((ref) => Stream<Set<String>>.value({comp.id})),
       ],
       child: MaterialApp(
+        locale: const Locale('fr'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: CompetitionDetailPage(competitionId: comp.id),
       ),
     );

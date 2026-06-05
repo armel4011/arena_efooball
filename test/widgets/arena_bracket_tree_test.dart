@@ -1,5 +1,6 @@
 import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/features_shared/widgets/arena_bracket_tree.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -55,6 +56,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('fr'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox.expand(
               child: ArenaBracketTree(matches: matches),
@@ -90,6 +94,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('fr'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox.expand(
               child: ArenaBracketTree(
@@ -112,8 +119,11 @@ void main() {
 
     testWidgets('does not crash when matches list is empty', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(body: ArenaBracketTree(matches: [])),
+        MaterialApp(
+          locale: const Locale('fr'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const Scaffold(body: ArenaBracketTree(matches: [])),
         ),
       );
       await tester.pump();

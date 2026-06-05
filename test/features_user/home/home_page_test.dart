@@ -9,6 +9,7 @@
 import 'package:arena/data/models/profile.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/home/home_page.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -26,7 +27,12 @@ Widget _scoped(Profile profile) => ProviderScope(
       overrides: [
         currentProfileProvider.overrideWith((ref) => Stream.value(profile)),
       ],
-      child: const MaterialApp(home: Scaffold(body: HomePage())),
+      child: MaterialApp(
+        locale: const Locale('fr'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const Scaffold(body: HomePage()),
+      ),
     );
 
 void main() {

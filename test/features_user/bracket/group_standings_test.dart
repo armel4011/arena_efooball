@@ -1,6 +1,7 @@
 import 'package:arena/data/models/standings.dart';
 import 'package:arena/data/repositories/standings_repository.dart';
 import 'package:arena/features_user/bracket/group_standings_page.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -45,8 +46,11 @@ Widget _scoped(List<StandingsBucket> buckets) => ProviderScope(
         competitionStandingsProvider
             .overrideWith((ref, _) async => buckets),
       ],
-      child: const MaterialApp(
-        home: Scaffold(body: GroupStandingsPage(competitionId: 'c-1')),
+      child: MaterialApp(
+        locale: const Locale('fr'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const Scaffold(body: GroupStandingsPage(competitionId: 'c-1')),
       ),
     );
 

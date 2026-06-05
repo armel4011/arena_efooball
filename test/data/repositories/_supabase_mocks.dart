@@ -14,6 +14,8 @@ class MockSupabaseClient extends Mock implements SupabaseClient {}
 
 class MockGoTrueClient extends Mock implements GoTrueClient {}
 
+class MockUser extends Mock implements User {}
+
 /// Branche `client.from(table)` sur une chaîne dont l'`await` final renvoie
 /// [result]. Renvoie le [QueryProbe] partagé pour asserter colonnes/filtres.
 ///
@@ -25,6 +27,35 @@ QueryProbe stubFrom(MockSupabaseClient client, String table, Object? result) {
   return from.probe;
 }
 
+/// Variante séquentielle : chaque appel successif à `client.from(table)`
+/// renvoie le résultat suivant de [results] (le dernier est répété). Utile
+/// quand un repo interroge la même table plusieurs fois (ex. read-then-insert).
+void stubFromQueue(
+  MockSupabaseClient client,
+  String table,
+  List<Object?> results,
+) {
+  var i = 0;
+  when(() => client.from(table)).thenAnswer((_) {
+    final r = results[i < results.length ? i : results.length - 1];
+    i++;
+    return FakeFromBuilder(Future<dynamic>.value(r));
+  });
+}
+
+/// Branche `client.auth.currentUser` sur un user d'id [userId] (ou `null`).
+void stubAuthUser(MockSupabaseClient client, String? userId) {
+  final auth = MockGoTrueClient();
+  when(() => client.auth).thenReturn(auth);
+  if (userId == null) {
+    when(() => auth.currentUser).thenReturn(null);
+  } else {
+    final user = MockUser();
+    when(() => user.id).thenReturn(userId);
+    when(() => auth.currentUser).thenReturn(user);
+  }
+}
+
 /// État partagé entre tous les maillons d'une même chaîne — permet
 /// d'inspecter colonnes/filtres quel que soit le maillon retourné.
 class QueryProbe {
@@ -33,6 +64,9 @@ class QueryProbe {
 
   /// Valeurs passées au dernier `insert(...)` (pour asserter le payload).
   Object? insertedValues;
+
+  /// Valeurs passées au dernier `upsert(...)`.
+  Object? upsertedValues;
 
   /// Valeurs passées au dernier `update(...)`.
   Map<dynamic, dynamic>? updatedValues;
@@ -101,6 +135,18 @@ class FakeQueryChain<T> extends Fake implements PostgrestFilterBuilder<T> {
   @override
   PostgrestFilterBuilder<T> or(String filters, {String? referencedTable}) {
     probe.record('or', filters, null);
+    return this;
+  }
+
+  @override
+  PostgrestFilterBuilder<T> not(String column, String operator, Object? value) {
+    probe.record('not', column, '$operator:$value');
+    return this;
+  }
+
+  @override
+  PostgrestFilterBuilder<T> isFilter(String column, Object? value) {
+    probe.record('is', column, value);
     return this;
   }
 
@@ -190,6 +236,17 @@ class FakeFromBuilder extends Fake implements SupabaseQueryBuilder {
   @override
   PostgrestFilterBuilder<dynamic> update(Map<dynamic, dynamic> values) {
     probe.updatedValues = values;
+    return _chain<dynamic>();
+  }
+
+  @override
+  PostgrestFilterBuilder<dynamic> upsert(
+    Object values, {
+    String? onConflict,
+    bool ignoreDuplicates = false,
+    bool defaultToNull = true,
+  }) {
+    probe.upsertedValues = values;
     return _chain<dynamic>();
   }
 
