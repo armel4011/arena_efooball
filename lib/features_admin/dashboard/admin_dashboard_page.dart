@@ -169,13 +169,6 @@ class AdminDashboardPage extends ConsumerWidget {
                 ),
                 const SizedBox(height: ArenaSpacing.xs),
                 ArenaButton(
-                  label: '💰 VALIDER PAYOUTS',
-                  fullWidth: true,
-                  variant: ArenaButtonVariant.secondary,
-                  onPressed: () => context.push(AdminRoutes.payouts),
-                ),
-                const SizedBox(height: ArenaSpacing.xs),
-                ArenaButton(
                   label: '📺 MODÉRATION STREAMS',
                   fullWidth: true,
                   variant: ArenaButtonVariant.secondary,

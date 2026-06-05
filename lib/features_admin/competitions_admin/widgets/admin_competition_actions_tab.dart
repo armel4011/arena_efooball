@@ -6,6 +6,7 @@ import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/admin/admin_competitions_repository.dart';
 import 'package:arena/data/repositories/payout_repository.dart';
+import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,6 +20,11 @@ class AdminCompetitionActionsTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // La génération des versements est une action super-admin (la RPC le force
+    // déjà côté serveur ; on évite juste qu'un admin simple voie un bouton
+    // qui échouerait).
+    final isSuperAdmin =
+        ref.watch(currentProfileProvider).valueOrNull?.isSuperAdmin ?? false;
     return ListView(
       padding: const EdgeInsets.all(ArenaSpacing.lg),
       children: [
@@ -66,12 +72,14 @@ class AdminCompetitionActionsTab extends ConsumerWidget {
             ),
           ),
         if (competition.status == CompetitionStatus.completed) ...[
-          const SizedBox(height: ArenaSpacing.xs),
-          ArenaButton(
-            label: '💰 GÉNÉRER LES VERSEMENTS',
-            fullWidth: true,
-            onPressed: () => _generatePayouts(context, ref),
-          ),
+          if (isSuperAdmin) ...[
+            const SizedBox(height: ArenaSpacing.xs),
+            ArenaButton(
+              label: '💰 GÉNÉRER LES VERSEMENTS',
+              fullWidth: true,
+              onPressed: () => _generatePayouts(context, ref),
+            ),
+          ],
           const SizedBox(height: ArenaSpacing.xs),
           ArenaButton(
             label: '🔄 RÉGÉNÉRER LA COMPÉTITION',
