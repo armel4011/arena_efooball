@@ -241,6 +241,7 @@ _NotificationCategory _categorize(ArenaNotification n) {
     case 'payout_available':
     case 'payout_paid':
     case 'payment_completed':
+    case 'payment_refunded':
       return _NotificationCategory.earning;
     default:
       return _NotificationCategory.system;
@@ -463,6 +464,7 @@ _NotifVisual _visualFor(ArenaNotification n) {
     case 'payout_available':
     case 'payout_paid':
     case 'payment_completed':
+    case 'payment_refunded':
       return const _NotifVisual(emoji: '💰', color: ArenaColors.statusOk);
     case 'dispute_opened':
       return const _NotifVisual(emoji: '⚠️', color: ArenaColors.neonRed);

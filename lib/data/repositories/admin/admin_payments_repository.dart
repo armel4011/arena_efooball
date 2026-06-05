@@ -58,8 +58,20 @@ class AdminPaymentsRepository {
     final rows = await _client
         .from(_table)
         .select(_selectWithJoins)
-        .inFilter('status', ['succeeded', 'rejected'])
+        .inFilter('status', ['succeeded', 'rejected', 'refunded'])
         .order('updated_at', ascending: false);
+    return [for (final r in rows) _parseJoinedRow(r)];
+  }
+
+  /// File des remboursements à effectuer : paiements `refund_pending`
+  /// (compétition annulée), plus anciens en tête. Le `payer_phone` est le
+  /// numéro sur lequel le staff doit rembourser via Mobile Money.
+  Future<List<AdminPaymentRow>> listRefundPending() async {
+    final rows = await _client
+        .from(_table)
+        .select(_selectWithJoins)
+        .eq('status', 'refund_pending')
+        .order('created_at');
     return [for (final r in rows) _parseJoinedRow(r)];
   }
 
@@ -112,6 +124,15 @@ class AdminPaymentsRepository {
     }).eq('id', paymentId);
   }
 
+  /// Marque un paiement `refund_pending` comme `refunded` (après le virement
+  /// Mobile Money réel) via la RPC `mark_payment_refunded` (super-admin +
+  /// notifie le joueur).
+  Future<void> markRefunded(String paymentId) async {
+    await _client.rpc<void>(
+      'mark_payment_refunded',
+      params: {'p_payment_id': paymentId},
+    );
+  }
 }
 
 final adminPaymentsRepositoryProvider =
@@ -131,4 +152,11 @@ final adminPaymentsHistoryProvider =
     StreamProvider.autoDispose<List<AdminPaymentRow>>((ref) {
   final repo = ref.watch(adminPaymentsRepositoryProvider);
   return pollStream(const Duration(seconds: 120), repo.listHistory);
+});
+
+/// File des remboursements à effectuer (paiements `refund_pending`).
+final adminRefundPendingProvider =
+    StreamProvider.autoDispose<List<AdminPaymentRow>>((ref) {
+  final repo = ref.watch(adminPaymentsRepositoryProvider);
+  return pollStream(const Duration(seconds: 120), repo.listRefundPending);
 });
