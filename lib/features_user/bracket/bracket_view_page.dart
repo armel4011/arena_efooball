@@ -132,8 +132,9 @@ class _BracketCaption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Text(
-      'ÉLIMINATION DIRECTE · $playerCount JOUEURS',
+      l10n.bracketCaption(playerCount),
       textAlign: TextAlign.center,
       style: ArenaText.monoSmall.copyWith(
         color: ArenaColors.silver,

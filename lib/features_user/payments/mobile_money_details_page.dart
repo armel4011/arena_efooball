@@ -373,8 +373,7 @@ class _MerchantCodeCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Compose ce code sur ton ${method.labelOf(l10n)}, paie le montant '
-            'exact, puis reviens ici cliquer "J\'AI PAYÉ".',
+            l10n.mobileMoneyDialHelp(method.labelOf(l10n)),
             style: ArenaText.small,
           ),
         ],

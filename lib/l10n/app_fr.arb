@@ -852,5 +852,566 @@
   "watchStreamChatUnavailable": "Chat indisponible",
   "watchStreamChatEmpty": "Sois le premier à commenter !",
   "watchStreamChatHint": "Envoie un message…",
-  "watchStreamLiveBadge": "LIVE"
+  "watchStreamLiveBadge": "LIVE",
+  "bannedLoadStateError": "Impossible de charger l'état de la requête : {error}",
+  "@bannedLoadStateError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "cguWhatsappLabel": "WHATSAPP ({dialCode})",
+  "@cguWhatsappLabel": {
+    "placeholders": {
+      "dialCode": {
+        "type": "Object"
+      }
+    }
+  },
+  "cguWhatsappHelper": "Le code pays {dialCode} est ajouté automatiquement.",
+  "@cguWhatsappHelper": {
+    "placeholders": {
+      "dialCode": {
+        "type": "Object"
+      }
+    }
+  },
+  "cguConsentRequiredSuffix": "{title} *",
+  "@cguConsentRequiredSuffix": {
+    "placeholders": {
+      "title": {
+        "type": "Object"
+      }
+    }
+  },
+  "linkAccountEmailLineNoEmail": "L'adresse e-mail de ce compte {providerLabel} est déjà utilisée par un compte ARENA.",
+  "@linkAccountEmailLineNoEmail": {
+    "placeholders": {
+      "providerLabel": {
+        "type": "Object"
+      }
+    }
+  },
+  "linkAccountEmailLineWithEmail": "{email} est déjà utilisé par un compte ARENA (mot de passe).",
+  "@linkAccountEmailLineWithEmail": {
+    "placeholders": {
+      "email": {
+        "type": "Object"
+      }
+    }
+  },
+  "registerStepperTitle": "Étape {step} / 3",
+  "@registerStepperTitle": {
+    "placeholders": {
+      "step": {
+        "type": "Object"
+      }
+    }
+  },
+  "registerWhatsappLabel": "WHATSAPP ({dialCode})",
+  "@registerWhatsappLabel": {
+    "placeholders": {
+      "dialCode": {
+        "type": "Object"
+      }
+    }
+  },
+  "registerWhatsappHelper": "Le code pays {dialCode} est ajouté automatiquement.",
+  "@registerWhatsappHelper": {
+    "placeholders": {
+      "dialCode": {
+        "type": "Object"
+      }
+    }
+  },
+  "bracketCaption": "ÉLIMINATION DIRECTE · {playerCount} JOUEURS",
+  "@bracketCaption": {
+    "placeholders": {
+      "playerCount": {
+        "type": "Object"
+      }
+    }
+  },
+  "referralCardDescription": "Tu dois parrainer {referralQuota} ami(s) pour t'inscrire à cette compétition gratuite. Partage ton code avec eux pour qu'ils créent leur compte ARENA.",
+  "@referralCardDescription": {
+    "placeholders": {
+      "referralQuota": {
+        "type": "Object"
+      }
+    }
+  },
+  "referralProgressError": "Impossible de vérifier ta progression : {error}",
+  "@referralProgressError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "referralFriendsRemaining": "Encore {count} ami(s) à parrainer",
+  "@referralFriendsRemaining": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "referralCodeCopied": "Code {code} copié dans le presse-papier",
+  "@referralCodeCopied": {
+    "placeholders": {
+      "code": {
+        "type": "Object"
+      }
+    }
+  },
+  "referralShareMessage": "Rejoins-moi sur ARENA ! Tournois d'e-sport mobile gratuits avec récompenses. Utilise mon code de parrainage à l'inscription : {code}",
+  "@referralShareMessage": {
+    "placeholders": {
+      "code": {
+        "type": "Object"
+      }
+    }
+  },
+  "liveStreamsOthersCount": "+{count} autres",
+  "@liveStreamsOthersCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "pendingPaymentMultipleTitle": "{count} paiements en attente",
+  "@pendingPaymentMultipleTitle": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "upcomingMatchesError": "Erreur : {error}",
+  "@upcomingMatchesError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "upcomingMatchVsOpponent": "vs {opponentName}",
+  "@upcomingMatchVsOpponent": {
+    "placeholders": {
+      "opponentName": {
+        "type": "Object"
+      }
+    }
+  },
+  "upcomingBadgeInHours": "DANS {hours}H",
+  "@upcomingBadgeInHours": {
+    "placeholders": {
+      "hours": {
+        "type": "Object"
+      }
+    }
+  },
+  "upcomingBadgeInDays": "DANS {days}J",
+  "@upcomingBadgeInDays": {
+    "placeholders": {
+      "days": {
+        "type": "Object"
+      }
+    }
+  },
+  "upcomingPhaseRound": "Round {round}",
+  "@upcomingPhaseRound": {
+    "placeholders": {
+      "round": {
+        "type": "Object"
+      }
+    }
+  },
+  "matchRoomTitleNumbered": "MATCH #{number}",
+  "@matchRoomTitleNumbered": {
+    "placeholders": {
+      "number": {
+        "type": "Object"
+      }
+    }
+  },
+  "manualUploadFailure": "Échec : {message}",
+  "@manualUploadFailure": {
+    "placeholders": {
+      "message": {
+        "type": "Object"
+      }
+    }
+  },
+  "manualUploadError": "Erreur : {error}",
+  "@manualUploadError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "outcomeWinner": "Gagnant : Joueur {winner}…",
+  "@outcomeWinner": {
+    "placeholders": {
+      "winner": {
+        "type": "Object"
+      }
+    }
+  },
+  "outcomeResubmitError": "Impossible de renvoyer : {error}",
+  "@outcomeResubmitError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "outcomeScoreShootout": "TAB {pen1} — {pen2}",
+  "@outcomeScoreShootout": {
+    "placeholders": {
+      "pen1": {
+        "type": "Object"
+      },
+      "pen2": {
+        "type": "Object"
+      }
+    }
+  },
+  "matchHeaderSelfSuffix": "{username} · TOI",
+  "@matchHeaderSelfSuffix": {
+    "placeholders": {
+      "username": {
+        "type": "Object"
+      }
+    }
+  },
+  "recordingLiveStreamError": "Impossible de démarrer la diffusion : {error}",
+  "@recordingLiveStreamError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "recordingPermBundleNeedsSettings": "Autorise {list} dans Paramètres > Apps > ARENA",
+  "@recordingPermBundleNeedsSettings": {
+    "placeholders": {
+      "list": {
+        "type": "Object"
+      }
+    }
+  },
+  "recordingPermBundleDenied": "Autorisation {list} refusée — retape JE SUIS DANS LA ROOM",
+  "@recordingPermBundleDenied": {
+    "placeholders": {
+      "list": {
+        "type": "Object"
+      }
+    }
+  },
+  "recordingBannerUnavailable": "Recording indisponible — {error}\nTape ici pour réessayer.",
+  "@recordingBannerUnavailable": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "notificationsTimeMinutesAgo": "Il y a {minutes} min",
+  "@notificationsTimeMinutesAgo": {
+    "placeholders": {
+      "minutes": {
+        "type": "Object"
+      }
+    }
+  },
+  "notificationsTimeHoursAgo": "Il y a {hours} h",
+  "@notificationsTimeHoursAgo": {
+    "placeholders": {
+      "hours": {
+        "type": "Object"
+      }
+    }
+  },
+  "mobileMoneyDialHelp": "Compose ce code sur ton {method}, paie le montant exact, puis reviens ici cliquer \"J'AI PAYÉ\".",
+  "@mobileMoneyDialHelp": {
+    "placeholders": {
+      "method": {
+        "type": "Object"
+      }
+    }
+  },
+  "deleteAccountStepCaption": "ÉTAPE {stepNum}/04 · {stepLabel}",
+  "@deleteAccountStepCaption": {
+    "placeholders": {
+      "stepNum": {
+        "type": "Object"
+      },
+      "stepLabel": {
+        "type": "Object"
+      }
+    }
+  },
+  "deleteAccountCheckErrorNote": "Note: vérification non concluante (table indisponible). Détail: {checkError}",
+  "@deleteAccountCheckErrorNote": {
+    "placeholders": {
+      "checkError": {
+        "type": "Object"
+      }
+    }
+  },
+  "deleteAccountTypeToConfirmLabel": "Tape \"{confirmWord}\" pour confirmer",
+  "@deleteAccountTypeToConfirmLabel": {
+    "placeholders": {
+      "confirmWord": {
+        "type": "Object"
+      }
+    }
+  },
+  "editProfileWhatsappCaption": "WHATSAPP ({dialCode})",
+  "@editProfileWhatsappCaption": {
+    "placeholders": {
+      "dialCode": {
+        "type": "Object"
+      }
+    }
+  },
+  "editProfileWhatsappHelper": "Le code pays {dialCode} est ajouté automatiquement.",
+  "@editProfileWhatsappHelper": {
+    "placeholders": {
+      "dialCode": {
+        "type": "Object"
+      }
+    }
+  },
+  "friendsErrorMessage": "Erreur : {error}",
+  "@friendsErrorMessage": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "friendsRemoveDialogTitle": "Retirer {username} ?",
+  "@friendsRemoveDialogTitle": {
+    "placeholders": {
+      "username": {
+        "type": "Object"
+      }
+    }
+  },
+  "friendsAcceptedSnack": "{username} est maintenant ton ami",
+  "@friendsAcceptedSnack": {
+    "placeholders": {
+      "username": {
+        "type": "Object"
+      }
+    }
+  },
+  "friendsUnblockedSnack": "{username} débloqué",
+  "@friendsUnblockedSnack": {
+    "placeholders": {
+      "username": {
+        "type": "Object"
+      }
+    }
+  },
+  "friendsSearchErrorMessage": "Erreur : {error}",
+  "@friendsSearchErrorMessage": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "playerProfileError": "Erreur: {error}",
+  "@playerProfileError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "playerProfileStatsError": "Stats indisponibles ({error})",
+  "@playerProfileStatsError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "playerProfileMatchRowError": "Erreur: {error}",
+  "@playerProfileMatchRowError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "playerProfileFriendsCountSingular": "{friendsCount} ami",
+  "@playerProfileFriendsCountSingular": {
+    "placeholders": {
+      "friendsCount": {
+        "type": "Object"
+      }
+    }
+  },
+  "playerProfileFriendsCountPlural": "{friendsCount} amis",
+  "@playerProfileFriendsCountPlural": {
+    "placeholders": {
+      "friendsCount": {
+        "type": "Object"
+      }
+    }
+  },
+  "playerProfileReferralCountSingular": "{count} invité",
+  "@playerProfileReferralCountSingular": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "playerProfileReferralCountPlural": "{count} invités",
+  "@playerProfileReferralCountPlural": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "publicProfileError": "Erreur : {error}",
+  "@publicProfileError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "publicProfileRequestSent": "Demande envoyée à {username}",
+  "@publicProfileRequestSent": {
+    "placeholders": {
+      "username": {
+        "type": "Object"
+      }
+    }
+  },
+  "publicProfileNowFriend": "{username} est maintenant ton ami",
+  "@publicProfileNowFriend": {
+    "placeholders": {
+      "username": {
+        "type": "Object"
+      }
+    }
+  },
+  "publicProfileRemoveConfirmTitle": "Retirer {username} ?",
+  "@publicProfileRemoveConfirmTitle": {
+    "placeholders": {
+      "username": {
+        "type": "Object"
+      }
+    }
+  },
+  "publicProfileBlockConfirmTitle": "Bloquer {username} ?",
+  "@publicProfileBlockConfirmTitle": {
+    "placeholders": {
+      "username": {
+        "type": "Object"
+      }
+    }
+  },
+  "publicProfileWinRateValue": "{pct}% ({total} matchs)",
+  "@publicProfileWinRateValue": {
+    "placeholders": {
+      "pct": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
+    }
+  },
+  "publicProfileMatchRowError": "Erreur: {error}",
+  "@publicProfileMatchRowError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "settingsMarketingError": "Erreur: {error}",
+  "@settingsMarketingError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "settingsEmailChangeError": "Erreur: {error}",
+  "@settingsEmailChangeError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "settingsPasswordChangeError": "Erreur: {error}",
+  "@settingsPasswordChangeError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "settingsExportError": "Export impossible : {error}",
+  "@settingsExportError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "settingsExportFileLabel": "Fichier ({sizeKb} Ko) :",
+  "@settingsExportFileLabel": {
+    "placeholders": {
+      "sizeKb": {
+        "type": "Object"
+      }
+    }
+  },
+  "startStreamingErrorSnack": "Erreur: {error}",
+  "@startStreamingErrorSnack": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "watchStreamFailed": "Échec : {reason}",
+  "@watchStreamFailed": {
+    "placeholders": {
+      "reason": {
+        "type": "Object"
+      }
+    }
+  },
+  "watchStreamChatSendError": "Erreur envoi : {error}",
+  "@watchStreamChatSendError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "watchStreamViewersWatching": "{viewers} watching",
+  "@watchStreamViewersWatching": {
+    "placeholders": {
+      "viewers": {
+        "type": "Object"
+      }
+    }
+  }
 }

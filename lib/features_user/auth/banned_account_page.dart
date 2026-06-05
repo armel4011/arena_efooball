@@ -99,7 +99,7 @@ class _BannedAccountPageState extends ConsumerState<BannedAccountPage> {
                 ),
               ),
               error: (e, _) => Text(
-                "Impossible de charger l'état de la requête : $e",
+                l10n.bannedLoadStateError(e),
                 style: ArenaText.bodyMuted,
               ),
               data: _buildRequestSection,

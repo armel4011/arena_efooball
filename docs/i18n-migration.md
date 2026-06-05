@@ -37,12 +37,17 @@
   (extraction → fusion ARB centralisée → câblage) : **789 clés** fr/en/ar,
   **718 chaînes câblées**. Outil de fusion : `scripts/i18n_merge.mjs`.
 
+## Fait (suite)
+- ✅ **résidus statiques** : 56/58 câblés par refactor (threading `l10n`,
+  `labelOf(l10n)`, defaults nullables). PR #53.
+- ✅ **interpolations → ICU** : 69/69 converties en placeholders (`{count}`,
+  `{error}`…) + câblage `l10n.key(arg)`. Outils : `scripts/icu_merge.mjs`.
+  Note : gen-l10n `use-escaping:false` → apostrophes littérales (pas de `''`).
+
 ## Restant
-1. **~55 chaînes laissées en dur** (sûreté) : méthodes statiques sans
-   `BuildContext`, validateurs, defaults de constructeur const. À reprendre en
-   passant le `l10n`/`context` en paramètre.
-2. **~69 chaînes interpolées** (`'... $x ...'`) différées → à convertir en
-   **placeholders ICU** dans les ARB (`"{count}"`) puis `l10n.x(count)`.
-3. **Admin** (`features_admin` mobile + `features_admin_desktop`, ~68 écrans) :
-   hors scope (outils internes staff) — à décider.
-4. **Relecture humaine** des traductions auto en/ar (surtout arabe) avant prod.
+1. **~3 résidus** + quelques interpolations hors-extraction (widgets non `Text`).
+2. **Admin** (`features_admin` + `features_admin_desktop`, ~68 écrans) : hors
+   scope (outils internes staff) — à décider.
+3. **Relecture humaine** des traductions auto en/ar (surtout arabe) avant prod.
+
+➡️ **`features_user` est désormais traduit à ~100 %** (statique + dynamique).

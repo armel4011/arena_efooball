@@ -2651,4 +2651,349 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get watchStreamLiveBadge => 'LIVE';
+
+  @override
+  String bannedLoadStateError(Object error) {
+    return 'Impossible de charger l\'état de la requête : $error';
+  }
+
+  @override
+  String cguWhatsappLabel(Object dialCode) {
+    return 'WHATSAPP ($dialCode)';
+  }
+
+  @override
+  String cguWhatsappHelper(Object dialCode) {
+    return 'Le code pays $dialCode est ajouté automatiquement.';
+  }
+
+  @override
+  String cguConsentRequiredSuffix(Object title) {
+    return '$title *';
+  }
+
+  @override
+  String linkAccountEmailLineNoEmail(Object providerLabel) {
+    return 'L\'adresse e-mail de ce compte $providerLabel est déjà utilisée par un compte ARENA.';
+  }
+
+  @override
+  String linkAccountEmailLineWithEmail(Object email) {
+    return '$email est déjà utilisé par un compte ARENA (mot de passe).';
+  }
+
+  @override
+  String registerStepperTitle(Object step) {
+    return 'Étape $step / 3';
+  }
+
+  @override
+  String registerWhatsappLabel(Object dialCode) {
+    return 'WHATSAPP ($dialCode)';
+  }
+
+  @override
+  String registerWhatsappHelper(Object dialCode) {
+    return 'Le code pays $dialCode est ajouté automatiquement.';
+  }
+
+  @override
+  String bracketCaption(Object playerCount) {
+    return 'ÉLIMINATION DIRECTE · $playerCount JOUEURS';
+  }
+
+  @override
+  String referralCardDescription(Object referralQuota) {
+    return 'Tu dois parrainer $referralQuota ami(s) pour t\'inscrire à cette compétition gratuite. Partage ton code avec eux pour qu\'ils créent leur compte ARENA.';
+  }
+
+  @override
+  String referralProgressError(Object error) {
+    return 'Impossible de vérifier ta progression : $error';
+  }
+
+  @override
+  String referralFriendsRemaining(Object count) {
+    return 'Encore $count ami(s) à parrainer';
+  }
+
+  @override
+  String referralCodeCopied(Object code) {
+    return 'Code $code copié dans le presse-papier';
+  }
+
+  @override
+  String referralShareMessage(Object code) {
+    return 'Rejoins-moi sur ARENA ! Tournois d\'e-sport mobile gratuits avec récompenses. Utilise mon code de parrainage à l\'inscription : $code';
+  }
+
+  @override
+  String liveStreamsOthersCount(Object count) {
+    return '+$count autres';
+  }
+
+  @override
+  String pendingPaymentMultipleTitle(Object count) {
+    return '$count paiements en attente';
+  }
+
+  @override
+  String upcomingMatchesError(Object error) {
+    return 'Erreur : $error';
+  }
+
+  @override
+  String upcomingMatchVsOpponent(Object opponentName) {
+    return 'vs $opponentName';
+  }
+
+  @override
+  String upcomingBadgeInHours(Object hours) {
+    return 'DANS ${hours}H';
+  }
+
+  @override
+  String upcomingBadgeInDays(Object days) {
+    return 'DANS ${days}J';
+  }
+
+  @override
+  String upcomingPhaseRound(Object round) {
+    return 'Round $round';
+  }
+
+  @override
+  String matchRoomTitleNumbered(Object number) {
+    return 'MATCH #$number';
+  }
+
+  @override
+  String manualUploadFailure(Object message) {
+    return 'Échec : $message';
+  }
+
+  @override
+  String manualUploadError(Object error) {
+    return 'Erreur : $error';
+  }
+
+  @override
+  String outcomeWinner(Object winner) {
+    return 'Gagnant : Joueur $winner…';
+  }
+
+  @override
+  String outcomeResubmitError(Object error) {
+    return 'Impossible de renvoyer : $error';
+  }
+
+  @override
+  String outcomeScoreShootout(Object pen1, Object pen2) {
+    return 'TAB $pen1 — $pen2';
+  }
+
+  @override
+  String matchHeaderSelfSuffix(Object username) {
+    return '$username · TOI';
+  }
+
+  @override
+  String recordingLiveStreamError(Object error) {
+    return 'Impossible de démarrer la diffusion : $error';
+  }
+
+  @override
+  String recordingPermBundleNeedsSettings(Object list) {
+    return 'Autorise $list dans Paramètres > Apps > ARENA';
+  }
+
+  @override
+  String recordingPermBundleDenied(Object list) {
+    return 'Autorisation $list refusée — retape JE SUIS DANS LA ROOM';
+  }
+
+  @override
+  String recordingBannerUnavailable(Object error) {
+    return 'Recording indisponible — $error\nTape ici pour réessayer.';
+  }
+
+  @override
+  String notificationsTimeMinutesAgo(Object minutes) {
+    return 'Il y a $minutes min';
+  }
+
+  @override
+  String notificationsTimeHoursAgo(Object hours) {
+    return 'Il y a $hours h';
+  }
+
+  @override
+  String mobileMoneyDialHelp(Object method) {
+    return 'Compose ce code sur ton $method, paie le montant exact, puis reviens ici cliquer \"J\'AI PAYÉ\".';
+  }
+
+  @override
+  String deleteAccountStepCaption(Object stepNum, Object stepLabel) {
+    return 'ÉTAPE $stepNum/04 · $stepLabel';
+  }
+
+  @override
+  String deleteAccountCheckErrorNote(Object checkError) {
+    return 'Note: vérification non concluante (table indisponible). Détail: $checkError';
+  }
+
+  @override
+  String deleteAccountTypeToConfirmLabel(Object confirmWord) {
+    return 'Tape \"$confirmWord\" pour confirmer';
+  }
+
+  @override
+  String editProfileWhatsappCaption(Object dialCode) {
+    return 'WHATSAPP ($dialCode)';
+  }
+
+  @override
+  String editProfileWhatsappHelper(Object dialCode) {
+    return 'Le code pays $dialCode est ajouté automatiquement.';
+  }
+
+  @override
+  String friendsErrorMessage(Object error) {
+    return 'Erreur : $error';
+  }
+
+  @override
+  String friendsRemoveDialogTitle(Object username) {
+    return 'Retirer $username ?';
+  }
+
+  @override
+  String friendsAcceptedSnack(Object username) {
+    return '$username est maintenant ton ami';
+  }
+
+  @override
+  String friendsUnblockedSnack(Object username) {
+    return '$username débloqué';
+  }
+
+  @override
+  String friendsSearchErrorMessage(Object error) {
+    return 'Erreur : $error';
+  }
+
+  @override
+  String playerProfileError(Object error) {
+    return 'Erreur: $error';
+  }
+
+  @override
+  String playerProfileStatsError(Object error) {
+    return 'Stats indisponibles ($error)';
+  }
+
+  @override
+  String playerProfileMatchRowError(Object error) {
+    return 'Erreur: $error';
+  }
+
+  @override
+  String playerProfileFriendsCountSingular(Object friendsCount) {
+    return '$friendsCount ami';
+  }
+
+  @override
+  String playerProfileFriendsCountPlural(Object friendsCount) {
+    return '$friendsCount amis';
+  }
+
+  @override
+  String playerProfileReferralCountSingular(Object count) {
+    return '$count invité';
+  }
+
+  @override
+  String playerProfileReferralCountPlural(Object count) {
+    return '$count invités';
+  }
+
+  @override
+  String publicProfileError(Object error) {
+    return 'Erreur : $error';
+  }
+
+  @override
+  String publicProfileRequestSent(Object username) {
+    return 'Demande envoyée à $username';
+  }
+
+  @override
+  String publicProfileNowFriend(Object username) {
+    return '$username est maintenant ton ami';
+  }
+
+  @override
+  String publicProfileRemoveConfirmTitle(Object username) {
+    return 'Retirer $username ?';
+  }
+
+  @override
+  String publicProfileBlockConfirmTitle(Object username) {
+    return 'Bloquer $username ?';
+  }
+
+  @override
+  String publicProfileWinRateValue(Object pct, Object total) {
+    return '$pct% ($total matchs)';
+  }
+
+  @override
+  String publicProfileMatchRowError(Object error) {
+    return 'Erreur: $error';
+  }
+
+  @override
+  String settingsMarketingError(Object error) {
+    return 'Erreur: $error';
+  }
+
+  @override
+  String settingsEmailChangeError(Object error) {
+    return 'Erreur: $error';
+  }
+
+  @override
+  String settingsPasswordChangeError(Object error) {
+    return 'Erreur: $error';
+  }
+
+  @override
+  String settingsExportError(Object error) {
+    return 'Export impossible : $error';
+  }
+
+  @override
+  String settingsExportFileLabel(Object sizeKb) {
+    return 'Fichier ($sizeKb Ko) :';
+  }
+
+  @override
+  String startStreamingErrorSnack(Object error) {
+    return 'Erreur: $error';
+  }
+
+  @override
+  String watchStreamFailed(Object reason) {
+    return 'Échec : $reason';
+  }
+
+  @override
+  String watchStreamChatSendError(Object error) {
+    return 'Erreur envoi : $error';
+  }
+
+  @override
+  String watchStreamViewersWatching(Object viewers) {
+    return '$viewers watching';
+  }
 }

@@ -105,7 +105,7 @@ class _PlayerSeat extends StatelessWidget {
         ),
         const SizedBox(height: ArenaSpacing.sm),
         Text(
-          isSelf ? '$username · TOI' : username,
+          isSelf ? l10n.matchHeaderSelfSuffix(username) : username,
           style: ArenaText.body.copyWith(
             color: ArenaColors.bone,
             fontWeight: FontWeight.w700,

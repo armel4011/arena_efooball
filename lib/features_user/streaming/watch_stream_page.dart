@@ -116,7 +116,7 @@ class _WatchStreamPageState extends ConsumerState<WatchStreamPage> {
                                   }
                                   if (s is AgoraFailed) {
                                     return _PlaceholderLayer(
-                                      text: 'Échec : ${s.reason}',
+                                      text: l10n.watchStreamFailed(s.reason),
                                     );
                                   }
                                   return _PlaceholderLayer(
@@ -237,9 +237,11 @@ class _SpectatorChatState extends ConsumerState<_SpectatorChat> {
       Future<void>.delayed(const Duration(milliseconds: 300), _scrollToBottom);
     } catch (e) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erreur envoi : $e', style: ArenaText.small),
+            content:
+                Text(l10n.watchStreamChatSendError(e), style: ArenaText.small),
             backgroundColor: ArenaColors.danger,
           ),
         );
@@ -297,7 +299,7 @@ class _SpectatorChatState extends ConsumerState<_SpectatorChat> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '$viewers watching',
+                  l10n.watchStreamViewersWatching(viewers),
                   style: ArenaText.monoSmall.copyWith(
                     color: ArenaColors.silver,
                   ),

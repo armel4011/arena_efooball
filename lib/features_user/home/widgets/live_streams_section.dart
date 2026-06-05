@@ -115,7 +115,7 @@ class _LiveStreamCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(ArenaRadius.round),
                       ),
                       child: Text(
-                        '+${allCount - 1} autres',
+                        l10n.liveStreamsOthersCount(allCount - 1),
                         style: ArenaText.badge.copyWith(
                           color: ArenaColors.bone,
                         ),

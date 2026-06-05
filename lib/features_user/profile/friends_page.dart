@@ -107,7 +107,7 @@ class _FriendsTab extends ConsumerWidget {
       },
       child: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => _ErrorList(message: 'Erreur : $e'),
+        error: (e, _) => _ErrorList(message: l10n.friendsErrorMessage(e)),
         data: (rows) {
           if (rows.isEmpty) {
             return _EmptyState(
@@ -164,7 +164,7 @@ class _FriendsTab extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: ArenaColors.surface,
-        title: Text('Retirer ${peer.username} ?'),
+        title: Text(l10n.friendsRemoveDialogTitle(peer.username)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -185,7 +185,7 @@ class _FriendsTab extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erreur : $e'),
+            content: Text(l10n.friendsErrorMessage(e)),
             backgroundColor: ArenaColors.danger,
           ),
         );
@@ -225,7 +225,7 @@ class _RequestsTab extends ConsumerWidget {
           const SizedBox(height: ArenaSpacing.sm),
           incomingAsync.when(
             loading: () => const _LoadingRow(),
-            error: (e, _) => _ErrorList(message: 'Erreur : $e'),
+            error: (e, _) => _ErrorList(message: l10n.friendsErrorMessage(e)),
             data: (rows) {
               if (rows.isEmpty) {
                 return _SmallEmpty(l10n.friendsNoRequests);
@@ -271,7 +271,7 @@ class _RequestsTab extends ConsumerWidget {
           const SizedBox(height: ArenaSpacing.sm),
           outgoingAsync.when(
             loading: () => const _LoadingRow(),
-            error: (e, _) => _ErrorList(message: 'Erreur : $e'),
+            error: (e, _) => _ErrorList(message: l10n.friendsErrorMessage(e)),
             data: (rows) {
               if (rows.isEmpty) {
                 return _SmallEmpty(l10n.friendsNoPendingRequests);
@@ -309,11 +309,12 @@ class _RequestsTab extends ConsumerWidget {
     Friendship f,
     String peerUsername,
   ) async {
+    final l10n = AppLocalizations.of(context);
     try {
       await ref.read(friendsRepositoryProvider).accept(f.id);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$peerUsername est maintenant ton ami')),
+          SnackBar(content: Text(l10n.friendsAcceptedSnack(peerUsername))),
         );
       }
       return true;
@@ -321,7 +322,7 @@ class _RequestsTab extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erreur : $e'),
+            content: Text(l10n.friendsErrorMessage(e)),
             backgroundColor: ArenaColors.danger,
           ),
         );
@@ -342,7 +343,7 @@ class _RequestsTab extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erreur : $e'),
+            content: Text(AppLocalizations.of(context).friendsErrorMessage(e)),
             backgroundColor: ArenaColors.danger,
           ),
         );
@@ -370,7 +371,7 @@ class _BlockedTab extends ConsumerWidget {
       },
       child: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => _ErrorList(message: 'Erreur : $e'),
+        error: (e, _) => _ErrorList(message: l10n.friendsErrorMessage(e)),
         data: (rows) {
           if (rows.isEmpty) {
             return _EmptyState(
@@ -406,11 +407,12 @@ class _BlockedTab extends ConsumerWidget {
     WidgetRef ref,
     Profile peer,
   ) async {
+    final l10n = AppLocalizations.of(context);
     try {
       await ref.read(friendsRepositoryProvider).unblock(peer.id);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${peer.username} débloqué')),
+          SnackBar(content: Text(l10n.friendsUnblockedSnack(peer.username))),
         );
       }
       return true;
@@ -418,7 +420,7 @@ class _BlockedTab extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erreur : $e'),
+            content: Text(l10n.friendsErrorMessage(e)),
             backgroundColor: ArenaColors.danger,
           ),
         );

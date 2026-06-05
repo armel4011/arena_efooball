@@ -126,6 +126,7 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final state = ref.watch(signUpControllerProvider);
     final googleState = ref.watch(googleSsoControllerProvider);
     final isLoading = state.isLoading || googleState.isLoading;
@@ -137,7 +138,7 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
 
     return Scaffold(
       appBar: ArenaAppBar(
-        title: 'Étape ${_step + 1} / 3',
+        title: l10n.registerStepperTitle(_step + 1),
         showBack: _step < 2 && !isLoading,
         onBack: _back,
       ),
@@ -396,9 +397,9 @@ class _ProfileStep extends StatelessWidget {
           ),
           const SizedBox(height: ArenaSpacing.md),
           ArenaTextField(
-            label: 'WHATSAPP ($_dialCode)',
+            label: l10n.registerWhatsappLabel(_dialCode),
             hint: l10n.registerWhatsappHint,
-            helper: 'Le code pays $_dialCode est ajouté automatiquement.',
+            helper: l10n.registerWhatsappHelper(_dialCode),
             controller: whatsappCtrl,
             keyboardType: TextInputType.phone,
             textInputAction: TextInputAction.done,

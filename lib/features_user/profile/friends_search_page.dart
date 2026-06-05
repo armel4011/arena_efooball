@@ -118,7 +118,7 @@ class _ResultList extends StatelessWidget {
       error: (e, _) => Padding(
         padding: const EdgeInsets.all(ArenaSpacing.lg),
         child: Text(
-          'Erreur : $e',
+          l10n.friendsSearchErrorMessage(e),
           style: ArenaText.body.copyWith(color: ArenaColors.danger),
         ),
       ),

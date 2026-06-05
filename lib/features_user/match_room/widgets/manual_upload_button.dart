@@ -52,10 +52,14 @@ class _ManualUploadButtonState extends ConsumerState<ManualUploadButton> {
       );
     } on RecordingUploadException catch (e) {
       if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text('Échec : ${e.message}')));
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.manualUploadFailure(e.message))),
+      );
     } catch (e) {
       if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text('Erreur : $e')));
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.manualUploadError(e))),
+      );
     } finally {
       if (mounted) {
         setState(() => _busy = false);

@@ -71,7 +71,7 @@ class PendingPaymentBanner extends ConsumerWidget {
                     Text(
                       pending.length == 1
                           ? l10n.pendingPaymentSingleTitle
-                          : '${pending.length} paiements en attente',
+                          : l10n.pendingPaymentMultipleTitle(pending.length),
                       style: ArenaText.body
                           .copyWith(fontWeight: FontWeight.w700),
                     ),

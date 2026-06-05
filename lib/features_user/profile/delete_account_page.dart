@@ -155,7 +155,7 @@ class _DeleteAccountPageState extends ConsumerState<DeleteAccountPage> {
                 // Caption mono rouge "ÉTAPE 03/04 · CONFIRMATION"
                 // (maquette #27 `m-text-caption color: var(--neon-red)`).
                 Text(
-                  'ÉTAPE $stepNum/04 · ${stepLabels[_step]}',
+                  l10n.deleteAccountStepCaption(stepNum, stepLabels[_step]),
                   style: ArenaText.monoSmall.copyWith(
                     color: ArenaColors.neonRed,
                     letterSpacing: 1.5,
@@ -367,8 +367,7 @@ class _StepPending extends StatelessWidget {
         if (checkError != null) ...[
           const SizedBox(height: ArenaSpacing.md),
           Text(
-            'Note: vérification non concluante (table indisponible). '
-            'Détail: $checkError',
+            l10n.deleteAccountCheckErrorNote(checkError!),
             style: ArenaTypography.bodySmall.copyWith(
               color: ArenaColors.textFaint,
             ),
@@ -432,7 +431,7 @@ class _StepConfirmState extends State<_StepConfirm> {
         ),
         const SizedBox(height: ArenaSpacing.md),
         ArenaTextField(
-          label: 'Tape "$confirmWord" pour confirmer',
+          label: l10n.deleteAccountTypeToConfirmLabel(confirmWord),
           controller: widget.confirmCtrl,
           inputFormatters: [
             FilteringTextInputFormatter.allow(RegExp('[A-Za-z]')),

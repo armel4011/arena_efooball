@@ -78,7 +78,7 @@ class MatchRoomPage extends ConsumerWidget {
         appBar: ArenaAppBar(
           title: switch (async.value?.matchNumber) {
             null => l10n.matchRoomTitleDefault,
-            final n => 'MATCH #$n',
+            final n => l10n.matchRoomTitleNumbered(n),
           },
           onBack: () {
             widgetRef.invalidate(competitionMatchesProvider);

@@ -51,7 +51,7 @@ class CompletedView extends StatelessWidget {
           Text(
             match.winnerId == null
                 ? l10n.outcomeDraw
-                : 'Gagnant : Joueur ${match.winnerId!.substring(0, 6)}…',
+                : l10n.outcomeWinner(match.winnerId!.substring(0, 6)),
             style: ArenaText.bodyMuted,
           ),
           if (_isPlayer) ...[
@@ -220,8 +220,9 @@ class _DisputedViewState extends ConsumerState<DisputedView> {
           );
     } catch (e) {
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Impossible de renvoyer : $e')),
+        SnackBar(content: Text(l10n.outcomeResubmitError(e))),
       );
       return;
     }
@@ -306,6 +307,7 @@ class _ScoreSubmissionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final s1 = payload?['score1'] as int?;
     final s2 = payload?['score2'] as int?;
     final viaPen = payload?['via_penalties'] == true;
@@ -334,7 +336,7 @@ class _ScoreSubmissionCard extends StatelessWidget {
           if (viaPen && pen1 != null && pen2 != null) ...[
             const SizedBox(height: 4),
             Text(
-              'TAB $pen1 — $pen2',
+              l10n.outcomeScoreShootout(pen1, pen2),
               style: ArenaText.small.copyWith(color: ArenaColors.silver),
             ),
           ],
