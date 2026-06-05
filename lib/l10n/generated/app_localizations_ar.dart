@@ -2643,12 +2643,12 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String linkAccountEmailLineNoEmail(Object providerLabel) {
-    return 'عنوان البريد الإلكتروني لحساب $providerLabel هذا مستخدم بالفعل من قبل حساب أرينا.';
+    return 'عنوان البريد الإلكتروني لحساب $providerLabel هذا مستخدم بالفعل من قبل حساب ARENA.';
   }
 
   @override
   String linkAccountEmailLineWithEmail(Object email) {
-    return '$email مستخدم بالفعل من قبل حساب أرينا (كلمة المرور).';
+    return '$email مستخدم بالفعل من قبل حساب ARENA (كلمة المرور).';
   }
 
   @override
