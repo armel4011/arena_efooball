@@ -127,6 +127,12 @@ class FakeQueryChain<T> extends Fake implements PostgrestFilterBuilder<T> {
   }
 
   @override
+  PostgrestFilterBuilder<T> gte(String column, Object value) {
+    probe.record('gte', column, value);
+    return this;
+  }
+
+  @override
   PostgrestFilterBuilder<T> inFilter(String column, List<Object?> values) {
     probe.record('in', column, values);
     return this;
