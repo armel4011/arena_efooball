@@ -2,6 +2,7 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/features_shared/widgets/arena_card.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -18,6 +19,7 @@ class CompetitionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final glow = _glowFor(context, competition.status);
     final card = ArenaCard(
       onTap: onTap,
@@ -44,7 +46,7 @@ class CompetitionCard extends StatelessWidget {
           ),
           const SizedBox(height: ArenaSpacing.xs),
           Text(
-            '${competition.game.label} · ${_formatLabel(competition.format)}',
+            '${competition.game.label} · ${_formatLabel(competition.format, l10n)}',
             style: ArenaTypography.bodyMedium.copyWith(
               color: ArenaColors.textMuted,
             ),
@@ -165,10 +167,11 @@ class CompetitionCard extends StatelessWidget {
     return NumberFormat.decimalPattern('fr').format(v);
   }
 
-  static String _formatLabel(TournamentFormat f) => switch (f) {
-        TournamentFormat.singleElimination => 'Élimination directe',
-        TournamentFormat.groupsThenKnockout => 'Poules + élimination',
-        TournamentFormat.roundRobin => 'Round robin',
+  static String _formatLabel(TournamentFormat f, AppLocalizations l10n) =>
+      switch (f) {
+        TournamentFormat.singleElimination => l10n.compFormatSingleElim,
+        TournamentFormat.groupsThenKnockout => l10n.compFormatGroupsKnockout,
+        TournamentFormat.roundRobin => l10n.compFormatRoundRobin,
       };
 }
 

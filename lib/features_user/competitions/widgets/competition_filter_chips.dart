@@ -1,5 +1,6 @@
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 
 /// Lot C.1 — Les widgets `GameChips` / `StatusChips` / `PricingChips`
 /// ont été remplacés par un `ArenaFilterMenu` dans `competitions_list_page`.
@@ -8,12 +9,15 @@ import 'package:arena/data/models/competition_enums.dart';
 
 /// Tarif filter — gratuit / payant / tous.
 enum PricingBucket {
-  all('Toutes'),
-  free('Gratuites'),
-  paid('Payantes');
+  all,
+  free,
+  paid;
 
-  const PricingBucket(this.label);
-  final String label;
+  String labelOf(AppLocalizations l10n) => switch (this) {
+        PricingBucket.all => l10n.filterAll,
+        PricingBucket.free => l10n.filterFree,
+        PricingBucket.paid => l10n.filterPaid,
+      };
 
   bool matches(Competition c) => switch (this) {
         PricingBucket.all => true,
@@ -24,13 +28,17 @@ enum PricingBucket {
 
 /// Status filter — bucket regroupant plusieurs `CompetitionStatus`.
 enum StatusBucket {
-  all('Toutes'),
-  upcoming('À venir'),
-  ongoing('En cours'),
-  completed('Terminés');
+  all,
+  upcoming,
+  ongoing,
+  completed;
 
-  const StatusBucket(this.label);
-  final String label;
+  String labelOf(AppLocalizations l10n) => switch (this) {
+        StatusBucket.all => l10n.filterAll,
+        StatusBucket.upcoming => l10n.filterUpcoming,
+        StatusBucket.ongoing => l10n.filterOngoing,
+        StatusBucket.completed => l10n.filterCompleted,
+      };
 
   bool matches(CompetitionStatus status) => switch (this) {
         StatusBucket.all => true,

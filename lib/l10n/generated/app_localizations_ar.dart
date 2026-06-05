@@ -2965,4 +2965,123 @@ class AppLocalizationsAr extends AppLocalizations {
   String watchStreamViewersWatching(Object viewers) {
     return '$viewers يشاهدون';
   }
+
+  @override
+  String get authErrInvalidCredentials =>
+      'البريد الإلكتروني أو كلمة المرور غير صحيحة.';
+
+  @override
+  String get authErrEmailAlreadyRegistered =>
+      'يوجد حساب بالفعل بهذا البريد الإلكتروني.';
+
+  @override
+  String get authErrWeakPassword => 'كلمة المرور ضعيفة جدًا: 8 أحرف كحد أدنى.';
+
+  @override
+  String get authErrEmailNotConfirmed =>
+      'أكّد تسجيلك عبر الرابط المُرسل بالبريد الإلكتروني.';
+
+  @override
+  String get authErrUserBanned => 'هذا الحساب موقوف. تواصل مع الدعم.';
+
+  @override
+  String get authErrWrongApp => 'هذا حساب مسؤول. استخدم تطبيق ARENA Admin.';
+
+  @override
+  String get authErrNetwork =>
+      'لا يوجد اتصال بالإنترنت. تحقق من شبكتك وحاول مرة أخرى.';
+
+  @override
+  String get authErrRateLimited =>
+      'محاولات كثيرة جدًا. حاول مرة أخرى بعد بضع دقائق.';
+
+  @override
+  String get authErrInvalidInvitation =>
+      'رمز الدعوة غير صالح أو منتهٍ أو مستخدم بالفعل.';
+
+  @override
+  String get authErrInvalidTotp => 'الرمز المكوّن من 6 أرقام غير صحيح.';
+
+  @override
+  String get authErrTotpReplay =>
+      'تم استخدام هذا الرمز بالفعل. انتظر الرمز التالي.';
+
+  @override
+  String get authErrAdminLocked =>
+      'تم قفل الحساب بعد 3 محاولات. حاول مرة أخرى بعد 30 دقيقة.';
+
+  @override
+  String get authErrBackendUnavailable =>
+      'الخدمة غير متوفرة مؤقتًا. حاول مرة أخرى لاحقًا.';
+
+  @override
+  String get authErrUsernameTaken =>
+      'اسم المستخدم هذا مستخدم بالفعل. اختر اسمًا آخر.';
+
+  @override
+  String get authErrSsoCancelled => 'تم إلغاء تسجيل الدخول.';
+
+  @override
+  String get authErrSsoIdToken =>
+      'تعذّر تسجيل الدخول. تحقق من شبكتك وحاول مرة أخرى.';
+
+  @override
+  String get authErrSsoConfig =>
+      'تسجيل الدخول غير متاح حاليًا. تواصل مع الدعم.';
+
+  @override
+  String get authErrInvalidResetCode =>
+      'رمز غير صحيح. تحقق من بريدك الإلكتروني.';
+
+  @override
+  String get authErrExpiredResetCode =>
+      'انتهت صلاحية الرمز. اطلب رمزًا جديدًا.';
+
+  @override
+  String get authErrUnknown => 'حدث خطأ ما. حاول مرة أخرى.';
+
+  @override
+  String get matchStepCodeRoom => 'رمز الغرفة';
+
+  @override
+  String get matchStepOpponentJoining => 'الخصم ينضم';
+
+  @override
+  String get matchStepInProgress => 'المباراة جارية';
+
+  @override
+  String get matchStepResult => 'النتيجة';
+
+  @override
+  String get activeCompetitionsEmpty => 'لا توجد مسابقة نشطة لهذا الفلتر.';
+
+  @override
+  String get filterAll => 'الكل';
+
+  @override
+  String get filterFree => 'مجانية';
+
+  @override
+  String get filterPaid => 'مدفوعة';
+
+  @override
+  String get filterUpcoming => 'قادمة';
+
+  @override
+  String get filterOngoing => 'جارية';
+
+  @override
+  String get filterCompleted => 'منتهية';
+
+  @override
+  String get compFormatSingleElim => 'إقصاء مباشر';
+
+  @override
+  String get compFormatGroupsKnockout => 'مجموعات + إقصاء';
+
+  @override
+  String get compFormatRoundRobin => 'دوري';
+
+  @override
+  String get matchStepWord => 'الخطوة';
 }

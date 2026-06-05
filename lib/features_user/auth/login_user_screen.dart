@@ -56,9 +56,9 @@ class _LoginUserScreenState extends ConsumerState<LoginUserScreen> {
     // Affiche d'abord l'erreur du flow actif. Email > Google si les deux
     // ont fini en erreur (cas tordu où l'utilisateur a tenté les deux).
     final errorMessage = state.hasError
-        ? authFailureToMessage(_asFailure(state.error))
+        ? authFailureToMessage(_asFailure(state.error), l10n)
         : googleState.hasError
-            ? authFailureToMessage(_asFailure(googleState.error))
+            ? authFailureToMessage(_asFailure(googleState.error), l10n)
             : null;
 
     return Scaffold(

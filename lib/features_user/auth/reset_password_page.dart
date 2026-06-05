@@ -69,8 +69,9 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
     final state = ref.watch(resetPasswordControllerProvider);
     final isLoading = state.isLoading;
     final passwordChanged = state.value ?? false;
-    final errorMessage =
-        state.hasError ? authFailureToMessage(_asFailure(state.error)) : null;
+    final errorMessage = state.hasError
+        ? authFailureToMessage(_asFailure(state.error), l10n)
+        : null;
 
     return Scaffold(
       // Pas de back — l'utilisateur a déjà validé son OTP, le retour

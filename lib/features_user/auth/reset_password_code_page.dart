@@ -86,8 +86,9 @@ class _ResetPasswordCodePageState extends ConsumerState<ResetPasswordCodePage> {
     final l10n = AppLocalizations.of(context);
     final state = ref.watch(verifyPasswordResetCodeControllerProvider);
     final isLoading = state.isLoading;
-    final errorMessage =
-        state.hasError ? authFailureToMessage(_asFailure(state.error)) : null;
+    final errorMessage = state.hasError
+        ? authFailureToMessage(_asFailure(state.error), l10n)
+        : null;
 
     return Scaffold(
       appBar: ArenaAppBar(
