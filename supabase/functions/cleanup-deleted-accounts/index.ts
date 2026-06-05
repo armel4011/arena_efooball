@@ -1,25 +1,26 @@
 // =============================================================================
 // ARENA — Edge Function : cleanup-deleted-accounts
 // =============================================================================
-// Job de purge RGPD : supprime physiquement les comptes soft-deleted depuis
-// plus de 30 jours.
+// Job RGPD : ANONYMISE les comptes soft-deleted depuis plus de 30 jours.
 //
-// Workflow :
-//   1. Cherche `profiles` avec `deleted_at < now() - 30d` AND `is_active = false`.
-//   2. Pour chaque user_id :
-//        a. Supprime les objets storage : `match-proofs/*/{user_id}/*`
-//           + `match-recordings/*/{user_id}/*`.
-//        b. Appelle `auth.admin.deleteUser(id)` → cascade FK supprime le
-//           profile + matches/payments/notifications/etc.
-//   3. Retourne un résumé { processed, deleted, errors }.
+// ⚠️ On n'appelle PLUS `auth.admin.deleteUser` (fix audit C-1) : les FK
+// `ON DELETE RESTRICT` de payments/payouts/competition_registrations bloquaient
+// la suppression du profile (cascade depuis auth.users) pour tout utilisateur
+// ayant transigé → le compte restait en limbe indéfiniment. Décision produit :
+// anonymiser en place et CONSERVER les pièces comptables (obligation légale).
 //
-// Auth : webhook secret partagé (réutilisé du flux notifications). Pas de
-// JWT user, c'est un job cron — `verify_jwt = false`.
+// Workflow par compte :
+//   1. Purge les médias storage personnels (match-proofs/recordings).
+//   2. `anonymize_deleted_account(id)` (RPC service_role) : scrub les PII du
+//      profile + pose `anonymized_at`.
+//   3. Scrub l'identité côté auth.users (email anonymisé, métadonnées vidées,
+//      mot de passe aléatoire, login banni) — on GARDE la ligne car
+//      `profiles.id REFERENCES auth.users` et les FK compta y pendent.
 //
-// Idempotence : si une exécution échoue partiellement, la prochaine reprend
-// le même set (filtre toujours sur `deleted_at < 30d ago`). Pas de race
-// condition critique — au pire on tente une 2e fois `deleteUser` sur un
-// id déjà supprimé, Supabase renvoie 404 qu'on traite comme succès.
+// Idempotence : filtre `anonymized_at IS NULL` → un compte déjà anonymisé
+// n'est jamais retraité.
+//
+// Auth : webhook secret partagé (même secret que dispatch_notification).
 // =============================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
@@ -48,9 +49,6 @@ async function listAllUnderUser(
   bucket: string,
   userId: string,
 ): Promise<string[]> {
-  // Les chemins sont {matchId}/{userId}/file.ext — donc on liste d'abord
-  // les "dossiers" (matchId) à la racine, puis pour chacun on regarde
-  // si le sous-dossier userId existe.
   const out: string[] = [];
   const { data: roots, error: rootErr } = await client.storage
     .from(bucket)
@@ -58,8 +56,6 @@ async function listAllUnderUser(
   if (rootErr || !roots) return out;
 
   for (const root of roots) {
-    // `list("")` retourne des "folders" comme entries avec id=null. Si
-    // c'est un fichier à la racine on l'ignore (pas notre convention).
     if (root.id !== null) continue;
     const prefix = `${root.name}/${userId}`;
     const { data: files } = await client.storage
@@ -67,7 +63,6 @@ async function listAllUnderUser(
       .list(prefix, { limit: 1000 });
     if (!files) continue;
     for (const f of files) {
-      // Seulement les fichiers (id non null).
       if (f.id === null) continue;
       out.push(`${prefix}/${f.name}`);
     }
@@ -85,7 +80,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   // Auth : shared bearer entre pg_cron et l'EF (même secret que
   // dispatch_notification). On bloque même si verify_jwt=false côté
-  // platform, pour éviter qu'un curl anonyme déclenche le purge.
+  // platform, pour éviter qu'un curl anonyme déclenche le job.
   const expected = `Bearer ${Deno.env.get("WEBHOOK_SECRET") ?? ""}`;
   const got = req.headers.get("authorization") ?? "";
   if (expected.length < "Bearer ".length + 8 || got !== expected) {
@@ -102,17 +97,18 @@ Deno.serve(async (req: Request): Promise<Response> => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  // Fenêtre RGPD : suppression définitive 30 jours après le soft-delete.
-  // Le user a eu cette période pour annuler en se reconnectant.
+  // Fenêtre RGPD : anonymisation 30 jours après le soft-delete. Le user a eu
+  // cette période pour annuler en se reconnectant.
   const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
     .toISOString();
 
   const { data: candidates, error: queryErr } = await service
     .from("profiles")
-    .select("id, email, deleted_at")
+    .select("id, deleted_at")
     .lt("deleted_at", cutoff)
     .eq("is_active", false)
-    .limit(100); // batch — si > 100 / jour, la prochaine itération prend la suite.
+    .is("anonymized_at", null) // idempotence : pas de retraitement.
+    .limit(100);
   if (queryErr) {
     return jsonResponse(
       { error: "candidates_lookup_failed", detail: queryErr.message },
@@ -120,17 +116,17 @@ Deno.serve(async (req: Request): Promise<Response> => {
     );
   }
   if (!candidates || candidates.length === 0) {
-    return jsonResponse({ processed: 0, deleted: 0, errors: [] });
+    return jsonResponse({ processed: 0, anonymized: 0, errors: [] });
   }
 
   const errors: Array<{ id: string; step: string; message: string }> = [];
-  let deleted = 0;
+  let anonymized = 0;
 
   for (const profile of candidates) {
     const userId = profile.id as string;
+    let failed = false;
 
-    // 1. Purge storage. On itère sur les buckets connus de la phase 8.
-    //    Les buckets sont privés — service role peut les vider.
+    // 1. Purge des médias personnels (preuves / enregistrements de match).
     for (const bucket of ["match-recordings", "match-proofs"]) {
       try {
         const paths = await listAllUnderUser(service, bucket, userId);
@@ -139,11 +135,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
             .from(bucket)
             .remove(paths);
           if (rmErr) {
-            errors.push({
-              id: userId,
-              step: `storage:${bucket}`,
-              message: rmErr.message,
-            });
+            errors.push({ id: userId, step: `storage:${bucket}`, message: rmErr.message });
           }
         }
       } catch (e) {
@@ -155,33 +147,37 @@ Deno.serve(async (req: Request): Promise<Response> => {
       }
     }
 
-    // 2. Supprime auth.users — la FK `profiles.id REFERENCES auth.users
-    //    ON DELETE CASCADE` détruit le profile, et les FK des tables
-    //    métier (matches, payments, notifications, ...) propagent.
-    //    Les tables avec FK `ON DELETE SET NULL` (ex. audit_log.actor_id)
-    //    conservent les rows en NULL pour préserver l'historique métier
-    //    sans exposer l'identité — comportement attendu en RGPD.
-    const { error: delErr } = await service.auth.admin.deleteUser(userId);
-    if (delErr) {
-      // 404 = déjà supprimé manuellement (race ou cleanup précédent
-      // partiel). On considère ça comme un succès.
-      const msg = delErr.message ?? "";
+    // 2. Scrub des PII du profile + pose anonymized_at (RPC service_role).
+    //    Les lignes compta (payments/payouts) survivent anonymisées.
+    const { error: rpcErr } = await service.rpc("anonymize_deleted_account", {
+      p_user_id: userId,
+    });
+    if (rpcErr) {
+      errors.push({ id: userId, step: "anonymize_rpc", message: rpcErr.message });
+      failed = true;
+    }
+
+    // 3. Scrub l'identité auth.users (on garde la ligne, on retire les PII et
+    //    on désactive le login). On ne supprime PAS l'utilisateur auth car
+    //    profiles.id y est rattaché et porte les FK comptables.
+    const { error: authErr } = await service.auth.admin.updateUserById(userId, {
+      email: `${userId}@deleted.invalid`,
+      password: crypto.randomUUID() + crypto.randomUUID(),
+      user_metadata: {},
+      app_metadata: {},
+      ban_duration: "876000h", // ~100 ans : login définitivement désactivé.
+    });
+    if (authErr) {
+      const msg = authErr.message ?? "";
+      // 404 = déjà supprimé manuellement → on ignore (le profile reste géré).
       if (!/not found/i.test(msg) && !/404/.test(msg)) {
-        errors.push({
-          id: userId,
-          step: "auth.admin.deleteUser",
-          message: msg,
-        });
-        continue;
+        errors.push({ id: userId, step: "auth.updateUserById", message: msg });
+        failed = true;
       }
     }
-    deleted++;
+
+    if (!failed) anonymized++;
   }
 
-  return jsonResponse({
-    processed: candidates.length,
-    deleted,
-    errors,
-    cutoff,
-  });
+  return jsonResponse({ processed: candidates.length, anonymized, errors, cutoff });
 });

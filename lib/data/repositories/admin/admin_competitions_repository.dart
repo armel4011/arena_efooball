@@ -218,15 +218,18 @@ class AdminCompetitionsRepository {
     );
   }
 
-  /// Flips a competition into `cancelled`. The Edge Function that
-  /// refunds the registrations (PHASE 11bis) doesn't exist yet — the
-  /// admin still gets a clean UI affordance, and the rows
-  /// stay around for the eventual refund sweep.
-  Future<void> cancel(String id) async {
-    await _client
-        .from(_table)
-        .update({'status': 'cancelled'})
-        .eq('id', id);
+  /// Annule une compétition via la RPC `cancel_competition` (SECURITY
+  /// DEFINER, gate `is_admin()`) : flip `status=cancelled` ET notifie chaque
+  /// joueur ayant un paiement `succeeded`/`awaiting_admin` qu'un remboursement
+  /// manuel (Mobile Money) va suivre (fix audit C-2). Retourne le nombre de
+  /// joueurs notifiés. Le remboursement effectif reste un geste manuel du
+  /// super-admin (file de remboursement traçable = chantier ultérieur).
+  Future<int> cancel(String id) async {
+    final res = await _client.rpc<dynamic>(
+      'cancel_competition',
+      params: {'p_competition_id': id},
+    );
+    return (res as num?)?.toInt() ?? 0;
   }
 
   /// Suppression définitive (super-admin only). Appelle la RPC SQL
