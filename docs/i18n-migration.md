@@ -44,10 +44,15 @@
   `{error}`…) + câblage `l10n.key(arg)`. Outils : `scripts/icu_merge.mjs`.
   Note : gen-l10n `use-escaping:false` → apostrophes littérales (pas de `''`).
 
+## Hors scope (décidé)
+- **Admin** (`features_admin` + `features_admin_desktop`, ~68 écrans) : **ne sera
+  PAS traduit** — outils internes staff, le français reste la langue de travail
+  (décision produit 2026-06-05). Ne pas relancer d'extraction dessus.
+
 ## Restant
 1. **~3 résidus** + quelques interpolations hors-extraction (widgets non `Text`).
-2. **Admin** (`features_admin` + `features_admin_desktop`, ~68 écrans) : hors
-   scope (outils internes staff) — à décider.
-3. **Relecture humaine** des traductions auto en/ar (surtout arabe) avant prod.
+2. **Relecture humaine** des traductions auto en/ar (surtout arabe) avant prod —
+   **seul vrai préalable** avant une publication multilingue.
 
-➡️ **`features_user` est désormais traduit à ~100 %** (statique + dynamique).
+➡️ **`features_user` est traduit à ~100 %** (statique + dynamique). Le chantier
+i18n côté utilisateur est **clos** ; il ne reste que la relecture linguistique.
