@@ -286,9 +286,11 @@ class _StepWarning extends StatelessWidget {
         ),
         const SizedBox(height: ArenaSpacing.md),
         Text(
-          'Ton compte sera désactivé immédiatement, puis définitivement '
-          'supprimé sous 30 jours. Pendant ce délai, tu peux contacter le '
-          'support pour annuler la suppression.',
+          'Ton compte sera désactivé immédiatement, puis anonymisé '
+          '(données personnelles effacées) sous 30 jours. Les pièces '
+          'comptables légales (paiements) sont conservées sous forme '
+          'anonymisée. Pendant ce délai, tu peux contacter le support pour '
+          'annuler.',
           style: ArenaTypography.bodySmall,
         ),
         const SizedBox(height: ArenaSpacing.xl),
@@ -488,8 +490,8 @@ class _StepDone extends StatelessWidget {
         ),
         const SizedBox(height: ArenaSpacing.md),
         Text(
-          'Ton compte sera définitivement supprimé sous 30 jours. '
-          "Contacte le support si tu changes d'avis.",
+          'Ton compte sera anonymisé (données personnelles effacées) sous '
+          "30 jours. Contacte le support si tu changes d'avis.",
           style: ArenaTypography.bodyMedium,
           textAlign: TextAlign.center,
         ),
