@@ -48,32 +48,48 @@ class AppLocalizationsAr extends AppLocalizations {
   String get commonError => 'حدث خطأ';
 
   @override
-  String get onboardingSlide1Title => 'مرحبًا\nبك في أرينا';
+  String get onboardingSlide1Title => 'بطولات الرياضات الإلكترونية الأفريقية';
 
   @override
   String get onboardingSlide1Body =>
-      'منصة بطولات الرياضات الإلكترونية المتنقلة في أفريقيا لـ eFootball وFIFA Mobile وEA SPORTS FC Mobile.';
+      'مرحبًا بك في أرينا، المنصة رقم 1 لبطولات eFootball وFIFA Mobile وFC Mobile في أفريقيا.';
 
   @override
-  String get onboardingSlide2Title => 'أقواس\nتلقائية';
+  String get onboardingSlide2Title => 'أقواس إقصاء، مواجهات حقيقية';
 
   @override
   String get onboardingSlide2Body =>
-      'إقصائي، دور المجموعات، دوري — التطبيق يتكفّل بالقرعة والتقدّم.';
+      'إقصاء مباشر أو دور المجموعات: تسلّق شجرة البطولة واهزم كل خصومك للفوز بالجائزة.';
 
   @override
-  String get onboardingSlide3Title => 'رمز غرفة\nمشترك';
+  String get onboardingSlide3Title => 'رمز غرفة مشترك';
 
   @override
   String get onboardingSlide3Body =>
-      'تشارك رمز غرفتك، تلعبان المباراة، ثم تؤكدان النتيجة معًا.';
+      'شارك رمز غرفتك داخل اللعبة، تواجها، ثم أكّدا النتيجة معًا في أرينا.';
 
   @override
-  String get onboardingSlide4Title => 'جوائز\nالأربعة الأوائل';
+  String get onboardingSlide4Title => 'مكافآت تُدفع مباشرة';
 
   @override
   String get onboardingSlide4Body =>
-      'تحويل مباشر إلى MTN MoMo أو Orange Money أو Wave فور انتهاء البطولة.';
+      'احصل على مكافآت حتى في المسابقات المجانية واستمتع.';
+
+  @override
+  String get onboardingNext => 'التالي';
+
+  @override
+  String get onboardingStart => 'ابدأ';
+
+  @override
+  String get onboardingSkip => 'تخطّي';
+
+  @override
+  String get onboardingExitTitle => 'الخروج من المقدمة؟';
+
+  @override
+  String get onboardingExitBody =>
+      'يمكنك إعادة مشاهدتها لاحقًا من الملف الشخصي ← إعادة المقدمة.';
 
   @override
   String get languageFrench => 'Français';

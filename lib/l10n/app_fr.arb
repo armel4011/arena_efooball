@@ -22,20 +22,26 @@
   "commonLoading": "Chargement…",
   "commonError": "Une erreur est survenue",
 
-  "onboardingSlide1Title": "BIENVENUE\nSUR ARENA",
+  "onboardingSlide1Title": "TOURNOIS E-SPORT PANAFRICAINS",
   "@onboardingSlide1Title": {
-    "description": "Onboarding slide 1 (welcome) — Orbitron, line break preserved."
+    "description": "Onboarding slide 1 title."
   },
-  "onboardingSlide1Body": "La plateforme africaine de tournois e-sport mobile sur eFootball, FIFA Mobile et EA SPORTS FC Mobile.",
+  "onboardingSlide1Body": "Bienvenue sur ARENA, la plateforme #1 de tournois eFootball, FIFA Mobile et FC Mobile en Afrique.",
 
-  "onboardingSlide2Title": "BRACKETS\nAUTOMATIQUES",
-  "onboardingSlide2Body": "Single élimination, phase de groupes, round robin — l’app gère le tirage et les avancées.",
+  "onboardingSlide2Title": "DES BRACKETS, DE VRAIS DUELS",
+  "onboardingSlide2Body": "Élimination directe ou phase de groupes : grimpe l'arbre du tournoi et bats tous tes adversaires pour la récompense.",
 
-  "onboardingSlide3Title": "CODE DE\nROOM PARTAGÉ",
-  "onboardingSlide3Body": "Tu partages ton code eFootball, vous jouez le match, puis vous validez le score à deux.",
+  "onboardingSlide3Title": "CODE DE ROOM PARTAGÉ",
+  "onboardingSlide3Body": "Tu partages ton code de room dans le jeu, vous vous affrontez, puis vous validez le score à deux dans ARENA.",
 
-  "onboardingSlide4Title": "GAINS DU\nTOP 4",
-  "onboardingSlide4Body": "Versement direct vers ton MTN MoMo, Orange Money ou Wave dès la fin du tournoi.",
+  "onboardingSlide4Title": "RÉCOMPENSES VERSÉES DIRECT",
+  "onboardingSlide4Body": "Obtenez des récompenses même dans des compétitions à inscription gratuite et divertissez-vous.",
+
+  "onboardingNext": "SUIVANT",
+  "onboardingStart": "COMMENCER",
+  "onboardingSkip": "Ignorer",
+  "onboardingExitTitle": "Quitter l'introduction ?",
+  "onboardingExitBody": "Tu peux la revoir plus tard depuis Profil > Revoir l'introduction.",
 
   "languageFrench": "Français",
   "languageEnglish": "English",

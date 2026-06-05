@@ -16,17 +16,23 @@
   "commonLoading": "Loading…",
   "commonError": "Something went wrong",
 
-  "onboardingSlide1Title": "WELCOME\nTO ARENA",
-  "onboardingSlide1Body": "Africa's mobile e-sport tournament platform for eFootball, FIFA Mobile and EA SPORTS FC Mobile.",
+  "onboardingSlide1Title": "PAN-AFRICAN E-SPORT TOURNAMENTS",
+  "onboardingSlide1Body": "Welcome to ARENA, the #1 platform for eFootball, FIFA Mobile and FC Mobile tournaments in Africa.",
 
-  "onboardingSlide2Title": "AUTOMATIC\nBRACKETS",
-  "onboardingSlide2Body": "Single elimination, group stage, round robin — the app handles seeding and progression.",
+  "onboardingSlide2Title": "BRACKETS, REAL DUELS",
+  "onboardingSlide2Body": "Single elimination or group stage: climb the tournament tree and beat every opponent for the prize.",
 
-  "onboardingSlide3Title": "SHARED\nROOM CODE",
-  "onboardingSlide3Body": "Share your eFootball room code, play the match, then both confirm the score.",
+  "onboardingSlide3Title": "SHARED ROOM CODE",
+  "onboardingSlide3Body": "Share your in-game room code, face off, then both confirm the score in ARENA.",
 
-  "onboardingSlide4Title": "TOP 4\nPRIZES",
-  "onboardingSlide4Body": "Direct payout to MTN MoMo, Orange Money or Wave as soon as the tournament ends.",
+  "onboardingSlide4Title": "REWARDS PAID DIRECTLY",
+  "onboardingSlide4Body": "Earn rewards even in free-entry competitions and have fun.",
+
+  "onboardingNext": "NEXT",
+  "onboardingStart": "START",
+  "onboardingSkip": "Skip",
+  "onboardingExitTitle": "Exit the intro?",
+  "onboardingExitBody": "You can replay it later from Profile > Replay intro.",
 
   "languageFrench": "Français",
   "languageEnglish": "English",

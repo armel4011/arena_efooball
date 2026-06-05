@@ -16,17 +16,23 @@
   "commonLoading": "جارٍ التحميل…",
   "commonError": "حدث خطأ",
 
-  "onboardingSlide1Title": "مرحبًا\nبك في أرينا",
-  "onboardingSlide1Body": "منصة بطولات الرياضات الإلكترونية المتنقلة في أفريقيا لـ eFootball وFIFA Mobile وEA SPORTS FC Mobile.",
+  "onboardingSlide1Title": "بطولات الرياضات الإلكترونية الأفريقية",
+  "onboardingSlide1Body": "مرحبًا بك في أرينا، المنصة رقم 1 لبطولات eFootball وFIFA Mobile وFC Mobile في أفريقيا.",
 
-  "onboardingSlide2Title": "أقواس\nتلقائية",
-  "onboardingSlide2Body": "إقصائي، دور المجموعات، دوري — التطبيق يتكفّل بالقرعة والتقدّم.",
+  "onboardingSlide2Title": "أقواس إقصاء، مواجهات حقيقية",
+  "onboardingSlide2Body": "إقصاء مباشر أو دور المجموعات: تسلّق شجرة البطولة واهزم كل خصومك للفوز بالجائزة.",
 
-  "onboardingSlide3Title": "رمز غرفة\nمشترك",
-  "onboardingSlide3Body": "تشارك رمز غرفتك، تلعبان المباراة، ثم تؤكدان النتيجة معًا.",
+  "onboardingSlide3Title": "رمز غرفة مشترك",
+  "onboardingSlide3Body": "شارك رمز غرفتك داخل اللعبة، تواجها، ثم أكّدا النتيجة معًا في أرينا.",
 
-  "onboardingSlide4Title": "جوائز\nالأربعة الأوائل",
-  "onboardingSlide4Body": "تحويل مباشر إلى MTN MoMo أو Orange Money أو Wave فور انتهاء البطولة.",
+  "onboardingSlide4Title": "مكافآت تُدفع مباشرة",
+  "onboardingSlide4Body": "احصل على مكافآت حتى في المسابقات المجانية واستمتع.",
+
+  "onboardingNext": "التالي",
+  "onboardingStart": "ابدأ",
+  "onboardingSkip": "تخطّي",
+  "onboardingExitTitle": "الخروج من المقدمة؟",
+  "onboardingExitBody": "يمكنك إعادة مشاهدتها لاحقًا من الملف الشخصي ← إعادة المقدمة.",
 
   "languageFrench": "Français",
   "languageEnglish": "English",

@@ -178,53 +178,83 @@ abstract class AppLocalizations {
   /// **'Une erreur est survenue'**
   String get commonError;
 
-  /// Onboarding slide 1 (welcome) — Orbitron, line break preserved.
+  /// Onboarding slide 1 title.
   ///
   /// In fr, this message translates to:
-  /// **'BIENVENUE\nSUR ARENA'**
+  /// **'TOURNOIS E-SPORT PANAFRICAINS'**
   String get onboardingSlide1Title;
 
   /// No description provided for @onboardingSlide1Body.
   ///
   /// In fr, this message translates to:
-  /// **'La plateforme africaine de tournois e-sport mobile sur eFootball, FIFA Mobile et EA SPORTS FC Mobile.'**
+  /// **'Bienvenue sur ARENA, la plateforme #1 de tournois eFootball, FIFA Mobile et FC Mobile en Afrique.'**
   String get onboardingSlide1Body;
 
   /// No description provided for @onboardingSlide2Title.
   ///
   /// In fr, this message translates to:
-  /// **'BRACKETS\nAUTOMATIQUES'**
+  /// **'DES BRACKETS, DE VRAIS DUELS'**
   String get onboardingSlide2Title;
 
   /// No description provided for @onboardingSlide2Body.
   ///
   /// In fr, this message translates to:
-  /// **'Single élimination, phase de groupes, round robin — l’app gère le tirage et les avancées.'**
+  /// **'Élimination directe ou phase de groupes : grimpe l\'arbre du tournoi et bats tous tes adversaires pour la récompense.'**
   String get onboardingSlide2Body;
 
   /// No description provided for @onboardingSlide3Title.
   ///
   /// In fr, this message translates to:
-  /// **'CODE DE\nROOM PARTAGÉ'**
+  /// **'CODE DE ROOM PARTAGÉ'**
   String get onboardingSlide3Title;
 
   /// No description provided for @onboardingSlide3Body.
   ///
   /// In fr, this message translates to:
-  /// **'Tu partages ton code eFootball, vous jouez le match, puis vous validez le score à deux.'**
+  /// **'Tu partages ton code de room dans le jeu, vous vous affrontez, puis vous validez le score à deux dans ARENA.'**
   String get onboardingSlide3Body;
 
   /// No description provided for @onboardingSlide4Title.
   ///
   /// In fr, this message translates to:
-  /// **'GAINS DU\nTOP 4'**
+  /// **'RÉCOMPENSES VERSÉES DIRECT'**
   String get onboardingSlide4Title;
 
   /// No description provided for @onboardingSlide4Body.
   ///
   /// In fr, this message translates to:
-  /// **'Versement direct vers ton MTN MoMo, Orange Money ou Wave dès la fin du tournoi.'**
+  /// **'Obtenez des récompenses même dans des compétitions à inscription gratuite et divertissez-vous.'**
   String get onboardingSlide4Body;
+
+  /// No description provided for @onboardingNext.
+  ///
+  /// In fr, this message translates to:
+  /// **'SUIVANT'**
+  String get onboardingNext;
+
+  /// No description provided for @onboardingStart.
+  ///
+  /// In fr, this message translates to:
+  /// **'COMMENCER'**
+  String get onboardingStart;
+
+  /// No description provided for @onboardingSkip.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ignorer'**
+  String get onboardingSkip;
+
+  /// No description provided for @onboardingExitTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quitter l\'introduction ?'**
+  String get onboardingExitTitle;
+
+  /// No description provided for @onboardingExitBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu peux la revoir plus tard depuis Profil > Revoir l\'introduction.'**
+  String get onboardingExitBody;
 
   /// No description provided for @languageFrench.
   ///

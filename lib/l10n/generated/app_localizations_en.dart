@@ -48,32 +48,48 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonError => 'Something went wrong';
 
   @override
-  String get onboardingSlide1Title => 'WELCOME\nTO ARENA';
+  String get onboardingSlide1Title => 'PAN-AFRICAN E-SPORT TOURNAMENTS';
 
   @override
   String get onboardingSlide1Body =>
-      'Africa\'s mobile e-sport tournament platform for eFootball, FIFA Mobile and EA SPORTS FC Mobile.';
+      'Welcome to ARENA, the #1 platform for eFootball, FIFA Mobile and FC Mobile tournaments in Africa.';
 
   @override
-  String get onboardingSlide2Title => 'AUTOMATIC\nBRACKETS';
+  String get onboardingSlide2Title => 'BRACKETS, REAL DUELS';
 
   @override
   String get onboardingSlide2Body =>
-      'Single elimination, group stage, round robin — the app handles seeding and progression.';
+      'Single elimination or group stage: climb the tournament tree and beat every opponent for the prize.';
 
   @override
-  String get onboardingSlide3Title => 'SHARED\nROOM CODE';
+  String get onboardingSlide3Title => 'SHARED ROOM CODE';
 
   @override
   String get onboardingSlide3Body =>
-      'Share your eFootball room code, play the match, then both confirm the score.';
+      'Share your in-game room code, face off, then both confirm the score in ARENA.';
 
   @override
-  String get onboardingSlide4Title => 'TOP 4\nPRIZES';
+  String get onboardingSlide4Title => 'REWARDS PAID DIRECTLY';
 
   @override
   String get onboardingSlide4Body =>
-      'Direct payout to MTN MoMo, Orange Money or Wave as soon as the tournament ends.';
+      'Earn rewards even in free-entry competitions and have fun.';
+
+  @override
+  String get onboardingNext => 'NEXT';
+
+  @override
+  String get onboardingStart => 'START';
+
+  @override
+  String get onboardingSkip => 'Skip';
+
+  @override
+  String get onboardingExitTitle => 'Exit the intro?';
+
+  @override
+  String get onboardingExitBody =>
+      'You can replay it later from Profile > Replay intro.';
 
   @override
   String get languageFrench => 'Français';
