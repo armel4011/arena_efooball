@@ -111,6 +111,8 @@ site web/
 
 # Screenshots de test manuels à la racine (captures device ad-hoc).
 /_t*.png
+# Captures temporaires ad-hoc (préfixe .tmp_) à la racine — jamais à versionner.
+/.tmp_*
 
 # Backups ad-hoc du registre de migrations distant (snapshots manuels).
 supabase/_remote_migration_history_backup_*.json

@@ -5,7 +5,7 @@ import 'package:arena/data/models/chat_channel.dart';
 import 'package:arena/data/models/chat_message.dart';
 import 'package:arena/data/repositories/match_repository.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
-import 'package:arena/features_user/auth/auth_providers.dart';
+import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
