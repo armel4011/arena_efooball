@@ -49,9 +49,14 @@
   PAS traduit** — outils internes staff, le français reste la langue de travail
   (décision produit 2026-06-05). Ne pas relancer d'extraction dessus.
 
+## Fait (fin)
+- ✅ **fichiers manqués par l'extraction** : `auth_failure_message.dart`
+  (20 messages d'erreur d'auth — `l10n` optionnel pour que l'admin reste FR) +
+  enums `MatchStep` / `PricingBucket` / `StatusBucket` / `TournamentFormat`
+  (`labelOf(l10n)`) + empty-state home. `scripts/i18n_missed.mjs`.
+
 ## Restant
-1. **~3 résidus** + quelques interpolations hors-extraction (widgets non `Text`).
-2. **Relecture humaine** des traductions auto en/ar (surtout arabe) avant prod —
+1. **Relecture humaine** des traductions auto en/ar (surtout arabe) avant prod —
    **seul vrai préalable** avant une publication multilingue.
 
 ➡️ **`features_user` est traduit à ~100 %** (statique + dynamique). Le chantier

@@ -2996,4 +2996,125 @@ class AppLocalizationsFr extends AppLocalizations {
   String watchStreamViewersWatching(Object viewers) {
     return '$viewers watching';
   }
+
+  @override
+  String get authErrInvalidCredentials => 'Email ou mot de passe incorrect.';
+
+  @override
+  String get authErrEmailAlreadyRegistered =>
+      'Un compte existe déjà avec cet email.';
+
+  @override
+  String get authErrWeakPassword =>
+      'Mot de passe trop faible : 8 caractères minimum.';
+
+  @override
+  String get authErrEmailNotConfirmed =>
+      'Confirmez votre inscription via le lien reçu par email.';
+
+  @override
+  String get authErrUserBanned =>
+      'Ce compte est suspendu. Contactez le support.';
+
+  @override
+  String get authErrWrongApp =>
+      'Ce compte est administrateur. Utilisez l\'application ARENA Admin.';
+
+  @override
+  String get authErrNetwork =>
+      'Pas de connexion internet. Vérifiez votre réseau et réessayez.';
+
+  @override
+  String get authErrRateLimited =>
+      'Trop de tentatives. Réessayez dans quelques minutes.';
+
+  @override
+  String get authErrInvalidInvitation =>
+      'Code d\'invitation invalide, expiré ou déjà utilisé.';
+
+  @override
+  String get authErrInvalidTotp => 'Code à 6 chiffres incorrect.';
+
+  @override
+  String get authErrTotpReplay =>
+      'Ce code a déjà été utilisé. Attendez le suivant.';
+
+  @override
+  String get authErrAdminLocked =>
+      'Compte verrouillé après 3 tentatives. Réessayez dans 30 minutes.';
+
+  @override
+  String get authErrBackendUnavailable =>
+      'Service momentanément indisponible. Réessayez plus tard.';
+
+  @override
+  String get authErrUsernameTaken =>
+      'Ce pseudo est déjà utilisé. Choisissez-en un autre.';
+
+  @override
+  String get authErrSsoCancelled => 'Connexion annulée.';
+
+  @override
+  String get authErrSsoIdToken =>
+      'Connexion impossible. Vérifiez votre réseau et réessayez.';
+
+  @override
+  String get authErrSsoConfig =>
+      'Connexion indisponible pour le moment. Contactez le support.';
+
+  @override
+  String get authErrInvalidResetCode => 'Code incorrect. Vérifiez votre email.';
+
+  @override
+  String get authErrExpiredResetCode =>
+      'Code expiré. Demandez un nouveau code.';
+
+  @override
+  String get authErrUnknown => 'Une erreur est survenue. Réessayez.';
+
+  @override
+  String get matchStepCodeRoom => 'Code room';
+
+  @override
+  String get matchStepOpponentJoining => 'Adversaire rejoint';
+
+  @override
+  String get matchStepInProgress => 'Match en cours';
+
+  @override
+  String get matchStepResult => 'Résultat';
+
+  @override
+  String get activeCompetitionsEmpty =>
+      'Aucune compétition active pour ce filtre.';
+
+  @override
+  String get filterAll => 'Toutes';
+
+  @override
+  String get filterFree => 'Gratuites';
+
+  @override
+  String get filterPaid => 'Payantes';
+
+  @override
+  String get filterUpcoming => 'À venir';
+
+  @override
+  String get filterOngoing => 'En cours';
+
+  @override
+  String get filterCompleted => 'Terminés';
+
+  @override
+  String get compFormatSingleElim => 'Élimination directe';
+
+  @override
+  String get compFormatGroupsKnockout => 'Poules + élimination';
+
+  @override
+  String get compFormatRoundRobin => 'Round robin';
+
+  @override
+  String get matchStepWord => 'ÉTAPE';
 }

@@ -84,8 +84,9 @@ class _CguAcceptancePageState extends ConsumerState<CguAcceptancePage> {
     final l10n = AppLocalizations.of(context);
     final state = ref.watch(acceptCguControllerProvider);
     final isLoading = state.isLoading;
-    final errorMessage =
-        state.hasError ? authFailureToMessage(_asFailure(state.error)) : null;
+    final errorMessage = state.hasError
+        ? authFailureToMessage(_asFailure(state.error), l10n)
+        : null;
 
     // Pré-remplir le pays avec celui déjà présent sur le profil SSO
     // (Google sign-in pose 'CI' par défaut, mais un compte legacy peut

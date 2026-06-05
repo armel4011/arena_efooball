@@ -5511,6 +5511,216 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'{viewers} watching'**
   String watchStreamViewersWatching(Object viewers);
+
+  /// No description provided for @authErrInvalidCredentials.
+  ///
+  /// In fr, this message translates to:
+  /// **'Email ou mot de passe incorrect.'**
+  String get authErrInvalidCredentials;
+
+  /// No description provided for @authErrEmailAlreadyRegistered.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un compte existe déjà avec cet email.'**
+  String get authErrEmailAlreadyRegistered;
+
+  /// No description provided for @authErrWeakPassword.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mot de passe trop faible : 8 caractères minimum.'**
+  String get authErrWeakPassword;
+
+  /// No description provided for @authErrEmailNotConfirmed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Confirmez votre inscription via le lien reçu par email.'**
+  String get authErrEmailNotConfirmed;
+
+  /// No description provided for @authErrUserBanned.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce compte est suspendu. Contactez le support.'**
+  String get authErrUserBanned;
+
+  /// No description provided for @authErrWrongApp.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce compte est administrateur. Utilisez l\'application ARENA Admin.'**
+  String get authErrWrongApp;
+
+  /// No description provided for @authErrNetwork.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pas de connexion internet. Vérifiez votre réseau et réessayez.'**
+  String get authErrNetwork;
+
+  /// No description provided for @authErrRateLimited.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trop de tentatives. Réessayez dans quelques minutes.'**
+  String get authErrRateLimited;
+
+  /// No description provided for @authErrInvalidInvitation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Code d\'invitation invalide, expiré ou déjà utilisé.'**
+  String get authErrInvalidInvitation;
+
+  /// No description provided for @authErrInvalidTotp.
+  ///
+  /// In fr, this message translates to:
+  /// **'Code à 6 chiffres incorrect.'**
+  String get authErrInvalidTotp;
+
+  /// No description provided for @authErrTotpReplay.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce code a déjà été utilisé. Attendez le suivant.'**
+  String get authErrTotpReplay;
+
+  /// No description provided for @authErrAdminLocked.
+  ///
+  /// In fr, this message translates to:
+  /// **'Compte verrouillé après 3 tentatives. Réessayez dans 30 minutes.'**
+  String get authErrAdminLocked;
+
+  /// No description provided for @authErrBackendUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Service momentanément indisponible. Réessayez plus tard.'**
+  String get authErrBackendUnavailable;
+
+  /// No description provided for @authErrUsernameTaken.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce pseudo est déjà utilisé. Choisissez-en un autre.'**
+  String get authErrUsernameTaken;
+
+  /// No description provided for @authErrSsoCancelled.
+  ///
+  /// In fr, this message translates to:
+  /// **'Connexion annulée.'**
+  String get authErrSsoCancelled;
+
+  /// No description provided for @authErrSsoIdToken.
+  ///
+  /// In fr, this message translates to:
+  /// **'Connexion impossible. Vérifiez votre réseau et réessayez.'**
+  String get authErrSsoIdToken;
+
+  /// No description provided for @authErrSsoConfig.
+  ///
+  /// In fr, this message translates to:
+  /// **'Connexion indisponible pour le moment. Contactez le support.'**
+  String get authErrSsoConfig;
+
+  /// No description provided for @authErrInvalidResetCode.
+  ///
+  /// In fr, this message translates to:
+  /// **'Code incorrect. Vérifiez votre email.'**
+  String get authErrInvalidResetCode;
+
+  /// No description provided for @authErrExpiredResetCode.
+  ///
+  /// In fr, this message translates to:
+  /// **'Code expiré. Demandez un nouveau code.'**
+  String get authErrExpiredResetCode;
+
+  /// No description provided for @authErrUnknown.
+  ///
+  /// In fr, this message translates to:
+  /// **'Une erreur est survenue. Réessayez.'**
+  String get authErrUnknown;
+
+  /// No description provided for @matchStepCodeRoom.
+  ///
+  /// In fr, this message translates to:
+  /// **'Code room'**
+  String get matchStepCodeRoom;
+
+  /// No description provided for @matchStepOpponentJoining.
+  ///
+  /// In fr, this message translates to:
+  /// **'Adversaire rejoint'**
+  String get matchStepOpponentJoining;
+
+  /// No description provided for @matchStepInProgress.
+  ///
+  /// In fr, this message translates to:
+  /// **'Match en cours'**
+  String get matchStepInProgress;
+
+  /// No description provided for @matchStepResult.
+  ///
+  /// In fr, this message translates to:
+  /// **'Résultat'**
+  String get matchStepResult;
+
+  /// No description provided for @activeCompetitionsEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune compétition active pour ce filtre.'**
+  String get activeCompetitionsEmpty;
+
+  /// No description provided for @filterAll.
+  ///
+  /// In fr, this message translates to:
+  /// **'Toutes'**
+  String get filterAll;
+
+  /// No description provided for @filterFree.
+  ///
+  /// In fr, this message translates to:
+  /// **'Gratuites'**
+  String get filterFree;
+
+  /// No description provided for @filterPaid.
+  ///
+  /// In fr, this message translates to:
+  /// **'Payantes'**
+  String get filterPaid;
+
+  /// No description provided for @filterUpcoming.
+  ///
+  /// In fr, this message translates to:
+  /// **'À venir'**
+  String get filterUpcoming;
+
+  /// No description provided for @filterOngoing.
+  ///
+  /// In fr, this message translates to:
+  /// **'En cours'**
+  String get filterOngoing;
+
+  /// No description provided for @filterCompleted.
+  ///
+  /// In fr, this message translates to:
+  /// **'Terminés'**
+  String get filterCompleted;
+
+  /// No description provided for @compFormatSingleElim.
+  ///
+  /// In fr, this message translates to:
+  /// **'Élimination directe'**
+  String get compFormatSingleElim;
+
+  /// No description provided for @compFormatGroupsKnockout.
+  ///
+  /// In fr, this message translates to:
+  /// **'Poules + élimination'**
+  String get compFormatGroupsKnockout;
+
+  /// No description provided for @compFormatRoundRobin.
+  ///
+  /// In fr, this message translates to:
+  /// **'Round robin'**
+  String get compFormatRoundRobin;
+
+  /// No description provided for @matchStepWord.
+  ///
+  /// In fr, this message translates to:
+  /// **'ÉTAPE'**
+  String get matchStepWord;
 }
 
 class _AppLocalizationsDelegate

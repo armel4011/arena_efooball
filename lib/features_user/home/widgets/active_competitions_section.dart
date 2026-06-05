@@ -3,6 +3,7 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -21,6 +22,7 @@ class ActiveCompetitionsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final filter = ref.watch(homeGameFilterProvider);
     final async = ref.watch(competitionsListProvider(filter));
     return Column(
@@ -57,7 +59,7 @@ class ActiveCompetitionsSection extends ConsumerWidget {
                   padding: const EdgeInsets.all(ArenaSpacing.md),
                   alignment: Alignment.center,
                   child: Text(
-                    'Aucune compétition active pour ce filtre.',
+                    l10n.activeCompetitionsEmpty,
                     style: ArenaText.bodyMuted,
                   ),
                 );

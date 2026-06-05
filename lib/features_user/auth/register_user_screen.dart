@@ -131,9 +131,9 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
     final googleState = ref.watch(googleSsoControllerProvider);
     final isLoading = state.isLoading || googleState.isLoading;
     final errorMessage = state.hasError
-        ? authFailureToMessage(_asFailure(state.error))
+        ? authFailureToMessage(_asFailure(state.error), l10n)
         : googleState.hasError
-            ? authFailureToMessage(_asFailure(googleState.error))
+            ? authFailureToMessage(_asFailure(googleState.error), l10n)
             : null;
 
     return Scaffold(

@@ -163,7 +163,7 @@ class _CompetitionsListPageState extends ConsumerState<CompetitionsListPage> {
         mode: ArenaFilterMode.radio,
         options: [
           for (final b in StatusBucket.values)
-            ArenaFilterOption(id: b.name, label: b.label),
+            ArenaFilterOption(id: b.name, label: b.labelOf(l10n)),
         ],
       ),
       ArenaFilterSection(
@@ -172,7 +172,7 @@ class _CompetitionsListPageState extends ConsumerState<CompetitionsListPage> {
         mode: ArenaFilterMode.radio,
         options: [
           for (final p in PricingBucket.values)
-            ArenaFilterOption(id: p.name, label: p.label),
+            ArenaFilterOption(id: p.name, label: p.labelOf(l10n)),
         ],
       ),
     ];

@@ -1,5 +1,6 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/match_status.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 /// Maps the match status onto the four-step v2 progress indicator.
@@ -10,15 +11,21 @@ import 'package:flutter/material.dart';
 ///   3 — Match en cours  (recording / score submission)
 ///   4 — Score validé  (terminal : completed / disputed / forfeited)
 enum MatchStep {
-  codeRoom(1, 'Code room'),
-  opponentJoining(2, 'Adversaire rejoint'),
-  matchInProgress(3, 'Match en cours'),
-  result(4, 'Résultat');
+  codeRoom(1),
+  opponentJoining(2),
+  matchInProgress(3),
+  result(4);
 
-  const MatchStep(this.number, this.label);
+  const MatchStep(this.number);
 
   final int number;
-  final String label;
+
+  String labelOf(AppLocalizations l10n) => switch (this) {
+        MatchStep.codeRoom => l10n.matchStepCodeRoom,
+        MatchStep.opponentJoining => l10n.matchStepOpponentJoining,
+        MatchStep.matchInProgress => l10n.matchStepInProgress,
+        MatchStep.result => l10n.matchStepResult,
+      };
 
   static MatchStep fromStatus(MatchStatus s) => switch (s) {
         MatchStatus.pending || MatchStatus.scheduled => MatchStep.codeRoom,
@@ -77,9 +84,10 @@ class StepLabel extends StatelessWidget {
   /// signalBlue avec letter-spacing pour donner du caractère "console".
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final n = step.number.toString().padLeft(2, '0');
     return Text(
-      'ÉTAPE $n/04 · ${step.label.toUpperCase()}',
+      '${l10n.matchStepWord} $n/04 · ${step.labelOf(l10n).toUpperCase()}',
       style: ArenaText.monoSmall.copyWith(
         color: ArenaColors.signalBlue,
         letterSpacing: 1.5,
