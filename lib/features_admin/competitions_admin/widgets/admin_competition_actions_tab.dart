@@ -5,6 +5,7 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/admin/admin_competitions_repository.dart';
+import 'package:arena/data/repositories/payout_repository.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -65,6 +66,12 @@ class AdminCompetitionActionsTab extends ConsumerWidget {
             ),
           ),
         if (competition.status == CompetitionStatus.completed) ...[
+          const SizedBox(height: ArenaSpacing.xs),
+          ArenaButton(
+            label: '💰 GÉNÉRER LES VERSEMENTS',
+            fullWidth: true,
+            onPressed: () => _generatePayouts(context, ref),
+          ),
           const SizedBox(height: ArenaSpacing.xs),
           ArenaButton(
             label: '🔄 RÉGÉNÉRER LA COMPÉTITION',
@@ -143,6 +150,56 @@ class AdminCompetitionActionsTab extends ConsumerWidget {
         ),
       );
       unawaited(context.push(AdminRoutes.competitionDetailPath(fresh.id)));
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Échec : $e')),
+      );
+    }
+  }
+
+  /// Génère les lignes de versement des gains (super-admin). Idempotent côté
+  /// serveur : un 2e clic ne recrée rien. Réservé au super-admin par la RPC.
+  Future<void> _generatePayouts(BuildContext context, WidgetRef ref) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        backgroundColor: ArenaColors.carbon,
+        title: Text('Générer les versements ?', style: ArenaText.h3),
+        content: Text(
+          'Crée une ligne de versement pour chaque gagnant selon le classement '
+          'final et la répartition des prix. Les gagnants sont notifiés et '
+          'pourront réclamer leur gain (numéro Mobile Money). Action sans effet '
+          'si les versements ont déjà été générés.',
+          style: ArenaText.bodyMuted,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(c).pop(false),
+            child: const Text('NON'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(c).pop(true),
+            child: const Text('GÉNÉRER'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      final n = await ref
+          .read(payoutRepositoryProvider)
+          .generate(competition.id);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            n == 0
+                ? 'Aucun versement généré (déjà fait, ou pas de gagnant/prix).'
+                : '$n versement(s) généré(s) — gagnants notifiés.',
+          ),
+        ),
+      );
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
