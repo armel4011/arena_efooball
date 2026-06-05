@@ -9,6 +9,7 @@ import 'package:arena/data/repositories/notification_repository.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -42,18 +43,28 @@ sealed class SyncAction {
   const SyncAction({
     required this.id,
     required this.createdAt,
+    this.attempts = 0,
   });
 
   final String id;
   final DateTime createdAt;
 
+  /// Nombre de tentatives de flush échouées (erreurs non-définitives).
+  /// Au-delà de [SyncQueueService.maxAttempts], l'action part en dead-letter
+  /// (drop + log) au lieu d'être rejouée indéfiniment (« poison message »).
+  final int attempts;
+
   String get type;
   Map<String, dynamic> get payload;
+
+  /// Copie de l'action avec un compteur de tentatives mis à jour.
+  SyncAction copyWithAttempts(int attempts);
 
   Map<String, dynamic> toJson() => {
         'id': id,
         'type': type,
         'created_at': createdAt.toIso8601String(),
+        'attempts': attempts,
         'payload': payload,
       };
 
@@ -66,22 +77,24 @@ sealed class SyncAction {
     final type = json['type'] as String;
     final id = json['id'] as String;
     final createdAt = DateTime.parse(json['created_at'] as String);
+    final attempts = json['attempts'] as int? ?? 0;
     final payload = (json['payload'] as Map).cast<String, dynamic>();
+    final SyncAction action;
     switch (type) {
       case MarkNotificationReadAction._type:
-        return MarkNotificationReadAction.fromPayload(
+        action = MarkNotificationReadAction.fromPayload(
           id: id,
           createdAt: createdAt,
           payload: payload,
         );
       case SendChatMessageAction._type:
-        return SendChatMessageAction.fromPayload(
+        action = SendChatMessageAction.fromPayload(
           id: id,
           createdAt: createdAt,
           payload: payload,
         );
       case RegisterFreeCompetitionAction._type:
-        return RegisterFreeCompetitionAction.fromPayload(
+        action = RegisterFreeCompetitionAction.fromPayload(
           id: id,
           createdAt: createdAt,
           payload: payload,
@@ -92,6 +105,7 @@ sealed class SyncAction {
         }
         return null;
     }
+    return action.copyWithAttempts(attempts);
   }
 }
 
@@ -104,6 +118,7 @@ class MarkNotificationReadAction extends SyncAction {
     required super.id,
     required super.createdAt,
     required this.notificationId,
+    super.attempts = 0,
   });
 
   factory MarkNotificationReadAction.fromPayload({
@@ -125,6 +140,14 @@ class MarkNotificationReadAction extends SyncAction {
 
   @override
   Map<String, dynamic> get payload => {'notification_id': notificationId};
+
+  @override
+  SyncAction copyWithAttempts(int attempts) => MarkNotificationReadAction(
+        id: id,
+        createdAt: createdAt,
+        notificationId: notificationId,
+        attempts: attempts,
+      );
 
   @override
   Future<bool> execute(SupabaseClient client) async {
@@ -156,6 +179,7 @@ class SendChatMessageAction extends SyncAction {
     required this.channelId,
     required this.senderId,
     required this.text,
+    super.attempts = 0,
   });
 
   factory SendChatMessageAction.fromPayload({
@@ -185,6 +209,16 @@ class SendChatMessageAction extends SyncAction {
         'sender_id': senderId,
         'text': text,
       };
+
+  @override
+  SyncAction copyWithAttempts(int attempts) => SendChatMessageAction(
+        id: id,
+        createdAt: createdAt,
+        channelId: channelId,
+        senderId: senderId,
+        text: text,
+        attempts: attempts,
+      );
 
   @override
   Future<bool> execute(SupabaseClient client) async {
@@ -224,6 +258,7 @@ class RegisterFreeCompetitionAction extends SyncAction {
     required super.createdAt,
     required this.competitionId,
     required this.playerId,
+    super.attempts = 0,
   });
 
   factory RegisterFreeCompetitionAction.fromPayload({
@@ -250,6 +285,15 @@ class RegisterFreeCompetitionAction extends SyncAction {
         'competition_id': competitionId,
         'player_id': playerId,
       };
+
+  @override
+  SyncAction copyWithAttempts(int attempts) => RegisterFreeCompetitionAction(
+        id: id,
+        createdAt: createdAt,
+        competitionId: competitionId,
+        playerId: playerId,
+        attempts: attempts,
+      );
 
   @override
   Future<bool> execute(SupabaseClient client) async {
@@ -325,6 +369,11 @@ class SyncQueueService {
 
   static const _key = 'arena.sync_queue.v1';
 
+  /// Au-delà de ce nombre de tentatives de flush échouées, une action est
+  /// considérée « poison » et part en dead-letter (drop + Sentry) au lieu
+  /// d'être rejouée à chaque flush indéfiniment.
+  static const maxAttempts = 10;
+
   final SharedPreferences _prefs;
   final SupabaseClient _client;
   final NetworkStatusService _network;
@@ -395,7 +444,25 @@ class SyncQueueService {
       final remaining = <SyncAction>[];
       for (final a in actions) {
         final done = await a.execute(_client);
-        if (!done) remaining.add(a);
+        if (done) continue;
+        final next = a.attempts + 1;
+        if (next >= maxAttempts) {
+          // Dead-letter : action « poison » qui échoue indéfiniment. On la
+          // drop (au lieu de la rejouer à chaque flush) avec visibilité prod.
+          if (kDebugMode) {
+            debugPrint(
+              '[sync] dead-letter ${a.type} (${a.id}) après $next échecs',
+            );
+          }
+          unawaited(
+            Sentry.captureMessage(
+              'sync dead-letter: ${a.type} dropped after $next attempts',
+              level: SentryLevel.warning,
+            ),
+          );
+          continue; // drop
+        }
+        remaining.add(a.copyWithAttempts(next));
       }
       await _persist(remaining);
     } finally {
