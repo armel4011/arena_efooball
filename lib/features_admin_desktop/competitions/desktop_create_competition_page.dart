@@ -82,6 +82,7 @@ class _DesktopCreateCompetitionPageState
   bool _publishNow = true;
   bool _autoGenerateBracket = true;
   int _matchIntervalMinutes = 60;
+  bool _thirdPlaceMatch = false;
   final _referralQuotaCtrl = TextEditingController(text: '0');
   final _roundIntervalsCtrl = TextEditingController();
   final _groupCountCtrl = TextEditingController(text: '4');
@@ -114,6 +115,7 @@ class _DesktopCreateCompetitionPageState
         : commissionXaf.toString();
     _autoGenerateBracket = c.autoGenerateBracket;
     _matchIntervalMinutes = c.matchIntervalMinutes;
+    _thirdPlaceMatch = c.thirdPlaceMatch;
     _referralQuotaCtrl.text = c.referralQuota.toString();
     if (c.roundIntervals != null && c.roundIntervals!.isNotEmpty) {
       _roundIntervalsCtrl.text = c.roundIntervals!.join(',');
@@ -465,6 +467,20 @@ class _DesktopCreateCompetitionPageState
             ),
           ],
         ),
+        if (_format != TournamentFormat.roundRobin) ...[
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              ToggleSwitch(
+                checked: _thirdPlaceMatch,
+                onChanged: (v) => setState(() => _thirdPlaceMatch = v),
+                content: const Text(
+                  'Match de classement (3e place) — petite finale',
+                ),
+              ),
+            ],
+          ),
+        ],
         const SizedBox(height: 16),
         InfoLabel(
           label: 'Intervalle entre rounds (défaut)',
@@ -777,6 +793,11 @@ class _DesktopCreateCompetitionPageState
                 label: 'Intervalle rounds',
                 value: _intervalLabel(_matchIntervalMinutes),
               ),
+              if (_format != TournamentFormat.roundRobin)
+                _ReviewRow(
+                  label: 'Match 3e place',
+                  value: _thirdPlaceMatch ? 'Oui' : 'Non',
+                ),
               if (_referralQuota() > 0)
                 _ReviewRow(
                   label: 'Parrainages requis',
@@ -837,6 +858,7 @@ class _DesktopCreateCompetitionPageState
                 'prize_distribution': _prizeDistribution(),
                 'auto_generate_bracket': _autoGenerateBracket,
                 'match_interval_minutes': _matchIntervalMinutes,
+                'third_place_match': _thirdPlaceMatch,
                 'referral_quota': _referralQuota(),
                 'referral_activity_mode': 'any',
                 'round_intervals': _roundIntervals(),
@@ -878,6 +900,7 @@ class _DesktopCreateCompetitionPageState
           'created_by': adminId,
           'auto_generate_bracket': _autoGenerateBracket,
           'match_interval_minutes': _matchIntervalMinutes,
+          'third_place_match': _thirdPlaceMatch,
           'referral_quota': _referralQuota(),
           'referral_activity_mode': 'any',
           'round_intervals': _roundIntervals(),

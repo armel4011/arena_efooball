@@ -101,6 +101,9 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
   bool _autoGenerateBracket = true;
   int _matchIntervalMinutes = 60;
 
+  // Match de classement (petite finale / 3e place) — opt-in admin.
+  bool _thirdPlaceMatch = false;
+
   // Lot D — Quota parrainages requis pour s'inscrire (item 8).
   // 0 = pas de gating. Activable seulement pour comp. gratuites.
   final _referralQuotaCtrl = TextEditingController(text: '0');
@@ -148,6 +151,7 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
         : commissionXaf.toString();
     _autoGenerateBracket = c.autoGenerateBracket;
     _matchIntervalMinutes = c.matchIntervalMinutes;
+    _thirdPlaceMatch = c.thirdPlaceMatch;
     _referralQuotaCtrl.text = c.referralQuota.toString();
     // referral_activity_mode toujours 'any' depuis le wizard — pas de UI.
     if (c.roundIntervals != null && c.roundIntervals!.isNotEmpty) {
@@ -279,6 +283,7 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
                         maxPlayers: _maxPlayers,
                         autoGenerateBracket: _autoGenerateBracket,
                         matchIntervalMinutes: _matchIntervalMinutes,
+                        thirdPlaceMatch: _thirdPlaceMatch,
                         roundIntervalsCtrl: _roundIntervalsCtrl,
                         groupCountCtrl: _groupCountCtrl,
                         qualifiersPerGroupCtrl: _qualifiersPerGroupCtrl,
@@ -290,6 +295,8 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
                             setState(() => _autoGenerateBracket = v),
                         onMatchIntervalChanged: (m) =>
                             setState(() => _matchIntervalMinutes = m),
+                        onThirdPlaceChanged: (v) =>
+                            setState(() => _thirdPlaceMatch = v),
                         onChanged: () => setState(() {}),
                       ),
                     if (_step == 2) ..._buildPrizesStep(),
@@ -530,6 +537,11 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
         label: 'Intervalle entre rounds',
         value: _matchIntervalLabel(_matchIntervalMinutes),
       ),
+      if (_format != TournamentFormat.roundRobin)
+        ReviewRow(
+          label: 'Match de classement (3e place)',
+          value: _thirdPlaceMatch ? 'Oui' : 'Non',
+        ),
       if (_referralQuota() > 0)
         ReviewRow(
           label: 'Parrainages requis',
@@ -597,6 +609,7 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
           'created_by': adminId,
           'auto_generate_bracket': _autoGenerateBracket,
           'match_interval_minutes': _matchIntervalMinutes,
+          'third_place_match': _thirdPlaceMatch,
           'referral_quota': _referralQuota(),
           'referral_activity_mode': 'any',
           'round_intervals': _roundIntervals(),
@@ -665,6 +678,7 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
         'prize_distribution': _prizeDistribution(),
         'auto_generate_bracket': _autoGenerateBracket,
         'match_interval_minutes': _matchIntervalMinutes,
+        'third_place_match': _thirdPlaceMatch,
         'referral_quota': _referralQuota(),
         'referral_activity_mode': 'any',
         'round_intervals': _roundIntervals(),

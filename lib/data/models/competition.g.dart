@@ -54,6 +54,7 @@ _$CompetitionImpl _$$CompetitionImplFromJson(Map<String, dynamic> json) =>
       matchIntervalMinutes:
           (json['match_interval_minutes'] as num?)?.toInt() ?? 60,
       autoGenerateBracket: json['auto_generate_bracket'] as bool? ?? true,
+      thirdPlaceMatch: json['third_place_match'] as bool? ?? false,
       referralQuota: (json['referral_quota'] as num?)?.toInt() ?? 0,
       referralActivityMode: json['referral_activity_mode'] as String? ?? 'any',
       roundIntervals: (json['round_intervals'] as List<dynamic>?)
@@ -107,6 +108,7 @@ Map<String, dynamic> _$$CompetitionImplToJson(_$CompetitionImpl instance) =>
       'prize_distribution': instance.prizeDistribution,
       'match_interval_minutes': instance.matchIntervalMinutes,
       'auto_generate_bracket': instance.autoGenerateBracket,
+      'third_place_match': instance.thirdPlaceMatch,
       'referral_quota': instance.referralQuota,
       'referral_activity_mode': instance.referralActivityMode,
       if (instance.roundIntervals case final value?) 'round_intervals': value,

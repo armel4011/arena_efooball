@@ -150,7 +150,7 @@ class ArenaBracketTree extends StatelessWidget {
   }
 }
 
-enum _RoundStyle { round1, intermediate, demi, finale }
+enum _RoundStyle { round1, intermediate, demi, finale, thirdPlace }
 
 class _RoundColumn extends StatelessWidget {
   const _RoundColumn({
@@ -177,7 +177,9 @@ class _RoundColumn extends StatelessWidget {
             height: matchHeight,
             child: _MatchCard(
               match: m,
-              style: style,
+              // Le match de classement arrive dans le même round que la
+              // finale ; on le distingue par un style bronze dédié.
+              style: m.isThirdPlace ? _RoundStyle.thirdPlace : style,
               onTap: onTapMatch == null ? null : () => onTapMatch!(m),
               usernamesByPlayerId: usernamesByPlayerId,
             ),
@@ -237,7 +239,9 @@ class _MatchCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
       child: style == _RoundStyle.finale
           ? _FinaleContent(score1: match.score1, score2: match.score2)
-          : Column(
+          : style == _RoundStyle.thirdPlace
+              ? _ThirdPlaceContent(score1: match.score1, score2: match.score2)
+              : Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -300,6 +304,12 @@ class _MatchCard extends StatelessWidget {
             ArenaColors.void_,
             true,
           ),
+        _RoundStyle.thirdPlace => (
+            ArenaColors.tierBronze.withValues(alpha: 0.12),
+            ArenaColors.tierBronze,
+            ArenaColors.tierBronze,
+            false,
+          ),
       };
 }
 
@@ -345,6 +355,36 @@ class _FinaleContent extends StatelessWidget {
             color: ArenaColors.void_,
             fontSize: 11,
             letterSpacing: 1,
+            height: 1,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Contenu de la card du match de classement (3e place). Style bronze,
+/// libellé « 🥉 3e PLACE » tant qu'aucun score n'est saisi.
+class _ThirdPlaceContent extends StatelessWidget {
+  const _ThirdPlaceContent({required this.score1, required this.score2});
+
+  final int? score1;
+  final int? score2;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasScore = score1 != null && score2 != null;
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Text('🥉', style: TextStyle(fontSize: 12, height: 1)),
+        const SizedBox(height: 1),
+        Text(
+          hasScore ? '$score1 — $score2' : '3e PLACE',
+          style: ArenaText.h2.copyWith(
+            color: ArenaColors.tierBronze,
+            fontSize: 10,
+            letterSpacing: 0.5,
             height: 1,
           ),
         ),

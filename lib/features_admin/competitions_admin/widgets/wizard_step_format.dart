@@ -12,6 +12,7 @@ class WizardStepFormat extends StatelessWidget {
     required this.maxPlayers,
     required this.autoGenerateBracket,
     required this.matchIntervalMinutes,
+    required this.thirdPlaceMatch,
     required this.roundIntervalsCtrl,
     required this.groupCountCtrl,
     required this.qualifiersPerGroupCtrl,
@@ -20,6 +21,7 @@ class WizardStepFormat extends StatelessWidget {
     required this.onMaxPlayersChanged,
     required this.onAutoGenerateChanged,
     required this.onMatchIntervalChanged,
+    required this.onThirdPlaceChanged,
     required this.onChanged,
     super.key,
   });
@@ -28,6 +30,7 @@ class WizardStepFormat extends StatelessWidget {
   final int maxPlayers;
   final bool autoGenerateBracket;
   final int matchIntervalMinutes;
+  final bool thirdPlaceMatch;
   final TextEditingController roundIntervalsCtrl;
   final TextEditingController groupCountCtrl;
   final TextEditingController qualifiersPerGroupCtrl;
@@ -36,6 +39,7 @@ class WizardStepFormat extends StatelessWidget {
   final ValueChanged<int> onMaxPlayersChanged;
   final ValueChanged<bool> onAutoGenerateChanged;
   final ValueChanged<int> onMatchIntervalChanged;
+  final ValueChanged<bool> onThirdPlaceChanged;
   final VoidCallback onChanged;
 
   Widget _lockable(Widget child) {
@@ -80,6 +84,35 @@ class WizardStepFormat extends StatelessWidget {
             onChanged: onMaxPlayersChanged,
           ),
         ),
+        if (format != TournamentFormat.roundRobin) ...[
+          const SizedBox(height: ArenaSpacing.lg),
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: ArenaSpacing.md,
+              vertical: ArenaSpacing.sm,
+            ),
+            decoration: BoxDecoration(
+              color: ArenaColors.carbon,
+              borderRadius: BorderRadius.circular(ArenaRadius.md),
+              border: Border.all(color: ArenaColors.border),
+            ),
+            child: SwitchListTile.adaptive(
+              value: thirdPlaceMatch,
+              onChanged: onThirdPlaceChanged,
+              title: Text(
+                '🥉 Activer le match de classement (3e place)',
+                style: ArenaText.body,
+              ),
+              subtitle: Text(
+                'Ajoute une petite finale opposant les 2 perdants des '
+                'demi-finales pour départager la 3e place.',
+                style: ArenaText.small,
+              ),
+              contentPadding: EdgeInsets.zero,
+              activeThumbColor: ArenaColors.tierBronze,
+            ),
+          ),
+        ],
         const SizedBox(height: ArenaSpacing.lg),
         Text('Gestion automatique', style: ArenaText.h3),
         const SizedBox(height: ArenaSpacing.xs),

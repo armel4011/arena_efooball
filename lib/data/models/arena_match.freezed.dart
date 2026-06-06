@@ -38,6 +38,7 @@ mixin _$ArenaMatch {
   String? get player1TeamName => throw _privateConstructorUsedError;
   String? get player2TeamName => throw _privateConstructorUsedError;
   String? get nextMatchId => throw _privateConstructorUsedError;
+  bool get isThirdPlace => throw _privateConstructorUsedError;
   DateTime? get scheduledAt => throw _privateConstructorUsedError;
   DateTime? get startedAt => throw _privateConstructorUsedError;
   DateTime? get finishedAt => throw _privateConstructorUsedError;
@@ -78,6 +79,7 @@ abstract class $ArenaMatchCopyWith<$Res> {
       String? player1TeamName,
       String? player2TeamName,
       String? nextMatchId,
+      bool isThirdPlace,
       DateTime? scheduledAt,
       DateTime? startedAt,
       DateTime? finishedAt,
@@ -117,6 +119,7 @@ class _$ArenaMatchCopyWithImpl<$Res, $Val extends ArenaMatch>
     Object? player1TeamName = freezed,
     Object? player2TeamName = freezed,
     Object? nextMatchId = freezed,
+    Object? isThirdPlace = null,
     Object? scheduledAt = freezed,
     Object? startedAt = freezed,
     Object? finishedAt = freezed,
@@ -192,6 +195,10 @@ class _$ArenaMatchCopyWithImpl<$Res, $Val extends ArenaMatch>
           ? _value.nextMatchId
           : nextMatchId // ignore: cast_nullable_to_non_nullable
               as String?,
+      isThirdPlace: null == isThirdPlace
+          ? _value.isThirdPlace
+          : isThirdPlace // ignore: cast_nullable_to_non_nullable
+              as bool,
       scheduledAt: freezed == scheduledAt
           ? _value.scheduledAt
           : scheduledAt // ignore: cast_nullable_to_non_nullable
@@ -242,6 +249,7 @@ abstract class _$$ArenaMatchImplCopyWith<$Res>
       String? player1TeamName,
       String? player2TeamName,
       String? nextMatchId,
+      bool isThirdPlace,
       DateTime? scheduledAt,
       DateTime? startedAt,
       DateTime? finishedAt,
@@ -279,6 +287,7 @@ class __$$ArenaMatchImplCopyWithImpl<$Res>
     Object? player1TeamName = freezed,
     Object? player2TeamName = freezed,
     Object? nextMatchId = freezed,
+    Object? isThirdPlace = null,
     Object? scheduledAt = freezed,
     Object? startedAt = freezed,
     Object? finishedAt = freezed,
@@ -354,6 +363,10 @@ class __$$ArenaMatchImplCopyWithImpl<$Res>
           ? _value.nextMatchId
           : nextMatchId // ignore: cast_nullable_to_non_nullable
               as String?,
+      isThirdPlace: null == isThirdPlace
+          ? _value.isThirdPlace
+          : isThirdPlace // ignore: cast_nullable_to_non_nullable
+              as bool,
       scheduledAt: freezed == scheduledAt
           ? _value.scheduledAt
           : scheduledAt // ignore: cast_nullable_to_non_nullable
@@ -399,6 +412,7 @@ class _$ArenaMatchImpl extends _ArenaMatch {
       this.player1TeamName,
       this.player2TeamName,
       this.nextMatchId,
+      this.isThirdPlace = false,
       this.scheduledAt,
       this.startedAt,
       this.finishedAt,
@@ -446,6 +460,9 @@ class _$ArenaMatchImpl extends _ArenaMatch {
   @override
   final String? nextMatchId;
   @override
+  @JsonKey()
+  final bool isThirdPlace;
+  @override
   final DateTime? scheduledAt;
   @override
   final DateTime? startedAt;
@@ -458,7 +475,7 @@ class _$ArenaMatchImpl extends _ArenaMatch {
 
   @override
   String toString() {
-    return 'ArenaMatch(id: $id, competitionId: $competitionId, phaseId: $phaseId, groupId: $groupId, round: $round, matchNumber: $matchNumber, player1Id: $player1Id, player2Id: $player2Id, score1: $score1, score2: $score2, winnerId: $winnerId, status: $status, homePlayerId: $homePlayerId, roomCode: $roomCode, player1TeamName: $player1TeamName, player2TeamName: $player2TeamName, nextMatchId: $nextMatchId, scheduledAt: $scheduledAt, startedAt: $startedAt, finishedAt: $finishedAt, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'ArenaMatch(id: $id, competitionId: $competitionId, phaseId: $phaseId, groupId: $groupId, round: $round, matchNumber: $matchNumber, player1Id: $player1Id, player2Id: $player2Id, score1: $score1, score2: $score2, winnerId: $winnerId, status: $status, homePlayerId: $homePlayerId, roomCode: $roomCode, player1TeamName: $player1TeamName, player2TeamName: $player2TeamName, nextMatchId: $nextMatchId, isThirdPlace: $isThirdPlace, scheduledAt: $scheduledAt, startedAt: $startedAt, finishedAt: $finishedAt, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -493,6 +510,8 @@ class _$ArenaMatchImpl extends _ArenaMatch {
                 other.player2TeamName == player2TeamName) &&
             (identical(other.nextMatchId, nextMatchId) ||
                 other.nextMatchId == nextMatchId) &&
+            (identical(other.isThirdPlace, isThirdPlace) ||
+                other.isThirdPlace == isThirdPlace) &&
             (identical(other.scheduledAt, scheduledAt) ||
                 other.scheduledAt == scheduledAt) &&
             (identical(other.startedAt, startedAt) ||
@@ -526,6 +545,7 @@ class _$ArenaMatchImpl extends _ArenaMatch {
         player1TeamName,
         player2TeamName,
         nextMatchId,
+        isThirdPlace,
         scheduledAt,
         startedAt,
         finishedAt,
@@ -568,6 +588,7 @@ abstract class _ArenaMatch extends ArenaMatch {
       final String? player1TeamName,
       final String? player2TeamName,
       final String? nextMatchId,
+      final bool isThirdPlace,
       final DateTime? scheduledAt,
       final DateTime? startedAt,
       final DateTime? finishedAt,
@@ -613,6 +634,8 @@ abstract class _ArenaMatch extends ArenaMatch {
   String? get player2TeamName;
   @override
   String? get nextMatchId;
+  @override
+  bool get isThirdPlace;
   @override
   DateTime? get scheduledAt;
   @override

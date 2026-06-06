@@ -190,6 +190,7 @@ class _EmptyStateState extends ConsumerState<_EmptyState> {
           await repo.generateSingleElim(
             competitionId: widget.competition.id,
             playerIds: players,
+            thirdPlace: widget.competition.thirdPlaceMatch,
           );
         case TournamentFormat.roundRobin:
           await repo.generateRoundRobinTournament(
@@ -202,6 +203,7 @@ class _EmptyStateState extends ConsumerState<_EmptyState> {
             playerIds: players,
             groupCount: extra!.groupCount,
             qualifiersPerGroup: extra.qualifiers,
+            thirdPlace: widget.competition.thirdPlaceMatch,
           );
       }
       await ref.read(adminAuditLogRepositoryProvider).record(

@@ -36,6 +36,7 @@ sealed class ArenaMatch with _$ArenaMatch {
     String? player1TeamName,
     String? player2TeamName,
     String? nextMatchId,
+    @Default(false) bool isThirdPlace,
     DateTime? scheduledAt,
     DateTime? startedAt,
     DateTime? finishedAt,
