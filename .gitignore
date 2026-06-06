@@ -52,6 +52,10 @@ app.*.map.json
 # Flavor secrets / Firebase configs
 google-services.json
 GoogleService-Info.plist
+# Variantes iOS par flavor (user/admin) — contiennent une API_KEY Firebase.
+# Restreinte par bundle ID donc semi-publique, mais on aligne la politique
+# sur Android (google-services.json ignoré). Templates : *.plist.example
+GoogleService-Info-*.plist
 firebase_options.dart
 secrets/
 
