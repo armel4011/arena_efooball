@@ -299,13 +299,16 @@ jobs:
         continue-on-error: true
         run: deno fmt --check
 
-      - name: Deno test (si présents)
-        # Aucun test Deno pour l'instant (dette T-1 de l'audit). Ce step exécute
-        # automatiquement les futurs `*.test.ts`/`*_test.ts` dès qu'ils sont
-        # ajoutés, et ne fait rien (sans échouer) tant qu'il n'y en a pas.
+      - name: Deno test (BLOQUANT)
+        # Tests unitaires de _shared/ (TOTP RFC 6238, rate-limit fail-open,
+        # config APNs, classes d'erreur). `--no-check` car le type-check strict
+        # bute sur la baseline de typage des sources (cf. step "Deno type-check"
+        # non bloquant ci-dessus) — on valide ici le COMPORTEMENT au runtime.
+        # `--allow-all` : les tests APNs lisent/écrivent Deno.env. Le `if`
+        # exécute aussi automatiquement tout futur *.test.ts ajouté.
         run: |
-          if ls **/*.test.ts **/*_test.ts >/dev/null 2>&1; then
-            deno test --allow-all
+          if [ -n "$(find . -name '*.test.ts' -o -name '*_test.ts' | head -1)" ]; then
+            deno test --allow-all --no-check
           else
             echo "Aucun test Deno pour l'instant — step ignoré."
           fi
