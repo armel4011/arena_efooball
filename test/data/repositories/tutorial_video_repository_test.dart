@@ -2,6 +2,7 @@ import 'package:arena/data/models/tutorial_video.dart';
 import 'package:arena/data/repositories/tutorial_video_repository.dart';
 import 'package:arena/features_user/home/widgets/tutorial_video_section.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 
 import '_supabase_mocks.dart';
 
@@ -131,13 +132,47 @@ void main() {
     });
   });
 
-  group('shouldShowTutorialBanner', () {
+  group('recordAndGetFirstView (RPC)', () {
+    test('rpc renvoie une String ISO → DateTime correct', () async {
+      when(
+        () => client.rpc<dynamic>(
+          'tutorial_record_and_get_view',
+          params: any(named: 'params'),
+        ),
+      ).thenAnswer(
+        (_) => FakeQueryChain<dynamic>(
+          Future<dynamic>.value('2026-06-01T10:00:00.000Z'),
+        ),
+      );
+      final seen = await repo.recordAndGetFirstView('v1');
+      expect(seen, isNotNull);
+      expect(seen, DateTime.parse('2026-06-01T10:00:00.000Z'));
+      verify(
+        () => client.rpc<dynamic>(
+          'tutorial_record_and_get_view',
+          params: {'p_tutorial_id': 'v1'},
+        ),
+      ).called(1);
+    });
+
+    test('rpc renvoie null → null', () async {
+      when(
+        () => client.rpc<dynamic>(
+          'tutorial_record_and_get_view',
+          params: any(named: 'params'),
+        ),
+      ).thenAnswer((_) => FakeQueryChain<dynamic>(Future<dynamic>.value(null)));
+      expect(await repo.recordAndGetFirstView('v1'), isNull);
+    });
+  });
+
+  group('shouldShowTutorialBanner (fenêtre = 1re impression)', () {
     final now = DateTime(2026, 6, 6, 12);
 
-    test('createdAt null → masqué (fallback sûr)', () {
+    test('firstSeen null → masqué (fallback sûr)', () {
       expect(
         shouldShowTutorialBanner(
-          accountCreatedAt: null,
+          firstSeen: null,
           displayDays: 7,
           now: now,
         ),
@@ -145,10 +180,10 @@ void main() {
       );
     });
 
-    test('compte plus jeune que la durée → affiché', () {
+    test('1re impression plus récente que la durée → affiché', () {
       expect(
         shouldShowTutorialBanner(
-          accountCreatedAt: now.subtract(const Duration(days: 3)),
+          firstSeen: now.subtract(const Duration(days: 3)),
           displayDays: 7,
           now: now,
         ),
@@ -156,10 +191,10 @@ void main() {
       );
     });
 
-    test('compte plus vieux que la durée → masqué', () {
+    test('1re impression plus ancienne que la durée → masqué', () {
       expect(
         shouldShowTutorialBanner(
-          accountCreatedAt: now.subtract(const Duration(days: 10)),
+          firstSeen: now.subtract(const Duration(days: 10)),
           displayDays: 7,
           now: now,
         ),
@@ -170,7 +205,7 @@ void main() {
     test('âge égal à la durée (jours entiers) → masqué (strictement <)', () {
       expect(
         shouldShowTutorialBanner(
-          accountCreatedAt: now.subtract(const Duration(days: 7)),
+          firstSeen: now.subtract(const Duration(days: 7)),
           displayDays: 7,
           now: now,
         ),

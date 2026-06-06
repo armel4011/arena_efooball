@@ -75,6 +75,25 @@ class TutorialVideoRepository {
         .eq('is_active', true);
   }
 
+  /// Enregistre (si absente) la 1re impression du user courant pour la vidéo
+  /// [tutorialId] et renvoie l'instant de cette 1re impression — existant si
+  /// déjà vue, neuf sinon. Idempotent : appels répétés renvoient la même date.
+  ///
+  /// Délègue à la RPC `tutorial_record_and_get_view` (identité via
+  /// `auth.uid()`) qui renvoie un scalaire `timestamptz`. Supabase sérialise
+  /// ce scalaire en `String` ISO (ou `null`) ; on parse en [DateTime] (UTC).
+  /// Toute valeur inattendue (type imprévu, String non parsable) → `null`.
+  Future<DateTime?> recordAndGetFirstView(String tutorialId) async {
+    final res = await _client.rpc<dynamic>(
+      'tutorial_record_and_get_view',
+      params: {'p_tutorial_id': tutorialId},
+    );
+    if (res == null) return null;
+    if (res is DateTime) return res;
+    if (res is String) return DateTime.tryParse(res);
+    return null;
+  }
+
   static String _now() => DateTime.now().toUtc().toIso8601String();
 }
 
@@ -99,4 +118,13 @@ final activeTutorialVideoProvider =
 final currentTutorialVideoProvider =
     FutureProvider.autoDispose<TutorialVideo?>((ref) {
   return ref.watch(tutorialVideoRepositoryProvider).getCurrent();
+});
+
+/// Instant de la 1re impression du user courant pour la vidéo `id` — `null`
+/// tant qu'on ne sait pas (la RPC enregistre la 1re vue à la volée et renvoie
+/// sa date). La fenêtre d'affichage de la bannière est calculée à partir de
+/// cet instant, pas de l'âge du compte.
+final tutorialFirstSeenProvider =
+    FutureProvider.family<DateTime?, String>((ref, id) {
+  return ref.watch(tutorialVideoRepositoryProvider).recordAndGetFirstView(id);
 });
