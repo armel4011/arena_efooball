@@ -28,6 +28,10 @@ paths = [
   # (`.replace(/-----BEGIN PRIVATE KEY-----/, '')`) — aucune clé n'y est en dur.
   '''supabase/functions/_shared/apns\.ts$''',
   '''supabase/functions/_shared/fcm\.ts$''',
+  # Tests unitaires _shared : fixtures uniquement (vecteur public RFC 6238
+  # `GEZDGNBV…`, clé HMAC fabriquée, secrets APNs bidons "pem"/"KID"). Aucun
+  # vrai secret — par convention ces fichiers de test n'en contiennent jamais.
+  '''supabase/functions/_shared/.*\.test\.ts$''',
 ]
 
 regexes = [
