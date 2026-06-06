@@ -9,6 +9,7 @@ import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// SA · Vidéo tutoriel — gestion de la vidéo de prise en main de la home.
@@ -30,19 +31,30 @@ class _SuperAdminTutorialVideoState
     extends ConsumerState<SuperAdminTutorialVideo> {
   final _titleCtrl = TextEditingController();
   final _urlCtrl = TextEditingController();
+  final _daysCtrl = TextEditingController(text: '7');
 
   bool _saving = false;
   String? _lastResult;
+  // Pré-remplit le champ durée depuis la vidéo courante une seule fois.
+  bool _daysPrefilled = false;
 
   @override
   void dispose() {
     _titleCtrl.dispose();
     _urlCtrl.dispose();
+    _daysCtrl.dispose();
     super.dispose();
   }
 
   String get _title => _titleCtrl.text.trim();
   String get _url => _urlCtrl.text.trim();
+
+  /// Durée d'affichage saisie (jours), ou `null` si invalide.
+  int? get _displayDays {
+    final n = int.tryParse(_daysCtrl.text.trim());
+    if (n == null || n < 1 || n > 365) return null;
+    return n;
+  }
 
   /// URL http/https valide et absolue.
   bool get _urlValid {
@@ -54,7 +66,11 @@ class _SuperAdminTutorialVideoState
   }
 
   bool get _canSave =>
-      !_saving && _title.isNotEmpty && _url.isNotEmpty && _urlValid;
+      !_saving &&
+      _title.isNotEmpty &&
+      _url.isNotEmpty &&
+      _urlValid &&
+      _displayDays != null;
 
   Future<void> _publish() async {
     if (!_canSave) return;
@@ -72,9 +88,11 @@ class _SuperAdminTutorialVideoState
       _lastResult = null;
     });
     try {
+      final days = _displayDays!;
       await ref.read(tutorialVideoRepositoryProvider).saveActive(
             title: _title,
             videoUrl: _url,
+            displayDays: days,
             updatedBy: adminId,
           );
       await ref.read(adminAuditLogRepositoryProvider).record(
@@ -85,6 +103,7 @@ class _SuperAdminTutorialVideoState
         afterState: {
           'title': _title,
           'video_url': _url,
+          'display_days': days,
         },
       );
       ref.invalidate(currentTutorialVideoProvider);
@@ -94,6 +113,7 @@ class _SuperAdminTutorialVideoState
         _lastResult = '✓ Vidéo tutoriel publiée sur la home.';
         _titleCtrl.clear();
         _urlCtrl.clear();
+        _daysCtrl.text = '7';
       });
     } catch (e) {
       if (!mounted) return;
@@ -139,10 +159,26 @@ class _SuperAdminTutorialVideoState
     }
   }
 
+  /// Pré-remplit le champ "durée" avec la valeur de la vidéo active, une
+  /// seule fois (au premier chargement réussi). On ne touche plus au champ
+  /// ensuite pour ne pas écraser une saisie en cours de l'admin.
+  void _maybePrefillDays(TutorialVideo? video) {
+    if (_daysPrefilled) return;
+    _daysPrefilled = true;
+    if (video == null || !video.isActive) return;
+    final days = video.displayDays;
+    // Repousse post-frame : on ne mute pas un controller pendant le build.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _daysCtrl.text = days.toString();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final current = ref.watch(currentTutorialVideoProvider);
     final showUrlError = _url.isNotEmpty && !_urlValid;
+    final showDaysError = _daysCtrl.text.trim().isNotEmpty && _displayDays == null;
 
     return Scaffold(
       appBar: const ArenaAppBar(title: '🎬 VIDÉO TUTORIEL'),
@@ -166,10 +202,13 @@ class _SuperAdminTutorialVideoState
                   style: ArenaText.bodyMuted
                       .copyWith(color: ArenaColors.neonRed),
                 ),
-                data: (video) => _CurrentVideoCard(
-                  video: video,
-                  onRemove: _saving ? null : _removeCurrent,
-                ),
+                data: (video) {
+                  _maybePrefillDays(video);
+                  return _CurrentVideoCard(
+                    video: video,
+                    onRemove: _saving ? null : _removeCurrent,
+                  );
+                },
               ),
               const SizedBox(height: ArenaSpacing.lg),
               Text('NOUVELLE VIDÉO', style: ArenaText.h3),
@@ -201,6 +240,28 @@ class _SuperAdminTutorialVideoState
                   style: ArenaText.small.copyWith(color: ArenaColors.neonRed),
                 ),
               ],
+              const SizedBox(height: ArenaSpacing.lg),
+
+              // ─── Durée d'affichage (ciblage nouveaux users) ───────────
+              Text(
+                "⏳ DURÉE D'AFFICHAGE POUR LES NOUVEAUX (JOURS)",
+                style: ArenaText.inputLabel,
+              ),
+              const SizedBox(height: ArenaSpacing.sm),
+              ArenaTextField(
+                controller: _daysCtrl,
+                hint: '7',
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(3),
+                ],
+                helper: "La bannière s'affiche à chaque nouvel utilisateur "
+                    'pendant ce nombre de jours après la création de son '
+                    'compte (1 à 365), puis disparaît.',
+                errorText: showDaysError ? 'Entrez un nombre entre 1 et 365.' : null,
+                onChanged: (_) => setState(() {}),
+              ),
               const SizedBox(height: ArenaSpacing.lg),
 
               ArenaButton(
@@ -277,6 +338,12 @@ class _CurrentVideoCard extends StatelessWidget {
           ),
           const SizedBox(height: ArenaSpacing.xs),
           Text(v.videoUrl, style: ArenaText.bodyMuted),
+          const SizedBox(height: ArenaSpacing.xs),
+          Text(
+            '⏳ Affichée aux nouveaux pendant ${v.displayDays} '
+            'jour${v.displayDays > 1 ? 's' : ''}',
+            style: ArenaText.bodyMuted,
+          ),
           const SizedBox(height: ArenaSpacing.sm),
           ArenaButton(
             label: 'RETIRER DE LA HOME',

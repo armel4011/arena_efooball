@@ -12,6 +12,7 @@ sealed class TutorialVideo with _$TutorialVideo {
     required String title,
     required String videoUrl,
     @Default(true) bool isActive,
+    @Default(7) int displayDays,
     String? updatedBy,
     DateTime? createdAt,
     DateTime? updatedAt,

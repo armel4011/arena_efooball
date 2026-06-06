@@ -1,5 +1,6 @@
 import 'package:arena/data/models/tutorial_video.dart';
 import 'package:arena/data/repositories/tutorial_video_repository.dart';
+import 'package:arena/features_user/home/widgets/tutorial_video_section.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '_supabase_mocks.dart';
@@ -21,12 +22,14 @@ void main() {
     String title = 'Prise en main',
     String videoUrl = 'https://youtu.be/abc',
     bool isActive = true,
+    int displayDays = 14,
   }) =>
       {
         'id': id,
         'title': title,
         'video_url': videoUrl,
         'is_active': isActive,
+        'display_days': displayDays,
         'updated_by': 'super1',
         'created_at': '2026-06-01T10:00:00.000Z',
         'updated_at': '2026-06-02T10:00:00.000Z',
@@ -41,6 +44,7 @@ void main() {
       expect(video.title, 'Prise en main');
       expect(video.videoUrl, 'https://youtu.be/abc');
       expect(video.isActive, isTrue);
+      expect(video.displayDays, 14);
       expect(video.updatedBy, 'super1');
       expect(from.hasFilter('order', 'updated_at'), isTrue);
       expect(from.filters.any((f) => f == 'order:updated_at=false'), isTrue);
@@ -60,6 +64,7 @@ void main() {
       await repo.saveActive(
         title: 'Nouveau tuto',
         videoUrl: 'https://vimeo.com/123',
+        displayDays: 21,
         updatedBy: 'super1',
       );
       // stubFrom renvoie le même builder pour les 2 appels : le dernier
@@ -69,6 +74,7 @@ void main() {
       expect(ins['title'], 'Nouveau tuto');
       expect(ins['video_url'], 'https://vimeo.com/123');
       expect(ins['is_active'], true);
+      expect(ins['display_days'], 21);
       expect(ins['updated_by'], 'super1');
 
       final upd = from.updatedValues!;
@@ -83,10 +89,12 @@ void main() {
       await repo.saveActive(
         title: 'Sans auteur',
         videoUrl: 'https://x.gg/v',
+        displayDays: 7,
       );
       final ins = from.insertedValues! as Map<String, dynamic>;
       expect(ins.containsKey('updated_by'), isFalse);
       expect(ins['title'], 'Sans auteur');
+      expect(ins['display_days'], 7);
     });
   });
 
@@ -107,6 +115,67 @@ void main() {
       expect(v.isActive, isFalse);
       expect(v.createdAt, isA<DateTime>());
       expect(v.updatedAt, isA<DateTime>());
+    });
+
+    test('mappe display_days et round-trip toJson', () {
+      final v = TutorialVideo.fromJson(videoRow(displayDays: 30));
+      expect(v.displayDays, 30);
+      final json = v.toJson();
+      expect(json['display_days'], 30);
+      expect(TutorialVideo.fromJson(json).displayDays, 30);
+    });
+
+    test('display_days absent → défaut 7', () {
+      final row = videoRow()..remove('display_days');
+      expect(TutorialVideo.fromJson(row).displayDays, 7);
+    });
+  });
+
+  group('shouldShowTutorialBanner', () {
+    final now = DateTime(2026, 6, 6, 12);
+
+    test('createdAt null → masqué (fallback sûr)', () {
+      expect(
+        shouldShowTutorialBanner(
+          accountCreatedAt: null,
+          displayDays: 7,
+          now: now,
+        ),
+        isFalse,
+      );
+    });
+
+    test('compte plus jeune que la durée → affiché', () {
+      expect(
+        shouldShowTutorialBanner(
+          accountCreatedAt: now.subtract(const Duration(days: 3)),
+          displayDays: 7,
+          now: now,
+        ),
+        isTrue,
+      );
+    });
+
+    test('compte plus vieux que la durée → masqué', () {
+      expect(
+        shouldShowTutorialBanner(
+          accountCreatedAt: now.subtract(const Duration(days: 10)),
+          displayDays: 7,
+          now: now,
+        ),
+        isFalse,
+      );
+    });
+
+    test('âge égal à la durée (jours entiers) → masqué (strictement <)', () {
+      expect(
+        shouldShowTutorialBanner(
+          accountCreatedAt: now.subtract(const Duration(days: 7)),
+          displayDays: 7,
+          now: now,
+        ),
+        isFalse,
+      );
     });
   });
 }

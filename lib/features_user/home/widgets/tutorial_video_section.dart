@@ -3,10 +3,32 @@ import 'dart:async';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/tutorial_video.dart';
 import 'package:arena/data/repositories/tutorial_video_repository.dart';
+import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+/// Décide si la bannière tutoriel doit s'afficher pour un user donné.
+///
+/// Règle : la bannière ne cible que les NOUVEAUX comptes. Elle s'affiche
+/// tant que l'âge du compte (`now - accountCreatedAt`) est strictement
+/// inférieur à `displayDays` jours, puis disparaît.
+///
+/// Fallback SÛR : si `accountCreatedAt` est `null` (date de création
+/// inconnue — profil non hydraté, cache vide…), on **ne montre pas** la
+/// bannière. On préfère ne rien afficher plutôt que de spammer un user dont
+/// on ignore l'ancienneté.
+bool shouldShowTutorialBanner({
+  required DateTime? accountCreatedAt,
+  required int displayDays,
+  DateTime? now,
+}) {
+  if (accountCreatedAt == null) return false;
+  final reference = now ?? DateTime.now();
+  final ageInDays = reference.difference(accountCreatedAt).inDays;
+  return ageInDays < displayDays;
+}
 
 /// Section vidéo tutoriel de la home utilisateur.
 ///
@@ -24,6 +46,15 @@ class TutorialVideoSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final video = ref.watch(activeTutorialVideoProvider).valueOrNull;
     if (video == null) return const SizedBox.shrink();
+
+    // Ciblage nouveaux users : on n'affiche que si le compte est plus jeune
+    // que `video.displayDays`. Fallback sûr si createdAt inconnu → masqué.
+    final profile = ref.watch(currentProfileProvider).valueOrNull;
+    final show = shouldShowTutorialBanner(
+      accountCreatedAt: profile?.createdAt,
+      displayDays: video.displayDays,
+    );
+    if (!show) return const SizedBox.shrink();
 
     final l10n = AppLocalizations.of(context);
 
