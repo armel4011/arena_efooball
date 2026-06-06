@@ -207,12 +207,12 @@ class _LiveStreamCard extends ConsumerWidget {
     );
   }
 
-  // 4 deterministic gradients (eFootball green, FIFA orange,
+  // 4 deterministic gradients (eFootball green, draughts red,
   // FC Mobile violet, signal blue) cycled by matchId hash — keeps
   // visual variety without needing a `game` field on MatchStream.
   static const _palettes = <List<Color>>[
     [Color(0xFF0A4D2C), Color(0xFF0D6E3F)], // eFootball green
-    [Color(0xFF4A2A1A), Color(0xFF6E3F0D)], // FIFA orange
+    [Color(0xFF4A2A1A), Color(0xFF6E3F0D)], // draughts mock
     [Color(0xFF2A1A4D), Color(0xFF3F0D6E)], // FC Mobile violet
     [Color(0xFF1A2A4D), Color(0xFF0D3F6E)], // signal blue
   ];

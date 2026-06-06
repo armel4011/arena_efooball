@@ -25,7 +25,7 @@ import 'package:go_router/go_router.dart';
 /// 3. ● LIVE NOW (caption rouge pulsante + lien View all) —
 ///    `activePublicStreamsProvider` top item, gradient game-themed.
 /// 4. ★ ACTIVE TOURNAMENTS (caption gold) — filter chips + 3 banners
-///    game-themed (eFoot / FIFA / FC).
+///    game-themed (eFoot / Dames / FC).
 /// 5. 📊 YOUR STATS — grille 3-col (`profile.stats`).
 ///
 /// Captions stylisées : `_SectionCaption` reproduit `m-text-caption`

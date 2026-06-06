@@ -13,8 +13,8 @@ import 'package:go_router/go_router.dart';
 final homeGameFilterProvider = StateProvider<GameType?>((_) => null);
 
 /// Section "★ ACTIVE TOURNAMENTS" — chips de filtre par jeu + jusqu'à
-/// 3 banners game-themed (gradient eFoot/FIFA/FC) pour les compétitions
-/// en `registrationOpen` / `ongoing`. Reproduit `.m-banner-efoot/fifa/fc`
+/// 3 banners game-themed (gradient eFoot/Dames/FC) pour les compétitions
+/// en `registrationOpen` / `ongoing`. Reproduit `.m-banner-efoot/draughts/fc`
 /// de la maquette : gradient corner-to-corner, badge OUVERT/EN COURS/
 /// BIENTÔT translucide sur fond couleur, meta blanche en mono.
 class ActiveCompetitionsSection extends ConsumerWidget {
@@ -89,7 +89,7 @@ class _GameFilterChips extends ConsumerWidget {
     final items = <(String, GameType?)>[
       ('Tous', null),
       ('eFoot', GameType.efootball),
-      ('FIFA', GameType.fifaMobile),
+      ('Dames', GameType.draughts),
       ('FC Mobile', GameType.eaSportsFc),
     ];
     return SingleChildScrollView(
@@ -162,7 +162,7 @@ class _Chip extends StatelessWidget {
 ///  - Gratuit + gain → TURQUOISE (`iceCyan`) + badge `🎁`
 ///  - Gratuit pur    → VERT (`statusOk`) + badge ASCII libre
 ///
-/// Le gradient game-themed (eFoot/FIFA/FC) reste en arriere-plan pour
+/// Le gradient game-themed (eFoot/Dames/FC) reste en arriere-plan pour
 /// conserver l'identite jeu (bleu/vert/orange).
 class _CompetitionBanner extends StatelessWidget {
   const _CompetitionBanner({required this.competition});
@@ -193,7 +193,7 @@ class _CompetitionBanner extends StatelessWidget {
   }
 
   /// Gradient de fond par tier — remplace l'ancien gradient game-themed
-  /// (eFoot bleu/FIFA vert/FC orange) pour que le tarif soit immediatement
+  /// (eFoot bleu/Dames rouge/FC orange) pour que le tarif soit immediatement
   /// lisible au scroll.
   LinearGradient get _tierGradient {
     if (_isPaid) return ArenaColors.compTierPaid;

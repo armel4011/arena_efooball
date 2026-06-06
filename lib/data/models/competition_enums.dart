@@ -5,7 +5,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 /// new icon/asset on the client.
 enum GameType {
   efootball('efootball', 'eFootball'),
-  fifaMobile('fifa_mobile', 'FIFA Mobile'),
+  draughts('draughts', 'Jeu de Dames'),
   eaSportsFc('ea_sports_fc', 'EA SPORTS FC Mobile');
 
   const GameType(this.value, this.label);

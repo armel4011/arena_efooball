@@ -374,7 +374,7 @@ class _LogoPainter extends CustomPainter {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// GAMES ROW — 3 badges EFB / FIFA / FC, partagé entre cinematic et short
+// GAMES ROW — 3 badges EFB / DAM / FC, partagé entre cinematic et short
 // ════════════════════════════════════════════════════════════════════
 class GamesRow extends StatelessWidget {
   const GamesRow({super.key});
@@ -386,7 +386,7 @@ class GamesRow extends StatelessWidget {
       children: [
         GameBadge(label: 'EFB', color: ArenaColors.gameEfoot),
         SizedBox(width: 16),
-        GameBadge(label: 'FIFA', color: ArenaColors.gameFifa),
+        GameBadge(label: 'DAM', color: ArenaColors.gameDraughts),
         SizedBox(width: 16),
         GameBadge(label: 'FC', color: ArenaColors.gameFc),
       ],

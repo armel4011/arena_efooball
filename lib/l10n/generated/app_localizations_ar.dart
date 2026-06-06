@@ -53,7 +53,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get onboardingSlide1Body =>
-      'مرحبًا بك في ARENA، المنصة رقم 1 لبطولات eFootball وFIFA Mobile وFC Mobile في أفريقيا.';
+      'مرحبًا بك في ARENA، المنصة رقم 1 لبطولات eFootball والداما وFC Mobile في أفريقيا.';
 
   @override
   String get onboardingSlide2Title => 'جداول الإقصاء، مواجهات حقيقية';

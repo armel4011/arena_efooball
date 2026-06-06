@@ -74,7 +74,7 @@ class PermissionsService {
 
   /// PACKAGE_USAGE_STATS permission (Android only).
   ///
-  /// Required by `app_usage` to detect when eFootball / FIFA enters the
+  /// Required by `app_usage` to detect when eFootball / EA FC enters the
   /// foreground. The OS does NOT expose this as a runtime dialog: the
   /// user must toggle it in Settings → Apps → Special access → Usage
   /// access. PHASE 8.2 will plug `app_usage.UsageStats.checkUsage…` to

@@ -247,8 +247,8 @@ class _BannerGallery extends StatelessWidget {
         ),
         SizedBox(height: ArenaSpacing.sm),
         ArenaBanner(
-          game: ArenaBannerGame.fifa,
-          title: 'FIFA Mobile Africa',
+          game: ArenaBannerGame.draughts,
+          title: 'Jeu de Dames Africa',
           subtitle: '8 / 32 joueurs · Récompense 50 000 XAF',
         ),
         SizedBox(height: ArenaSpacing.sm),
@@ -533,7 +533,7 @@ class _ColorPalette extends StatelessWidget {
     _Swatch('primary', ArenaColors.primary),
     _Swatch('secondary', ArenaColors.secondary),
     _Swatch('efootball', ArenaColors.efootball),
-    _Swatch('fifa', ArenaColors.fifa),
+    _Swatch('draughts', ArenaColors.draughts),
     _Swatch('fcMobile', ArenaColors.fcMobile),
     _Swatch('success', ArenaColors.success),
     _Swatch('warning', ArenaColors.warning),
@@ -709,7 +709,7 @@ class _CardsGallery extends StatelessWidget {
           onTap: () {},
           child: Row(
             children: [
-              const Icon(Icons.flash_on, color: ArenaColors.fifa),
+              const Icon(Icons.flash_on, color: ArenaColors.draughts),
               const SizedBox(width: ArenaSpacing.md),
               Expanded(
                 child: Text(

@@ -17,7 +17,7 @@ import 'package:installed_apps/installed_apps.dart';
 /// returns an empty result without throwing.
 ///
 /// PHASE 8.3 will subscribe to [foregroundGameStream] to gate the
-/// recording start: as soon as eFootball / FIFA enters foreground the
+/// recording start: as soon as eFootball / EA FC enters foreground the
 /// foreground service flips on; when the player swipes back to ARENA
 /// the stream emits `null` and we can offer the "did you finish?" CTA.
 class GameDetectorService {

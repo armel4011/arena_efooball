@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 
-/// Floating button rendered on top of eFootball / FIFA during a
+/// Floating button rendered on top of eFootball / the game during a
 /// recorded match. Lives in its own Flutter isolate spawned by
 /// `flutter_overlay_window` — it cannot read providers from the
 /// main app, so all state arrives through `FlutterOverlayWindow.shareData`.

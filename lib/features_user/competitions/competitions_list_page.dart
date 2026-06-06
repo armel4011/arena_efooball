@@ -297,7 +297,7 @@ void _openInscriptionFlow(BuildContext context, Competition c) {
 
 String _gameEmoji(GameType g) => switch (g) {
       GameType.efootball => '⚽',
-      GameType.fifaMobile => '🏆',
+      GameType.draughts => '🔴',
       GameType.eaSportsFc => '🎮',
     };
 

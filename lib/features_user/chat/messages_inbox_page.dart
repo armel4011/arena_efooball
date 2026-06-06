@@ -689,7 +689,7 @@ class _CompetitionThreadRow extends StatelessWidget {
     final c = competition;
     final emoji = switch (c.game.value) {
       'efootball' => '⚽',
-      'fifa_mobile' => '🎮',
+      'draughts' => '🔴',
       'ea_sports_fc' => '🎯',
       _ => '🏆',
     };

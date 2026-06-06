@@ -210,7 +210,7 @@ class _GameSwatch extends StatelessWidget {
       runSpacing: ArenaSpacing.sm,
       children: [
         _Swatch(label: 'gameEfoot', color: ArenaColors.gameEfoot),
-        _Swatch(label: 'gameFifa', color: ArenaColors.gameFifa),
+        _Swatch(label: 'gameDraughts', color: ArenaColors.gameDraughts),
         _Swatch(label: 'gameFc', color: ArenaColors.gameFc),
       ],
     );

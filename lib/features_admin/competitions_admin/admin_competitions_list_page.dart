@@ -153,7 +153,7 @@ class _GameChipsRow extends StatelessWidget {
   static const _items = <(GameType?, String)>[
     (null, 'Tous'),
     (GameType.efootball, 'eFoot'),
-    (GameType.fifaMobile, 'FIFA'),
+    (GameType.draughts, 'Dames'),
     (GameType.eaSportsFc, 'FC Mobile'),
   ];
 

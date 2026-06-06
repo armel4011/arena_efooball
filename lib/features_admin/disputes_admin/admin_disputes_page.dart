@@ -184,7 +184,7 @@ class _ScoresCard extends StatelessWidget {
             label: 'Joueur 1 (HOME)',
             teamName: match.player1TeamName,
             score: '${match.score1 ?? '?'}',
-            scoreColor: ArenaColors.gameFifa,
+            scoreColor: ArenaColors.gameDraughts,
           ),
           const Divider(
             color: ArenaColors.border,

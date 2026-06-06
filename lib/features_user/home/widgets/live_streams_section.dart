@@ -37,7 +37,7 @@ class LiveStreamsSection extends ConsumerWidget {
 }
 
 /// Card hero pour le stream le plus récent — reproduit `.m-card` de la
-/// maquette : gradient game-themed cyclique (eFoot / FIFA / FC / signal)
+/// maquette : gradient game-themed cyclique (eFoot / Dames / FC / signal)
 /// déterministe via `hash(matchId)`, badge LIVE pulsant top-left,
 /// compteur `+N autres` éventuel, et titre + caption bottom over scrim.
 class _LiveStreamCard extends StatelessWidget {
@@ -47,8 +47,8 @@ class _LiveStreamCard extends StatelessWidget {
   final int allCount;
 
   static const _palettes = <LinearGradient>[
-    ArenaColors.bannerFifa, // vert eFootball mock
-    ArenaColors.bannerFc, // orange FIFA
+    ArenaColors.bannerDraughts, // rouge dames mock
+    ArenaColors.bannerFc, // orange FC
     LinearGradient(
       colors: [Color(0xFF6A11CB), Color(0xFF2575FC)],
       begin: Alignment.topLeft,

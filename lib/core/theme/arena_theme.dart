@@ -48,7 +48,7 @@ class ArenaColors {
 
   // ─── Game colors (par jeu) ────────────────────────────────────────────────
   static const Color gameEfoot = Color(0xFF00B4D8);      // eFootball
-  static const Color gameFifa = Color(0xFF06D6A0);       // FIFA Mobile
+  static const Color gameDraughts = Color(0xFFD62828);   // Jeu de Dames (rouge dames)
   static const Color gameFc = Color(0xFFF77F00);         // EA SPORTS FC Mobile
 
   // ─── Borders ──────────────────────────────────────────────────────────────
@@ -94,8 +94,8 @@ class ArenaColors {
     colors: [Color(0xFF00B4D8), Color(0xFF023E8A)],
     begin: Alignment.topLeft, end: Alignment.bottomRight,
   );
-  static const LinearGradient bannerFifa = LinearGradient(
-    colors: [Color(0xFF06D6A0), Color(0xFF0F5132)],
+  static const LinearGradient bannerDraughts = LinearGradient(
+    colors: [Color(0xFFD62828), Color(0xFF6A040F)],
     begin: Alignment.topLeft, end: Alignment.bottomRight,
   );
   static const LinearGradient bannerFc = LinearGradient(
@@ -204,7 +204,7 @@ class ArenaColors {
   static const Color primary = signalBlue;
   static const Color secondary = neonRed;
   static const Color efootball = gameEfoot;
-  static const Color fifa = gameFifa;
+  static const Color draughts = gameDraughts;
   static const Color fcMobile = gameFc;
   static const Color success = statusOk;
   static const Color warning = statusWarn;
