@@ -26,6 +26,7 @@
 // les notifs suivantes partent.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
+import type { ServiceClient } from '../_shared/db.ts';
 import { FcmTokenInvalidError, sendFcmNotification } from '../_shared/fcm.ts';
 import {
   ApnsTokenInvalidError,
@@ -50,7 +51,7 @@ function jsonResponse(payload: unknown, status = 200): Response {
 /// Stampe `notifications.sent_at = now()` pour que l'app ne ré-affiche
 /// pas la notif en bandeau « non remis ». Best-effort — pas de retry V1.
 async function markSent(
-  sb: ReturnType<typeof createClient>,
+  sb: ServiceClient,
   id: string,
 ): Promise<void> {
   const { error } = await sb
@@ -67,7 +68,7 @@ async function markSent(
 /// des tokens morts à chaque insert. Le prochain cold start de l'app
 /// re-enregistrera un nouveau token via NotificationService.attach.
 async function clearDeadToken(
-  sb: ReturnType<typeof createClient>,
+  sb: ServiceClient,
   userId: string,
   column: 'fcm_token' | 'voip_token',
 ): Promise<void> {

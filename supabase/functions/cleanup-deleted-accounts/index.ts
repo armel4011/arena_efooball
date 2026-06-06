@@ -24,6 +24,7 @@
 // =============================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+import type { ServiceClient } from "../_shared/db.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -45,7 +46,7 @@ function jsonResponse(body: unknown, status = 200): Response {
 /// V1.0 c'est largement assez (< 100 utilisateurs supprimés / mois
 /// attendus).
 async function listAllUnderUser(
-  client: ReturnType<typeof createClient>,
+  client: ServiceClient,
   bucket: string,
   userId: string,
 ): Promise<string[]> {

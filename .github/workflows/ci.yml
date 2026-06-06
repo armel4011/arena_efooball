@@ -282,15 +282,13 @@ jobs:
         # (database.types.ts généré) définis dans supabase/functions/deno.json.
         run: deno lint
 
-      - name: Deno type-check (non bloquant — baseline 11 erreurs)
+      - name: Deno type-check (BLOQUANT)
         # `deno check` résout les imports distants (esm.sh / npm:) et type-check.
-        # 11 erreurs historiques au 2026-06-06, surtout des décalages de types
-        # de paquets tiers (ex. `agora-token@2.0.5` n'exporte pas `RtmRole` dans
-        # ses .d.ts alors qu'il existe au runtime). Non bloquant tant que la
-        # baseline n'est pas traitée ; à passer bloquant ensuite (retirer
-        # continue-on-error). On type-check tous les `index.ts` (points d'entrée).
-        continue-on-error: true
-        run: deno check **/index.ts
+        # Baseline résorbée le 2026-06-06 (11 erreurs corrigées : importKey
+        # BufferSource, type ServiceClient, API RtmTokenBuilder v2). Tout
+        # nouveau souci de typage fait désormais échouer la CI. Périmètre :
+        # tous les .ts (sources _shared + index + tests).
+        run: deno check **/*.ts
 
       - name: Deno fmt --check (non bloquant — code pas encore formaté)
         # Le code n'a jamais été passé à `deno fmt` (guillemets mixtes, lignes
@@ -301,14 +299,13 @@ jobs:
 
       - name: Deno test (BLOQUANT)
         # Tests unitaires de _shared/ (TOTP RFC 6238, rate-limit fail-open,
-        # config APNs, classes d'erreur). `--no-check` car le type-check strict
-        # bute sur la baseline de typage des sources (cf. step "Deno type-check"
-        # non bloquant ci-dessus) — on valide ici le COMPORTEMENT au runtime.
+        # config APNs, classes d'erreur). Type-check inclus (le `--no-check`
+        # n'est plus nécessaire depuis la résorption de la baseline de typage).
         # `--allow-all` : les tests APNs lisent/écrivent Deno.env. Le `if`
         # exécute aussi automatiquement tout futur *.test.ts ajouté.
         run: |
           if [ -n "$(find . -name '*.test.ts' -o -name '*_test.ts' | head -1)" ]; then
-            deno test --allow-all --no-check
+            deno test --allow-all
           else
             echo "Aucun test Deno pour l'instant — step ignoré."
           fi
