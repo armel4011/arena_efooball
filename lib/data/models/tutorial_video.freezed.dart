@@ -25,6 +25,7 @@ mixin _$TutorialVideo {
   String get videoUrl => throw _privateConstructorUsedError;
   bool get isActive => throw _privateConstructorUsedError;
   int get displayDays => throw _privateConstructorUsedError;
+  TutorialPage get targetPage => throw _privateConstructorUsedError;
   String? get updatedBy => throw _privateConstructorUsedError;
   DateTime? get createdAt => throw _privateConstructorUsedError;
   DateTime? get updatedAt => throw _privateConstructorUsedError;
@@ -51,6 +52,7 @@ abstract class $TutorialVideoCopyWith<$Res> {
       String videoUrl,
       bool isActive,
       int displayDays,
+      TutorialPage targetPage,
       String? updatedBy,
       DateTime? createdAt,
       DateTime? updatedAt});
@@ -76,6 +78,7 @@ class _$TutorialVideoCopyWithImpl<$Res, $Val extends TutorialVideo>
     Object? videoUrl = null,
     Object? isActive = null,
     Object? displayDays = null,
+    Object? targetPage = null,
     Object? updatedBy = freezed,
     Object? createdAt = freezed,
     Object? updatedAt = freezed,
@@ -101,6 +104,10 @@ class _$TutorialVideoCopyWithImpl<$Res, $Val extends TutorialVideo>
           ? _value.displayDays
           : displayDays // ignore: cast_nullable_to_non_nullable
               as int,
+      targetPage: null == targetPage
+          ? _value.targetPage
+          : targetPage // ignore: cast_nullable_to_non_nullable
+              as TutorialPage,
       updatedBy: freezed == updatedBy
           ? _value.updatedBy
           : updatedBy // ignore: cast_nullable_to_non_nullable
@@ -131,6 +138,7 @@ abstract class _$$TutorialVideoImplCopyWith<$Res>
       String videoUrl,
       bool isActive,
       int displayDays,
+      TutorialPage targetPage,
       String? updatedBy,
       DateTime? createdAt,
       DateTime? updatedAt});
@@ -154,6 +162,7 @@ class __$$TutorialVideoImplCopyWithImpl<$Res>
     Object? videoUrl = null,
     Object? isActive = null,
     Object? displayDays = null,
+    Object? targetPage = null,
     Object? updatedBy = freezed,
     Object? createdAt = freezed,
     Object? updatedAt = freezed,
@@ -179,6 +188,10 @@ class __$$TutorialVideoImplCopyWithImpl<$Res>
           ? _value.displayDays
           : displayDays // ignore: cast_nullable_to_non_nullable
               as int,
+      targetPage: null == targetPage
+          ? _value.targetPage
+          : targetPage // ignore: cast_nullable_to_non_nullable
+              as TutorialPage,
       updatedBy: freezed == updatedBy
           ? _value.updatedBy
           : updatedBy // ignore: cast_nullable_to_non_nullable
@@ -204,6 +217,7 @@ class _$TutorialVideoImpl implements _TutorialVideo {
       required this.videoUrl,
       this.isActive = true,
       this.displayDays = 7,
+      this.targetPage = TutorialPage.home,
       this.updatedBy,
       this.createdAt,
       this.updatedAt});
@@ -224,6 +238,9 @@ class _$TutorialVideoImpl implements _TutorialVideo {
   @JsonKey()
   final int displayDays;
   @override
+  @JsonKey()
+  final TutorialPage targetPage;
+  @override
   final String? updatedBy;
   @override
   final DateTime? createdAt;
@@ -232,7 +249,7 @@ class _$TutorialVideoImpl implements _TutorialVideo {
 
   @override
   String toString() {
-    return 'TutorialVideo(id: $id, title: $title, videoUrl: $videoUrl, isActive: $isActive, displayDays: $displayDays, updatedBy: $updatedBy, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'TutorialVideo(id: $id, title: $title, videoUrl: $videoUrl, isActive: $isActive, displayDays: $displayDays, targetPage: $targetPage, updatedBy: $updatedBy, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -248,6 +265,8 @@ class _$TutorialVideoImpl implements _TutorialVideo {
                 other.isActive == isActive) &&
             (identical(other.displayDays, displayDays) ||
                 other.displayDays == displayDays) &&
+            (identical(other.targetPage, targetPage) ||
+                other.targetPage == targetPage) &&
             (identical(other.updatedBy, updatedBy) ||
                 other.updatedBy == updatedBy) &&
             (identical(other.createdAt, createdAt) ||
@@ -259,7 +278,7 @@ class _$TutorialVideoImpl implements _TutorialVideo {
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   int get hashCode => Object.hash(runtimeType, id, title, videoUrl, isActive,
-      displayDays, updatedBy, createdAt, updatedAt);
+      displayDays, targetPage, updatedBy, createdAt, updatedAt);
 
   /// Create a copy of TutorialVideo
   /// with the given fields replaced by the non-null parameter values.
@@ -284,6 +303,7 @@ abstract class _TutorialVideo implements TutorialVideo {
       required final String videoUrl,
       final bool isActive,
       final int displayDays,
+      final TutorialPage targetPage,
       final String? updatedBy,
       final DateTime? createdAt,
       final DateTime? updatedAt}) = _$TutorialVideoImpl;
@@ -301,6 +321,8 @@ abstract class _TutorialVideo implements TutorialVideo {
   bool get isActive;
   @override
   int get displayDays;
+  @override
+  TutorialPage get targetPage;
   @override
   String? get updatedBy;
   @override

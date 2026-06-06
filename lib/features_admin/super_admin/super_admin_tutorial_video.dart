@@ -12,31 +12,337 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// SA · Vidéo tutoriel — gestion de la vidéo de prise en main de la home.
+/// SA · Vidéos tutoriel — gestion CRUD des bannières de prise en main.
 ///
-/// Le super-admin renseigne un titre + un lien vidéo externe (YouTube,
-/// Vimeo, lien direct…) et publie. Une seule vidéo active à la fois :
-/// publier remplace la précédente. Un bouton permet de retirer la vidéo de
-/// la home sans en publier une nouvelle. Côté user, la bannière ouvre le
-/// lien en EXTERNE au tap.
-class SuperAdminTutorialVideo extends ConsumerStatefulWidget {
+/// Plusieurs bannières peuvent être actives, chacune ciblant une page
+/// (Accueil / Compétitions) ou toutes (Toutes les pages). Le super-admin
+/// peut ajouter, modifier, activer/désactiver et supprimer chaque bannière.
+/// La fenêtre d'affichage par nouvel utilisateur (jours) est gérée par
+/// bannière. Toutes les mutations exigent un step-up TOTP + un audit log.
+/// Côté user, la bannière ouvre le lien vidéo en EXTERNE au tap.
+class SuperAdminTutorialVideo extends ConsumerWidget {
   const SuperAdminTutorialVideo({super.key});
 
   @override
-  ConsumerState<SuperAdminTutorialVideo> createState() =>
-      _SuperAdminTutorialVideoState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final banners = ref.watch(allTutorialBannersProvider);
+
+    return Scaffold(
+      appBar: const ArenaAppBar(title: '🎬 VIDÉOS TUTORIEL'),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: ArenaColors.signalBlue,
+        onPressed: () => _openForm(context, ref, existing: null),
+        icon: const Icon(Icons.add),
+        label: const Text('Ajouter une bannière'),
+      ),
+      body: ArenaScreenBackground(
+        accent: ArenaColors.neonRed,
+        child: SafeArea(
+          child: banners.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(
+              child: Padding(
+                padding: const EdgeInsets.all(ArenaSpacing.lg),
+                child: Text(
+                  'Erreur : $e',
+                  style: ArenaText.bodyMuted
+                      .copyWith(color: ArenaColors.neonRed),
+                ),
+              ),
+            ),
+            data: (list) {
+              if (list.isEmpty) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(ArenaSpacing.lg),
+                    child: Text(
+                      'Aucune bannière. Touchez « Ajouter une bannière » '
+                      'pour en créer une.',
+                      textAlign: TextAlign.center,
+                      style: ArenaText.bodyMuted,
+                    ),
+                  ),
+                );
+              }
+              return ListView.separated(
+                padding: const EdgeInsets.fromLTRB(
+                  ArenaSpacing.lg,
+                  ArenaSpacing.lg,
+                  ArenaSpacing.lg,
+                  // Espace pour le FAB.
+                  ArenaSpacing.xl * 2,
+                ),
+                itemCount: list.length,
+                separatorBuilder: (_, __) =>
+                    const SizedBox(height: ArenaSpacing.md),
+                itemBuilder: (_, i) => _BannerCard(
+                  banner: list[i],
+                  onEdit: () =>
+                      _openForm(context, ref, existing: list[i]),
+                  onToggle: () => _toggleActive(context, ref, list[i]),
+                  onDelete: () => _delete(context, ref, list[i]),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openForm(
+    BuildContext context,
+    WidgetRef ref, {
+    required TutorialVideo? existing,
+  }) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _BannerFormSheet(existing: existing),
+    );
+  }
+
+  Future<void> _toggleActive(
+    BuildContext context,
+    WidgetRef ref,
+    TutorialVideo banner,
+  ) async {
+    final adminId = ref.read(currentSessionProvider)?.user.id;
+    if (adminId == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final next = !banner.isActive;
+    final totpOk = await TotpGate.confirm(
+      context,
+      ref,
+      reason: next
+          ? 'Activer la bannière tutoriel « ${banner.title} »'
+          : 'Désactiver la bannière tutoriel « ${banner.title} »',
+    );
+    if (!totpOk) return;
+    try {
+      await ref.read(tutorialVideoRepositoryProvider).setActive(banner.id, next);
+      await ref.read(adminAuditLogRepositoryProvider).record(
+        adminId: adminId,
+        action: next ? 'tutorial_video_activated' : 'tutorial_video_deactivated',
+        targetType: 'tutorial_video',
+        targetId: banner.id,
+        beforeState: {'is_active': banner.isActive},
+        afterState: {'is_active': next},
+      );
+      _snack(messenger, next ? '✓ Bannière activée.' : '✓ Bannière désactivée.');
+    } catch (e) {
+      _snack(messenger, '✗ Erreur : $e', error: true);
+    }
+  }
+
+  Future<void> _delete(
+    BuildContext context,
+    WidgetRef ref,
+    TutorialVideo banner,
+  ) async {
+    final adminId = ref.read(currentSessionProvider)?.user.id;
+    if (adminId == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: ArenaColors.carbon,
+        title: Text('Supprimer la bannière ?', style: ArenaText.h3),
+        content: Text(
+          'La bannière « ${banner.title} » sera supprimée définitivement.',
+          style: ArenaText.bodyMuted,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text('Annuler', style: ArenaText.body),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(
+              'Supprimer',
+              style: ArenaText.body.copyWith(color: ArenaColors.neonRed),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !context.mounted) return;
+
+    final totpOk = await TotpGate.confirm(
+      context,
+      ref,
+      reason: 'Supprimer la bannière tutoriel « ${banner.title} »',
+    );
+    if (!totpOk || !context.mounted) return;
+    try {
+      await ref.read(tutorialVideoRepositoryProvider).deleteBanner(banner.id);
+      await ref.read(adminAuditLogRepositoryProvider).record(
+        adminId: adminId,
+        action: 'tutorial_video_deleted',
+        targetType: 'tutorial_video',
+        targetId: banner.id,
+        beforeState: {
+          'title': banner.title,
+          'video_url': banner.videoUrl,
+          'target_page': banner.targetPage.wire,
+          'display_days': banner.displayDays,
+          'is_active': banner.isActive,
+        },
+      );
+      _snack(messenger, '✓ Bannière supprimée.');
+    } catch (e) {
+      _snack(messenger, '✗ Erreur : $e', error: true);
+    }
+  }
+
+  void _snack(
+    ScaffoldMessengerState messenger,
+    String msg, {
+    bool error = false,
+  }) {
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: error ? ArenaColors.neonRed : ArenaColors.statusOk,
+      ),
+    );
+  }
 }
 
-class _SuperAdminTutorialVideoState
-    extends ConsumerState<SuperAdminTutorialVideo> {
-  final _titleCtrl = TextEditingController();
-  final _urlCtrl = TextEditingController();
-  final _daysCtrl = TextEditingController(text: '7');
+/// Carte récapitulative d'une bannière dans la liste admin.
+class _BannerCard extends StatelessWidget {
+  const _BannerCard({
+    required this.banner,
+    required this.onEdit,
+    required this.onToggle,
+    required this.onDelete,
+  });
 
+  final TutorialVideo banner;
+  final VoidCallback onEdit;
+  final VoidCallback onToggle;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final active = banner.isActive;
+    return Container(
+      padding: const EdgeInsets.all(ArenaSpacing.md),
+      decoration: BoxDecoration(
+        color: ArenaColors.carbon,
+        borderRadius: BorderRadius.circular(ArenaRadius.md),
+        border: Border.all(
+          color: active ? ArenaColors.statusOk : ArenaColors.border,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  banner.title,
+                  style: ArenaText.body.copyWith(fontWeight: FontWeight.w700),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              _StatusBadge(active: active),
+            ],
+          ),
+          const SizedBox(height: ArenaSpacing.xs),
+          Text(banner.videoUrl, style: ArenaText.bodyMuted, maxLines: 1),
+          const SizedBox(height: ArenaSpacing.xs),
+          Text(
+            '📄 ${banner.targetPage.labelFr}  ·  ⏳ ${banner.displayDays} '
+            'jour${banner.displayDays > 1 ? 's' : ''}',
+            style: ArenaText.bodyMuted,
+          ),
+          const SizedBox(height: ArenaSpacing.sm),
+          Row(
+            children: [
+              Expanded(
+                child: ArenaButton(
+                  label: 'MODIFIER',
+                  variant: ArenaButtonVariant.secondary,
+                  onPressed: onEdit,
+                ),
+              ),
+              const SizedBox(width: ArenaSpacing.sm),
+              Expanded(
+                child: ArenaButton(
+                  label: active ? 'DÉSACTIVER' : 'ACTIVER',
+                  variant: ArenaButtonVariant.secondary,
+                  onPressed: onToggle,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: ArenaSpacing.sm),
+          ArenaButton(
+            label: 'SUPPRIMER',
+            variant: ArenaButtonVariant.danger,
+            fullWidth: true,
+            onPressed: onDelete,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  const _StatusBadge({required this.active});
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = active ? ArenaColors.statusOk : ArenaColors.silver;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(ArenaRadius.sm),
+        border: Border.all(color: color),
+      ),
+      child: Text(
+        active ? 'ACTIVE' : 'INACTIVE',
+        style: ArenaText.monoSmall.copyWith(color: color, letterSpacing: 1),
+      ),
+    );
+  }
+}
+
+/// Formulaire en bottom-sheet pour créer / modifier une bannière.
+class _BannerFormSheet extends ConsumerStatefulWidget {
+  const _BannerFormSheet({required this.existing});
+  final TutorialVideo? existing;
+
+  @override
+  ConsumerState<_BannerFormSheet> createState() => _BannerFormSheetState();
+}
+
+class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
+  late final TextEditingController _titleCtrl;
+  late final TextEditingController _urlCtrl;
+  late final TextEditingController _daysCtrl;
+  late TutorialPage _page;
   bool _saving = false;
-  String? _lastResult;
-  // Pré-remplit le champ durée depuis la vidéo courante une seule fois.
-  bool _daysPrefilled = false;
+
+  bool get _isEdit => widget.existing != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final e = widget.existing;
+    _titleCtrl = TextEditingController(text: e?.title ?? '');
+    _urlCtrl = TextEditingController(text: e?.videoUrl ?? '');
+    _daysCtrl = TextEditingController(text: (e?.displayDays ?? 7).toString());
+    _page = e?.targetPage ?? TutorialPage.home;
+  }
 
   @override
   void dispose() {
@@ -49,14 +355,12 @@ class _SuperAdminTutorialVideoState
   String get _title => _titleCtrl.text.trim();
   String get _url => _urlCtrl.text.trim();
 
-  /// Durée d'affichage saisie (jours), ou `null` si invalide.
   int? get _displayDays {
     final n = int.tryParse(_daysCtrl.text.trim());
     if (n == null || n < 1 || n > 365) return null;
     return n;
   }
 
-  /// URL http/https valide et absolue.
   bool get _urlValid {
     final uri = Uri.tryParse(_url);
     return uri != null &&
@@ -72,218 +376,184 @@ class _SuperAdminTutorialVideoState
       _urlValid &&
       _displayDays != null;
 
-  Future<void> _publish() async {
+  Future<void> _save() async {
     if (!_canSave) return;
     final adminId = ref.read(currentSessionProvider)?.user.id;
     if (adminId == null) return;
     final totpOk = await TotpGate.confirm(
       context,
       ref,
-      reason: 'Publier une vidéo tutoriel sur la home',
-    );
-    if (!totpOk || !mounted) return;
-
-    setState(() {
-      _saving = true;
-      _lastResult = null;
-    });
-    try {
-      final days = _displayDays!;
-      await ref.read(tutorialVideoRepositoryProvider).saveActive(
-            title: _title,
-            videoUrl: _url,
-            displayDays: days,
-            updatedBy: adminId,
-          );
-      await ref.read(adminAuditLogRepositoryProvider).record(
-        adminId: adminId,
-        action: 'tutorial_video_published',
-        targetType: 'tutorial_video',
-        targetId: null,
-        afterState: {
-          'title': _title,
-          'video_url': _url,
-          'display_days': days,
-        },
-      );
-      ref.invalidate(currentTutorialVideoProvider);
-      if (!mounted) return;
-      setState(() {
-        _saving = false;
-        _lastResult = '✓ Vidéo tutoriel publiée sur la home.';
-        _titleCtrl.clear();
-        _urlCtrl.clear();
-        _daysCtrl.text = '7';
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _saving = false;
-        _lastResult = '✗ Erreur : $e';
-      });
-    }
-  }
-
-  Future<void> _removeCurrent() async {
-    final adminId = ref.read(currentSessionProvider)?.user.id;
-    if (adminId == null) return;
-    final totpOk = await TotpGate.confirm(
-      context,
-      ref,
-      reason: 'Retirer la vidéo tutoriel de la home',
+      reason: _isEdit
+          ? 'Modifier la bannière tutoriel « $_title »'
+          : 'Créer une bannière tutoriel « $_title »',
     );
     if (!totpOk || !mounted) return;
 
     setState(() => _saving = true);
+    final days = _displayDays!;
+    final repo = ref.read(tutorialVideoRepositoryProvider);
+    final audit = ref.read(adminAuditLogRepositoryProvider);
     try {
-      await ref.read(tutorialVideoRepositoryProvider).deactivate();
-      await ref.read(adminAuditLogRepositoryProvider).record(
-            adminId: adminId,
-            action: 'tutorial_video_removed',
-            targetType: 'tutorial_video',
-            targetId: null,
-            afterState: {},
-          );
-      ref.invalidate(currentTutorialVideoProvider);
+      if (_isEdit) {
+        final before = widget.existing!;
+        await repo.updateBanner(
+          id: before.id,
+          title: _title,
+          videoUrl: _url,
+          targetPage: _page,
+          displayDays: days,
+          isActive: before.isActive,
+          updatedBy: adminId,
+        );
+        await audit.record(
+          adminId: adminId,
+          action: 'tutorial_video_updated',
+          targetType: 'tutorial_video',
+          targetId: before.id,
+          beforeState: {
+            'title': before.title,
+            'video_url': before.videoUrl,
+            'target_page': before.targetPage.wire,
+            'display_days': before.displayDays,
+          },
+          afterState: {
+            'title': _title,
+            'video_url': _url,
+            'target_page': _page.wire,
+            'display_days': days,
+          },
+        );
+      } else {
+        await repo.createBanner(
+          title: _title,
+          videoUrl: _url,
+          targetPage: _page,
+          displayDays: days,
+          updatedBy: adminId,
+        );
+        await audit.record(
+          adminId: adminId,
+          action: 'tutorial_video_created',
+          targetType: 'tutorial_video',
+          afterState: {
+            'title': _title,
+            'video_url': _url,
+            'target_page': _page.wire,
+            'display_days': days,
+          },
+        );
+      }
       if (!mounted) return;
-      setState(() {
-        _saving = false;
-        _lastResult = '✓ Vidéo tutoriel retirée de la home.';
-      });
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_isEdit ? '✓ Bannière modifiée.' : '✓ Bannière créée.'),
+          backgroundColor: ArenaColors.statusOk,
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _saving = false;
-        _lastResult = '✗ Erreur : $e';
-      });
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('✗ Erreur : $e'),
+          backgroundColor: ArenaColors.neonRed,
+        ),
+      );
     }
-  }
-
-  /// Pré-remplit le champ "durée" avec la valeur de la vidéo active, une
-  /// seule fois (au premier chargement réussi). On ne touche plus au champ
-  /// ensuite pour ne pas écraser une saisie en cours de l'admin.
-  void _maybePrefillDays(TutorialVideo? video) {
-    if (_daysPrefilled) return;
-    _daysPrefilled = true;
-    if (video == null || !video.isActive) return;
-    final days = video.displayDays;
-    // Repousse post-frame : on ne mute pas un controller pendant le build.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _daysCtrl.text = days.toString();
-    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final current = ref.watch(currentTutorialVideoProvider);
     final showUrlError = _url.isNotEmpty && !_urlValid;
-    final showDaysError = _daysCtrl.text.trim().isNotEmpty && _displayDays == null;
+    final showDaysError =
+        _daysCtrl.text.trim().isNotEmpty && _displayDays == null;
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
-    return Scaffold(
-      appBar: const ArenaAppBar(title: '🎬 VIDÉO TUTORIEL'),
-      body: ArenaScreenBackground(
-        accent: ArenaColors.neonRed,
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: ArenaColors.carbon2,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(ArenaRadius.lg)),
+        ),
         child: SafeArea(
-          child: ListView(
+          top: false,
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(ArenaSpacing.lg),
-            children: [
-              Text('VIDÉO ACTUELLE', style: ArenaText.inputLabel),
-              const SizedBox(height: ArenaSpacing.sm),
-              current.when(
-                loading: () => const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(ArenaSpacing.md),
-                    child: CircularProgressIndicator(),
-                  ),
-                ),
-                error: (e, _) => Text(
-                  'Erreur : $e',
-                  style: ArenaText.bodyMuted
-                      .copyWith(color: ArenaColors.neonRed),
-                ),
-                data: (video) {
-                  _maybePrefillDays(video);
-                  return _CurrentVideoCard(
-                    video: video,
-                    onRemove: _saving ? null : _removeCurrent,
-                  );
-                },
-              ),
-              const SizedBox(height: ArenaSpacing.lg),
-              Text('NOUVELLE VIDÉO', style: ArenaText.h3),
-              const SizedBox(height: ArenaSpacing.sm),
-
-              // ─── Titre ────────────────────────────────────────────────
-              Text('📝 TITRE', style: ArenaText.inputLabel),
-              const SizedBox(height: ArenaSpacing.sm),
-              ArenaTextField(
-                controller: _titleCtrl,
-                hint: 'Ex. Comment créer ta première compétition',
-                onChanged: (_) => setState(() {}),
-              ),
-              const SizedBox(height: ArenaSpacing.lg),
-
-              // ─── Lien vidéo ───────────────────────────────────────────
-              Text('🔗 LIEN VIDÉO', style: ArenaText.inputLabel),
-              const SizedBox(height: ArenaSpacing.sm),
-              ArenaTextField(
-                controller: _urlCtrl,
-                hint: 'https://youtu.be/…',
-                helper: 'Lien http/https ouvert dans le navigateur externe.',
-                onChanged: (_) => setState(() {}),
-              ),
-              if (showUrlError) ...[
-                const SizedBox(height: ArenaSpacing.xs),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
                 Text(
-                  'Lien invalide — utilisez une URL http(s) complète.',
-                  style: ArenaText.small.copyWith(color: ArenaColors.neonRed),
+                  _isEdit ? 'MODIFIER LA BANNIÈRE' : 'NOUVELLE BANNIÈRE',
+                  style: ArenaText.h3,
                 ),
-              ],
-              const SizedBox(height: ArenaSpacing.lg),
+                const SizedBox(height: ArenaSpacing.lg),
 
-              // ─── Durée d'affichage (ciblage nouveaux users) ───────────
-              Text(
-                "⏳ DURÉE D'AFFICHAGE POUR LES NOUVEAUX (JOURS)",
-                style: ArenaText.inputLabel,
-              ),
-              const SizedBox(height: ArenaSpacing.sm),
-              ArenaTextField(
-                controller: _daysCtrl,
-                hint: '7',
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(3),
-                ],
-                helper: "La bannière s'affiche à chaque nouvel utilisateur "
-                    'pendant ce nombre de jours après la création de son '
-                    'compte (1 à 365), puis disparaît.',
-                errorText: showDaysError ? 'Entrez un nombre entre 1 et 365.' : null,
-                onChanged: (_) => setState(() {}),
-              ),
-              const SizedBox(height: ArenaSpacing.lg),
-
-              ArenaButton(
-                label: _saving ? 'PUBLICATION…' : '🚀 PUBLIER LA VIDÉO',
-                fullWidth: true,
-                size: ArenaButtonSize.large,
-                isLoading: _saving,
-                onPressed: _canSave ? _publish : null,
-              ),
-              if (_lastResult != null) ...[
+                Text('📝 TITRE', style: ArenaText.inputLabel),
                 const SizedBox(height: ArenaSpacing.sm),
+                ArenaTextField(
+                  controller: _titleCtrl,
+                  hint: 'Ex. Comment créer ta première compétition',
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: ArenaSpacing.lg),
+
+                Text('🔗 LIEN VIDÉO', style: ArenaText.inputLabel),
+                const SizedBox(height: ArenaSpacing.sm),
+                ArenaTextField(
+                  controller: _urlCtrl,
+                  hint: 'https://youtu.be/…',
+                  helper: 'Lien http/https ouvert dans le navigateur externe.',
+                  errorText: showUrlError
+                      ? 'Lien invalide — utilisez une URL http(s) complète.'
+                      : null,
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: ArenaSpacing.lg),
+
+                Text('📄 PAGE CIBLE', style: ArenaText.inputLabel),
+                const SizedBox(height: ArenaSpacing.sm),
+                _PageDropdown(
+                  value: _page,
+                  onChanged: (p) => setState(() => _page = p),
+                ),
+                const SizedBox(height: ArenaSpacing.lg),
+
                 Text(
-                  _lastResult!,
-                  textAlign: TextAlign.center,
-                  style: ArenaText.body.copyWith(
-                    color: _lastResult!.startsWith('✓')
-                        ? ArenaColors.statusOk
-                        : ArenaColors.neonRed,
-                  ),
+                  "⏳ DURÉE D'AFFICHAGE POUR LES NOUVEAUX (JOURS)",
+                  style: ArenaText.inputLabel,
+                ),
+                const SizedBox(height: ArenaSpacing.sm),
+                ArenaTextField(
+                  controller: _daysCtrl,
+                  hint: '7',
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(3),
+                  ],
+                  helper: "La bannière s'affiche à chaque nouvel utilisateur "
+                      'pendant ce nombre de jours après sa 1re impression '
+                      '(1 à 365), puis disparaît.',
+                  errorText:
+                      showDaysError ? 'Entrez un nombre entre 1 et 365.' : null,
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: ArenaSpacing.lg),
+
+                ArenaButton(
+                  label: _saving
+                      ? 'ENREGISTREMENT…'
+                      : (_isEdit ? '💾 ENREGISTRER' : '🚀 CRÉER LA BANNIÈRE'),
+                  fullWidth: true,
+                  size: ArenaButtonSize.large,
+                  isLoading: _saving,
+                  onPressed: _canSave ? _save : null,
                 ),
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -291,67 +561,34 @@ class _SuperAdminTutorialVideoState
   }
 }
 
-class _CurrentVideoCard extends StatelessWidget {
-  const _CurrentVideoCard({required this.video, required this.onRemove});
-
-  final TutorialVideo? video;
-  final VoidCallback? onRemove;
+class _PageDropdown extends StatelessWidget {
+  const _PageDropdown({required this.value, required this.onChanged});
+  final TutorialPage value;
+  final ValueChanged<TutorialPage> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    if (video == null || !video!.isActive) {
-      return Container(
-        padding: const EdgeInsets.all(ArenaSpacing.md),
-        decoration: BoxDecoration(
-          color: ArenaColors.carbon,
-          borderRadius: BorderRadius.circular(ArenaRadius.md),
-          border: Border.all(color: ArenaColors.border),
-        ),
-        child: Text(
-          'Aucune vidéo active — la section tutoriel est masquée sur la home.',
-          style: ArenaText.bodyMuted,
-        ),
-      );
-    }
-    final v = video!;
     return Container(
-      padding: const EdgeInsets.all(ArenaSpacing.sm),
+      padding: const EdgeInsets.symmetric(horizontal: ArenaSpacing.md),
       decoration: BoxDecoration(
         color: ArenaColors.carbon,
         borderRadius: BorderRadius.circular(ArenaRadius.md),
-        border: Border.all(color: ArenaColors.statusOk),
+        border: Border.all(color: ArenaColors.border),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              const Icon(
-                Icons.play_circle_outline,
-                color: ArenaColors.statusOk,
-              ),
-              const SizedBox(width: ArenaSpacing.sm),
-              Expanded(
-                child: Text('🟢 Active · ${v.title}', style: ArenaText.body),
-              ),
-            ],
-          ),
-          const SizedBox(height: ArenaSpacing.xs),
-          Text(v.videoUrl, style: ArenaText.bodyMuted),
-          const SizedBox(height: ArenaSpacing.xs),
-          Text(
-            '⏳ Affichée aux nouveaux pendant ${v.displayDays} '
-            'jour${v.displayDays > 1 ? 's' : ''}',
-            style: ArenaText.bodyMuted,
-          ),
-          const SizedBox(height: ArenaSpacing.sm),
-          ArenaButton(
-            label: 'RETIRER DE LA HOME',
-            variant: ArenaButtonVariant.danger,
-            fullWidth: true,
-            onPressed: onRemove,
-          ),
-        ],
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<TutorialPage>(
+          value: value,
+          isExpanded: true,
+          dropdownColor: ArenaColors.carbon,
+          style: ArenaText.body,
+          items: [
+            for (final p in TutorialPage.values)
+              DropdownMenuItem(value: p, child: Text(p.labelFr)),
+          ],
+          onChanged: (p) {
+            if (p != null) onChanged(p);
+          },
+        ),
       ),
     );
   }

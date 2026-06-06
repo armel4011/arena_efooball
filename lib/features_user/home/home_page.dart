@@ -1,5 +1,6 @@
 import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/data/models/tutorial_video.dart';
 import 'package:arena/data/repositories/match_repository.dart';
 import 'package:arena/data/repositories/match_stream_repository.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
@@ -56,7 +57,7 @@ class HomePage extends ConsumerWidget {
             HomeHeader(profile: profile),
             const PendingPaymentBanner(),
             const PromoBannerSection(),
-            const TutorialVideoSection(),
+            const TutorialBannerSection(page: TutorialPage.home),
             const SizedBox(height: ArenaSpacing.lg),
             _SectionCaption(
               label: l10n.homeSectionNextMatch,

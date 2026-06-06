@@ -24,6 +24,8 @@ void main() {
     String videoUrl = 'https://youtu.be/abc',
     bool isActive = true,
     int displayDays = 14,
+    String targetPage = 'home',
+    String createdAt = '2026-06-01T10:00:00.000Z',
   }) =>
       {
         'id': id,
@@ -31,82 +33,161 @@ void main() {
         'video_url': videoUrl,
         'is_active': isActive,
         'display_days': displayDays,
+        'target_page': targetPage,
         'updated_by': 'super1',
-        'created_at': '2026-06-01T10:00:00.000Z',
+        'created_at': createdAt,
         'updated_at': '2026-06-02T10:00:00.000Z',
       };
 
-  group('getCurrent', () {
-    test('order updated_at desc + limit 1 + parse la vidéo', () async {
-      final from = stub('tutorial_video', [videoRow()]);
-      final video = await repo.getCurrent();
-      expect(video, isNotNull);
-      expect(video!.id, 'v1');
-      expect(video.title, 'Prise en main');
-      expect(video.videoUrl, 'https://youtu.be/abc');
-      expect(video.isActive, isTrue);
-      expect(video.displayDays, 14);
-      expect(video.updatedBy, 'super1');
-      expect(from.hasFilter('order', 'updated_at'), isTrue);
-      expect(from.filters.any((f) => f == 'order:updated_at=false'), isTrue);
-      expect(from.filters.any((f) => f == 'limit:_=1'), isTrue);
-    });
+  TutorialVideo banner({
+    String id = 'v1',
+    bool isActive = true,
+    TutorialPage page = TutorialPage.home,
+    String createdAt = '2026-06-01T10:00:00.000Z',
+  }) =>
+      TutorialVideo.fromJson(
+        videoRow(
+          id: id,
+          isActive: isActive,
+          targetPage: page.wire,
+          createdAt: createdAt,
+        ),
+      );
 
-    test('liste vide → null', () async {
-      stub('tutorial_video', <Map<String, dynamic>>[]);
-      expect(await repo.getCurrent(), isNull);
-    });
-  });
-
-  group('saveActive', () {
-    test('payload insert: title, video_url, is_active true, updated_by inclus',
-        () async {
+  group('createBanner', () {
+    test('payload insert: title, video_url, target_page, is_active true, '
+        'display_days, updated_by', () async {
       final from = stub('tutorial_video', null);
-      await repo.saveActive(
+      await repo.createBanner(
         title: 'Nouveau tuto',
         videoUrl: 'https://vimeo.com/123',
+        targetPage: TutorialPage.competitions,
         displayDays: 21,
         updatedBy: 'super1',
       );
-      // stubFrom renvoie le même builder pour les 2 appels : le dernier
-      // (insert) écrase le probe → insertedValues contient le payload insert,
-      // updatedValues contient le payload update.
       final ins = from.insertedValues! as Map<String, dynamic>;
       expect(ins['title'], 'Nouveau tuto');
       expect(ins['video_url'], 'https://vimeo.com/123');
+      expect(ins['target_page'], 'competitions');
       expect(ins['is_active'], true);
       expect(ins['display_days'], 21);
       expect(ins['updated_by'], 'super1');
-
-      final upd = from.updatedValues!;
-      expect(upd['is_active'], false);
-      expect(upd['updated_at'], isA<String>());
-      expect(from.filters.any((f) => f == 'eq:is_active=true'), isTrue);
     });
 
-    test('updatedBy omis → pas de clé updated_by dans le payload insert',
-        () async {
+    test('updatedBy omis → pas de clé updated_by', () async {
       final from = stub('tutorial_video', null);
-      await repo.saveActive(
+      await repo.createBanner(
         title: 'Sans auteur',
         videoUrl: 'https://x.gg/v',
+        targetPage: TutorialPage.all,
         displayDays: 7,
       );
       final ins = from.insertedValues! as Map<String, dynamic>;
       expect(ins.containsKey('updated_by'), isFalse);
-      expect(ins['title'], 'Sans auteur');
-      expect(ins['display_days'], 7);
+      expect(ins['target_page'], 'all');
     });
   });
 
-  group('deactivate', () {
-    test('update is_active=false + updated_at, filtre is_active=true', () async {
+  group('updateBanner', () {
+    test('update tous les champs éditables + filtre id', () async {
       final from = stub('tutorial_video', null);
-      await repo.deactivate();
+      await repo.updateBanner(
+        id: 'v9',
+        title: 'Maj',
+        videoUrl: 'https://y.gg/v',
+        targetPage: TutorialPage.home,
+        displayDays: 30,
+        isActive: false,
+        updatedBy: 'super1',
+      );
       final upd = from.updatedValues!;
+      expect(upd['title'], 'Maj');
+      expect(upd['video_url'], 'https://y.gg/v');
+      expect(upd['target_page'], 'home');
+      expect(upd['display_days'], 30);
       expect(upd['is_active'], false);
       expect(upd['updated_at'], isA<String>());
-      expect(from.filters.any((f) => f == 'eq:is_active=true'), isTrue);
+      expect(from.filters.any((f) => f == 'eq:id=v9'), isTrue);
+    });
+  });
+
+  group('setActive', () {
+    test('update is_active + updated_at, filtre id', () async {
+      final from = stub('tutorial_video', null);
+      await repo.setActive('v3', true);
+      final upd = from.updatedValues!;
+      expect(upd['is_active'], true);
+      expect(upd['updated_at'], isA<String>());
+      expect(from.filters.any((f) => f == 'eq:id=v3'), isTrue);
+    });
+  });
+
+  group('deleteBanner', () {
+    test('delete + filtre id', () async {
+      final from = stub('tutorial_video', null);
+      await repo.deleteBanner('v4');
+      expect(from.filters.any((f) => f == 'eq:id=v4'), isTrue);
+    });
+  });
+
+  group('filterActiveForPage (filtre pur)', () {
+    test('bannière all apparaît pour home ET competitions', () {
+      final all = banner(id: 'a', page: TutorialPage.all);
+      expect(
+        TutorialVideoRepository.filterActiveForPage([all], TutorialPage.home)
+            .map((b) => b.id),
+        ['a'],
+      );
+      expect(
+        TutorialVideoRepository.filterActiveForPage(
+          [all],
+          TutorialPage.competitions,
+        ).map((b) => b.id),
+        ['a'],
+      );
+    });
+
+    test("bannière home n'apparaît PAS pour competitions", () {
+      final home = banner(id: 'h', page: TutorialPage.home);
+      expect(
+        TutorialVideoRepository.filterActiveForPage(
+          [home],
+          TutorialPage.competitions,
+        ),
+        isEmpty,
+      );
+      expect(
+        TutorialVideoRepository.filterActiveForPage([home], TutorialPage.home)
+            .map((b) => b.id),
+        ['h'],
+      );
+    });
+
+    test('les inactives sont exclues', () {
+      final inactive =
+          banner(id: 'x', page: TutorialPage.home, isActive: false);
+      expect(
+        TutorialVideoRepository.filterActiveForPage([inactive], TutorialPage.home),
+        isEmpty,
+      );
+    });
+
+    test('tri par created_at croissant', () {
+      final older = banner(
+        id: 'old',
+        page: TutorialPage.home,
+        createdAt: '2026-06-01T00:00:00.000Z',
+      );
+      final newer = banner(
+        id: 'new',
+        page: TutorialPage.home,
+        createdAt: '2026-06-03T00:00:00.000Z',
+      );
+      final out = TutorialVideoRepository.filterActiveForPage(
+        [newer, older],
+        TutorialPage.home,
+      );
+      expect(out.map((b) => b.id), ['old', 'new']);
     });
   });
 
@@ -129,6 +210,22 @@ void main() {
     test('display_days absent → défaut 7', () {
       final row = videoRow()..remove('display_days');
       expect(TutorialVideo.fromJson(row).displayDays, 7);
+    });
+
+    test('mappe target_page et round-trip toJson', () {
+      final v = TutorialVideo.fromJson(videoRow(targetPage: 'competitions'));
+      expect(v.targetPage, TutorialPage.competitions);
+      final json = v.toJson();
+      expect(json['target_page'], 'competitions');
+      expect(
+        TutorialVideo.fromJson(json).targetPage,
+        TutorialPage.competitions,
+      );
+    });
+
+    test('target_page absent → défaut home', () {
+      final row = videoRow()..remove('target_page');
+      expect(TutorialVideo.fromJson(row).targetPage, TutorialPage.home);
     });
   });
 
