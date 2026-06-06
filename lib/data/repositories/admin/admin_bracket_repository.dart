@@ -207,6 +207,24 @@ class AdminBracketRepository {
         if (node.nextPosition != null) 'next_position': node.nextPosition,
       }).eq('id', nodeIds[i]);
     }
+
+    // Résout les byes : on marque le match du bye `forfeited` avec le joueur
+    // présent comme vainqueur. Le trigger `cascade_match_winner` (qui gère
+    // désormais `forfeited` et dérive le match suivant via bracket_nodes)
+    // l'avance alors automatiquement au round suivant — parité avec le
+    // générateur SQL `generate_single_elim_bracket`. À faire APRÈS le câblage
+    // des `next_node_id` pour que la cascade trouve le lien.
+    for (final node in plan.nodes) {
+      if (!node.isBye || node.byePlayerId == null || node.matchIndex < 0) {
+        continue;
+      }
+      await _client.from('matches').update({
+        'status': 'forfeited',
+        'winner_id': node.byePlayerId,
+        'score1': 0,
+        'score2': 0,
+      }).eq('id', matchIds[node.matchIndex]);
+    }
   }
 }
 
