@@ -13,7 +13,15 @@ enum TutorialPage {
   @JsonValue('competitions')
   competitions,
 
-  /// Toutes les pages équipées (home + competitions).
+  /// Page profil de l'utilisateur courant uniquement.
+  @JsonValue('profile')
+  profile,
+
+  /// Boîte de réception messagerie uniquement.
+  @JsonValue('messages')
+  messages,
+
+  /// Toutes les pages équipées (home + competitions + profile + messages).
   @JsonValue('all')
   all,
 }
@@ -24,6 +32,8 @@ extension TutorialPageWire on TutorialPage {
   String get wire => switch (this) {
         TutorialPage.home => 'home',
         TutorialPage.competitions => 'competitions',
+        TutorialPage.profile => 'profile',
+        TutorialPage.messages => 'messages',
         TutorialPage.all => 'all',
       };
 
@@ -31,6 +41,8 @@ extension TutorialPageWire on TutorialPage {
   String get labelFr => switch (this) {
         TutorialPage.home => 'Accueil',
         TutorialPage.competitions => 'Compétitions',
+        TutorialPage.profile => 'Profil',
+        TutorialPage.messages => 'Messagerie',
         TutorialPage.all => 'Toutes les pages',
       };
 }

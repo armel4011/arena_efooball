@@ -3,6 +3,7 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/models/player_stats.dart';
 import 'package:arena/data/models/profile.dart';
+import 'package:arena/data/models/tutorial_video.dart';
 import 'package:arena/data/repositories/friends_repository.dart';
 import 'package:arena/data/repositories/match_stats_repository.dart';
 import 'package:arena/data/repositories/referral_repository.dart';
@@ -10,6 +11,7 @@ import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_card.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
+import 'package:arena/features_user/home/widgets/tutorial_video_section.dart';
 import 'package:arena/features_user/profile/avatar_palette.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -86,6 +88,7 @@ class _ProfileBody extends ConsumerWidget {
       child: ListView(
         padding: const EdgeInsets.all(ArenaSpacing.lg),
         children: [
+          const TutorialBannerSection(page: TutorialPage.profile),
           _Header(profile: profile),
           const SizedBox(height: ArenaSpacing.lg),
           _StatsRow(stats: statsAsync),

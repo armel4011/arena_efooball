@@ -43,5 +43,7 @@ Map<String, dynamic> _$$TutorialVideoImplToJson(_$TutorialVideoImpl instance) =>
 const _$TutorialPageEnumMap = {
   TutorialPage.home: 'home',
   TutorialPage.competitions: 'competitions',
+  TutorialPage.profile: 'profile',
+  TutorialPage.messages: 'messages',
   TutorialPage.all: 'all',
 };
