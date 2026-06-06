@@ -101,6 +101,12 @@ const List<_NavEntry> _superEntries = [
     label: 'Réintégrations',
     superAdminOnly: true,
   ),
+  _NavEntry(
+    route: AdminDesktopRoutes.superTutorialBanners,
+    icon: FluentIcons.video,
+    label: 'Bannières tuto',
+    superAdminOnly: true,
+  ),
 ];
 
 /// Coquille de navigation desktop — barre latérale Fluent (NavigationView)
