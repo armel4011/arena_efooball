@@ -5,6 +5,7 @@ import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/match_status.dart';
 import 'package:arena/data/models/profile.dart';
+import 'package:arena/data/models/tutorial_video.dart';
 import 'package:arena/data/repositories/admin_chat_repository.dart';
 import 'package:arena/data/repositories/chat_repository.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
@@ -15,6 +16,7 @@ import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
+import 'package:arena/features_user/home/widgets/tutorial_video_section.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -63,6 +65,7 @@ class MessagesInboxBody extends StatelessWidget {
       child: SafeArea(
         child: Column(
           children: [
+            const TutorialBannerSection(page: TutorialPage.messages),
             const _InboxTabs(),
             Expanded(
               child: TabBarView(
