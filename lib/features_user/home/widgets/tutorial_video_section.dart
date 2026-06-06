@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-/// Décide si la bannière tutoriel doit s'afficher pour un user donné.
+/// Décide si une bannière tutoriel doit s'afficher pour un user donné.
 ///
 /// Règle : la fenêtre d'affichage démarre à la PREMIÈRE IMPRESSION du user
 /// (`firstSeen`), pas à la création du compte. La bannière s'affiche tant que
@@ -29,23 +29,49 @@ bool shouldShowTutorialBanner({
   return ageInDays < displayDays;
 }
 
-/// Section vidéo tutoriel de la home utilisateur.
+/// Section bannières tutoriel ciblée par page (`home` / `competitions`).
 ///
-/// Affiche la vidéo de prise en main active (renseignée par le super-admin)
-/// sous forme de bannière avec un CTA "Regarder le tutoriel". **N'affiche
-/// RIEN** tant qu'aucune vidéo active n'existe (ni pendant le loading / en
-/// cas d'erreur) — la section se replie en `SizedBox.shrink`.
+/// Observe les bannières ACTIVES éligibles pour la [page] (inclut les
+/// bannières `all`). Pour chaque bannière, n'affiche que celles dans la
+/// fenêtre du user courant (`shouldShowTutorialBanner` sur la 1re impression).
+/// Plusieurs bannières peuvent s'afficher → rendues dans une `Column`.
+///
+/// **N'affiche RIEN** s'il n'y a aucune bannière éligible (ni pendant le
+/// loading / en cas d'erreur) — chaque bannière non résolue est masquée.
 ///
 /// Au tap, le lien `videoUrl` s'ouvre en EXTERNE (navigateur / app vidéo)
 /// via `url_launcher` (LaunchMode.externalApplication).
-class TutorialVideoSection extends ConsumerWidget {
-  const TutorialVideoSection({super.key});
+class TutorialBannerSection extends ConsumerWidget {
+  const TutorialBannerSection({required this.page, super.key});
+
+  final TutorialPage page;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final video = ref.watch(activeTutorialVideoProvider).valueOrNull;
-    if (video == null) return const SizedBox.shrink();
+    final banners =
+        ref.watch(tutorialBannersForPageProvider(page)).valueOrNull ??
+            const <TutorialVideo>[];
+    if (banners.isEmpty) return const SizedBox.shrink();
 
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final banner in banners)
+          _TutorialBannerCard(key: ValueKey(banner.id), banner: banner),
+      ],
+    );
+  }
+}
+
+/// Une bannière tutoriel. Observe la 1re impression du user pour la bannière
+/// et se masque si hors fenêtre / non résolue (loading / erreur).
+class _TutorialBannerCard extends ConsumerWidget {
+  const _TutorialBannerCard({required this.banner, super.key});
+
+  final TutorialVideo banner;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     // Fenêtre basée sur la 1re impression du user (enregistrée par la RPC à
     // la volée), pas sur l'âge du compte.
     //
@@ -53,10 +79,11 @@ class TutorialVideoSection extends ConsumerWidget {
     // - Erreur : fallback masqué. La 1re impression n'est PAS perdue : la RPC
     //   est idempotente, donc elle sera enregistrée au prochain chargement
     //   réussi (la fenêtre démarrera simplement à ce moment-là).
-    final firstSeen = ref.watch(tutorialFirstSeenProvider(video.id)).valueOrNull;
+    final firstSeen =
+        ref.watch(tutorialFirstSeenProvider(banner.id)).valueOrNull;
     final show = shouldShowTutorialBanner(
       firstSeen: firstSeen,
-      displayDays: video.displayDays,
+      displayDays: banner.displayDays,
     );
     if (!show) return const SizedBox.shrink();
 
@@ -70,7 +97,7 @@ class TutorialVideoSection extends ConsumerWidget {
         0,
       ),
       child: GestureDetector(
-        onTap: () => _handleTap(context, video),
+        onTap: () => _handleTap(context),
         child: Container(
           padding: const EdgeInsets.all(ArenaSpacing.md),
           decoration: BoxDecoration(
@@ -100,7 +127,7 @@ class TutorialVideoSection extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      video.title,
+                      banner.title,
                       style: ArenaText.body
                           .copyWith(fontWeight: FontWeight.w700),
                       maxLines: 2,
@@ -129,8 +156,8 @@ class TutorialVideoSection extends ConsumerWidget {
     );
   }
 
-  void _handleTap(BuildContext context, TutorialVideo video) {
-    final target = video.videoUrl.trim();
+  void _handleTap(BuildContext context) {
+    final target = banner.videoUrl.trim();
     if (target.isEmpty) return;
     unawaited(_launchExternal(context, target));
   }

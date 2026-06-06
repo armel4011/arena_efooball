@@ -2,6 +2,7 @@ import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
+import 'package:arena/data/models/tutorial_video.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
 import 'package:arena/data/repositories/payment_repository.dart';
 import 'package:arena/features_shared/widgets/arena_filter_menu.dart';
@@ -10,6 +11,7 @@ import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:arena/features_shared/widgets/error_state.dart';
 import 'package:arena/features_user/competitions/widgets/competition_filter_chips.dart';
 import 'package:arena/features_user/competitions/widgets/competition_list_card.dart';
+import 'package:arena/features_user/home/widgets/tutorial_video_section.dart';
 import 'package:arena/features_user/payments/payment_method.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -47,6 +49,7 @@ class _CompetitionsListPageState extends ConsumerState<CompetitionsListPage> {
     return ArenaScreenBackground(
       child: Column(
         children: [
+          const TutorialBannerSection(page: TutorialPage.competitions),
           Padding(
             padding: const EdgeInsets.fromLTRB(
               ArenaSpacing.lg,

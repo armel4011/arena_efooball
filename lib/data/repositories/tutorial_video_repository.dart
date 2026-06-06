@@ -1,16 +1,15 @@
-import 'package:arena/core/services/persistent_cache.dart';
 import 'package:arena/data/models/tutorial_video.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// CRUD sur la table `tutorial_video` (vidéo de prise en main de la home).
+/// CRUD sur la table `tutorial_video` (bannières de prise en main).
 ///
-/// Côté user : [watchActive] alimente la section tutoriel (null = rien à
-/// afficher). Côté super-admin : [getCurrent] préremplit l'écran de
-/// gestion, [saveActive] publie une nouvelle vidéo (en désactivant
-/// l'ancienne d'abord — une seule active à la fois), [deactivate] retire
-/// la vidéo courante de la home.
+/// La feature est passée d'UNE bannière active à PLUSIEURS, chacune ciblant
+/// une page (`home` / `competitions`) ou toutes (`all`). Côté user, chaque
+/// page observe [watchActiveForPage] ; côté super-admin, [watchAll] alimente
+/// la liste CRUD. La fenêtre d'affichage par nouvel utilisateur est gérée par
+/// bannière via [recordAndGetFirstView].
 class TutorialVideoRepository {
   const TutorialVideoRepository(this._client);
 
@@ -18,66 +17,106 @@ class TutorialVideoRepository {
 
   final SupabaseClient _client;
 
-  /// Realtime stream de la vidéo active (ou `null`). Limité à 1 ligne
-  /// (index unique partiel garantit l'unicité côté DB).
-  Stream<TutorialVideo?> watchActive() {
+  /// Filtre pur (testable sans realtime) : conserve les bannières actives
+  /// dont la page cible vaut [page] ou `all`, triées par `created_at` croissant.
+  static List<TutorialVideo> filterActiveForPage(
+    List<TutorialVideo> banners,
+    TutorialPage page,
+  ) {
+    final filtered = banners
+        .where(
+          (b) =>
+              b.isActive &&
+              (b.targetPage == page || b.targetPage == TutorialPage.all),
+        )
+        .toList()
+      ..sort((a, b) => _createdAtOf(a).compareTo(_createdAtOf(b)));
+    return filtered;
+  }
+
+  static DateTime _createdAtOf(TutorialVideo v) =>
+      v.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+
+  /// Realtime stream des bannières ACTIVES éligibles pour [page] (inclut les
+  /// bannières `all`). On stream toute la table — petite — puis on filtre en
+  /// Dart via [filterActiveForPage].
+  Stream<List<TutorialVideo>> watchActiveForPage(TutorialPage page) {
     return _client
         .from(_table)
         .stream(primaryKey: ['id'])
-        .eq('is_active', true)
-        .limit(1)
         .map(
-          (rows) => rows.isEmpty ? null : TutorialVideo.fromJson(rows.first),
+          (rows) => filterActiveForPage(
+            rows.map(TutorialVideo.fromJson).toList(),
+            page,
+          ),
         );
   }
 
-  /// Vidéo la plus récente (active ou non) — sert à préremplir l'écran
-  /// super-admin avec l'état courant.
-  Future<TutorialVideo?> getCurrent() async {
-    final rows = await _client
+  /// Realtime stream de TOUTES les bannières (actives ou non), triées par
+  /// `created_at` décroissant — pour l'écran super-admin.
+  Stream<List<TutorialVideo>> watchAll() {
+    return _client
         .from(_table)
-        .select()
-        .order('updated_at', ascending: false)
-        .limit(1);
-    final list = rows as List<dynamic>;
-    return list.isEmpty
-        ? null
-        : TutorialVideo.fromJson(list.first as Map<String, dynamic>);
+        .stream(primaryKey: ['id'])
+        .order('created_at', ascending: false)
+        .map((rows) => rows.map(TutorialVideo.fromJson).toList());
   }
 
-  /// Publie une nouvelle vidéo active. Désactive d'abord toute vidéo active
-  /// existante pour respecter l'index unique partiel, puis insère.
-  Future<void> saveActive({
+  /// Crée une nouvelle bannière active.
+  Future<void> createBanner({
     required String title,
     required String videoUrl,
+    required TutorialPage targetPage,
     required int displayDays,
     String? updatedBy,
   }) async {
-    await _client
-        .from(_table)
-        .update({'is_active': false, 'updated_at': _now()})
-        .eq('is_active', true);
     await _client.from(_table).insert({
       'title': title,
       'video_url': videoUrl,
+      'target_page': targetPage.wire,
       'is_active': true,
       'display_days': displayDays,
       if (updatedBy != null) 'updated_by': updatedBy,
     });
   }
 
-  /// Retire la vidéo de la home (toutes les lignes actives passent à
-  /// `is_active = false`). L'historique est conservé.
-  Future<void> deactivate() async {
-    await _client
-        .from(_table)
-        .update({'is_active': false, 'updated_at': _now()})
-        .eq('is_active', true);
+  /// Met à jour une bannière existante (tous les champs éditables).
+  Future<void> updateBanner({
+    required String id,
+    required String title,
+    required String videoUrl,
+    required TutorialPage targetPage,
+    required int displayDays,
+    required bool isActive,
+    String? updatedBy,
+  }) async {
+    await _client.from(_table).update({
+      'title': title,
+      'video_url': videoUrl,
+      'target_page': targetPage.wire,
+      'display_days': displayDays,
+      'is_active': isActive,
+      'updated_at': _now(),
+      if (updatedBy != null) 'updated_by': updatedBy,
+    }).eq('id', id);
   }
 
-  /// Enregistre (si absente) la 1re impression du user courant pour la vidéo
-  /// [tutorialId] et renvoie l'instant de cette 1re impression — existant si
-  /// déjà vue, neuf sinon. Idempotent : appels répétés renvoient la même date.
+  /// Active / désactive une bannière sans toucher au reste.
+  // ignore: avoid_positional_boolean_parameters
+  Future<void> setActive(String id, bool isActive) async {
+    await _client
+        .from(_table)
+        .update({'is_active': isActive, 'updated_at': _now()}).eq('id', id);
+  }
+
+  /// Supprime définitivement une bannière.
+  Future<void> deleteBanner(String id) async {
+    await _client.from(_table).delete().eq('id', id);
+  }
+
+  /// Enregistre (si absente) la 1re impression du user courant pour la
+  /// bannière [tutorialId] et renvoie l'instant de cette 1re impression —
+  /// existant si déjà vue, neuf sinon. Idempotent.
   ///
   /// Délègue à la RPC `tutorial_record_and_get_view` (identité via
   /// `auth.uid()`) qui renvoie un scalaire `timestamptz`. Supabase sérialise
@@ -101,29 +140,22 @@ final tutorialVideoRepositoryProvider = Provider<TutorialVideoRepository>((ref) 
   return TutorialVideoRepository(ref.watch(supabaseClientProvider));
 });
 
-/// Vidéo tutoriel active de la home — `null` si aucune. Offline-safe : la
-/// dernière vidéo connue reste affichée hors-ligne (cache disque).
-final activeTutorialVideoProvider =
-    StreamProvider.autoDispose<TutorialVideo?>((ref) async* {
-  final cache = await ref.watch(persistentCacheProvider.future);
-  yield* cache.hydrateSingle<TutorialVideo>(
-    namespace: 'tutorial_video.active',
-    source: ref.watch(tutorialVideoRepositoryProvider).watchActive(),
-    fromJson: TutorialVideo.fromJson,
-    toJson: (v) => v.toJson(),
-  );
+/// Bannières tutoriel ACTIVES éligibles pour une page donnée (inclut `all`).
+final tutorialBannersForPageProvider =
+    StreamProvider.family<List<TutorialVideo>, TutorialPage>((ref, page) {
+  return ref.watch(tutorialVideoRepositoryProvider).watchActiveForPage(page);
 });
 
-/// État courant de la vidéo pour l'écran super-admin (active ou non).
-final currentTutorialVideoProvider =
-    FutureProvider.autoDispose<TutorialVideo?>((ref) {
-  return ref.watch(tutorialVideoRepositoryProvider).getCurrent();
+/// Toutes les bannières (actives ou non) — pour l'écran super-admin.
+final allTutorialBannersProvider =
+    StreamProvider.autoDispose<List<TutorialVideo>>((ref) {
+  return ref.watch(tutorialVideoRepositoryProvider).watchAll();
 });
 
-/// Instant de la 1re impression du user courant pour la vidéo `id` — `null`
-/// tant qu'on ne sait pas (la RPC enregistre la 1re vue à la volée et renvoie
-/// sa date). La fenêtre d'affichage de la bannière est calculée à partir de
-/// cet instant, pas de l'âge du compte.
+/// Instant de la 1re impression du user courant pour la bannière `id` —
+/// `null` tant qu'on ne sait pas (la RPC enregistre la 1re vue à la volée et
+/// renvoie sa date). La fenêtre d'affichage est calculée à partir de cet
+/// instant, pas de l'âge du compte.
 final tutorialFirstSeenProvider =
     FutureProvider.family<DateTime?, String>((ref, id) {
   return ref.watch(tutorialVideoRepositoryProvider).recordAndGetFirstView(id);

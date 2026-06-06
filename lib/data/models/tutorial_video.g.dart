@@ -13,6 +13,9 @@ _$TutorialVideoImpl _$$TutorialVideoImplFromJson(Map<String, dynamic> json) =>
       videoUrl: json['video_url'] as String,
       isActive: json['is_active'] as bool? ?? true,
       displayDays: (json['display_days'] as num?)?.toInt() ?? 7,
+      targetPage:
+          $enumDecodeNullable(_$TutorialPageEnumMap, json['target_page']) ??
+              TutorialPage.home,
       updatedBy: json['updated_by'] as String?,
       createdAt: json['created_at'] == null
           ? null
@@ -29,9 +32,16 @@ Map<String, dynamic> _$$TutorialVideoImplToJson(_$TutorialVideoImpl instance) =>
       'video_url': instance.videoUrl,
       'is_active': instance.isActive,
       'display_days': instance.displayDays,
+      'target_page': _$TutorialPageEnumMap[instance.targetPage]!,
       if (instance.updatedBy case final value?) 'updated_by': value,
       if (instance.createdAt?.toIso8601String() case final value?)
         'created_at': value,
       if (instance.updatedAt?.toIso8601String() case final value?)
         'updated_at': value,
     };
+
+const _$TutorialPageEnumMap = {
+  TutorialPage.home: 'home',
+  TutorialPage.competitions: 'competitions',
+  TutorialPage.all: 'all',
+};
