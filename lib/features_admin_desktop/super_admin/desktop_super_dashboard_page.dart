@@ -335,7 +335,7 @@ class _CountryBreakdown extends StatelessWidget {
         }
         const colors = <Color>[
           ArenaColors.gameEfoot,
-          ArenaColors.gameFifa,
+          ArenaColors.gameDraughts,
           ArenaColors.gameFc,
           ArenaColors.silver,
           ArenaColors.signalBlue,

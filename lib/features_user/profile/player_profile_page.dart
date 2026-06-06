@@ -422,7 +422,7 @@ class _AchievementsRow extends StatelessWidget {
       if (played >= 1) ('🎮', [ArenaColors.signalBlue, ArenaColors.iceCyan]),
       if (wins >= 1)
         ('🥇', [ArenaColors.tierGoldWarm, ArenaColors.tierGoldDeep]),
-      if (wins >= 3) ('🔥', [ArenaColors.statusOk, ArenaColors.gameFifa]),
+      if (wins >= 3) ('🔥', [ArenaColors.statusOk, ArenaColors.gameDraughts]),
       if (played >= 10) ('⚡', [ArenaColors.neonRed, ArenaColors.hotCoral]),
     ];
     final slots = List<(String, List<Color>)?>.filled(5, null);

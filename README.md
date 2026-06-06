@@ -1,7 +1,7 @@
 # ARENA
 
 Plateforme panafricaine de tournois e-sport mobile dédiée aux jeux de
-football virtuel : **eFootball**, **FIFA Mobile**, **EA SPORTS FC Mobile**.
+football virtuel : **eFootball**, **Jeu de Dames**, **EA SPORTS FC Mobile**.
 
 > Spécifications de référence : [`docs/ARENA_MASTER_PROMPT.md`](./docs/ARENA_MASTER_PROMPT.md)
 > et [`docs/ARENA_FLUTTER_PROMPT.md`](./docs/ARENA_FLUTTER_PROMPT.md).

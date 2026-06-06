@@ -10,7 +10,7 @@ import 'package:flutter/material.dart';
 ///
 /// L'accent par défaut est `signalBlue` (cohérent avec splash + onboarding) ;
 /// passer un autre accent (`neonRed` pour les pages admin, `gameEfoot` /
-/// `gameFifa` / `gameFc` pour les détails compétition, etc.) sans toucher
+/// `gameDraughts` / `gameFc` pour les détails compétition, etc.) sans toucher
 /// au reste du layout.
 class ArenaScreenBackground extends StatelessWidget {
   const ArenaScreenBackground({

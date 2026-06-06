@@ -34,7 +34,7 @@ import java.io.File
  *     pour 18 min — confortablement sous le ceiling 500 MB du bucket
  *     `match-recordings` ET upload mobile money-friendly),
  *   * 24 fps — fluidité suffisante pour relire un jeu d'eFootball
- *     ou FIFA Mobile et distinguer le score à l'écran.
+ *     ou un Jeu de Dames et distinguer le score à l'écran.
  *
  * Lifecycle:
  *   START intent (with MediaProjection result) → setup + start.

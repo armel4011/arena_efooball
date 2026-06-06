@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 
 /// Full-width gradient banner identifying a game.
 ///
-/// Maps to `.banner` / `.banner-efoot` / `.banner-fifa` / `.banner-fc` in
+/// Maps to `.banner` / `.banner-efoot` / `.banner-draughts` / `.banner-fc` in
 /// `arena_v2.html`. Text renders white over the gradient.
-enum ArenaBannerGame { efoot, fifa, fc }
+enum ArenaBannerGame { efoot, draughts, fc }
 
 class ArenaBanner extends StatelessWidget {
   const ArenaBanner({
@@ -23,7 +23,7 @@ class ArenaBanner extends StatelessWidget {
 
   LinearGradient get _gradient => switch (game) {
         ArenaBannerGame.efoot => ArenaColors.bannerEfoot,
-        ArenaBannerGame.fifa => ArenaColors.bannerFifa,
+        ArenaBannerGame.draughts => ArenaColors.bannerDraughts,
         ArenaBannerGame.fc => ArenaColors.bannerFc,
       };
 

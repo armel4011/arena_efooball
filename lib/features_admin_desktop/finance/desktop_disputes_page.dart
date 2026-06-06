@@ -224,7 +224,7 @@ class _ScoresCard extends StatelessWidget {
           _scoreRow(
             label: 'Joueur 1 (HOME)',
             score: '${match.score1 ?? '?'}',
-            color: ArenaColors.gameFifa,
+            color: ArenaColors.gameDraughts,
             border: true,
           ),
           _scoreRow(

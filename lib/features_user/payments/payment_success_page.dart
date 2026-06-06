@@ -22,7 +22,7 @@ class PaymentSuccessPage extends StatelessWidget {
     required this.method,
     required this.transactionId,
     required this.dateLabel,
-    this.tournamentName = 'FIFA WEEKEND CUP',
+    this.tournamentName = 'DAMES WEEKEND CUP',
     this.tournamentStartLabel = 'Démarre le 11 mai à 14h',
     this.competitionId,
     this.onSeeMyEntries,

@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 /// Bannière haut de la page admin compétition : badge de statut, ID court,
-/// nom + capacité + cagnotte. Gradient par jeu (eFoot / FIFA / FC).
+/// nom + capacité + cagnotte. Gradient par jeu (eFoot / Dames / FC).
 class AdminCompetitionHeader extends StatelessWidget {
   const AdminCompetitionHeader({required this.competition, super.key});
   final Competition competition;
@@ -91,8 +91,8 @@ class AdminCompetitionHeader extends StatelessWidget {
 
   static LinearGradient _gradientFor(GameType g) {
     switch (g) {
-      case GameType.fifaMobile:
-        return ArenaColors.bannerFifa;
+      case GameType.draughts:
+        return ArenaColors.bannerDraughts;
       case GameType.eaSportsFc:
         return ArenaColors.bannerFc;
       case GameType.efootball:

@@ -195,7 +195,7 @@ void main() {
         {
           'competition_id': 'c1',
           'name': 'Coupe Arena',
-          'game': 'FIFA',
+          'game': 'Dames',
           'registered_count': 64,
           'revenue_xaf': 320000.0,
           'commission_xaf': 32000.0,
@@ -207,7 +207,7 @@ void main() {
       expect(list, hasLength(1));
       expect(list.first.competitionId, 'c1');
       expect(list.first.name, 'Coupe Arena');
-      expect(list.first.game, 'FIFA');
+      expect(list.first.game, 'Dames');
       expect(list.first.registeredCount, 64);
       expect(list.first.revenueXaf, 320000.0);
       expect(list.first.commissionXaf, 32000.0);

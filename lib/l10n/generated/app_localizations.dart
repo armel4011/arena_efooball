@@ -187,7 +187,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingSlide1Body.
   ///
   /// In fr, this message translates to:
-  /// **'Bienvenue sur ARENA, la plateforme #1 de tournois eFootball, FIFA Mobile et FC Mobile en Afrique.'**
+  /// **'Bienvenue sur ARENA, la plateforme #1 de tournois eFootball, Jeu de Dames et FC Mobile en Afrique.'**
   String get onboardingSlide1Body;
 
   /// No description provided for @onboardingSlide2Title.

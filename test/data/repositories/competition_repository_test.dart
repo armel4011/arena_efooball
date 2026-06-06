@@ -54,9 +54,9 @@ void main() {
 
     test('filtre par game quand fourni', () async {
       final from = stub('competitions', <Map<String, dynamic>>[]);
-      await repo.list(game: GameType.fifaMobile);
+      await repo.list(game: GameType.draughts);
       expect(
-        from.filters.any((f) => f == 'eq:game=fifa_mobile'),
+        from.filters.any((f) => f == 'eq:game=draughts'),
         isTrue,
       );
     });

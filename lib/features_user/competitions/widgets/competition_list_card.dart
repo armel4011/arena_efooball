@@ -185,7 +185,7 @@ class CompetitionListCard extends StatelessWidget {
 
   static String _gameLabel(GameType g) => switch (g) {
         GameType.efootball => '⚽ EFOOT',
-        GameType.fifaMobile => '🎮 FIFA',
+        GameType.draughts => '🔴 DAMES',
         GameType.eaSportsFc => '🎯 FC',
       };
 

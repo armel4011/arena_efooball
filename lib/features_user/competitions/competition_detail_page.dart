@@ -82,7 +82,7 @@ class CompetitionDetailPage extends ConsumerWidget {
 }
 
 /// Banner premium — reproduit `.m-banner` 100 px de la maquette : un
-/// gradient game-themed (eFoot bleu / FIFA vert / FC orange), caption
+/// gradient game-themed (eFoot bleu / Dames rouge / FC orange), caption
 /// mono `{JEU} · {dates}` semi-transparent en haut, titre Bebas Neue 28
 /// px sur l'image en bas. Le titre est uppercase, peut wrap sur 2
 /// lignes (`maxLines: 2`).
@@ -137,7 +137,7 @@ class _PremiumBanner extends StatelessWidget {
 
   static LinearGradient _gradientFor(GameType g) => switch (g) {
         GameType.efootball => ArenaColors.bannerEfoot,
-        GameType.fifaMobile => ArenaColors.bannerFifa,
+        GameType.draughts => ArenaColors.bannerDraughts,
         GameType.eaSportsFc => ArenaColors.bannerFc,
       };
 
@@ -793,7 +793,7 @@ String _formatMoney(num v) =>
 
 String _gameEmoji(GameType g) => switch (g) {
       GameType.efootball => '⚽',
-      GameType.fifaMobile => '🏆',
+      GameType.draughts => '🔴',
       GameType.eaSportsFc => '🎮',
     };
 

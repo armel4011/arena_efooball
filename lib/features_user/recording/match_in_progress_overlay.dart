@@ -8,7 +8,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 /// PHASE 7 — visual stand-in for the in-game floating ARENA chip.
 ///
-/// The actual native overlay (drawn over FIFA/eFootball with
+/// The actual native overlay (drawn over the game / eFootball with
 /// `flutter_overlay_window`) lives in `recording/overlay/`. This page
 /// matches `arena_v2.html` #17 — a 60×60 floating chip with the recording
 /// timer and a long-press menu mocked at the bottom. It's primarily
@@ -19,7 +19,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 class MatchInProgressOverlay extends StatelessWidget {
   const MatchInProgressOverlay({
     this.elapsed = const Duration(minutes: 24, seconds: 18),
-    this.gameLabel = 'FIFA MOBILE',
+    this.gameLabel = 'JEU DE DAMES',
     this.scoreLine = '2 - 1',
     this.matchPhase = "Mi-temps · 42'",
     super.key,

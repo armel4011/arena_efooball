@@ -52,7 +52,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get onboardingSlide1Body =>
-      'Bienvenue sur ARENA, la plateforme #1 de tournois eFootball, FIFA Mobile et FC Mobile en Afrique.';
+      'Bienvenue sur ARENA, la plateforme #1 de tournois eFootball, Jeu de Dames et FC Mobile en Afrique.';
 
   @override
   String get onboardingSlide2Title => 'DES BRACKETS, DE VRAIS DUELS';
