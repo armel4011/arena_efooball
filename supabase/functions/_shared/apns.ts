@@ -59,7 +59,7 @@ function base64url(input: string | Uint8Array): string {
     .replace(/=+$/, '');
 }
 
-async function importP8Key(pem: string): Promise<CryptoKey> {
+function importP8Key(pem: string): Promise<CryptoKey> {
   const body = pem
     .replace(/-----BEGIN PRIVATE KEY-----/, '')
     .replace(/-----END PRIVATE KEY-----/, '')
