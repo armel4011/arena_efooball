@@ -50,6 +50,7 @@ class TutorialVideoRepository {
   Future<void> saveActive({
     required String title,
     required String videoUrl,
+    required int displayDays,
     String? updatedBy,
   }) async {
     await _client
@@ -60,6 +61,7 @@ class TutorialVideoRepository {
       'title': title,
       'video_url': videoUrl,
       'is_active': true,
+      'display_days': displayDays,
       if (updatedBy != null) 'updated_by': updatedBy,
     });
   }
