@@ -164,16 +164,27 @@ function timingSafeEqual(a: string, b: string): boolean {
 // impraticable même si la DB est compromise — l'attaquant aurait besoin
 // AUSSI de la clé HMAC pour reconstituer les hashes.
 // ─────────────────────────────────────────────────────────────────────────────
-const BACKUP_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // sans 0/O/1/I/L
+const BACKUP_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // 31 chars, sans 0/O/1/I/L
 
 export function generateBackupCodes(count = 10, length = 8): string[] {
+  const alphabetLen = BACKUP_ALPHABET.length;
+  // L'alphabet fait 31 chars (256 n'en est pas un multiple) : un simple
+  // `octet % 31` favoriserait les premiers symboles (biais modulo). On rejette
+  // les octets au-dessus du plus grand multiple de 31 ≤ 256 (= 248) pour une
+  // distribution uniforme.
+  const maxUnbiased = Math.floor(256 / alphabetLen) * alphabetLen;
   const codes: string[] = [];
   for (let i = 0; i < count; i++) {
-    const buf = new Uint8Array(length);
-    crypto.getRandomValues(buf);
     let code = "";
-    for (let j = 0; j < length; j++) {
-      code += BACKUP_ALPHABET[buf[j] % BACKUP_ALPHABET.length];
+    while (code.length < length) {
+      const buf = new Uint8Array(length - code.length);
+      crypto.getRandomValues(buf);
+      for (const byte of buf) {
+        if (byte < maxUnbiased) {
+          code += BACKUP_ALPHABET[byte % alphabetLen];
+          if (code.length === length) break;
+        }
+      }
     }
     codes.push(`${code.slice(0, 4)}-${code.slice(4)}`);
   }
