@@ -54,6 +54,14 @@ class GoogleSsoController extends AsyncNotifier<Profile?> {
       enforceRoleForFlavor(profile);
       return profile;
     });
+    // Lors d'une 1re connexion Google, le profil minimal est créé APRÈS que
+    // la session ait émis : `currentProfileProvider` a donc pu émettre `null`
+    // (profil pas encore inséré) puis ne plus se ré-exécuter. On force un
+    // re-fetch pour que le router bascule tout de suite vers la complétion de
+    // profil (/cgu-acceptance) au lieu d'exiger un redémarrage de l'app.
+    if (state.hasValue && state.value != null) {
+      ref.invalidate(currentProfileProvider);
+    }
   }
 
   void reset() => state = const AsyncData(null);
