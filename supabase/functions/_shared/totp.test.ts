@@ -110,12 +110,16 @@ Deno.test("generateBackupCodes → format, count et alphabet sûr", () => {
   const codes = generateBackupCodes();
   assertEquals(codes.length, 10);
   for (const code of codes) {
-    assert(/^[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/.test(code), `format: ${code}`);
-    // Alphabet réel = sans 0/1/I/O (L est conservé, cf. BACKUP_ALPHABET).
-    assertFalse(/[01IO]/.test(code.replace("-", "")));
+    assert(/^[A-HJKM-NP-Z2-9]{4}-[A-HJKM-NP-Z2-9]{4}$/.test(code), `format: ${code}`);
   }
   // count personnalisé respecté.
   assertEquals(generateBackupCodes(5).length, 5);
+
+  // Gros échantillon : aucun caractère ambigu (0/1/I/L/O) ne doit JAMAIS
+  // apparaître — garde-fou contre la régression de BACKUP_ALPHABET (L y était
+  // présent à tort). 500 codes × 8 chars = 4000 tirages.
+  const bulk = generateBackupCodes(500).join("").replaceAll("-", "");
+  assertFalse(/[01ILO]/.test(bulk), "caractère ambigu détecté dans le bulk");
 });
 
 Deno.test("hashBackupCode → déterministe, hex 64 chars, insensible à la casse", async () => {
