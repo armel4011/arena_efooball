@@ -18,6 +18,7 @@ class PlannedMatch {
     this.player2Id,
     this.groupId,
     this.scheduledAt,
+    this.isThirdPlace = false,
   });
 
   final int roundNumber;
@@ -26,6 +27,11 @@ class PlannedMatch {
   final String? player2Id;
   final String? groupId;
   final DateTime? scheduledAt;
+
+  /// `true` pour le match de classement (petite finale / 3e place) — il
+  /// oppose les 2 perdants des demi-finales. Persisté dans
+  /// `matches.is_third_place`.
+  final bool isThirdPlace;
 
   Map<String, dynamic> toRow({required String competitionId, String? phaseId}) {
     return <String, dynamic>{
@@ -37,6 +43,7 @@ class PlannedMatch {
       if (player1Id != null) 'player1_id': player1Id,
       if (player2Id != null) 'player2_id': player2Id,
       if (scheduledAt != null) 'scheduled_at': scheduledAt!.toIso8601String(),
+      'is_third_place': isThirdPlace,
       'status': 'pending',
     };
   }
@@ -53,6 +60,8 @@ class PlannedBracketNode {
     required this.matchIndex,
     this.nextNodeIndex,
     this.nextPosition,
+    this.loserNextNodeIndex,
+    this.loserNextPosition,
     this.isGrandFinal = false,
     this.isThirdPlaceMatch = false,
     this.isBye = false,
@@ -67,6 +76,15 @@ class PlannedBracketNode {
   final int matchIndex;
   final int? nextNodeIndex;
   final String? nextPosition;
+
+  /// Index (dans `nodes`) du nœud du match 3e place vers lequel router le
+  /// PERDANT de ce nœud. Renseigné uniquement sur les 2 demi-finales
+  /// quand l'option 3e place est active. Résolu en `loser_next_node_id`
+  /// au moment de l'insert (cf. admin_bracket_repository).
+  final int? loserNextNodeIndex;
+
+  /// Slot du perdant dans le match 3e place : `'player1'` / `'player2'`.
+  final String? loserNextPosition;
   final bool isGrandFinal;
   final bool isThirdPlaceMatch;
   final bool isBye;

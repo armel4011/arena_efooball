@@ -44,6 +44,7 @@ GroupsKnockoutPlan generateGroupsThenKnockout({
   required int groupCount,
   required int qualifiersPerGroup,
   bool shuffle = true,
+  bool thirdPlace = false,
   int? seed,
 }) {
   if (groupCount < 2) {
@@ -100,6 +101,7 @@ GroupsKnockoutPlan generateGroupsThenKnockout({
   final knockoutPlan = generateSingleElimination(
     playerIds: placeholders,
     shuffle: false,
+    thirdPlace: thirdPlace,
   );
 
   // Wipe out the placeholder IDs so the admin can fill them in after

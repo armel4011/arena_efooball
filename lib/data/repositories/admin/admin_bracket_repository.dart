@@ -41,9 +41,14 @@ class AdminBracketRepository {
   Future<void> generateSingleElim({
     required String competitionId,
     required List<String> playerIds,
+    bool thirdPlace = false,
     int? seed,
   }) async {
-    final plan = generateSingleElimination(playerIds: playerIds, seed: seed);
+    final plan = generateSingleElimination(
+      playerIds: playerIds,
+      thirdPlace: thirdPlace,
+      seed: seed,
+    );
     final phaseId = await _insertPhase(
       competitionId: competitionId,
       type: 'knockout',
@@ -82,12 +87,14 @@ class AdminBracketRepository {
     required List<String> playerIds,
     required int groupCount,
     required int qualifiersPerGroup,
+    bool thirdPlace = false,
     int? seed,
   }) async {
     final plan = generateGroupsThenKnockout(
       playerIds: playerIds,
       groupCount: groupCount,
       qualifiersPerGroup: qualifiersPerGroup,
+      thirdPlace: thirdPlace,
       seed: seed,
     );
 
@@ -205,6 +212,21 @@ class AdminBracketRepository {
       await _client.from('bracket_nodes').update({
         'next_node_id': nodeIds[nextIndex],
         if (node.nextPosition != null) 'next_position': node.nextPosition,
+      }).eq('id', nodeIds[i]);
+    }
+
+    // Câblage du PERDANT vers le match de classement (3e place). Même
+    // pattern que `next_node_id` : sur chaque demi-finale, on pointe le
+    // nœud du match 3e place + le slot du perdant. Le trigger
+    // `cascade_match_winner` route alors automatiquement le perdant.
+    for (var i = 0; i < plan.nodes.length; i++) {
+      final node = plan.nodes[i];
+      final loserIndex = node.loserNextNodeIndex;
+      if (loserIndex == null) continue;
+      await _client.from('bracket_nodes').update({
+        'loser_next_node_id': nodeIds[loserIndex],
+        if (node.loserNextPosition != null)
+          'loser_next_position': node.loserNextPosition,
       }).eq('id', nodeIds[i]);
     }
 

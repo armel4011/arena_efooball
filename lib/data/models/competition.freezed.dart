@@ -70,6 +70,11 @@ mixin _$Competition {
   /// `trigger_auto_generate_bracket` consume ce flag.
   bool get autoGenerateBracket => throw _privateConstructorUsedError;
 
+  /// Si vrai, un match de classement (petite finale / 3e place) est
+  /// généré en plus de la finale : il oppose les 2 perdants des
+  /// demi-finales. Opt-in admin. Mappé sur `third_place_match`.
+  bool get thirdPlaceMatch => throw _privateConstructorUsedError;
+
   /// Lot D — quota de parrainages requis avant qu'un joueur puisse
   /// s'inscrire. 0 = pas de gating (la majorité des comp.). Utilisé
   /// uniquement pour les comp. gratuites avec récompense (variante
@@ -145,6 +150,7 @@ abstract class $CompetitionCopyWith<$Res> {
       List<int> prizeDistribution,
       int matchIntervalMinutes,
       bool autoGenerateBracket,
+      bool thirdPlaceMatch,
       int referralQuota,
       String referralActivityMode,
       List<int>? roundIntervals,
@@ -196,6 +202,7 @@ class _$CompetitionCopyWithImpl<$Res, $Val extends Competition>
     Object? prizeDistribution = null,
     Object? matchIntervalMinutes = null,
     Object? autoGenerateBracket = null,
+    Object? thirdPlaceMatch = null,
     Object? referralQuota = null,
     Object? referralActivityMode = null,
     Object? roundIntervals = freezed,
@@ -316,6 +323,10 @@ class _$CompetitionCopyWithImpl<$Res, $Val extends Competition>
           ? _value.autoGenerateBracket
           : autoGenerateBracket // ignore: cast_nullable_to_non_nullable
               as bool,
+      thirdPlaceMatch: null == thirdPlaceMatch
+          ? _value.thirdPlaceMatch
+          : thirdPlaceMatch // ignore: cast_nullable_to_non_nullable
+              as bool,
       referralQuota: null == referralQuota
           ? _value.referralQuota
           : referralQuota // ignore: cast_nullable_to_non_nullable
@@ -381,6 +392,7 @@ abstract class _$$CompetitionImplCopyWith<$Res>
       List<int> prizeDistribution,
       int matchIntervalMinutes,
       bool autoGenerateBracket,
+      bool thirdPlaceMatch,
       int referralQuota,
       String referralActivityMode,
       List<int>? roundIntervals,
@@ -430,6 +442,7 @@ class __$$CompetitionImplCopyWithImpl<$Res>
     Object? prizeDistribution = null,
     Object? matchIntervalMinutes = null,
     Object? autoGenerateBracket = null,
+    Object? thirdPlaceMatch = null,
     Object? referralQuota = null,
     Object? referralActivityMode = null,
     Object? roundIntervals = freezed,
@@ -550,6 +563,10 @@ class __$$CompetitionImplCopyWithImpl<$Res>
           ? _value.autoGenerateBracket
           : autoGenerateBracket // ignore: cast_nullable_to_non_nullable
               as bool,
+      thirdPlaceMatch: null == thirdPlaceMatch
+          ? _value.thirdPlaceMatch
+          : thirdPlaceMatch // ignore: cast_nullable_to_non_nullable
+              as bool,
       referralQuota: null == referralQuota
           ? _value.referralQuota
           : referralQuota // ignore: cast_nullable_to_non_nullable
@@ -610,6 +627,7 @@ class _$CompetitionImpl extends _Competition {
       final List<int> prizeDistribution = const <int>[0, 0, 0, 0],
       this.matchIntervalMinutes = 60,
       this.autoGenerateBracket = true,
+      this.thirdPlaceMatch = false,
       this.referralQuota = 0,
       this.referralActivityMode = 'any',
       final List<int>? roundIntervals,
@@ -724,6 +742,13 @@ class _$CompetitionImpl extends _Competition {
   @JsonKey()
   final bool autoGenerateBracket;
 
+  /// Si vrai, un match de classement (petite finale / 3e place) est
+  /// généré en plus de la finale : il oppose les 2 perdants des
+  /// demi-finales. Opt-in admin. Mappé sur `third_place_match`.
+  @override
+  @JsonKey()
+  final bool thirdPlaceMatch;
+
   /// Lot D — quota de parrainages requis avant qu'un joueur puisse
   /// s'inscrire. 0 = pas de gating (la majorité des comp.). Utilisé
   /// uniquement pour les comp. gratuites avec récompense (variante
@@ -785,7 +810,7 @@ class _$CompetitionImpl extends _Competition {
 
   @override
   String toString() {
-    return 'Competition(id: $id, name: $name, game: $game, format: $format, startDate: $startDate, status: $status, maxPlayers: $maxPlayers, currentPlayers: $currentPlayers, registrationFee: $registrationFee, registrationCurrency: $registrationCurrency, commissionPct: $commissionPct, prizePoolLocal: $prizePoolLocal, commissionXaf: $commissionXaf, sponsorBonusLocal: $sponsorBonusLocal, description: $description, bannerUrl: $bannerUrl, registrationOpensAt: $registrationOpensAt, registrationClosesAt: $registrationClosesAt, endDate: $endDate, prizePoolCurrency: $prizePoolCurrency, createdBy: $createdBy, createdAt: $createdAt, updatedAt: $updatedAt, orangeMoneyCode: $orangeMoneyCode, mtnMomoCode: $mtnMomoCode, prizeDistribution: $prizeDistribution, matchIntervalMinutes: $matchIntervalMinutes, autoGenerateBracket: $autoGenerateBracket, referralQuota: $referralQuota, referralActivityMode: $referralActivityMode, roundIntervals: $roundIntervals, formatConfig: $formatConfig, androidStoreUrl: $androidStoreUrl, iosStoreUrl: $iosStoreUrl)';
+    return 'Competition(id: $id, name: $name, game: $game, format: $format, startDate: $startDate, status: $status, maxPlayers: $maxPlayers, currentPlayers: $currentPlayers, registrationFee: $registrationFee, registrationCurrency: $registrationCurrency, commissionPct: $commissionPct, prizePoolLocal: $prizePoolLocal, commissionXaf: $commissionXaf, sponsorBonusLocal: $sponsorBonusLocal, description: $description, bannerUrl: $bannerUrl, registrationOpensAt: $registrationOpensAt, registrationClosesAt: $registrationClosesAt, endDate: $endDate, prizePoolCurrency: $prizePoolCurrency, createdBy: $createdBy, createdAt: $createdAt, updatedAt: $updatedAt, orangeMoneyCode: $orangeMoneyCode, mtnMomoCode: $mtnMomoCode, prizeDistribution: $prizeDistribution, matchIntervalMinutes: $matchIntervalMinutes, autoGenerateBracket: $autoGenerateBracket, thirdPlaceMatch: $thirdPlaceMatch, referralQuota: $referralQuota, referralActivityMode: $referralActivityMode, roundIntervals: $roundIntervals, formatConfig: $formatConfig, androidStoreUrl: $androidStoreUrl, iosStoreUrl: $iosStoreUrl)';
   }
 
   @override
@@ -843,6 +868,8 @@ class _$CompetitionImpl extends _Competition {
                 other.matchIntervalMinutes == matchIntervalMinutes) &&
             (identical(other.autoGenerateBracket, autoGenerateBracket) ||
                 other.autoGenerateBracket == autoGenerateBracket) &&
+            (identical(other.thirdPlaceMatch, thirdPlaceMatch) ||
+                other.thirdPlaceMatch == thirdPlaceMatch) &&
             (identical(other.referralQuota, referralQuota) ||
                 other.referralQuota == referralQuota) &&
             (identical(other.referralActivityMode, referralActivityMode) ||
@@ -889,6 +916,7 @@ class _$CompetitionImpl extends _Competition {
         const DeepCollectionEquality().hash(_prizeDistribution),
         matchIntervalMinutes,
         autoGenerateBracket,
+        thirdPlaceMatch,
         referralQuota,
         referralActivityMode,
         const DeepCollectionEquality().hash(_roundIntervals),
@@ -943,6 +971,7 @@ abstract class _Competition extends Competition {
       final List<int> prizeDistribution,
       final int matchIntervalMinutes,
       final bool autoGenerateBracket,
+      final bool thirdPlaceMatch,
       final int referralQuota,
       final String referralActivityMode,
       final List<int>? roundIntervals,
@@ -1031,6 +1060,12 @@ abstract class _Competition extends Competition {
   /// `trigger_auto_generate_bracket` consume ce flag.
   @override
   bool get autoGenerateBracket;
+
+  /// Si vrai, un match de classement (petite finale / 3e place) est
+  /// généré en plus de la finale : il oppose les 2 perdants des
+  /// demi-finales. Opt-in admin. Mappé sur `third_place_match`.
+  @override
+  bool get thirdPlaceMatch;
 
   /// Lot D — quota de parrainages requis avant qu'un joueur puisse
   /// s'inscrire. 0 = pas de gating (la majorité des comp.). Utilisé

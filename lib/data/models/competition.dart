@@ -63,6 +63,11 @@ sealed class Competition with _$Competition {
     /// `trigger_auto_generate_bracket` consume ce flag.
     @Default(true) bool autoGenerateBracket,
 
+    /// Si vrai, un match de classement (petite finale / 3e place) est
+    /// généré en plus de la finale : il oppose les 2 perdants des
+    /// demi-finales. Opt-in admin. Mappé sur `third_place_match`.
+    @Default(false) bool thirdPlaceMatch,
+
     /// Lot D — quota de parrainages requis avant qu'un joueur puisse
     /// s'inscrire. 0 = pas de gating (la majorité des comp.). Utilisé
     /// uniquement pour les comp. gratuites avec récompense (variante

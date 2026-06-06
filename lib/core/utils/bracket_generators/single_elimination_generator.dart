@@ -12,9 +12,16 @@ import 'package:arena/core/utils/bracket_generators/bracket_generator.dart';
 ///
 /// Yields N-1 matches (N = nextPowerOfTwo). Throws if fewer than 2
 /// players or more than 256 (matches the master prompt cap).
+///
+/// Si [thirdPlace] est vrai ET qu'il y a au moins des demi-finales
+/// (totalRounds >= 2, soit >= 4 slots), un match de classement
+/// supplémentaire est ajouté : il oppose les 2 perdants des demi-finales
+/// (câblés via `loserNextNodeIndex`). En dessous de 4 joueurs (pas de
+/// vraies demi-finales) le flag est ignoré.
 BracketPlan generateSingleElimination({
   required List<String> playerIds,
   bool shuffle = true,
+  bool thirdPlace = false,
   int? seed,
 }) {
   if (playerIds.length < 2) {
@@ -98,6 +105,53 @@ BracketPlan generateSingleElimination({
       ),);
     }
     nodeCursor += matchesThisRound;
+  }
+
+  // ─── Match de classement (3e place) ──────────────────────────────────
+  // Ajouté seulement s'il existe 2 VRAIES demi-finales : il faut au moins
+  // 4 joueurs réels (totalRounds >= 2 ne suffit pas — 3 joueurs donnent un
+  // field de 4 mais une seule demi réelle, l'autre étant un bye). Le match
+  // 3e place occupe `positionInRound: 1` du round final (la finale reste à
+  // la position 0) ; les 2 demi-finales (round totalRounds-1) routent leur
+  // PERDANT vers ce nœud.
+  if (thirdPlace && totalRounds >= 2 && players.length >= 4) {
+    final thirdPlaceMatchIndex = matches.length;
+    matches.add(PlannedMatch(
+      roundNumber: totalRounds,
+      matchNumber: matches.length + 1,
+      isThirdPlace: true,
+    ),);
+
+    final thirdPlaceNodeIndex = nodes.length;
+    nodes.add(PlannedBracketNode(
+      roundNumber: totalRounds,
+      positionInRound: 1,
+      totalRounds: totalRounds,
+      matchIndex: thirdPlaceMatchIndex,
+      isThirdPlaceMatch: true,
+    ),);
+
+    // Câble les 2 demi-finales (positions 0 et 1 du round totalRounds-1)
+    // vers le match 3e place. Les champs étant `final`, on remplace les
+    // nœuds en place par des copies enrichies.
+    for (var i = 0; i < nodes.length; i++) {
+      final node = nodes[i];
+      if (node.roundNumber != totalRounds - 1) continue;
+      nodes[i] = PlannedBracketNode(
+        roundNumber: node.roundNumber,
+        positionInRound: node.positionInRound,
+        totalRounds: node.totalRounds,
+        matchIndex: node.matchIndex,
+        nextNodeIndex: node.nextNodeIndex,
+        nextPosition: node.nextPosition,
+        loserNextNodeIndex: thirdPlaceNodeIndex,
+        loserNextPosition: node.positionInRound == 0 ? 'player1' : 'player2',
+        isGrandFinal: node.isGrandFinal,
+        isThirdPlaceMatch: node.isThirdPlaceMatch,
+        isBye: node.isBye,
+        byePlayerId: node.byePlayerId,
+      );
+    }
   }
 
   return BracketPlan(matches: matches, nodes: nodes);

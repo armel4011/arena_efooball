@@ -132,5 +132,90 @@ void main() {
       generateSingleElimination(playerIds: input, seed: 7);
       expect(input, copy);
     });
+
+    // ─── Match de classement (3e place) ────────────────────────────────
+    group('third place match', () {
+      test('adds exactly one 3rd-place node wired from both semis (4 & 8)', () {
+        for (final n in [4, 8]) {
+          final plan = generateSingleElimination(
+            playerIds: players(n),
+            shuffle: false,
+            thirdPlace: true,
+          );
+          final totalRounds = (log(n) / log(2)).round();
+
+          // Exactement 1 nœud de classement, au round final.
+          final tp =
+              plan.nodes.where((node) => node.isThirdPlaceMatch).toList();
+          expect(tp.length, 1, reason: 'N=$n one 3rd-place node');
+          expect(tp.single.roundNumber, totalRounds, reason: 'N=$n round');
+          expect(tp.single.positionInRound, 1, reason: 'N=$n position');
+
+          // Son match porte le flag is_third_place.
+          final tpMatch = plan.matches[tp.single.matchIndex];
+          expect(tpMatch.isThirdPlace, isTrue, reason: 'N=$n match flag');
+          expect(tpMatch.roundNumber, totalRounds, reason: 'N=$n match round');
+
+          // Les 2 demi-finales pointent leur perdant vers ce nœud.
+          final tpIndex = plan.nodes.indexOf(tp.single);
+          final semis = plan.nodes
+              .where((node) => node.roundNumber == totalRounds - 1)
+              .toList();
+          expect(semis.length, 2, reason: 'N=$n two semis');
+          for (final semi in semis) {
+            expect(semi.loserNextNodeIndex, tpIndex, reason: 'N=$n loser link');
+          }
+          final byPos = {for (final s in semis) s.positionInRound: s};
+          expect(byPos[0]!.loserNextPosition, 'player1');
+          expect(byPos[1]!.loserNextPosition, 'player2');
+
+          // is_third_place sérialisé dans toRow (toujours présent).
+          expect(
+            tpMatch.toRow(competitionId: 'c')['is_third_place'],
+            isTrue,
+          );
+        }
+      });
+
+      test('thirdPlace false → no 3rd-place node, N-1 matches', () {
+        for (final n in [4, 8]) {
+          final plan = generateSingleElimination(
+            playerIds: players(n),
+            shuffle: false,
+          );
+          expect(
+            plan.nodes.where((node) => node.isThirdPlaceMatch),
+            isEmpty,
+            reason: 'N=$n no 3rd-place node',
+          );
+          expect(plan.matches.length, n - 1, reason: 'N=$n match count');
+          expect(
+            plan.nodes.every((node) => node.loserNextNodeIndex == null),
+            isTrue,
+            reason: 'N=$n no loser links',
+          );
+        }
+      });
+
+      test('thirdPlace true with 2 & 3 players → no 3rd-place match', () {
+        for (final n in [2, 3]) {
+          final plan = generateSingleElimination(
+            playerIds: players(n),
+            shuffle: false,
+            thirdPlace: true,
+          );
+          expect(
+            plan.nodes.where((node) => node.isThirdPlaceMatch),
+            isEmpty,
+            reason: 'N=$n no 3rd-place node (totalRounds < 2)',
+          );
+          expect(
+            plan.matches.where((m) => m.isThirdPlace),
+            isEmpty,
+            reason: 'N=$n no 3rd-place match',
+          );
+        }
+      });
+    });
   });
 }

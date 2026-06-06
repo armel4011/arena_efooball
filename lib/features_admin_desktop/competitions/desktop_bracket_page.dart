@@ -206,6 +206,7 @@ class _EmptyBracketStateState extends ConsumerState<_EmptyBracketState> {
           await repo.generateSingleElim(
             competitionId: comp.id,
             playerIds: players,
+            thirdPlace: comp.thirdPlaceMatch,
           );
         case TournamentFormat.roundRobin:
           await repo.generateRoundRobinTournament(
@@ -218,6 +219,7 @@ class _EmptyBracketStateState extends ConsumerState<_EmptyBracketState> {
             playerIds: players,
             groupCount: groupsConfig.groupCount,
             qualifiersPerGroup: groupsConfig.qualifiers,
+            thirdPlace: comp.thirdPlaceMatch,
           );
       }
       await ref.read(adminAuditLogRepositoryProvider).record(
