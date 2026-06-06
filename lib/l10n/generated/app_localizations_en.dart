@@ -1152,6 +1152,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get promoBannerLinkOpenError => 'Unable to open the link.';
 
   @override
+  String get tutorialWatchCta => 'Watch the tutorial';
+
+  @override
   String get statGridMatchesLabel => 'Matches';
 
   @override

@@ -241,6 +241,14 @@ class AdminDashboardPage extends ConsumerWidget {
                     variant: ArenaButtonVariant.secondary,
                     onPressed: () => context.push(AdminRoutes.superPromoBanner),
                   ),
+                  const SizedBox(height: ArenaSpacing.xs),
+                  ArenaButton(
+                    label: '🎬 VIDÉO TUTORIEL',
+                    fullWidth: true,
+                    variant: ArenaButtonVariant.secondary,
+                    onPressed: () =>
+                        context.push(AdminRoutes.superTutorialVideo),
+                  ),
                 ],
                 const SizedBox(height: ArenaSpacing.lg),
                 Text(
