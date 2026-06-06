@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/tutorial_video.dart';
 import 'package:arena/data/repositories/tutorial_video_repository.dart';
-import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,22 +10,22 @@ import 'package:url_launcher/url_launcher.dart';
 
 /// Décide si la bannière tutoriel doit s'afficher pour un user donné.
 ///
-/// Règle : la bannière ne cible que les NOUVEAUX comptes. Elle s'affiche
-/// tant que l'âge du compte (`now - accountCreatedAt`) est strictement
-/// inférieur à `displayDays` jours, puis disparaît.
+/// Règle : la fenêtre d'affichage démarre à la PREMIÈRE IMPRESSION du user
+/// (`firstSeen`), pas à la création du compte. La bannière s'affiche tant que
+/// `now - firstSeen` est strictement inférieur à `displayDays` jours, puis
+/// disparaît définitivement pour ce user.
 ///
-/// Fallback SÛR : si `accountCreatedAt` est `null` (date de création
-/// inconnue — profil non hydraté, cache vide…), on **ne montre pas** la
-/// bannière. On préfère ne rien afficher plutôt que de spammer un user dont
-/// on ignore l'ancienneté.
+/// Fallback SÛR : si `firstSeen` est `null` (1re impression inconnue — RPC
+/// pas encore résolue, erreur réseau…), on **ne montre pas** la bannière. On
+/// préfère ne rien afficher plutôt que de risquer un calcul de fenêtre faux.
 bool shouldShowTutorialBanner({
-  required DateTime? accountCreatedAt,
+  required DateTime? firstSeen,
   required int displayDays,
   DateTime? now,
 }) {
-  if (accountCreatedAt == null) return false;
+  if (firstSeen == null) return false;
   final reference = now ?? DateTime.now();
-  final ageInDays = reference.difference(accountCreatedAt).inDays;
+  final ageInDays = reference.difference(firstSeen).inDays;
   return ageInDays < displayDays;
 }
 
@@ -47,11 +46,16 @@ class TutorialVideoSection extends ConsumerWidget {
     final video = ref.watch(activeTutorialVideoProvider).valueOrNull;
     if (video == null) return const SizedBox.shrink();
 
-    // Ciblage nouveaux users : on n'affiche que si le compte est plus jeune
-    // que `video.displayDays`. Fallback sûr si createdAt inconnu → masqué.
-    final profile = ref.watch(currentProfileProvider).valueOrNull;
+    // Fenêtre basée sur la 1re impression du user (enregistrée par la RPC à
+    // la volée), pas sur l'âge du compte.
+    //
+    // - Loading : on ne flashe rien tant que la date n'est pas connue.
+    // - Erreur : fallback masqué. La 1re impression n'est PAS perdue : la RPC
+    //   est idempotente, donc elle sera enregistrée au prochain chargement
+    //   réussi (la fenêtre démarrera simplement à ce moment-là).
+    final firstSeen = ref.watch(tutorialFirstSeenProvider(video.id)).valueOrNull;
     final show = shouldShowTutorialBanner(
-      accountCreatedAt: profile?.createdAt,
+      firstSeen: firstSeen,
       displayDays: video.displayDays,
     );
     if (!show) return const SizedBox.shrink();
