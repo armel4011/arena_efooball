@@ -365,6 +365,7 @@
   "pendingPaymentSingleTitle": "Payment awaiting validation",
   "pendingPaymentTapToCheck": "Tap to check the status",
   "promoBannerLinkOpenError": "Unable to open the link.",
+  "tutorialWatchCta": "Watch the tutorial",
   "statGridMatchesLabel": "Matches",
   "statGridWdlLabel": "W/L/D",
   "statGridWinRateLabel": "Win rate",

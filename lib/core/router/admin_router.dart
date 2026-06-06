@@ -27,6 +27,7 @@ import 'package:arena/features_admin/super_admin/super_admin_payouts_page.dart';
 import 'package:arena/features_admin/super_admin/super_admin_promo_banner.dart';
 import 'package:arena/features_admin/super_admin/super_admin_reintegration_requests.dart';
 import 'package:arena/features_admin/super_admin/super_admin_revenue.dart';
+import 'package:arena/features_admin/super_admin/super_admin_tutorial_video.dart';
 import 'package:arena/features_admin/super_admin/super_admin_users.dart';
 import 'package:arena/features_shared/presentation/dev_preview_page.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
@@ -73,6 +74,7 @@ abstract final class AdminRoutes {
   static const superPayouts = '/super/payouts';
   static const superBroadcast = '/super/broadcast';
   static const superPromoBanner = '/super/promo-banner';
+  static const superTutorialVideo = '/super/tutorial-video';
   static const superReintegration = '/super/reintegration';
   static const superChatThread = '/super/messages/:userId';
 
@@ -317,6 +319,11 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
         path: AdminRoutes.superPromoBanner,
         name: 'admin.superPromoBanner',
         builder: (context, state) => const SuperAdminPromoBanner(),
+      ),
+      GoRoute(
+        path: AdminRoutes.superTutorialVideo,
+        name: 'admin.superTutorialVideo',
+        builder: (context, state) => const SuperAdminTutorialVideo(),
       ),
       GoRoute(
         path: AdminRoutes.superReintegration,

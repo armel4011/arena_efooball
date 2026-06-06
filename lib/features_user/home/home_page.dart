@@ -10,6 +10,7 @@ import 'package:arena/features_user/home/widgets/live_streams_section.dart';
 import 'package:arena/features_user/home/widgets/pending_payment_banner.dart';
 import 'package:arena/features_user/home/widgets/promo_banner_section.dart';
 import 'package:arena/features_user/home/widgets/stat_grid.dart';
+import 'package:arena/features_user/home/widgets/tutorial_video_section.dart';
 import 'package:arena/features_user/home/widgets/upcoming_matches_section.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -55,6 +56,7 @@ class HomePage extends ConsumerWidget {
             HomeHeader(profile: profile),
             const PendingPaymentBanner(),
             const PromoBannerSection(),
+            const TutorialVideoSection(),
             const SizedBox(height: ArenaSpacing.lg),
             _SectionCaption(
               label: l10n.homeSectionNextMatch,

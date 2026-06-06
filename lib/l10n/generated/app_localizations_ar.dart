@@ -1147,6 +1147,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get promoBannerLinkOpenError => 'تعذر فتح الرابط.';
 
   @override
+  String get tutorialWatchCta => 'شاهد البرنامج التعليمي';
+
+  @override
   String get statGridMatchesLabel => 'المباريات';
 
   @override

@@ -2290,6 +2290,12 @@ abstract class AppLocalizations {
   /// **'Impossible d\'ouvrir le lien.'**
   String get promoBannerLinkOpenError;
 
+  /// No description provided for @tutorialWatchCta.
+  ///
+  /// In fr, this message translates to:
+  /// **'Regarder le tutoriel'**
+  String get tutorialWatchCta;
+
   /// No description provided for @statGridMatchesLabel.
   ///
   /// In fr, this message translates to:

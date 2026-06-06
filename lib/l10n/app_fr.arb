@@ -385,6 +385,7 @@
   "pendingPaymentSingleTitle": "Paiement en attente de validation",
   "pendingPaymentTapToCheck": "Tape pour vérifier le statut",
   "promoBannerLinkOpenError": "Impossible d'ouvrir le lien.",
+  "tutorialWatchCta": "Regarder le tutoriel",
   "statGridMatchesLabel": "Matchs",
   "statGridWdlLabel": "V/D/N",
   "statGridWinRateLabel": "Win rate",
