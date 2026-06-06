@@ -722,6 +722,12 @@ class _ActionsTab extends ConsumerWidget {
           danger: true,
           onPressed: () => _cancel(context, ref),
         ),
+        _ActionButton(
+          icon: FluentIcons.delete,
+          label: 'Supprimer la compétition',
+          danger: true,
+          onPressed: () => _delete(context, ref),
+        ),
       ],
     );
   }
@@ -803,6 +809,41 @@ class _ActionsTab extends ConsumerWidget {
       await ref
           .read(adminCompetitionsRepositoryProvider)
           .cancel(competition.id);
+    } catch (e) {
+      if (!context.mounted) return;
+      await _showError(context, e);
+    }
+  }
+
+  Future<void> _delete(BuildContext context, WidgetRef ref) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => ContentDialog(
+        title: const Text('Supprimer définitivement ?'),
+        content: const Text(
+          'Cette compétition et tous ses paiements liés seront effacés de la '
+          'base. Inscriptions, matches et brackets cascadent automatiquement. '
+          'Cette action est IRRÉVERSIBLE.',
+        ),
+        actions: [
+          Button(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Non'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Oui, supprimer'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ref
+          .read(adminCompetitionsRepositoryProvider)
+          .delete(competition.id);
+      if (!context.mounted) return;
+      context.go(AdminDesktopRoutes.competitions);
     } catch (e) {
       if (!context.mounted) return;
       await _showError(context, e);
