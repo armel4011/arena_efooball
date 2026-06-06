@@ -19,7 +19,7 @@
 // =============================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
-import { RtmRole, RtmTokenBuilder } from "npm:agora-token@2.0.5";
+import { RtmTokenBuilder } from "npm:agora-token@2.0.5";
 
 const APP_ID = Deno.env.get("AGORA_APP_ID");
 const APP_CERTIFICATE = Deno.env.get("AGORA_APP_CERTIFICATE");
@@ -76,13 +76,14 @@ Deno.serve(async (req) => {
 
   const expiresAt = Math.floor(Date.now() / 1000) + TOKEN_EXPIRE_SECONDS;
   // RTM v2 builder : buildToken(appId, certificate, userId, expirationTs).
-  // Le RtmRole.Rtm_User n'existe que sur les anciennes API v1 ; sur v2
-  // le token est simplement émis pour un account.
+  // agora-token@2.0.5 n'exporte PAS de RtmRole et `buildToken` ne prend que
+  // 4 args (le rôle n'existe plus en RTM v2). L'ancien appel à 5 args avec
+  // RtmRole.Rtm_User plantait au runtime (RtmRole === undefined). expiresAt
+  // est un timestamp absolu, comme pour les tokens RTC (cf. get_agora_token).
   const token = RtmTokenBuilder.buildToken(
     APP_ID,
     APP_CERTIFICATE,
     userId,
-    RtmRole.Rtm_User,
     expiresAt,
   );
 

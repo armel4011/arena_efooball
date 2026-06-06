@@ -96,7 +96,10 @@ async function hotp(secretBytes: Uint8Array, counter: bigint): Promise<string> {
   }
   const key = await crypto.subtle.importKey(
     "raw",
-    secretBytes,
+    // Copie dans un Uint8Array frais (ArrayBuffer non partagé) : un
+    // `Uint8Array` quelconque peut être adossé à un SharedArrayBuffer, que
+    // `BufferSource` (et SubtleCrypto) refuse — d'où le rejet du type-check.
+    new Uint8Array(secretBytes),
     { name: "HMAC", hash: "SHA-1" },
     false,
     ["sign"],
@@ -225,7 +228,8 @@ export async function hashBackupCode(
   const keyBytes = hexToBytes(hmacKey);
   const key = await crypto.subtle.importKey(
     "raw",
-    keyBytes,
+    // cf. note dans hotp() : Uint8Array frais pour garantir un BufferSource.
+    new Uint8Array(keyBytes),
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"],

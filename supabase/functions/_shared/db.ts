@@ -1,6 +1,15 @@
+import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import type { Database } from "./database.types.ts";
 
 export type { Database };
+
+/// Type du client service-role tel que retourné par `createClient(url, key)`
+/// (appelé sans générique). À utiliser pour typer les helpers EF qui reçoivent
+/// ce client : `ReturnType<typeof createClient>` résout vers la mauvaise
+/// surcharge sous supabase-js 2.45 (`<unknown, never, GenericSchema>`) et ne
+/// matche pas le retour réel de l'appel (`<any, "public", any>`).
+// deno-lint-ignore no-explicit-any
+export type ServiceClient = SupabaseClient<any, "public", any>;
 
 export type Tables<T extends keyof Database["public"]["Tables"]> =
   Database["public"]["Tables"][T]["Row"];
