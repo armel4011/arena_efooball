@@ -24,6 +24,7 @@ import 'package:arena/features_admin_desktop/super_admin/desktop_invitations_pag
 import 'package:arena/features_admin_desktop/super_admin/desktop_reintegration_page.dart';
 import 'package:arena/features_admin_desktop/super_admin/desktop_revenue_page.dart';
 import 'package:arena/features_admin_desktop/super_admin/desktop_super_dashboard_page.dart';
+import 'package:arena/features_admin_desktop/super_admin/desktop_tutorial_banners_page.dart';
 import 'package:arena/features_admin_desktop/super_admin/desktop_users_page.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -63,6 +64,7 @@ abstract final class AdminDesktopRoutes {
   static const superPaymentsValidation = '/super/payments';
   static const superBroadcast = '/super/broadcast';
   static const superReintegration = '/super/reintegration';
+  static const superTutorialBanners = '/super/tutorial-banners';
   static const superChatThread = '/super/messages/:userId';
 
   /// Routes accessibles sans authentification complète.
@@ -280,6 +282,11 @@ final adminDesktopRouterProvider = Provider<GoRouter>((ref) {
             path: AdminDesktopRoutes.superReintegration,
             name: 'desktop.superReintegration',
             builder: (context, state) => const DesktopReintegrationPage(),
+          ),
+          GoRoute(
+            path: AdminDesktopRoutes.superTutorialBanners,
+            name: 'desktop.superTutorialBanners',
+            builder: (context, state) => const DesktopTutorialBannersPage(),
           ),
           GoRoute(
             path: AdminDesktopRoutes.superChatThread,
