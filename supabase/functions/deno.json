@@ -1,0 +1,23 @@
+// Config Deno des Edge Functions Supabase.
+// Sert au job CI "Edge Functions (Deno)" et au dev local
+// (deno lint / fmt / check depuis supabase/functions/).
+{
+  "lint": {
+    "include": ["./"],
+    // database.types.ts est généré (supabase gen types) — on ne le lint pas.
+    "exclude": ["./database.types.ts", "_shared/database.types.ts"],
+    "rules": {
+      "exclude": [
+        // Les imports inline esm.sh / npm: sont l'idiome standard des Edge
+        // Functions Supabase (pas d'import map dédié). On désactive donc la
+        // règle qui les interdit, sinon tout le code legitime serait flaggé.
+        "no-import-prefix"
+      ]
+    }
+  },
+  "fmt": {
+    "include": ["./"],
+    "exclude": ["./database.types.ts", "_shared/database.types.ts"],
+    "singleQuote": false
+  }
+}

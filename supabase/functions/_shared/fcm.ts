@@ -19,7 +19,7 @@ interface ServiceAccount {
 
 let cachedToken: { token: string; expiresAt: number } | null = null;
 
-async function importPrivateKey(pem: string): Promise<CryptoKey> {
+function importPrivateKey(pem: string): Promise<CryptoKey> {
   const pemBody = pem
     .replace(/-----BEGIN PRIVATE KEY-----/, '')
     .replace(/-----END PRIVATE KEY-----/, '')

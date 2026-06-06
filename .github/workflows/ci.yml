@@ -245,3 +245,67 @@ jobs:
         # de build_runner ici. Debug suffit pour valider la chaîne de build
         # desktop ; le MSIX release reste un livrable manuel signé localement.
         run: flutter build windows --debug --target lib/main_admin_desktop.dart
+
+  edge-functions:
+    name: Edge Functions (Deno)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    # Les 14 Edge Functions Deno (supabase/functions/) n'étaient couvertes par
+    # AUCUN job : une fonction qui ne lint/type-check plus passait inaperçue
+    # jusqu'au `supabase functions deploy`. Ce job rattrape ce trou. Trois
+    # garde-fous, calibrés sur l'état réel du code au 2026-06-06 :
+    #   - lint  : BLOQUANT (baseline propre, 0 problème).
+    #   - check : NON bloquant (11 erreurs de typage historiques, voir step).
+    #   - fmt   : NON bloquant (code jamais passé à `deno fmt`).
+    # Même posture progressive que les garde-fous spacing / OSV : on rend
+    # visible d'abord, on bascule en bloquant une fois la baseline résorbée.
+    defaults:
+      run:
+        working-directory: supabase/functions
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          # Épinglé sur la version validée localement (la baseline lint/check
+          # ci-dessous en dépend : une autre version peut changer les règles).
+          deno-version: "2.8.2"
+
+      - name: Deno lint (bloquant)
+        # 0 problème au 2026-06-06 (après retrait de 2 `async` redondants dans
+        # _shared/fcm.ts et _shared/apns.ts). Tout nouveau souci de lint dans
+        # une Edge Function fait désormais échouer la CI. Périmètre + exclusions
+        # (database.types.ts généré) définis dans supabase/functions/deno.json.
+        run: deno lint
+
+      - name: Deno type-check (non bloquant — baseline 11 erreurs)
+        # `deno check` résout les imports distants (esm.sh / npm:) et type-check.
+        # 11 erreurs historiques au 2026-06-06, surtout des décalages de types
+        # de paquets tiers (ex. `agora-token@2.0.5` n'exporte pas `RtmRole` dans
+        # ses .d.ts alors qu'il existe au runtime). Non bloquant tant que la
+        # baseline n'est pas traitée ; à passer bloquant ensuite (retirer
+        # continue-on-error). On type-check tous les `index.ts` (points d'entrée).
+        continue-on-error: true
+        run: deno check **/index.ts
+
+      - name: Deno fmt --check (non bloquant — code pas encore formaté)
+        # Le code n'a jamais été passé à `deno fmt` (guillemets mixtes, lignes
+        # longues). Affiche le diff pour visibilité sans bloquer. Pour nettoyer :
+        # `deno fmt` dans supabase/functions/, puis basculer ce step en bloquant.
+        continue-on-error: true
+        run: deno fmt --check
+
+      - name: Deno test (si présents)
+        # Aucun test Deno pour l'instant (dette T-1 de l'audit). Ce step exécute
+        # automatiquement les futurs `*.test.ts`/`*_test.ts` dès qu'ils sont
+        # ajoutés, et ne fait rien (sans échouer) tant qu'il n'y en a pas.
+        run: |
+          if ls **/*.test.ts **/*_test.ts >/dev/null 2>&1; then
+            deno test --allow-all
+          else
+            echo "Aucun test Deno pour l'instant — step ignoré."
+          fi
