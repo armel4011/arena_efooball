@@ -1,0 +1,29 @@
+{
+  "_comment": "Vecteurs de test PARTAGÉS entre le moteur Dart (test/draughts/engine_vectors_test.dart) et le futur moteur TypeScript de l'Edge Function d'autorité. Toute divergence Dart↔TS sur ces cas = bug de parité. fen = position + trait ; legalMoveCount = nb de coups légaux attendus ; maxCaptured = nb max de pièces capturées par un coup légal (0 si aucune prise).",
+  "cases": [
+    {
+      "name": "opening_white_has_9_moves",
+      "fen": "W:W31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50:B1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20",
+      "legalMoveCount": 9,
+      "maxCaptured": 0
+    },
+    {
+      "name": "mandatory_single_man_capture",
+      "fen": "W:W28:B22",
+      "legalMoveCount": 1,
+      "maxCaptured": 1
+    },
+    {
+      "name": "majority_rule_forces_double_capture",
+      "fen": "W:W28:B22,11,23",
+      "legalMoveCount": 1,
+      "maxCaptured": 2
+    },
+    {
+      "name": "flying_king_three_landing_squares",
+      "fen": "W:WK28:B22",
+      "legalMoveCount": 3,
+      "maxCaptured": 1
+    }
+  ]
+}

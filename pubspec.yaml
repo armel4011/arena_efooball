@@ -41,6 +41,7 @@ dependencies:
   # ─── Models & serialization (utilisé partout) ──────────────
   freezed_annotation: ^2.4.4
   json_annotation: ^4.9.0
+  meta: ^1.15.0   # @immutable (moteur de dames pur Dart)
 
   # ─── HTTP / API ────────────────────────────────────────────
   dio: ^5.7.0
