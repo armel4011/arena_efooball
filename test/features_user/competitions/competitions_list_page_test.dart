@@ -51,16 +51,19 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
   }
 
-  testWidgets('shows the empty state when there are no competitions',
+  testWidgets('shows a per-game empty state on the default tab',
       (tester) async {
     await bumpViewport(tester);
     await tester.pumpWidget(_scoped(const []));
     await tester.pumpAndSettle();
 
-    // Lot C.1 : les chips inline ont été remplacés par un ArenaFilterMenu
-    // (bottom-sheet). On vérifie que le bouton "FILTRES" et l'empty state
-    // sont visibles ; les options de jeu sont désormais dans la sheet.
-    expect(find.text('Aucune compétition'), findsOneWidget);
+    // La liste est organisée en onglets — un par jeu (eFootball · Dames ·
+    // EA FC), plus d'onglet « Tous ». L'onglet par défaut (eFootball) sans
+    // compétition affiche un empty state dédié au jeu, et conserve le menu
+    // de filtres (statut + tarif).
+    expect(find.byType(TabBar), findsOneWidget);
+    expect(find.byType(Tab), findsNWidgets(3));
+    expect(find.text('Aucune compétition sur eFootball'), findsOneWidget);
     expect(find.text('FILTRES'), findsOneWidget);
   });
 
@@ -86,23 +89,19 @@ void main() {
     expect(find.text('GRATUIT'), findsNWidgets(2));
   });
 
-  testWidgets('filter menu applies the selected game', (tester) async {
+  testWidgets('switching tab filters by game (empty copy follows the tab)',
+      (tester) async {
     await bumpViewport(tester);
     await tester.pumpWidget(_scoped(const []));
     await tester.pumpAndSettle();
 
-    // Lot C.1 : on ouvre la sheet, on tape eFootball, on applique.
-    await tester.tap(find.text('FILTRES'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('eFootball'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('APPLIQUER'));
+    // Le filtrage par jeu se fait désormais via les onglets : on bascule
+    // sur l'onglet « Dames » (2e onglet) et l'empty state suit le jeu.
+    await tester.tap(find.byType(Tab).at(1));
     await tester.pumpAndSettle();
 
-    // The filtered empty-state copy switches to mention the selected
-    // game.
     expect(
-      find.text('Aucune compétition sur eFootball'),
+      find.text('Aucune compétition sur Jeu de Dames'),
       findsOneWidget,
     );
   });
