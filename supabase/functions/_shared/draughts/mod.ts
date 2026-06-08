@@ -402,21 +402,47 @@ export enum Outcome {
   Draw,
 }
 
-export const DRAW_PLY_LIMIT = 50;
+// Règles de nulle FMJD :
+export const DRAW_PLY_LIMIT = 50; // 25 coups par camp sans prise ni mvt de pion
+export const SIXTEEN_MOVE_PLY_LIMIT = 32; // 16 coups par camp
+export const FIVE_MOVE_PLY_LIMIT = 10; // 5 coups par camp
+
+export enum Endgame {
+  None,
+  FiveMove,
+  SixteenMove,
+}
 
 export interface GameState {
   cells: Piece[];
   turn: Side;
   sterilePlies: number;
+  endgamePlies: number;
+  /** Occurrences par position (clé FEN plateau+trait) — répétition triple. */
+  positionCounts: Record<string, number>;
 }
 
 export function initialState(): GameState {
-  return { cells: initialBoard(), turn: Side.White, sterilePlies: 0 };
+  const cells = initialBoard();
+  const key = encodeFen(cells, Side.White);
+  return {
+    cells,
+    turn: Side.White,
+    sterilePlies: 0,
+    endgamePlies: 0,
+    positionCounts: { [key]: 1 },
+  };
 }
 
-export function stateFromFen(fen: string, sterilePlies = 0): GameState {
+export function stateFromFen(
+  fen: string,
+  sterilePlies = 0,
+  endgamePlies = 0,
+  positionCounts?: Record<string, number>,
+): GameState {
   const { cells, turn } = decodeFen(fen);
-  return { cells, turn, sterilePlies };
+  const counts = positionCounts ?? { [encodeFen(cells, turn)]: 1 };
+  return { cells, turn, sterilePlies, endgamePlies, positionCounts: counts };
 }
 
 export function toFen(s: GameState): string {
@@ -425,6 +451,33 @@ export function toFen(s: GameState): string {
 
 export function stateLegalMoves(s: GameState): Move[] {
   return legalMoves(s.cells, s.turn);
+}
+
+/// Catégorie d'endgame d'un plateau (un roi seul contre peu de matériel).
+export function endgameCategory(cells: Piece[]): Endgame {
+  let wK = 0, wM = 0, bK = 0, bM = 0;
+  for (const p of cells) {
+    if (p === Piece.WhiteKing) wK++;
+    else if (p === Piece.WhiteMan) wM++;
+    else if (p === Piece.BlackKing) bK++;
+    else if (p === Piece.BlackMan) bM++;
+  }
+  const catFor = (kings: number, men: number): Endgame => {
+    const total = kings + men;
+    if (kings < 1) return Endgame.None;
+    if (total <= 2) return Endgame.FiveMove;
+    if (total === 3) return Endgame.SixteenMove;
+    return Endgame.None;
+  };
+  if (wK === 1 && wM === 0) {
+    const c = catFor(bK, bM);
+    if (c !== Endgame.None) return c;
+  }
+  if (bK === 1 && bM === 0) {
+    const c = catFor(wK, wM);
+    if (c !== Endgame.None) return c;
+  }
+  return Endgame.None;
 }
 
 export function applyMove(s: GameState, move: Move): GameState {
@@ -440,11 +493,20 @@ export function applyMove(s: GameState, move: Move): GameState {
   cells[move.to] = placed;
 
   const progress = isCapture(move) || isMan(moving);
-  return {
-    cells,
-    turn: opponent(s.turn),
-    sterilePlies: progress ? 0 : s.sterilePlies + 1,
-  };
+  const sterilePlies = progress ? 0 : s.sterilePlies + 1;
+
+  const newCat = endgameCategory(cells);
+  const prevCat = endgameCategory(s.cells);
+  const endgamePlies = newCat === Endgame.None
+    ? 0
+    : (newCat === prevCat ? s.endgamePlies + 1 : 1);
+
+  const turn = opponent(s.turn);
+  const key = encodeFen(cells, turn);
+  const positionCounts = { ...s.positionCounts };
+  positionCounts[key] = (positionCounts[key] ?? 0) + 1;
+
+  return { cells, turn, sterilePlies, endgamePlies, positionCounts };
 }
 
 export function outcome(s: GameState): Outcome {
@@ -454,6 +516,17 @@ export function outcome(s: GameState): Outcome {
   if (stateLegalMoves(s).length === 0) {
     return s.turn === Side.White ? Outcome.BlackWins : Outcome.WhiteWins;
   }
+  // a) Répétition triple.
+  if ((s.positionCounts[toFen(s)] ?? 0) >= 3) return Outcome.Draw;
+  // c/d) Endgames à nulle accélérée.
+  const cat = endgameCategory(s.cells);
+  if (cat === Endgame.SixteenMove && s.endgamePlies >= SIXTEEN_MOVE_PLY_LIMIT) {
+    return Outcome.Draw;
+  }
+  if (cat === Endgame.FiveMove && s.endgamePlies >= FIVE_MOVE_PLY_LIMIT) {
+    return Outcome.Draw;
+  }
+  // b) 25 coups.
   if (s.sterilePlies >= DRAW_PLY_LIMIT) return Outcome.Draw;
   return Outcome.Ongoing;
 }
