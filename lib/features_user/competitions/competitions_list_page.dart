@@ -19,147 +19,204 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-/// PHASE 4 — list of competitions, filterable by game + status + tarif.
+/// PHASE 4 — list of competitions, organised by game in a [TabBar].
 ///
-/// Maps to screen #10 of `arena_v2.html`. Lot C.1 : les trois rangées
-/// de chips ont été consolidées dans un seul `ArenaFilterMenu` qui ouvre
-/// une bottom-sheet — preserve la même UX (jeu + statut + tarif) en
-/// libérant l'en-tête de la page.
+/// Maps to screen #10 of `arena_v2.html`. Lot C.1 avait consolidé les chips
+/// dans un `ArenaFilterMenu`. Évolution : il n'y a plus d'onglet « Tous » —
+/// **un onglet par jeu** ([GameType]), chacun ne montrant que ses compétitions
+/// (filtrage serveur via `competitionsListProvider(game)`). Chaque onglet
+/// conserve son **propre** filtrage statut + tarif, indépendant des autres
+/// (état préservé d'un onglet à l'autre via [AutomaticKeepAliveClientMixin]).
 ///
 /// Le rendu des cards et la logique des filtres (enums `StatusBucket` /
 /// `PricingBucket`) sont extraits dans `widgets/`.
-class CompetitionsListPage extends ConsumerStatefulWidget {
+class CompetitionsListPage extends StatefulWidget {
   const CompetitionsListPage({super.key});
 
   @override
-  ConsumerState<CompetitionsListPage> createState() =>
-      _CompetitionsListPageState();
+  State<CompetitionsListPage> createState() => _CompetitionsListPageState();
 }
 
-class _CompetitionsListPageState extends ConsumerState<CompetitionsListPage> {
-  GameType? _game;
-  StatusBucket _bucket = StatusBucket.all;
-  PricingBucket _pricing = PricingBucket.all;
+class _CompetitionsListPageState extends State<CompetitionsListPage>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tab =
+      TabController(length: GameType.values.length, vsync: this);
+
+  @override
+  void dispose() {
+    _tab.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final async = ref.watch(competitionsListProvider(_game));
-
     return ArenaScreenBackground(
       child: Column(
         children: [
           const TutorialBannerSection(page: TutorialPage.competitions),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              ArenaSpacing.lg,
-              ArenaSpacing.md,
-              ArenaSpacing.lg,
-              ArenaSpacing.sm,
-            ),
-            child: Row(
-              children: [
-                ArenaFilterMenu(
-                  activeCount: _activeFilterCount(),
-                  sections: _buildSections(),
-                  initialSelection: _selectionSnapshot(),
-                  onApply: _applySelection,
-                ),
-                const Spacer(),
-                if (_activeFilterCount() > 0)
-                  TextButton(
-                    onPressed: _resetAll,
-                    child: Text(
-                      l10n.compListReset,
-                      style: ArenaText.small.copyWith(
-                        color: ArenaColors.signalBlue,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
+          TabBar(
+            controller: _tab,
+            indicatorColor: ArenaColors.signalBlue,
+            indicatorWeight: 2.5,
+            indicatorSize: TabBarIndicatorSize.tab,
+            dividerColor: ArenaColors.border,
+            labelColor: ArenaColors.bone,
+            unselectedLabelColor: ArenaColors.textMuted,
+            labelStyle: ArenaText.button,
+            unselectedLabelStyle: ArenaText.button,
+            tabs: [
+              for (final g in GameType.values) Tab(text: _tabLabel(g)),
+            ],
           ),
-          const Divider(height: 1, thickness: 1, color: ArenaColors.border),
           Expanded(
-            child: async.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => ErrorState(
-                description: e.toString(),
-                onRetry: () => ref.invalidate(competitionsListProvider(_game)),
-              ),
-              data: (items) {
-                final filtered = items
-                    .where((c) => _bucket.matches(c.status))
-                    .where((c) => _pricing.matches(c))
-                    .toList();
-                if (filtered.isEmpty) {
-                  return EmptyState(
-                    icon: Icons.sports_esports_outlined,
-                    title: _game == null
-                        ? l10n.compListEmptyTitleAll
-                        : '${l10n.compListEmptyTitleGamePrefix}'
-                            '${_game!.label}',
-                    description: l10n.compListEmptyDesc,
-                  );
-                }
-                final registeredIds =
-                    ref.watch(myRegisteredCompetitionIdsProvider).valueOrNull ??
-                        const <String>{};
-                final pendingByComp =
-                    ref.watch(myPendingPaymentByCompetitionProvider);
-                return RefreshIndicator(
-                  onRefresh: () async {
-                    ref.invalidate(competitionsListProvider(_game));
-                    await ref.read(competitionsListProvider(_game).future);
-                  },
-                  child: ListView.separated(
-                    padding: const EdgeInsets.all(ArenaSpacing.lg),
-                    itemCount: filtered.length,
-                    separatorBuilder: (_, __) =>
-                        const SizedBox(height: ArenaSpacing.md),
-                    itemBuilder: (context, i) {
-                      final c = filtered[i];
-                      final isReg = registeredIds.contains(c.id);
-                      final pending = pendingByComp[c.id];
-                      return CompetitionListCard(
-                        competition: c,
-                        isRegistered: isReg,
-                        hasPendingPayment: pending != null,
-                        onTap: () => _onCardTap(
-                          context,
-                          c,
-                          registeredIds,
-                          pending,
-                        ),
-                        onRegister: !isReg && c.canRegister
-                            ? () => _onRegisterTap(context, c, pending)
-                            : null,
-                      );
-                    },
-                  ),
-                );
-              },
+            child: TabBarView(
+              controller: _tab,
+              children: [
+                for (final g in GameType.values)
+                  _CompetitionTab(key: ValueKey(g), game: g),
+              ],
             ),
           ),
         ],
       ),
     );
   }
+}
 
-  // ─── Filter helpers (mapping page state ↔ ArenaFilterMenu) ──────────
+/// Libellé court (avec emoji) pour l'onglet d'un jeu — `GameType.label` est
+/// trop long pour 3 onglets fixes (« EA SPORTS FC Mobile »).
+String _tabLabel(GameType g) => switch (g) {
+      GameType.efootball => '⚽  eFootball',
+      GameType.draughts => '🔴  Dames',
+      GameType.eaSportsFc => '🎮  EA FC',
+    };
 
-  List<ArenaFilterSection> _buildSections() {
+/// Onglet d'un jeu : la liste filtrée d'un seul [GameType], avec son propre
+/// état de filtres (statut + tarif) maintenu indépendamment des autres onglets.
+class _CompetitionTab extends ConsumerStatefulWidget {
+  const _CompetitionTab({required this.game, super.key});
+
+  final GameType game;
+
+  @override
+  ConsumerState<_CompetitionTab> createState() => _CompetitionTabState();
+}
+
+class _CompetitionTabState extends ConsumerState<_CompetitionTab>
+    with AutomaticKeepAliveClientMixin {
+  StatusBucket _bucket = StatusBucket.all;
+  PricingBucket _pricing = PricingBucket.all;
+
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context); // requis par AutomaticKeepAliveClientMixin
     final l10n = AppLocalizations.of(context);
+    final async = ref.watch(competitionsListProvider(widget.game));
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            ArenaSpacing.lg,
+            ArenaSpacing.md,
+            ArenaSpacing.lg,
+            ArenaSpacing.sm,
+          ),
+          child: Row(
+            children: [
+              ArenaFilterMenu(
+                activeCount: _activeFilterCount(),
+                sections: _buildSections(l10n),
+                initialSelection: _selectionSnapshot(),
+                onApply: _applySelection,
+              ),
+              const Spacer(),
+              if (_activeFilterCount() > 0)
+                TextButton(
+                  onPressed: _resetAll,
+                  child: Text(
+                    l10n.compListReset,
+                    style: ArenaText.small.copyWith(
+                      color: ArenaColors.signalBlue,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const Divider(height: 1, thickness: 1, color: ArenaColors.border),
+        Expanded(
+          child: async.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => ErrorState(
+              description: e.toString(),
+              onRetry: () =>
+                  ref.invalidate(competitionsListProvider(widget.game)),
+            ),
+            data: (items) {
+              final filtered = items
+                  .where((c) => _bucket.matches(c.status))
+                  .where((c) => _pricing.matches(c))
+                  .toList();
+              if (filtered.isEmpty) {
+                return EmptyState(
+                  icon: Icons.sports_esports_outlined,
+                  title: '${l10n.compListEmptyTitleGamePrefix}'
+                      '${widget.game.label}',
+                  description: l10n.compListEmptyDesc,
+                );
+              }
+              final registeredIds =
+                  ref.watch(myRegisteredCompetitionIdsProvider).valueOrNull ??
+                      const <String>{};
+              final pendingByComp =
+                  ref.watch(myPendingPaymentByCompetitionProvider);
+              return RefreshIndicator(
+                onRefresh: () async {
+                  ref.invalidate(competitionsListProvider(widget.game));
+                  await ref.read(competitionsListProvider(widget.game).future);
+                },
+                child: ListView.separated(
+                  padding: const EdgeInsets.all(ArenaSpacing.lg),
+                  itemCount: filtered.length,
+                  separatorBuilder: (_, __) =>
+                      const SizedBox(height: ArenaSpacing.md),
+                  itemBuilder: (context, i) {
+                    final c = filtered[i];
+                    final isReg = registeredIds.contains(c.id);
+                    final pending = pendingByComp[c.id];
+                    return CompetitionListCard(
+                      competition: c,
+                      isRegistered: isReg,
+                      hasPendingPayment: pending != null,
+                      onTap: () => _onCardTap(
+                        context,
+                        c,
+                        registeredIds,
+                        pending,
+                      ),
+                      onRegister: !isReg && c.canRegister
+                          ? () => _onRegisterTap(context, c, pending)
+                          : null,
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ─── Filter helpers (mapping tab state ↔ ArenaFilterMenu) ───────────
+  // La section « jeu » a disparu : le jeu est porté par l'onglet courant.
+
+  List<ArenaFilterSection> _buildSections(AppLocalizations l10n) {
     return [
-      ArenaFilterSection(
-        id: 'game',
-        title: l10n.compListFilterGame,
-        mode: ArenaFilterMode.radio,
-        options: [
-          for (final g in GameType.values)
-            ArenaFilterOption(id: g.name, label: g.label),
-        ],
-      ),
       ArenaFilterSection(
         id: 'status',
         title: l10n.compListFilterStatus,
@@ -183,7 +240,6 @@ class _CompetitionsListPageState extends ConsumerState<CompetitionsListPage> {
 
   Map<String, List<String>> _selectionSnapshot() {
     return {
-      'game': _game == null ? const [] : [_game!.name],
       'status': [_bucket.name],
       'pricing': _pricing == PricingBucket.all ? const [] : [_pricing.name],
     };
@@ -191,11 +247,6 @@ class _CompetitionsListPageState extends ConsumerState<CompetitionsListPage> {
 
   void _applySelection(Map<String, List<String>> selection) {
     setState(() {
-      final gameId = selection['game']?.firstOrNull;
-      _game = gameId == null
-          ? null
-          : GameType.values.firstWhere((g) => g.name == gameId);
-
       final statusId = selection['status']?.firstOrNull;
       _bucket = statusId == null
           ? StatusBucket.all
@@ -210,7 +261,6 @@ class _CompetitionsListPageState extends ConsumerState<CompetitionsListPage> {
 
   int _activeFilterCount() {
     var n = 0;
-    if (_game != null) n++;
     if (_bucket != StatusBucket.all) n++;
     if (_pricing != PricingBucket.all) n++;
     return n;
@@ -218,7 +268,6 @@ class _CompetitionsListPageState extends ConsumerState<CompetitionsListPage> {
 
   void _resetAll() {
     setState(() {
-      _game = null;
       _bucket = StatusBucket.all;
       _pricing = PricingBucket.all;
     });
