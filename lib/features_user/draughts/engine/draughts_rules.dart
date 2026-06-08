@@ -42,6 +42,34 @@ class DraughtsRules {
     return _allSimpleMoves(board, side);
   }
 
+  /// Reconstitue un coup (from→to + captures) à partir du diff de deux
+  /// plateaux. Sert à ANIMER un coup reçu par le réseau sans en connaître le
+  /// chemin exact (la rafle est alors rendue en glisse directe). Renvoie
+  /// `null` si le diff ne correspond pas à un coup unique (ex. plateau
+  /// réinitialisé en mort subite).
+  static DraughtsMove? deriveMove(List<Piece> before, List<Piece> after) {
+    final added = <int>[];
+    final removed = <int>[];
+    for (var i = 0; i < before.length; i++) {
+      if (before[i].isEmpty && !after[i].isEmpty) added.add(i);
+      if (!before[i].isEmpty && after[i].isEmpty) removed.add(i);
+    }
+    if (added.length != 1) return null;
+    final to = added.first;
+    final moverSide = after[to].side;
+    if (moverSide == null) return null;
+    final from = removed.where((i) => before[i].side == moverSide).toList();
+    if (from.length != 1) return null;
+    final captured =
+        removed.where((i) => before[i].side == moverSide.opponent).toList();
+    return DraughtsMove(
+      from: from.first,
+      to: to,
+      captured: captured,
+      path: [from.first, to],
+    );
+  }
+
   // ───────────────────────── Déplacements simples ─────────────────────────
 
   static List<DraughtsMove> _allSimpleMoves(DraughtsBoard board, Side side) {

@@ -78,6 +78,35 @@ void main() {
     });
   });
 
+  group('deriveMove (animation depuis un diff réseau)', () {
+    test('déplacement simple', () {
+      final before = DraughtsGameState.fromFen('W:W28:B').board.cells;
+      final after = DraughtsGameState.fromFen('W:W22:B').board.cells;
+      final m = DraughtsRules.deriveMove(before, after);
+      expect(m, isNotNull);
+      expect(m!.from, 27); // case 28
+      expect(m.to, 21); // case 22
+      expect(m.captured, isEmpty);
+    });
+
+    test('prise (la pièce capturée disparaît)', () {
+      // Avant : blanc 28, noir 22. Après : blanc 17 (a sauté 22).
+      final before = DraughtsGameState.fromFen('W:W28:B22').board.cells;
+      final after = DraughtsGameState.fromFen('W:W17:B').board.cells;
+      final m = DraughtsRules.deriveMove(before, after);
+      expect(m, isNotNull);
+      expect(m!.from, 27);
+      expect(m.to, 16); // case 17
+      expect(m.captured, [21]); // case 22
+    });
+
+    test('réinitialisation (mort subite) → non dérivable', () {
+      final before = DraughtsGameState.fromFen('W:W28:B').board.cells;
+      final after = DraughtsGameState.initial().board.cells;
+      expect(DraughtsRules.deriveMove(before, after), isNull);
+    });
+  });
+
   group('Issue de partie', () {
     test('camp sans pièce a perdu', () {
       final state = DraughtsGameState.fromFen('W:W:B1');
