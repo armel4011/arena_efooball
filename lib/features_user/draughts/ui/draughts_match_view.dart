@@ -83,10 +83,19 @@ class _DraughtsLobbyViewState extends ConsumerState<DraughtsLobbyView> {
 
 /// Partie en cours : plateau jouable câblé au serveur.
 class DraughtsMatchView extends ConsumerStatefulWidget {
-  const DraughtsMatchView({required this.match, required this.selfId, super.key});
+  const DraughtsMatchView({
+    required this.match,
+    required this.selfId,
+    this.spectator = false,
+    super.key,
+  });
 
   final ArenaMatch match;
   final String? selfId;
+
+  /// Observateur (non-joueur) : plateau en lecture seule, aucune action
+  /// (pas de démarrage, pas de coup, pas de réclamation de temps).
+  final bool spectator;
 
   @override
   ConsumerState<DraughtsMatchView> createState() => _DraughtsMatchViewState();
@@ -112,7 +121,7 @@ class _DraughtsMatchViewState extends ConsumerState<DraughtsMatchView> {
   }
 
   void _ensureStarted(DraughtsGameRow? game) {
-    if (game != null || _startRequested) return;
+    if (widget.spectator || game != null || _startRequested) return;
     _startRequested = true;
     Future<void>.microtask(() async {
       try {
@@ -135,7 +144,9 @@ class _DraughtsMatchViewState extends ConsumerState<DraughtsMatchView> {
   }
 
   void _maybeClaimTimeout(DraughtsGameRow g) {
-    if (!g.isActive || _timeoutClaimedForGame == g.id) return;
+    if (widget.spectator || !g.isActive || _timeoutClaimedForGame == g.id) {
+      return;
+    }
     final ms = _displayMs(g, g.turn);
     if (ms != null && ms <= 0) {
       _timeoutClaimedForGame = g.id;
@@ -241,9 +252,11 @@ class _DraughtsMatchViewState extends ConsumerState<DraughtsMatchView> {
               Padding(
                 padding: const EdgeInsets.only(top: ArenaSpacing.sm),
                 child: Text(
-                  myColor == null
-                      ? 'Partie en cours'
-                      : "En attente de l'adversaire…",
+                  widget.spectator
+                      ? 'Vous regardez la partie'
+                      : myColor == null
+                          ? 'Partie en cours'
+                          : "En attente de l'adversaire…",
                   style: ArenaText.small,
                 ),
               ),

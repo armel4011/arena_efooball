@@ -50,11 +50,19 @@ class StepBody extends StatelessWidget {
       MatchStatus.scorePending ||
       MatchStatus.awaitingValidation =>
         role == MatchRole.observer
-            ? ObserverWaitingPlaceholder(
-                icon: Icons.sports_esports,
-                title: l10n.stepBodyMatchInProgressTitle,
-                description: l10n.stepBodyMatchInProgressDesc,
-              )
+            ? (isDraughts
+                // Les dames se regardent in-app (lecture seule) ; les jeux
+                // tiers n'ont rien à montrer côté observateur.
+                ? DraughtsMatchView(
+                    match: match,
+                    selfId: selfId,
+                    spectator: true,
+                  )
+                : ObserverWaitingPlaceholder(
+                    icon: Icons.sports_esports,
+                    title: l10n.stepBodyMatchInProgressTitle,
+                    description: l10n.stepBodyMatchInProgressDesc,
+                  ))
             : isDraughts
                 ? DraughtsMatchView(match: match, selfId: selfId)
                 : ScoreFlowView(match: match, role: role),
