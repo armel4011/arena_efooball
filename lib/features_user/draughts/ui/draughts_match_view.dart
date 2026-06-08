@@ -225,6 +225,7 @@ class _DraughtsMatchViewState extends ConsumerState<DraughtsMatchView> {
               child: DraughtsBoardView(
                 state: state,
                 interactive: interactive,
+                flip: myColor == Side.black,
                 onMove: _onMove,
               ),
             ),
