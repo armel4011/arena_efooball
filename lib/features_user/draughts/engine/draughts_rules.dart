@@ -58,15 +58,40 @@ class DraughtsRules {
     final to = added.first;
     final moverSide = after[to].side;
     if (moverSide == null) return null;
-    final from = removed.where((i) => before[i].side == moverSide).toList();
-    if (from.length != 1) return null;
+    final fromList = removed.where((i) => before[i].side == moverSide).toList();
+    if (fromList.length != 1) return null;
+    final fromIdx = fromList.first;
     final captured =
         removed.where((i) => before[i].side == moverSide.opponent).toList();
+
+    if (captured.isEmpty) {
+      return DraughtsMove(
+        from: fromIdx,
+        to: to,
+        captured: const [],
+        path: [fromIdx, to],
+      );
+    }
+
+    // Rafle : retrouver le CHEMIN EXACT (séquence de sauts) en cherchant, parmi
+    // les rafles légales de la position d'avant, celle qui part de `fromIdx`,
+    // arrive sur `to` et capture exactement le même ensemble de pièces.
+    final capturedSet = captured.toSet();
+    for (final m in legalMoves(DraughtsBoard(before), moverSide)) {
+      if (m.from == fromIdx &&
+          m.to == to &&
+          m.captured.length == capturedSet.length &&
+          m.captured.toSet().containsAll(capturedSet)) {
+        return m;
+      }
+    }
+
+    // Repli (ne devrait pas arriver pour un coup légal) : glisse directe.
     return DraughtsMove(
-      from: from.first,
+      from: fromIdx,
       to: to,
       captured: captured,
-      path: [from.first, to],
+      path: [fromIdx, to],
     );
   }
 
