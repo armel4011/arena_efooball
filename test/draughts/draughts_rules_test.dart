@@ -100,6 +100,15 @@ void main() {
       expect(m.captured, [21]); // case 22
     });
 
+    test('rafle multi-saut : chemin EXACT reconstruit (pas une glisse)', () {
+      // Avant : blanc 28, noirs 22 et 11 → rafle 28x22x11 arrivant case 6.
+      final before = DraughtsGameState.fromFen('W:W28:B22,11').board.cells;
+      final after = DraughtsGameState.fromFen('W:W6:B').board.cells;
+      final m = DraughtsRules.deriveMove(before, after)!;
+      expect(m.captured.toSet(), {21, 10}); // cases 22 et 11
+      expect(m.path, [27, 16, 5]); // 28 → 17 → 6 : la case intermédiaire 17 !
+    });
+
     test('réinitialisation (mort subite) → non dérivable', () {
       final before = DraughtsGameState.fromFen('W:W28:B').board.cells;
       final after = DraughtsGameState.initial().board.cells;
