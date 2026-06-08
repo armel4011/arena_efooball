@@ -171,15 +171,18 @@ class _ArenaUserAppState extends ConsumerState<ArenaUserApp> {
     final extra = body['extra'] is Map
         ? Map<String, dynamic>.from(body['extra'] as Map)
         : const <String, dynamic>{};
+    // On NE réinitialise PAS `_shownIncomingCallId` ici : la ligne `calls`
+    // peut rester `ringing` un court instant après l'action (settle
+    // best-effort + latence Realtime). La garder mémorisée empêche le flux
+    // `incomingCallProvider` de re-présenter le MÊME appel en boucle (plein
+    // écran qui re-sonne toutes les ~45 s). Le reset a lieu quand l'appel
+    // disparaît réellement du flux (`call == null`, cf. listener du build).
     switch (event.event) {
       case Event.actionCallAccept:
-        _shownIncomingCallId = null;
         unawaited(_acceptCall(callId, extra));
       case Event.actionCallDecline:
-        _shownIncomingCallId = null;
         unawaited(_settleCall(callId, missed: false));
       case Event.actionCallTimeout:
-        _shownIncomingCallId = null;
         unawaited(_settleCall(callId, missed: true));
       case _:
         break;
