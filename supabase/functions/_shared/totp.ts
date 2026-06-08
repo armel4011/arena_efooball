@@ -12,6 +12,8 @@
 //   * `generateBackupCodes()`   — 10 codes alphanumériques 8 chars
 // =============================================================================
 
+import { timingSafeEqual } from "./timing.ts";
+
 const BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -146,15 +148,6 @@ export async function verifyTotp(params: {
     if (timingSafeEqual(candidate, cleanCode)) return true;
   }
   return false;
-}
-
-function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) {
-    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-  return diff === 0;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

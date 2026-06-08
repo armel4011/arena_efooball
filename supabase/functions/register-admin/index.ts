@@ -64,6 +64,30 @@ function normalizeCode(input: string): string {
   return v;
 }
 
+// IP de l'appelant (derrière le proxy Supabase). `x-forwarded-for` peut
+// contenir une liste "client, proxy1, proxy2" — on garde la première entrée.
+function clientIp(req: Request): string {
+  const fwd = req.headers.get("x-forwarded-for") ?? "";
+  const first = fwd.split(",")[0]?.trim();
+  return first && first.length > 0 ? first : "unknown";
+}
+
+// deno-lint-ignore no-explicit-any
+type ServiceClient = any;
+
+// Enregistre un échec de redeem (code refusé) pour l'IP. Fail-open : si le
+// backend rate-limit est indisponible, on n'empêche pas un admin légitime —
+// on log seulement.
+async function recordFailure(service: ServiceClient, ip: string): Promise<void> {
+  try {
+    await service.rpc("register_admin_record_failure", { p_ip: ip });
+  } catch (e) {
+    if (Deno.env.get("ARENA_DEBUG") === "1") {
+      console.error("[register-admin] record_failure failed:", e);
+    }
+  }
+}
+
 Deno.serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -125,6 +149,30 @@ Deno.serve(async (req: Request): Promise<Response> => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
+  // 0. Rate-limit par IP (anti-énumération de codes). Lu AVANT toute requête
+  //    sur `invitation_codes` → un attaquant verrouillé n'obtient aucun signal
+  //    sur l'existence/état d'un code. Fail-open : si le backend est indispo on
+  //    laisse passer (un admin légitime ne doit pas être bloqué par une panne).
+  const ip = clientIp(req);
+  try {
+    const { data: lock } = await service.rpc("register_admin_check_lock", {
+      p_ip: ip,
+    });
+    if (lock?.locked === true) {
+      return jsonResponse(
+        {
+          error: "too_many_attempts",
+          retry_after_seconds: lock.retry_after_seconds ?? 1800,
+        },
+        429,
+      );
+    }
+  } catch (e) {
+    if (Deno.env.get("ARENA_DEBUG") === "1") {
+      console.error("[register-admin] check_lock failed:", e);
+    }
+  }
+
   // 1. Charge le code d'invitation. On lit *sans* gate uses_count pour
   //    pouvoir donner des messages d'erreur distincts (already_used vs
   //    expired vs invalid).
@@ -141,21 +189,28 @@ Deno.serve(async (req: Request): Promise<Response> => {
       500,
     );
   }
+  // Chaque code refusé compte comme une tentative pour l'IP. Les codes
+  // d'erreur restent distincts (l'UI s'appuie dessus) mais le rate-limit borne
+  // le nombre de probes possibles → l'oracle d'énumération devient inexploitable.
   if (!invite) {
+    await recordFailure(service, ip);
     return jsonResponse({ error: "invalid_invitation_code" }, 404);
   }
   if (invite.uses_count >= invite.max_uses) {
+    await recordFailure(service, ip);
     return jsonResponse({ error: "invitation_already_used" }, 409);
   }
   if (invite.expires_at) {
     const exp = new Date(invite.expires_at).getTime();
     if (Number.isFinite(exp) && exp < Date.now()) {
+      await recordFailure(service, ip);
       return jsonResponse({ error: "invitation_expired" }, 410);
     }
   }
   if (invite.target_email && invite.target_email !== email) {
     // Code émis pour une adresse précise — l'admin l'a saisie côté SA2,
     // on bloque toute tentative de redeem avec une autre boîte.
+    await recordFailure(service, ip);
     return jsonResponse({ error: "invitation_email_mismatch" }, 403);
   }
 
@@ -279,6 +334,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
     .eq("id", invite.id);
   if (stampErr && Deno.env.get("ARENA_DEBUG") === "1") {
     console.error("invitation stamp failed:", stampErr.message);
+  }
+
+  // 4bis. Inscription réussie → on nettoie le compteur de tentatives de l'IP
+  //        (best-effort, non bloquant).
+  try {
+    await service.rpc("register_admin_record_success", { p_ip: ip });
+  } catch (_) {
+    // best-effort : au pire le compteur expirera tout seul (fenêtre 15 min).
   }
 
   // 5. Retourne le profil au client (le freezed Profile lit ces champs).

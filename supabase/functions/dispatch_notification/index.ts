@@ -33,6 +33,7 @@ import {
   readApnsConfig,
   sendApnsVoipPush,
 } from '../_shared/apns.ts';
+import { timingSafeEqual } from '../_shared/timing.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -110,7 +111,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   // Auth : shared bearer secret entre le webhook DB et l'EF.
   const expected = `Bearer ${Deno.env.get('WEBHOOK_SECRET') ?? ''}`;
   const got = req.headers.get('authorization') ?? '';
-  if (expected.length < 'Bearer '.length + 8 || got !== expected) {
+  if (expected.length < 'Bearer '.length + 8 || !timingSafeEqual(got, expected)) {
     return jsonResponse({ error: 'unauthorized' }, 401);
   }
 
