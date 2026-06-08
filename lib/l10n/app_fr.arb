@@ -322,7 +322,6 @@
   "compListEmptyTitleAll": "Aucune compétition",
   "compListEmptyTitleGamePrefix": "Aucune compétition sur ",
   "compListEmptyDesc": "De nouveaux tournois sont publiés chaque semaine. Reviens bientôt !",
-  "compListFilterGame": "Jeu",
   "compListFilterStatus": "Statut",
   "compListFilterPricing": "Tarif",
   "compListFormatSingleElim": "Élimination directe",
