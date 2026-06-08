@@ -19,6 +19,7 @@ import 'package:arena/features_user/chat/friend_chat_page.dart';
 import 'package:arena/features_user/chat/messages_inbox_page.dart';
 import 'package:arena/features_user/competitions/competition_detail_page.dart';
 import 'package:arena/features_user/competitions/registration_confirm_page.dart';
+import 'package:arena/features_user/draughts/ui/draughts_game_screen.dart';
 import 'package:arena/features_user/home/main_layout.dart';
 import 'package:arena/features_user/match_room/match_room_page.dart';
 import 'package:arena/features_user/notifications/notifications_page.dart';
@@ -94,6 +95,7 @@ abstract final class UserRoutes {
   static const devPreview = '/_dev/widgets';
   static const devShowcase = '/dev/showcase';
   static const devBracketShowcase = '/dev/bracket-showcase';
+  static const devDraughts = '/dev/draughts';
   static const intro = '/intro';
 
   /// Builds the concrete `/competitions/<id>/register/confirm` URL.
@@ -169,6 +171,8 @@ final userRouterProvider = Provider<GoRouter>((ref) {
       // Bracket showcase (1024 joueurs synthétiques) — debug only, accès
       // via lien depuis le design showcase.
       if (loc == UserRoutes.devBracketShowcase) return null;
+      // Aperçu du plateau de dames (pseudo-3D) — debug only.
+      if (loc == UserRoutes.devDraughts) return null;
 
       // Reset password is reachable from a deep link even if no session
       // yet (Supabase hydrates a recovery session before we land here).
@@ -537,6 +541,11 @@ final userRouterProvider = Provider<GoRouter>((ref) {
           path: UserRoutes.devBracketShowcase,
           name: 'user.dev.bracketShowcase',
           builder: (context, state) => const BracketShowcasePage(),
+        ),
+        GoRoute(
+          path: UserRoutes.devDraughts,
+          name: 'user.dev.draughts',
+          builder: (context, state) => const DraughtsGameScreen(),
         ),
       ],
     ],

@@ -2,6 +2,7 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/models/match_status.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
+import 'package:arena/features_user/draughts/ui/draughts_match_view.dart';
 import 'package:arena/features_user/match_room/match_room_page.dart'
     show MatchRole;
 import 'package:arena/features_user/match_room/widgets/match_outcome_views.dart';
@@ -19,6 +20,7 @@ class StepBody extends StatelessWidget {
     required this.match,
     required this.role,
     required this.selfId,
+    this.isDraughts = false,
     super.key,
   });
 
@@ -26,12 +28,24 @@ class StepBody extends StatelessWidget {
   final MatchRole role;
   final String? selfId;
 
+  /// Compétition de jeu de dames → plateau jouable in-app au lieu du flux
+  /// déclaratif (code room + saisie de score).
+  final bool isDraughts;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return switch (match.status) {
-      MatchStatus.pending || MatchStatus.scheduled => _stepShareCode(context),
-      MatchStatus.ready => RoomReadyView(match: match, role: role),
+      MatchStatus.pending || MatchStatus.scheduled => isDraughts
+          ? (role == MatchRole.observer
+              ? _observerWaiting(context)
+              : DraughtsLobbyView(match: match))
+          : _stepShareCode(context),
+      MatchStatus.ready => isDraughts
+          ? (role == MatchRole.observer
+              ? _observerWaiting(context)
+              : DraughtsLobbyView(match: match))
+          : RoomReadyView(match: match, role: role),
       MatchStatus.inProgress ||
       MatchStatus.scorePending ||
       MatchStatus.awaitingValidation =>
@@ -41,7 +55,9 @@ class StepBody extends StatelessWidget {
                 title: l10n.stepBodyMatchInProgressTitle,
                 description: l10n.stepBodyMatchInProgressDesc,
               )
-            : ScoreFlowView(match: match, role: role),
+            : isDraughts
+                ? DraughtsMatchView(match: match, selfId: selfId)
+                : ScoreFlowView(match: match, role: role),
       MatchStatus.disputed => DisputedView(match: match, selfId: selfId),
       MatchStatus.completed => CompletedView(match: match, selfId: selfId),
       MatchStatus.cancelled => TerminalCard(
@@ -65,6 +81,17 @@ class StepBody extends StatelessWidget {
   ///
   /// Fix item 4 prompt 2026-05-19 — avant, les 2 joueurs voyaient le
   /// formulaire en même temps, ce qui créait des conflits de saisie.
+  /// Placeholder d'attente pour un observateur (compétition draughts : il ne
+  /// peut pas lire la partie — RLS réservée aux 2 joueurs).
+  Widget _observerWaiting(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return ObserverWaitingPlaceholder(
+      icon: Icons.grid_on,
+      title: l10n.stepBodyMatchInProgressTitle,
+      description: l10n.stepBodyMatchInProgressDesc,
+    );
+  }
+
   Widget _stepShareCode(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     if (role == MatchRole.observer) {

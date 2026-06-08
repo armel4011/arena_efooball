@@ -1,6 +1,7 @@
 import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/arena_match.dart';
+import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/match_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
@@ -141,6 +142,9 @@ class _MatchRoomBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final players = ref.watch(matchPlayersProvider(match.id));
     final step = MatchStep.fromStatus(match.status);
+    final isDraughts =
+        ref.watch(matchGameTypeProvider(match.id)).valueOrNull ==
+            GameType.draughts;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(
@@ -163,11 +167,19 @@ class _MatchRoomBody extends ConsumerWidget {
             p2: players.value?.p2,
           ),
           // Anti-cheat recording banner (Android-only, no-op elsewhere).
-          MatchRecordingLifecycle(match: match, selfId: selfId),
+          // Inutile pour les dames : la partie est jouée in-app, le serveur
+          // tient l'historique des coups (pas d'écran de jeu tiers à filmer).
+          if (!isDraughts)
+            MatchRecordingLifecycle(match: match, selfId: selfId),
           if (role != MatchRole.observer)
             StartStreamingBanner(matchId: match.id),
           const SizedBox(height: ArenaSpacing.lg),
-          StepBody(match: match, role: role, selfId: selfId),
+          StepBody(
+            match: match,
+            role: role,
+            selfId: selfId,
+            isDraughts: isDraughts,
+          ),
         ],
       ),
     );
