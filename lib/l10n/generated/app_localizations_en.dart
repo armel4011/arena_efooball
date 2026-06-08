@@ -961,9 +961,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'New tournaments are published every week. Come back soon!';
 
   @override
-  String get compListFilterGame => 'Game';
-
-  @override
   String get compListFilterStatus => 'Status';
 
   @override

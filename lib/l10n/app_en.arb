@@ -302,7 +302,6 @@
   "compListEmptyTitleAll": "No competitions",
   "compListEmptyTitleGamePrefix": "No competitions on ",
   "compListEmptyDesc": "New tournaments are published every week. Come back soon!",
-  "compListFilterGame": "Game",
   "compListFilterStatus": "Status",
   "compListFilterPricing": "Pricing",
   "compListFormatSingleElim": "Single elimination",

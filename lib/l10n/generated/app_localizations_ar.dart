@@ -957,9 +957,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get compListEmptyDesc => 'تُنشر بطولات جديدة كل أسبوع. عُد قريبًا!';
 
   @override
-  String get compListFilterGame => 'اللعبة';
-
-  @override
   String get compListFilterStatus => 'الحالة';
 
   @override

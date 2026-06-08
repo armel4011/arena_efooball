@@ -968,9 +968,6 @@ class AppLocalizationsFr extends AppLocalizations {
       'De nouveaux tournois sont publiés chaque semaine. Reviens bientôt !';
 
   @override
-  String get compListFilterGame => 'Jeu';
-
-  @override
   String get compListFilterStatus => 'Statut';
 
   @override

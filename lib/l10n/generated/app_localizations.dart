@@ -1912,12 +1912,6 @@ abstract class AppLocalizations {
   /// **'De nouveaux tournois sont publiés chaque semaine. Reviens bientôt !'**
   String get compListEmptyDesc;
 
-  /// No description provided for @compListFilterGame.
-  ///
-  /// In fr, this message translates to:
-  /// **'Jeu'**
-  String get compListFilterGame;
-
   /// No description provided for @compListFilterStatus.
   ///
   /// In fr, this message translates to:
