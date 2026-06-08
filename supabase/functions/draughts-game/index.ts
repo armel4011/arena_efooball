@@ -217,6 +217,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
         board_fen: INITIAL_FEN,
         ply: 0,
         sterile_plies: 0,
+        endgame_plies: 0,
+        position_counts: { [INITIAL_FEN]: 1 },
         status: "active",
         white_clock_ms: DEFAULT_CLOCK_MS,
         black_clock_ms: DEFAULT_CLOCK_MS,
@@ -291,7 +293,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
 
   // Validation dure : on rejoue les règles côté serveur.
-  const state = stateFromFen(game.board_fen, game.sterile_plies);
+  const state = stateFromFen(
+    game.board_fen,
+    game.sterile_plies,
+    game.endgame_plies ?? 0,
+    (game.position_counts as Record<string, number> | null) ?? undefined,
+  );
   const legal = stateLegalMoves(state);
   const chosen: Move | null = selectMove(legal, from, to, capturedHint);
   if (chosen === null) {
@@ -337,6 +344,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
         current_turn: sideToTurn(next.turn),
         ply: newPly,
         sterile_plies: next.sterilePlies,
+        endgame_plies: next.endgamePlies,
+        position_counts: next.positionCounts,
         last_move_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         ...clockPatch,
@@ -384,6 +393,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
         board_fen: INITIAL_FEN,
         ply: 0,
         sterile_plies: 0,
+        endgame_plies: 0,
+        position_counts: { [INITIAL_FEN]: 1 },
         status: "active",
         white_clock_ms: DEFAULT_CLOCK_MS,
         black_clock_ms: DEFAULT_CLOCK_MS,
