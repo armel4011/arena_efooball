@@ -34,9 +34,12 @@ class DraughtsBoardTheme {
   static const Color whiteRim = ArenaColors.pearl;
   static final Color whiteShade =
       Color.lerp(ArenaColors.pearl, ArenaColors.silverDim, 0.55)!;
+  // Pions « noirs » : graphite à reflet clair + liseré argenté pour rester
+  // lisibles sur les cases sombres (sinon ils se fondent dans le damier).
   static final Color darkTop =
-      Color.lerp(ArenaColors.steel, ArenaColors.carbon2, 0.35)!;
-  static const Color darkRim = ArenaColors.graphite;
+      Color.lerp(ArenaColors.steel, ArenaColors.silver, 0.45)!;
+  static final Color darkRim =
+      Color.lerp(ArenaColors.silver, ArenaColors.pearl, 0.4)!;
   static const Color darkShade = ArenaColors.blackPure;
   static final Color specular = ArenaColors.bone.withValues(alpha: 0.55);
 
