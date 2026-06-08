@@ -25,6 +25,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import type { ServiceClient } from "../_shared/db.ts";
+import { timingSafeEqual } from "../_shared/timing.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -84,7 +85,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   // platform, pour éviter qu'un curl anonyme déclenche le job.
   const expected = `Bearer ${Deno.env.get("WEBHOOK_SECRET") ?? ""}`;
   const got = req.headers.get("authorization") ?? "";
-  if (expected.length < "Bearer ".length + 8 || got !== expected) {
+  if (expected.length < "Bearer ".length + 8 || !timingSafeEqual(got, expected)) {
     return jsonResponse({ error: "unauthorized" }, 401);
   }
 
