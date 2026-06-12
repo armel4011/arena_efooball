@@ -85,16 +85,27 @@ async function finishMatch(
   game: GameRow,
   winnerSide: Side | null,
   moverUid: string,
-): Promise<void> {
+): Promise<boolean> {
   const gameStatus = winnerSide === null
     ? "draw"
     : winnerSide === Side.White
     ? "white_won"
     : "black_won";
-  await service
+
+  // Compare-and-swap : SEUL le premier appelant fait basculer la partie de
+  // `active` vers un état terminal. Cela sérialise un coup décisif et un
+  // `timeout` concurrents (qui n'est PAS protégé par l'unicité (game_id, ply)
+  // car il n'écrit pas de move) : le perdant de la course obtient 0 ligne →
+  // no-op idempotent, donc pas de 2e écriture sur `matches` ni de double
+  // déclenchement de `cascade_match_winner` (avancement bracket / gains).
+  const { data: claimed } = await service
     .from("draughts_games")
     .update({ status: gameStatus, updated_at: new Date().toISOString() })
-    .eq("id", game.id);
+    .eq("id", game.id)
+    .eq("status", "active")
+    .select("id")
+    .maybeSingle();
+  if (!claimed) return false;
 
   const res = matchResult(
     winnerSide,
@@ -103,6 +114,7 @@ async function finishMatch(
     match.player1_id,
     match.player2_id,
   );
+  // Garde-fou supplémentaire : ne jamais réécrire un match déjà finalisé.
   await service
     .from("matches")
     .update({
@@ -112,7 +124,8 @@ async function finishMatch(
       status: "completed",
       finished_at: new Date().toISOString(),
     })
-    .eq("id", match.id);
+    .eq("id", match.id)
+    .not("status", "in", "(completed,cancelled,forfeited)");
 
   await service.from("match_events").insert({
     match_id: match.id,
@@ -125,6 +138,7 @@ async function finishMatch(
       score2: res.score2,
     },
   });
+  return true;
 }
 
 Deno.serve(async (req: Request): Promise<Response> => {
@@ -227,6 +241,22 @@ Deno.serve(async (req: Request): Promise<Response> => {
       .select("*")
       .single();
     if (createErr || !created) {
+      // Course entre deux `start` simultanés (les deux joueurs lancent en
+      // même temps) : l'index unique partiel (match_id WHERE status='active')
+      // ou la contrainte (match_id, game_number) rejette le 2e insert. On
+      // renvoie la partie active déjà créée par l'autre requête plutôt qu'un
+      // 500.
+      if (createErr?.code === "23505") {
+        const { data: raced } = await service
+          .from("draughts_games")
+          .select("*")
+          .eq("match_id", matchId)
+          .eq("status", "active")
+          .order("game_number", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (raced) return jsonResponse({ game: raced, created: false });
+      }
       return jsonResponse({ error: "start_failed" }, 500);
     }
     return jsonResponse({ game: created, created: true });
@@ -350,7 +380,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
         updated_at: new Date().toISOString(),
         ...clockPatch,
       })
-      .eq("id", game.id);
+      .eq("id", game.id)
+      .eq("status", "active");
     return jsonResponse({
       status: "ongoing",
       board_fen: newFen,
@@ -364,7 +395,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
     await service
       .from("draughts_games")
       .update({ board_fen: newFen, ply: newPly, ...clockPatch })
-      .eq("id", game.id);
+      .eq("id", game.id)
+      .eq("status", "active");
     await finishMatch(service, match, game, winnerSide, uid);
     return jsonResponse({ status: "finished", reason: "decisive", winnerSide });
   }
@@ -381,7 +413,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
         updated_at: new Date().toISOString(),
         ...clockPatch,
       })
-      .eq("id", game.id);
+      .eq("id", game.id)
+      .eq("status", "active");
     const { data: newGame } = await service
       .from("draughts_games")
       .insert({
@@ -413,7 +446,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
   await service
     .from("draughts_games")
     .update({ board_fen: newFen, ply: newPly, ...clockPatch })
-    .eq("id", game.id);
+    .eq("id", game.id)
+    .eq("status", "active");
   await finishMatch(service, match, game, null, uid);
   return jsonResponse({ status: "finished", reason: "draw", winnerSide: null });
 });
