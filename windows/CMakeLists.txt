@@ -39,6 +39,16 @@ set(CMAKE_CXX_FLAGS_PROFILE "${CMAKE_CXX_FLAGS_RELEASE}")
 # Use Unicode for all projects.
 add_definitions(-DUNICODE -D_UNICODE)
 
+# Le runner Windows de GitHub (image >= juin 2026) embarque un MSVC plus
+# récent (VS 18 / 14.51) qui transforme la dépréciation de
+# `<experimental/coroutine>` en ERREUR dure (static_assert STL1011). Le plugin
+# `permission_handler_windows` inclut encore cet en-tête expérimental → le
+# build natif échoue. On rétablit l'avertissement (au lieu de l'erreur) au
+# scope répertoire, AVANT l'ajout des sous-répertoires plugins, pour que la
+# définition se propage à toutes leurs cibles. À retirer quand
+# `permission_handler_windows` migrera vers `<coroutine>` (C++20).
+add_compile_definitions(_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)
+
 # Compilation settings that should be applied to most targets.
 #
 # Be cautious about adding new options here, as plugins use this function by
