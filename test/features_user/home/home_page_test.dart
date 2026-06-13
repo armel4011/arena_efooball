@@ -27,11 +27,11 @@ Widget _scoped(Profile profile) => ProviderScope(
       overrides: [
         currentProfileProvider.overrideWith((ref) => Stream.value(profile)),
       ],
-      child: MaterialApp(
-        locale: const Locale('fr'),
+      child: const MaterialApp(
+        locale: Locale('fr'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: const Scaffold(body: HomePage()),
+        home: Scaffold(body: HomePage()),
       ),
     );
 

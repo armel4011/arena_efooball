@@ -32,11 +32,11 @@ Widget _scoped(List<Competition> items) => ProviderScope(
         competitionsListProvider
             .overrideWith((ref, _) => Stream<List<Competition>>.value(items)),
       ],
-      child: MaterialApp(
-        locale: const Locale('fr'),
+      child: const MaterialApp(
+        locale: Locale('fr'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: const Scaffold(body: CompetitionsListPage()),
+        home: Scaffold(body: CompetitionsListPage()),
       ),
     );
 

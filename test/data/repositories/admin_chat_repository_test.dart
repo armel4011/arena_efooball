@@ -55,7 +55,7 @@ void main() {
         imageUrl: 'https://x/y.png',
         caption: 'jolie',
         readAt: '2026-06-05T11:00:00.000Z',
-      ));
+      ),);
       expect(m.imageUrl, 'https://x/y.png');
       expect(m.caption, 'jolie');
       expect(m.hasImage, isTrue);

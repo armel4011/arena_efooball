@@ -208,6 +208,13 @@ dev_dependencies:
 
   # ─── Tests ─────────────────────────────────────────────────
   mocktail: ^1.0.4
+  # Importés directement par les tests (mocks/fakes) — déclarés ici pour
+  # satisfaire `depend_on_referenced_packages` (sinon on dépend de la
+  # résolution transitive, fragile à tout bump). Déjà tirées par
+  # supabase_flutter / path_provider.
+  functions_client: ^2.5.0                 # FunctionsClient/FunctionResponse
+  path_provider_platform_interface: ^2.1.2 # _FakePathProvider
+  plugin_platform_interface: ^2.1.8        # MockPlatformInterfaceMixin
 
 flutter:
   uses-material-design: true

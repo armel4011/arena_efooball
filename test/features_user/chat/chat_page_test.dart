@@ -141,11 +141,11 @@ Widget _scoped({
       ),
       if (repo != null) chatRepositoryProvider.overrideWithValue(repo),
     ],
-    child: MaterialApp(
-      locale: const Locale('fr'),
+    child: const MaterialApp(
+      locale: Locale('fr'),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      home: const ChatPage(matchId: _matchId),
+      home: ChatPage(matchId: _matchId),
     ),
   );
 }

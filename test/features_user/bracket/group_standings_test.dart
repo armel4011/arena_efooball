@@ -46,11 +46,11 @@ Widget _scoped(List<StandingsBucket> buckets) => ProviderScope(
         competitionStandingsProvider
             .overrideWith((ref, _) async => buckets),
       ],
-      child: MaterialApp(
-        locale: const Locale('fr'),
+      child: const MaterialApp(
+        locale: Locale('fr'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: const Scaffold(body: GroupStandingsPage(competitionId: 'c-1')),
+        home: Scaffold(body: GroupStandingsPage(competitionId: 'c-1')),
       ),
     );
 
