@@ -141,7 +141,9 @@ class CurrencyPicker extends StatelessWidget {
   final String current;
   final ValueChanged<String> onChanged;
 
-  static const _options = ['XAF', 'XOF', 'USD'];
+  // V1.0 : paiement d'inscription disponible UNIQUEMENT au Cameroun (XAF).
+  // XOF / USD (autres pays) reviendront dans une version ultérieure.
+  static const _options = ['XAF'];
 
   @override
   Widget build(BuildContext context) {

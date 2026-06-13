@@ -200,7 +200,9 @@ class _MethodTile extends StatelessWidget {
                     style: ArenaText.body.copyWith(fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 2),
-                  Text(method.countriesLineOf(l10n), style: ArenaText.bodyMuted),
+                  // V1.0 : paiement uniquement au Cameroun → on n'affiche plus
+                  // la liste multi-pays par méthode, juste le pays courant.
+                  Text(l10n.mobileMoneyDefaultCountry, style: ArenaText.bodyMuted),
                 ],
               ),
             ),
