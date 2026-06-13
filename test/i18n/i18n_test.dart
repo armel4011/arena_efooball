@@ -123,15 +123,16 @@ void main() {
   });
 
   group('FeatureFlags.defaultsV1_0', () {
-    test('V1.0 has fr-only language and 3 currencies', () {
+    test('V1.0 defaults : FR + EN, 3 devises', () {
       final f = FeatureFlags.defaultsV1_0();
-      expect(f.enabledLanguages, [SupportedLocale.fr]);
+      expect(f.enabledLanguages, [SupportedLocale.fr, SupportedLocale.en]);
       expect(f.enabledCurrencies, [
         Currency.xaf,
         Currency.xof,
         Currency.usd,
       ]);
-      expect(f.isMultiLanguage, isFalse);
+      // FR + EN → le sélecteur de langue s'affiche.
+      expect(f.isMultiLanguage, isTrue);
       expect(f.isMultiCurrency, isTrue);
       expect(f.streamingEnabled, isFalse);
     });
