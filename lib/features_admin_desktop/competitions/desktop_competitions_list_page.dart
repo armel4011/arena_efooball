@@ -96,13 +96,12 @@ class _DesktopCompetitionsListPageState
   Widget _statusCombo() {
     return SizedBox(
       width: 170,
+      // Pas d'option « Tous les statuts » dans la liste : le placeholder
+      // (aucune sélection) vaut « tous ». Les items sont les statuts concrets.
       child: ComboBox<CompetitionStatus?>(
         value: _statusFilter,
         placeholder: const Text('Tous les statuts'),
         items: [
-          const ComboBoxItem<CompetitionStatus?>(
-            child: Text('Tous les statuts'),
-          ),
           for (final s in CompetitionStatus.values)
             ComboBoxItem<CompetitionStatus?>(
               value: s,

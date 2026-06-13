@@ -117,8 +117,9 @@ class _StatusChipsRow extends StatelessWidget {
   final CompetitionStatus? current;
   final ValueChanged<CompetitionStatus?> onTap;
 
-  static const _items = <(CompetitionStatus?, String)>[
-    (null, 'Toutes'),
+  // Pas d'option « Toutes » : aucune sélection (current == null) = tous les
+  // statuts. Re-toucher la puce active la désélectionne (retour à « tous »).
+  static const _items = <(CompetitionStatus, String)>[
     (CompetitionStatus.ongoing, 'Live'),
     (CompetitionStatus.registrationOpen, 'À venir'),
     (CompetitionStatus.draft, 'Draft'),
@@ -136,7 +137,7 @@ class _StatusChipsRow extends StatelessWidget {
               child: _Chip(
                 label: label,
                 active: status == current,
-                onTap: () => onTap(status),
+                onTap: () => onTap(status == current ? null : status),
               ),
             ),
         ],
