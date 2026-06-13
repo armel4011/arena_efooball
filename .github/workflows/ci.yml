@@ -321,12 +321,25 @@ jobs:
     # le trou P0 de l'audit 2026-06-13 : la sécurité d'accès aux données ne
     # reposait sur AUCUN test automatisé.
     #
-    # NON bloquant pour l'instant (même posture progressive que les garde-fous
-    # spacing / OSV / deno fmt) : le replay local des 138 migrations sur un
-    # Postgres neuf (vault, pg_cron, pg_net…) n'a pas encore été prouvé vert
-    # en CI. La LOGIQUE des assertions, elle, a été validée en prod via
-    # transaction ROLLBACK le 2026-06-13. Basculer en bloquant (retirer
-    # `continue-on-error`) une fois le 1er run vert observé.
+    # NON bloquant (même posture progressive que les garde-fous spacing / OSV
+    # / deno fmt). La LOGIQUE des assertions a été validée en prod via
+    # transaction ROLLBACK le 2026-06-13 ; ce qui empêche le run vert est un
+    # PROBLÈME DE REPLAY DES MIGRATIONS, indépendant des tests :
+    #
+    #   1er run (2026-06-13) → `supabase start` échoue à la migration
+    #   20260507100001_phase8_match_recordings_storage.sql :
+    #     ERROR: must be owner of relation objects (SQLSTATE 42501)
+    #     statement: COMMENT ON POLICY "match_recordings_owner_insert"
+    #                ON storage.objects ...
+    #   En local, le runner de migrations n'est pas owner de `storage.objects`
+    #   (owned par supabase_storage_admin), donc le COMMENT échoue — alors
+    #   qu'en prod la migration a été appliquée par un rôle privilégié.
+    #
+    # À RÉSOUDRE avant de rendre ce job bloquant (retirer `continue-on-error`) :
+    #   envelopper les opérations storage.objects des migrations dans un
+    #   `SET LOCAL ROLE supabase_storage_admin`, ou les rendre tolérantes en
+    #   local. D'ici là, le job reste informatif (rouge non bloquant) et
+    #   documente l'écart prod↔local.
     continue-on-error: true
 
     steps:
