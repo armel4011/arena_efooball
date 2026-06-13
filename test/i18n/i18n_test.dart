@@ -137,15 +137,30 @@ void main() {
       expect(f.streamingEnabled, isFalse);
     });
 
-    test('fromMap respects partial overrides', () {
-      final f = FeatureFlags.fromMap({
-        'enabled_languages': ['fr', 'en'],
-        'streaming_enabled': true,
+    test('fromConfig lit les clés réelles de app_config (clé/valeur agrégée)',
+        () {
+      final f = FeatureFlags.fromConfig({
+        'supported_languages': ['fr', 'en'],
+        'supported_currencies': ['XAF'],
+        'feature_flags': {
+          'streaming_finals_only': true,
+          'anti_cheat_recording': true,
+        },
       });
       expect(f.isMultiLanguage, isTrue);
+      expect(f.enabledCurrencies, [Currency.xaf]);
       expect(f.streamingEnabled, isTrue);
-      // Other fields fall back to defaults.
-      expect(f.enabledCurrencies.contains(Currency.xaf), isTrue);
+      expect(f.antiCheatRequired, isTrue);
+    });
+
+    test('fromConfig : clés absentes → defaults', () {
+      final f = FeatureFlags.fromConfig({'cgu_version': '1.0.0'});
+      expect(f.enabledLanguages, FeatureFlags.defaultsV1_0().enabledLanguages);
+      expect(
+        f.enabledCurrencies,
+        FeatureFlags.defaultsV1_0().enabledCurrencies,
+      );
+      expect(f.streamingEnabled, isFalse);
     });
   });
 }
