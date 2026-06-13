@@ -314,3 +314,53 @@ jobs:
           else
             echo "Aucun test Deno pour l'instant — step ignoré."
           fi
+
+  db-tests:
+    name: DB tests (pgTAP RLS)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # Tests pgTAP de `supabase/tests/` : RLS + gardes serveur « argent »
+    # (guard montant paiement, validation réservée super_admin, isolation
+    # des paiements/gains) + anti-régression RLS chat blocked-pair. C'était
+    # le trou P0 de l'audit 2026-06-13 : la sécurité d'accès aux données ne
+    # reposait sur AUCUN test automatisé.
+    #
+    # NON bloquant (même posture progressive que les garde-fous spacing / OSV
+    # / deno fmt). La LOGIQUE des assertions a été validée en prod via
+    # transaction ROLLBACK le 2026-06-13 ; ce qui empêche le run vert est un
+    # PROBLÈME DE REPLAY DES MIGRATIONS, indépendant des tests :
+    #
+    #   1er run (2026-06-13) → `supabase start` échoue à la migration
+    #   20260507100001_phase8_match_recordings_storage.sql :
+    #     ERROR: must be owner of relation objects (SQLSTATE 42501)
+    #     statement: COMMENT ON POLICY "match_recordings_owner_insert"
+    #                ON storage.objects ...
+    #   En local, le runner de migrations n'est pas owner de `storage.objects`
+    #   (owned par supabase_storage_admin), donc le COMMENT échoue — alors
+    #   qu'en prod la migration a été appliquée par un rôle privilégié.
+    #
+    # À RÉSOUDRE avant de rendre ce job bloquant (retirer `continue-on-error`) :
+    #   envelopper les opérations storage.objects des migrations dans un
+    #   `SET LOCAL ROLE supabase_storage_admin`, ou les rendre tolérantes en
+    #   local. D'ici là, le job reste informatif (rouge non bloquant) et
+    #   documente l'écart prod↔local.
+    continue-on-error: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.101.0
+
+      - name: Start local Supabase stack (applique les migrations)
+        # Démarre le Postgres local et rejoue toutes les migrations
+        # `supabase/migrations/`. Crée aussi les schémas auth/storage dont
+        # dépend le schéma public (ex. profiles.id → auth.users).
+        run: supabase start
+
+      - name: Run pgTAP tests
+        run: supabase test db
