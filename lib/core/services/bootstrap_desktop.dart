@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:arena/core/flavors/flavor_config.dart';
 import 'package:arena/core/services/onboarding_service.dart';
+import 'package:arena/core/services/secure_local_storage.dart';
 import 'package:arena/core/theme/arena_fluent_theme.dart';
 import 'package:arena/core/utils/sentry_provider_observer.dart';
 import 'package:flutter/foundation.dart';
@@ -139,7 +140,14 @@ Future<void> _initSupabase() async {
     return;
   }
 
-  await Supabase.initialize(url: url, anonKey: anon);
+  // Session chiffrée au repos (DPAPI sur Windows) — voir [SecureLocalStorage].
+  await Supabase.initialize(
+    url: url,
+    anonKey: anon,
+    authOptions: FlutterAuthClientOptions(
+      localStorage: SecureLocalStorage.fromUrl(url),
+    ),
+  );
 
   // Realtime auth refresh hook — même besoin que le mobile : Supabase
   // Flutter ne propage pas le JWT rafraîchi au client Realtime.
