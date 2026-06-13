@@ -45,7 +45,28 @@ enum CompetitionStatus {
   bool get isOngoing => this == CompetitionStatus.ongoing;
   bool get isCompleted => this == CompetitionStatus.completed;
   bool get isCancelled => this == CompetitionStatus.cancelled;
+
+  /// Regroupe les 6 statuts DB en 3 phases claires pour l'affichage :
+  /// À VENIR / EN COURS / TERMINÉ. **Source unique** pour les listes, filtres
+  /// et badges (évite les vocabulaires divergents entre écrans).
+  ///  * draft / registration_open / registration_closed → [CompetitionPhase.upcoming]
+  ///  * ongoing                                          → [CompetitionPhase.ongoing]
+  ///  * completed / cancelled                            → [CompetitionPhase.finished]
+  CompetitionPhase get phase => switch (this) {
+        CompetitionStatus.draft ||
+        CompetitionStatus.registrationOpen ||
+        CompetitionStatus.registrationClosed =>
+          CompetitionPhase.upcoming,
+        CompetitionStatus.ongoing => CompetitionPhase.ongoing,
+        CompetitionStatus.completed ||
+        CompetitionStatus.cancelled =>
+          CompetitionPhase.finished,
+      };
 }
+
+/// Phase d'affichage d'une compétition — regroupe les statuts DB en 3
+/// catégories claires côté UI (à venir / en cours / terminé).
+enum CompetitionPhase { upcoming, ongoing, finished }
 
 /// Mirror of Postgres enum `public.tournament_format`.
 enum TournamentFormat {

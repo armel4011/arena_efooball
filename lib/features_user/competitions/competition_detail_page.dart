@@ -12,6 +12,7 @@ import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:arena/features_shared/widgets/error_state.dart';
 import 'package:arena/features_user/bracket/bracket_view_page.dart';
 import 'package:arena/features_user/bracket/group_standings_page.dart';
+import 'package:arena/features_user/competitions/widgets/competition_phase_ui.dart';
 import 'package:arena/features_user/competitions/widgets/referral_progress_card.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -182,36 +183,16 @@ class _BannerBadges extends StatelessWidget {
     );
   }
 
+  // Statut unifié en 3 phases (À VENIR / EN COURS / TERMINÉ) — même source que
+  // la liste et le badge de card, pour un vocabulaire cohérent partout.
   static (String, Color) _statusFor(
     CompetitionStatus s,
     AppLocalizations l10n,
   ) =>
-      switch (s) {
-        CompetitionStatus.draft => (
-            l10n.compDetailStatusDraft,
-            ArenaColors.silver,
-          ),
-        CompetitionStatus.registrationOpen => (
-            l10n.compDetailStatusOpen,
-            ArenaColors.statusOk,
-          ),
-        CompetitionStatus.registrationClosed => (
-            l10n.compDetailStatusFull,
-            ArenaColors.statusWarn,
-          ),
-        CompetitionStatus.ongoing => (
-            l10n.compDetailStatusOngoing,
-            ArenaColors.signalBlue,
-          ),
-        CompetitionStatus.completed => (
-            l10n.compDetailStatusCompleted,
-            ArenaColors.silver,
-          ),
-        CompetitionStatus.cancelled => (
-            l10n.compDetailStatusCancelled,
-            ArenaColors.neonRed,
-          ),
-      };
+      (
+        competitionPhaseLabel(s.phase, l10n),
+        competitionPhaseColor(s.phase),
+      );
 }
 
 /// Pill colorée (status / capacity) — fond `accent @ 15 %`, border

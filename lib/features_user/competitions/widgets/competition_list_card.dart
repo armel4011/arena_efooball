@@ -2,6 +2,8 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:arena/features_user/competitions/widgets/competition_phase_ui.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -87,7 +89,11 @@ class CompetitionListCard extends StatelessWidget {
     final accent = _accent;
     final (tierLabel, tierEmoji) = _tierBadge;
     final gameLabel = _gameLabel(c.game);
-    final statusLabel = _statusLabel(c.status);
+    // Statut clair en 3 phases (À VENIR / EN COURS / TERMINÉ) — source unique.
+    final statusLabel = competitionPhaseLabel(
+      c.status.phase,
+      AppLocalizations.of(context),
+    ).toUpperCase();
 
     final card = InkWell(
       onTap: onTap,
@@ -187,15 +193,6 @@ class CompetitionListCard extends StatelessWidget {
         GameType.efootball => '⚽ EFOOT',
         GameType.draughts => '🔴 DAMES',
         GameType.eaSportsFc => '🎯 FC',
-      };
-
-  static String _statusLabel(CompetitionStatus s) => switch (s) {
-        CompetitionStatus.draft => 'BROUILLON',
-        CompetitionStatus.registrationOpen => 'OUVERT',
-        CompetitionStatus.registrationClosed => 'FERMÉ',
-        CompetitionStatus.ongoing => 'EN COURS',
-        CompetitionStatus.completed => 'TERMINÉ',
-        CompetitionStatus.cancelled => 'ANNULÉ',
       };
 
   static String _money(double v) =>
