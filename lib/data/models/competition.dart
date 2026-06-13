@@ -97,6 +97,13 @@ sealed class Competition with _$Competition {
     /// page registration_confirm côté user.
     String? androidStoreUrl,
     String? iosStoreUrl,
+
+    /// Dernier échec de génération/scheduling AUTO du bracket (NULL si aucun).
+    /// Renseigné par les triggers DB `trigger_auto_generate_bracket` /
+    /// `trigger_try_schedule_next_round` (migration 20260613120000) à la place
+    /// d'un WARNING invisible. Affiché en bandeau dans la console admin.
+    String? lastBracketError,
+    DateTime? lastBracketErrorAt,
   }) = _Competition;
 
   const Competition._();
