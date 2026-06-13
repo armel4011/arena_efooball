@@ -26,15 +26,14 @@ enum PricingBucket {
       };
 }
 
-/// Status filter — bucket regroupant plusieurs `CompetitionStatus`.
+/// Status filter — bucket sur les 3 phases (`CompetitionStatus.phase`).
+/// Pas d'option « Toutes » : l'absence de sélection (gérée côté page) = tous.
 enum StatusBucket {
-  all,
   upcoming,
   ongoing,
   completed;
 
   String labelOf(AppLocalizations l10n) => switch (this) {
-        StatusBucket.all => l10n.filterAll,
         StatusBucket.upcoming => l10n.filterUpcoming,
         StatusBucket.ongoing => l10n.filterOngoing,
         StatusBucket.completed => l10n.filterCompleted,
@@ -42,7 +41,6 @@ enum StatusBucket {
 
   // Délègue au mapping centralisé `CompetitionStatus.phase` (source unique).
   bool matches(CompetitionStatus status) => switch (this) {
-        StatusBucket.all => true,
         StatusBucket.upcoming => status.phase == CompetitionPhase.upcoming,
         StatusBucket.ongoing => status.phase == CompetitionPhase.ongoing,
         StatusBucket.completed => status.phase == CompetitionPhase.finished,

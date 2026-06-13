@@ -34,6 +34,7 @@ void main() {
       registrationCurrency: 'XAF',
       prizePoolLocal: 240000,
       prizePoolCurrency: 'XAF',
+      prizeDistribution: const [120000, 70000, 30000, 20000],
     );
 
     await tester.pumpWidget(
@@ -63,7 +64,10 @@ void main() {
     // Le badge tier "PREMIUM" confirme que la branche payante (isPaid)
     // a bien ete rendue, ce qui n'etait pas le cas avec le bug de layout.
     expect(find.textContaining('PREMIUM'), findsOneWidget);
-    expect(find.textContaining('GAGNER'), findsWidgets);
+    // Design « bande latérale » : la valeur de récompense + le nombre de
+    // récompensés (4 entrées > 0 dans prizeDistribution) sont mis en avant.
+    expect(find.textContaining('récompensée'), findsWidgets);
+    expect(find.textContaining('4 places'), findsOneWidget);
     // Pas d'exception de layout au pump (le matcher integre de Flutter
     // throw sinon).
     expect(tester.takeException(), isNull);

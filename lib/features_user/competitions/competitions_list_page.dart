@@ -104,7 +104,8 @@ class _CompetitionTab extends ConsumerStatefulWidget {
 
 class _CompetitionTabState extends ConsumerState<_CompetitionTab>
     with AutomaticKeepAliveClientMixin {
-  StatusBucket _bucket = StatusBucket.all;
+  // null = aucun filtre de statut (= toutes les phases). Plus d'option « Toutes ».
+  StatusBucket? _bucket;
   PricingBucket _pricing = PricingBucket.all;
 
   @override
@@ -158,7 +159,7 @@ class _CompetitionTabState extends ConsumerState<_CompetitionTab>
             ),
             data: (items) {
               final filtered = items
-                  .where((c) => _bucket.matches(c.status))
+                  .where((c) => _bucket?.matches(c.status) ?? true)
                   .where((c) => _pricing.matches(c))
                   .toList();
               if (filtered.isEmpty) {
@@ -240,7 +241,7 @@ class _CompetitionTabState extends ConsumerState<_CompetitionTab>
 
   Map<String, List<String>> _selectionSnapshot() {
     return {
-      'status': [_bucket.name],
+      'status': _bucket == null ? const [] : [_bucket!.name],
       'pricing': _pricing == PricingBucket.all ? const [] : [_pricing.name],
     };
   }
@@ -249,7 +250,7 @@ class _CompetitionTabState extends ConsumerState<_CompetitionTab>
     setState(() {
       final statusId = selection['status']?.firstOrNull;
       _bucket = statusId == null
-          ? StatusBucket.all
+          ? null
           : StatusBucket.values.firstWhere((b) => b.name == statusId);
 
       final pricingId = selection['pricing']?.firstOrNull;
@@ -261,14 +262,14 @@ class _CompetitionTabState extends ConsumerState<_CompetitionTab>
 
   int _activeFilterCount() {
     var n = 0;
-    if (_bucket != StatusBucket.all) n++;
+    if (_bucket != null) n++;
     if (_pricing != PricingBucket.all) n++;
     return n;
   }
 
   void _resetAll() {
     setState(() {
-      _bucket = StatusBucket.all;
+      _bucket = null;
       _pricing = PricingBucket.all;
     });
   }
