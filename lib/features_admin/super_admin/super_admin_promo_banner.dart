@@ -11,6 +11,7 @@ import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -366,10 +367,10 @@ class _CurrentBannerCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(ArenaRadius.sm),
             child: AspectRatio(
               aspectRatio: 16 / 9,
-              child: Image.network(
-                b.imageUrl,
+              child: CachedNetworkImage(
+                imageUrl: b.imageUrl,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
+                errorWidget: (_, __, ___) => Container(
                   color: ArenaColors.carbon2,
                   alignment: Alignment.center,
                   child: const Icon(

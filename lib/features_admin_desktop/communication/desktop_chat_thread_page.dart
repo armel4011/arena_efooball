@@ -4,6 +4,7 @@ import 'package:arena/core/theme/arena_fluent_theme.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/admin_chat_repository.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 // Dépendance transitive (umbrella `file_selector` absent du pubspec) : on
 // cible l'interface plateforme, l'implémentation Windows s'enregistre via
 // le plugin registrant.
@@ -401,19 +402,16 @@ class _BubbleImage extends StatelessWidget {
   Widget build(BuildContext context) {
     return ConstrainedBox(
       constraints: const BoxConstraints(maxHeight: 280),
-      child: Image.network(
-        url,
+      child: CachedNetworkImage(
+        imageUrl: url,
         fit: BoxFit.cover,
         width: double.infinity,
-        loadingBuilder: (_, child, progress) {
-          if (progress == null) return child;
-          return Container(
-            height: 200,
-            color: ArenaColors.carbon,
-            child: const Center(child: ProgressRing()),
-          );
-        },
-        errorBuilder: (_, __, ___) => Container(
+        placeholder: (_, __) => Container(
+          height: 200,
+          color: ArenaColors.carbon,
+          child: const Center(child: ProgressRing()),
+        ),
+        errorWidget: (_, __, ___) => Container(
           height: 120,
           color: ArenaColors.carbon,
           child: const Center(

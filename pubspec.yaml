@@ -31,8 +31,13 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
-  google_fonts: ^6.2.1        
+  google_fonts: ^6.2.1
   flutter_animate: ^4.5.0
+  # Cache disque + mémoire des images réseau (bannières promo, miniatures
+  # chat, avatars). Évite le re-téléchargement à chaque rebuild/scroll —
+  # gain réseau + anti-jank sensible sur la data mobile ciblée (audit perf
+  # 2026-06-13).
+  cached_network_image: ^3.4.1
 
   # ─── State management & navigation (PHASE 0/1) ─────────────
   flutter_riverpod: ^2.5.1

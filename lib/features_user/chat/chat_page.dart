@@ -21,6 +21,7 @@ import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/chat/call_screen.dart';
 import 'package:arena/features_user/chat/messages_inbox_page.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -834,11 +835,11 @@ class _MediaPreview extends ConsumerWidget {
         }
         return ClipRRect(
           borderRadius: BorderRadius.circular(12),
-          child: Image.network(
-            snap.data!,
+          child: CachedNetworkImage(
+            imageUrl: snap.data!,
             fit: BoxFit.cover,
             width: 240,
-            errorBuilder: (_, __, ___) => Container(
+            errorWidget: (_, __, ___) => Container(
               width: 220,
               height: 80,
               alignment: Alignment.center,

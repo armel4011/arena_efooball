@@ -1,4 +1,5 @@
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 /// Viewer plein ecran pour une image network, avec pinch-to-zoom
@@ -46,16 +47,13 @@ class ArenaImageViewer extends StatelessWidget {
                   minScale: 1,
                   maxScale: 5,
                   child: Center(
-                    child: Image.network(
-                      imageUrl,
+                    child: CachedNetworkImage(
+                      imageUrl: imageUrl,
                       fit: BoxFit.contain,
-                      loadingBuilder: (_, child, progress) {
-                        if (progress == null) return child;
-                        return const CircularProgressIndicator(
-                          color: ArenaColors.silver,
-                        );
-                      },
-                      errorBuilder: (_, __, ___) => Icon(
+                      placeholder: (_, __) => const CircularProgressIndicator(
+                        color: ArenaColors.silver,
+                      ),
+                      errorWidget: (_, __, ___) => Icon(
                         Icons.broken_image_outlined,
                         size: 64,
                         color: ArenaColors.silver.withValues(alpha: 0.6),

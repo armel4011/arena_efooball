@@ -8,6 +8,7 @@ import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_image_viewer.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -393,23 +394,20 @@ class _BubbleImage extends StatelessWidget {
       ),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxHeight: 280),
-        child: Image.network(
-          url,
+        child: CachedNetworkImage(
+          imageUrl: url,
           fit: BoxFit.cover,
           width: double.infinity,
-          loadingBuilder: (_, child, progress) {
-            if (progress == null) return child;
-            return Container(
-              height: 200,
-              color: ArenaColors.carbon,
-              child: const Center(
-                child: CircularProgressIndicator(
-                  color: ArenaColors.silver,
-                ),
+          placeholder: (_, __) => Container(
+            height: 200,
+            color: ArenaColors.carbon,
+            child: const Center(
+              child: CircularProgressIndicator(
+                color: ArenaColors.silver,
               ),
-            );
-          },
-          errorBuilder: (_, __, ___) => Container(
+            ),
+          ),
+          errorWidget: (_, __, ___) => Container(
             height: 120,
             color: ArenaColors.carbon,
             child: Center(

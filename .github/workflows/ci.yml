@@ -1,11 +1,11 @@
 name: CI
 
-# Déclenché sur push main + chaque PR. Deux jobs :
+# Déclenché sur push main + chaque PR. Jobs :
 #   - analyze-and-test : analyse statique + tests + garde-fous design.
-#   - build-apk        : build APK debug des 2 flavors (user/admin) —
+#   - build-app-bundle : build release .aab des 2 flavors (user/admin) —
 #     `flutter analyze`/`test` ne lancent aucun build Gradle, donc une
 #     régression native (ex. plugin Kotlin qui ne compile plus) passe
-#     inaperçue sans ce job.
+#     inaperçue sans ce job. L'AAB est l'artefact d'expédition Play Store.
 # Sert de filet de sécurité avant merge — Flutter SDK n'est pas fourni
 # par les runners GitHub, on utilise subosito/flutter-action qui le
 # télécharge et le met en cache.
@@ -141,8 +141,8 @@ jobs:
           chmod +x osv-scanner
           ./osv-scanner scan source --lockfile=pubspec.lock
 
-  build-apk:
-    name: Build APK (${{ matrix.flavor }})
+  build-app-bundle:
+    name: Build App Bundle (${{ matrix.flavor }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -201,7 +201,7 @@ jobs:
       - name: pub get
         run: flutter pub get
 
-      - name: Build release APK — flavor ${{ matrix.flavor }}
+      - name: Build release App Bundle (.aab) — flavor ${{ matrix.flavor }}
         # Compile toute la chaîne Android (plugins natifs Kotlin, Gradle,
         # AGP). C'est le job qui aurait attrapé sentry_flutter 9.20.0
         # (`Unresolved reference 'SentryFlutterReplayRecorder'`).
@@ -209,9 +209,14 @@ jobs:
         # (minify + shrink + proguard-rules.pro) : une mauvaise règle de keep
         # qui casse la config R8 est attrapée ici. Le keystore release étant
         # absent en CI, la signature retombe sur debug (cf. build.gradle.kts) —
-        # l'APK n'est pas publiable mais valide toute la chaîne de build.
+        # l'artefact n'est pas publiable mais valide toute la chaîne de build.
+        #
+        # `appbundle` (et non `apk`) car c'est l'artefact RÉEL d'expédition
+        # Play Store : Google génère des APK split-par-ABI côté serveur, ce qui
+        # divise par ~3 le téléchargement vs l'APK universel (qui embarque les
+        # 4 ABI). Valider l'AAB en CI garantit que le chemin de release marche.
         run: >-
-          flutter build apk --release
+          flutter build appbundle --release
           --flavor ${{ matrix.flavor }}
           --target lib/main_${{ matrix.flavor }}.dart
 
