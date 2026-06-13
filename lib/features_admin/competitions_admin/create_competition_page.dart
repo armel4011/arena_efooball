@@ -46,6 +46,7 @@ const List<({String label, int size, int lastRank})> _prizeBlocks = [
   (label: '9ème – 16ème', size: 8, lastRank: 16),
   (label: '17ème – 32ème', size: 16, lastRank: 32),
   (label: '33ème – 64ème', size: 32, lastRank: 64),
+  (label: '65ème – 128ème', size: 64, lastRank: 128),
 ];
 
 class CreateCompetitionPage extends ConsumerStatefulWidget {
@@ -85,13 +86,13 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
     TextEditingController(text: '15'),
     TextEditingController(text: '10'),
   ];
-  // Blocs 5-8 / 9-16 / 17-32 / 33-64 : un % « par place » saisi par bloc.
-  final List<TextEditingController> _blockShareCtrls = [
-    TextEditingController(text: '0'),
-    TextEditingController(text: '0'),
-    TextEditingController(text: '0'),
-    TextEditingController(text: '0'),
-  ];
+  // Blocs 5-8 / 9-16 / 17-32 / 33-64 / 65-128 : un % « par place » saisi par
+  // bloc. Dimensionné sur `_prizeBlocks` pour rester aligné si on ajoute un
+  // palier.
+  final List<TextEditingController> _blockShareCtrls = List.generate(
+    _prizeBlocks.length,
+    (_) => TextEditingController(text: '0'),
+  );
   // Nombre de récompensés : 1 / 2 / 4 (places individuelles seules) puis
   // 8 / 16 / 32 / 64 qui activent les blocs successifs.
   int _rewardedCount = 4;

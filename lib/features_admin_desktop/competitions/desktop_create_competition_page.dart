@@ -23,6 +23,7 @@ const List<({String label, int size, int lastRank})> _prizeBlocks = [
   (label: '9ème – 16ème', size: 8, lastRank: 16),
   (label: '17ème – 32ème', size: 16, lastRank: 32),
   (label: '33ème – 64ème', size: 32, lastRank: 64),
+  (label: '65ème – 128ème', size: 64, lastRank: 128),
 ];
 
 const List<String> _currencies = ['XAF', 'XOF', 'USD'];
@@ -72,12 +73,11 @@ class _DesktopCreateCompetitionPageState
     TextEditingController(text: '15'),
     TextEditingController(text: '10'),
   ];
-  final List<TextEditingController> _blockShareCtrls = [
-    TextEditingController(text: '0'),
-    TextEditingController(text: '0'),
-    TextEditingController(text: '0'),
-    TextEditingController(text: '0'),
-  ];
+  // Dimensionné sur `_prizeBlocks` pour suivre l'ajout d'un palier (65-128).
+  final List<TextEditingController> _blockShareCtrls = List.generate(
+    _prizeBlocks.length,
+    (_) => TextEditingController(text: '0'),
+  );
   int _rewardedCount = 4;
   bool _publishNow = true;
   bool _autoGenerateBracket = true;
