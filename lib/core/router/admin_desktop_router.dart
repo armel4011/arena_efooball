@@ -21,6 +21,7 @@ import 'package:arena/features_admin_desktop/shell/admin_desktop_shell.dart';
 import 'package:arena/features_admin_desktop/streams/desktop_stream_moderation_page.dart';
 import 'package:arena/features_admin_desktop/streams/desktop_watch_stream_page.dart';
 import 'package:arena/features_admin_desktop/super_admin/desktop_invitations_page.dart';
+import 'package:arena/features_admin_desktop/super_admin/desktop_promo_banner_page.dart';
 import 'package:arena/features_admin_desktop/super_admin/desktop_reintegration_page.dart';
 import 'package:arena/features_admin_desktop/super_admin/desktop_revenue_page.dart';
 import 'package:arena/features_admin_desktop/super_admin/desktop_super_dashboard_page.dart';
@@ -63,6 +64,7 @@ abstract final class AdminDesktopRoutes {
   static const superRevenue = '/super/revenue';
   static const superPaymentsValidation = '/super/payments';
   static const superBroadcast = '/super/broadcast';
+  static const superPromoBanner = '/super/promo-banner';
   static const superReintegration = '/super/reintegration';
   static const superTutorialBanners = '/super/tutorial-banners';
   static const superChatThread = '/super/messages/:userId';
@@ -277,6 +279,11 @@ final adminDesktopRouterProvider = Provider<GoRouter>((ref) {
             path: AdminDesktopRoutes.superBroadcast,
             name: 'desktop.superBroadcast',
             builder: (context, state) => const DesktopBroadcastPage(),
+          ),
+          GoRoute(
+            path: AdminDesktopRoutes.superPromoBanner,
+            name: 'desktop.superPromoBanner',
+            builder: (context, state) => const DesktopPromoBannerPage(),
           ),
           GoRoute(
             path: AdminDesktopRoutes.superReintegration,
