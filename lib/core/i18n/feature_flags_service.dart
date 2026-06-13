@@ -6,10 +6,16 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Reads `app_config` from Supabase with a robust local fallback.
 ///
-/// The `app_config` table is a single-row key/value (or single-row JSONB)
-/// table seeded by migrations in PHASE 0. Until the row exists or
-/// Supabase is reachable, [FeatureFlags.defaultsV1_0] is used so the app
-/// stays functional offline / on cold start.
+/// `app_config` est une table CLÉ/VALEUR (`{key text, value jsonb}`) seedée en
+/// PHASE 0 (`supported_languages`, `supported_currencies`, `feature_flags`,
+/// …). On lit TOUTES les lignes et on les agrège en une map `{clé: valeur}`
+/// passée à [FeatureFlags.fromConfig]. Tant qu'aucune ligne n'existe ou que
+/// Supabase est injoignable, [FeatureFlags.defaultsV1_0] est utilisé (offline /
+/// cold start).
+///
+/// (Avant le 2026-06-13, `fetch` lisait UNE seule ligne via `maybeSingle()` et
+/// `fromMap` y cherchait des clés racine `enabled_*` jamais présentes dans une
+/// table clé/valeur → les flags retombaient TOUJOURS sur les defaults. Corrigé.)
 class FeatureFlagsService {
   const FeatureFlagsService(this._client);
 
@@ -19,13 +25,13 @@ class FeatureFlagsService {
 
   Future<FeatureFlags> fetch() async {
     try {
-      final row = await _client
-          .from(_table)
-          .select()
-          .limit(1)
-          .maybeSingle();
-      if (row == null) return FeatureFlags.defaultsV1_0();
-      return FeatureFlags.fromMap(row);
+      final rows = await _client.from(_table).select('key, value');
+      final config = <String, dynamic>{
+        for (final row in rows)
+          if (row['key'] is String) row['key'] as String: row['value'],
+      };
+      if (config.isEmpty) return FeatureFlags.defaultsV1_0();
+      return FeatureFlags.fromConfig(config);
     } catch (e, st) {
       if (kDebugMode) {
         debugPrint(

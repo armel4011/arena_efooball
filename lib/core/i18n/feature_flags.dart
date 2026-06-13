@@ -37,34 +37,49 @@ class FeatureFlags {
     );
   }
 
-  factory FeatureFlags.fromMap(Map<String, dynamic> map) {
-    List<String> stringList(String key) {
-      final v = map[key];
-      if (v is List) return v.whereType<String>().toList();
-      return const [];
-    }
+  /// Construit les flags depuis la config `app_config` **agrégée**.
+  ///
+  /// `app_config` est une table CLÉ/VALEUR (`{key, value}`), agrégée par
+  /// `FeatureFlagsService.fetch` en une map `{clé: valeur jsonb}`. On lit donc
+  /// les clés RÉELLES de la table :
+  ///   * `supported_languages`  (List<String>) → [enabledLanguages]
+  ///   * `supported_currencies` (List<String>) → [enabledCurrencies]
+  ///   * `feature_flags` (objet jsonb) → sous-clés `streaming_finals_only`,
+  ///     `anti_cheat_recording`, `chat_moderation`.
+  /// Toute clé absente retombe sur `defaultsV1_0`.
+  ///
+  /// (Ancien bug 2026-06-13 : `fromMap` lisait `enabled_languages` au niveau
+  /// racine d'UNE SEULE ligne — jamais présent → `fetch` retombait toujours
+  /// sur les defaults. Cf. `FeatureFlagsService`.)
+  factory FeatureFlags.fromConfig(Map<String, dynamic> config) {
+    List<String> stringList(Object? v) =>
+        v is List ? v.whereType<String>().toList() : const [];
 
     final defaults = FeatureFlags.defaultsV1_0();
+    final ff = config['feature_flags'];
+    final featureFlags =
+        ff is Map<String, dynamic> ? ff : const <String, dynamic>{};
 
     return FeatureFlags(
-      enabledLanguages: stringList('enabled_languages')
+      enabledLanguages: stringList(config['supported_languages'])
           .map(SupportedLocale.fromLanguageCode)
           .toList()
           .ifEmpty(defaults.enabledLanguages),
-      enabledCurrencies: stringList('enabled_currencies')
+      enabledCurrencies: stringList(config['supported_currencies'])
           .map(Currency.fromCode)
           .toList()
           .ifEmpty(defaults.enabledCurrencies),
-      enabledRegions: stringList('enabled_regions')
-          .ifEmpty(defaults.enabledRegions),
-      streamingEnabled:
-          (map['streaming_enabled'] as bool?) ?? defaults.streamingEnabled,
-      chatModerationEnabled: (map['chat_moderation_enabled'] as bool?) ??
+      // Pas de clé `enabled_regions` en base → reste sur le défaut.
+      enabledRegions: defaults.enabledRegions,
+      streamingEnabled: (featureFlags['streaming_finals_only'] as bool?) ??
+          defaults.streamingEnabled,
+      chatModerationEnabled: (featureFlags['chat_moderation'] as bool?) ??
           defaults.chatModerationEnabled,
-      antiCheatRequired:
-          (map['anti_cheat_required'] as bool?) ?? defaults.antiCheatRequired,
-      maxPlayersPerCompetition: (map['max_players_per_competition'] as int?) ??
-          defaults.maxPlayersPerCompetition,
+      antiCheatRequired: (featureFlags['anti_cheat_recording'] as bool?) ??
+          defaults.antiCheatRequired,
+      maxPlayersPerCompetition:
+          (config['max_players_per_competition'] as int?) ??
+              defaults.maxPlayersPerCompetition,
     );
   }
 
