@@ -36,11 +36,11 @@ Widget _scoped(List<ArenaMatch> matches) => ProviderScope(
         competitionMatchesProvider
             .overrideWith((ref, _) => Stream<List<ArenaMatch>>.value(matches)),
       ],
-      child: MaterialApp(
-        locale: const Locale('fr'),
+      child: const MaterialApp(
+        locale: Locale('fr'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: const Scaffold(body: BracketView(competitionId: 'c-1')),
+        home: Scaffold(body: BracketView(competitionId: 'c-1')),
       ),
     );
 

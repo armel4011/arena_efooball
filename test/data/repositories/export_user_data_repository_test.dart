@@ -78,7 +78,7 @@ void main() {
       final decoded =
           jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
       expect(decoded['userId'], 'u1');
-      expect((decoded['matches'] as List), hasLength(2));
+      expect(decoded['matches'] as List, hasLength(2));
     });
 
     test('byteSize correspond à la taille réelle écrite', () async {

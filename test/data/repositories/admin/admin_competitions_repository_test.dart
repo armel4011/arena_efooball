@@ -227,7 +227,7 @@ void main() {
       await repo.autoRankFromResults('c1');
 
       expect(matchesProbe.filters.any((f) => f == 'eq:competition_id=c1'),
-          isTrue);
+          isTrue,);
 
       // Le builder qui porte le payload upsert (peu importe son rang).
       final upsertBuilder = regBuilders.firstWhere(

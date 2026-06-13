@@ -119,11 +119,11 @@ void main() {
 
     testWidgets('does not crash when matches list is empty', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          locale: const Locale('fr'),
+        const MaterialApp(
+          locale: Locale('fr'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: const Scaffold(body: ArenaBracketTree(matches: [])),
+          home: Scaffold(body: ArenaBracketTree(matches: [])),
         ),
       );
       await tester.pump();

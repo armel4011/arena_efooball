@@ -16,7 +16,7 @@ void main() {
   QueryProbe stub(String table, Object? result) =>
       stubFrom(client, table, result);
 
-  group('ban / unban (contrôle d\'accès)', () {
+  group("ban / unban (contrôle d'accès)", () {
     test('ban → is_active false, cible le user', () async {
       final from = stub('profiles', null);
       await repo.ban('u1');

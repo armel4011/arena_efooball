@@ -121,11 +121,11 @@ void main() {
       stubFromQueue(client, 'matches', List.generate(
         40,
         (i) => {'id': 'm$i'},
-      ));
+      ),);
       stubFromQueue(client, 'bracket_nodes', List.generate(
         40,
         (i) => {'id': 'n$i'},
-      ));
+      ),);
 
       await repo.generateGroupsKnockoutTournament(
         competitionId: 'c1',
@@ -152,11 +152,11 @@ void main() {
       await repo.resetBracket('c1');
 
       expect(nodesProbe.filters.any((f) => f == 'eq:competition_id=c1'),
-          isTrue);
+          isTrue,);
       expect(matchesProbe.filters.any((f) => f == 'eq:competition_id=c1'),
-          isTrue);
+          isTrue,);
       expect(phasesProbe.filters.any((f) => f == 'eq:competition_id=c1'),
-          isTrue);
+          isTrue,);
     });
   });
 }
