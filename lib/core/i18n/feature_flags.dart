@@ -17,9 +17,17 @@ class FeatureFlags {
 
   /// V1.0 hard-coded defaults — used as fallback when `app_config` cannot
   /// be reached (cold start, network down, Supabase unconfigured).
+  ///
+  /// NOTE i18n (2026-06-13) : FR + EN activés — `isMultiLanguage` devient vrai,
+  /// donc le sélecteur de langue (LanguageSwitcher) s'affiche dans les
+  /// Paramètres. L'arabe (RTL) reste différé. Ces defaults sont la SOURCE
+  /// effective des flags tant que le lecteur `app_config` n'est pas réparé
+  /// (cf. note dans feature_flags_service.dart : la table est en clé/valeur
+  /// `supported_languages`, mais fromMap lit `enabled_languages` au niveau
+  /// racine d'une seule ligne → fetch retombe toujours sur ces defaults).
   factory FeatureFlags.defaultsV1_0() {
     return const FeatureFlags(
-      enabledLanguages: [SupportedLocale.fr],
+      enabledLanguages: [SupportedLocale.fr, SupportedLocale.en],
       enabledCurrencies: [Currency.xaf, Currency.xof, Currency.usd],
       enabledRegions: ['francophone_africa'],
       streamingEnabled: false,
