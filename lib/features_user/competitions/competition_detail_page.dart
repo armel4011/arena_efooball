@@ -460,12 +460,7 @@ class _DetailBody extends StatelessWidget {
             child: TabBarView(
               children: [
                 _InfosTab(competition: competition),
-                _DeferredTab(
-                  phase: 'PHASE 4.E',
-                  icon: Icons.people_outline,
-                  title: l10n.compDetailParticipantsTitle,
-                  description: l10n.compDetailParticipantsDesc,
-                ),
+                _ParticipantsTab(competition: competition),
                 // Fix item 5 (2026-05-19) : `isBracket` est true pour
                 // groups_then_knockout aussi → la GroupStandingsPage
                 // n'était jamais affichée. On switch maintenant sur le
@@ -617,25 +612,103 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-class _DeferredTab extends StatelessWidget {
-  const _DeferredTab({
-    required this.phase,
-    required this.icon,
-    required this.title,
-    required this.description,
-  });
+/// Onglet PARTICIPANTS — liste des joueurs inscrits, joints à leur profil
+/// public (confirmés en tête). Tap → profil public du joueur. Lecture
+/// seule, invalidation au pull-to-refresh (même posture que le classement).
+class _ParticipantsTab extends ConsumerWidget {
+  const _ParticipantsTab({required this.competition});
 
-  final String phase;
-  final IconData icon;
-  final String title;
-  final String description;
+  final Competition competition;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final async = ref.watch(competitionParticipantsProvider(competition.id));
+
+    return async.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => ErrorState(
+        description: e.toString(),
+        onRetry: () =>
+            ref.invalidate(competitionParticipantsProvider(competition.id)),
+      ),
+      data: (participants) {
+        if (participants.isEmpty) {
+          return EmptyState(
+            icon: Icons.people_outline,
+            title: l10n.compDetailParticipantsTitle,
+            description: l10n.compDetailParticipantsDesc,
+          );
+        }
+        return RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(competitionParticipantsProvider(competition.id));
+            await ref
+                .read(competitionParticipantsProvider(competition.id).future);
+          },
+          child: ListView.separated(
+            padding: const EdgeInsets.all(ArenaSpacing.lg),
+            itemCount: participants.length,
+            separatorBuilder: (_, __) =>
+                const SizedBox(height: ArenaSpacing.xs),
+            itemBuilder: (_, i) =>
+                _ParticipantRow(participant: participants[i]),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ParticipantRow extends StatelessWidget {
+  const _ParticipantRow({required this.participant});
+
+  final CompetitionParticipant participant;
 
   @override
   Widget build(BuildContext context) {
-    return EmptyState(
-      icon: icon,
-      title: title,
-      description: '$phase — $description',
+    final name = participant.username;
+    final hasProfile = name.isNotEmpty && name != '—';
+    final initials = hasProfile ? name.substring(0, 1).toUpperCase() : '?';
+
+    return InkWell(
+      // Phase 13 — tap → profil public du joueur.
+      onTap: hasProfile
+          ? () => context.push(UserRoutes.publicProfilePath(name))
+          : null,
+      borderRadius: BorderRadius.circular(ArenaRadius.lg),
+      child: Container(
+        padding: const EdgeInsets.all(ArenaSpacing.md),
+        decoration: BoxDecoration(
+          color: ArenaColors.carbon,
+          borderRadius: BorderRadius.circular(ArenaRadius.lg),
+          border: Border.all(color: ArenaColors.border),
+        ),
+        child: Row(
+          children: [
+            ArenaAvatar(
+              initials: initials,
+              color: _avatarColorForSeed(name),
+              size: ArenaAvatarSize.sm,
+            ),
+            const SizedBox(width: ArenaSpacing.sm),
+            Expanded(
+              child: Text(
+                name,
+                style: ArenaText.body,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            // Inscription non encore confirmée (paiement/validation en attente).
+            if (!participant.isConfirmed)
+              const Icon(
+                Icons.schedule,
+                size: 16,
+                color: ArenaColors.silver,
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

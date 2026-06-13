@@ -32,6 +32,29 @@ class CompetitionRankingEntry {
   final int? finalRank;
 }
 
+/// Un participant inscrit à une compétition (vue côté joueur), joint à son
+/// profil public. Sert l'onglet PARTICIPANTS du détail compétition.
+@immutable
+class CompetitionParticipant {
+  const CompetitionParticipant({
+    required this.playerId,
+    required this.username,
+    required this.countryCode,
+    required this.avatarColor,
+    required this.status,
+  });
+
+  final String playerId;
+  final String username;
+  final String countryCode;
+  final String avatarColor;
+
+  /// Statut d'inscription : `confirmed` · `pending` · …
+  final String status;
+
+  bool get isConfirmed => status == 'confirmed';
+}
+
 /// CRUD + Realtime over the `competitions` table.
 ///
 /// Read-only from the User app — competitions are created server-side by
@@ -145,6 +168,59 @@ class CompetitionRepository {
     return list;
   }
 
+  /// Liste des participants inscrits à une compétition, joints à leur
+  /// profil public, triés par nom. Les confirmés d'abord. Utilisé par
+  /// l'onglet PARTICIPANTS (lecture seule côté joueur).
+  Future<List<CompetitionParticipant>> getParticipants(
+    String competitionId,
+  ) async {
+    final rows = await _client
+        .from('competition_registrations')
+        .select('player_id, status')
+        .eq('competition_id', competitionId);
+    final regs = [
+      for (final r in rows as List<dynamic>) r as Map<String, dynamic>,
+    ];
+
+    // Profils résolus via la vue publique `public_profiles` (table `profiles`
+    // restreinte à self+admin), comme `getRanking`.
+    final ids = {for (final r in regs) r['player_id'] as String}.toList();
+    final profilesById = <String, Map<String, dynamic>>{};
+    if (ids.isNotEmpty) {
+      final pr = await _client
+          .from('public_profiles')
+          .select('id, username, country_code, avatar_color')
+          .inFilter('id', ids);
+      for (final p in pr as List<dynamic>) {
+        final m = p as Map<String, dynamic>;
+        profilesById[m['id'] as String] = m;
+      }
+    }
+
+    return [
+      for (final row in regs)
+        _mapParticipant(row, profilesById[row['player_id']]),
+    ]..sort((a, b) {
+        // Confirmés en tête, puis tri alphabétique.
+        if (a.isConfirmed != b.isConfirmed) return a.isConfirmed ? -1 : 1;
+        return a.username.toLowerCase().compareTo(b.username.toLowerCase());
+      });
+  }
+
+  CompetitionParticipant _mapParticipant(
+    Map<String, dynamic> row,
+    Map<String, dynamic>? profile,
+  ) {
+    final p = profile ?? const {};
+    return CompetitionParticipant(
+      playerId: row['player_id'] as String,
+      username: p['username'] as String? ?? '—',
+      countryCode: p['country_code'] as String? ?? '',
+      avatarColor: p['avatar_color'] as String? ?? '#4C7AFF',
+      status: row['status'] as String? ?? 'pending',
+    );
+  }
+
   CompetitionRankingEntry _mapRankingEntry(
     Map<String, dynamic> row,
     Map<String, dynamic>? profile,
@@ -234,6 +310,17 @@ final competitionRankingProvider =
     FutureProvider.family.autoDispose<List<CompetitionRankingEntry>, String>(
         (ref, competitionId) {
   return ref.watch(competitionRepositoryProvider).getRanking(competitionId);
+});
+
+/// Participants inscrits à une compétition (onglet PARTICIPANTS). Même
+/// posture que le classement : `FutureProvider`, invalidation au
+/// pull-to-refresh, pas de Realtime en V1.0.
+final competitionParticipantsProvider =
+    FutureProvider.family.autoDispose<List<CompetitionParticipant>, String>(
+        (ref, competitionId) {
+  return ref
+      .watch(competitionRepositoryProvider)
+      .getParticipants(competitionId);
 });
 
 /// Realtime set des ids de comps où le joueur courant est inscrit

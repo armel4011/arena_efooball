@@ -174,4 +174,72 @@ void main() {
       expect(ranking.last.username, 'Zoe');
     });
   });
+
+  group('getParticipants', () {
+    test('aucune inscription → liste vide, pas de requête profils', () async {
+      stub('competition_registrations', <Map<String, dynamic>>[]);
+      final parts = await repo.getParticipants('c1');
+      expect(parts, isEmpty);
+      verifyNever(() => client.from('public_profiles'));
+    });
+
+    test('joint registrations + public_profiles, confirmés en tête', () async {
+      stub('competition_registrations', [
+        {'player_id': 'p1', 'status': 'pending'},
+        {'player_id': 'p2', 'status': 'confirmed'},
+      ]);
+      final profiles = stub('public_profiles', [
+        {
+          'id': 'p1',
+          'username': 'alpha',
+          'country_code': 'CM',
+          'avatar_color': '#111111',
+        },
+        {
+          'id': 'p2',
+          'username': 'bravo',
+          'country_code': 'CI',
+          'avatar_color': '#222222',
+        },
+      ]);
+
+      final parts = await repo.getParticipants('c1');
+
+      expect(parts, hasLength(2));
+      // Confirmé d'abord, même si alphabétiquement après.
+      expect(parts.first.playerId, 'p2');
+      expect(parts.first.isConfirmed, isTrue);
+      expect(parts.last.playerId, 'p1');
+      expect(parts.last.isConfirmed, isFalse);
+      // Profils résolus via la vue publique (pas de colonne email).
+      expect(profiles.hasFilter('in', 'id'), isTrue);
+      expect(profiles.selectedColumns, isNot(contains('email')));
+    });
+
+    test('même statut → tri alphabétique sur username', () async {
+      stub('competition_registrations', [
+        {'player_id': 'p1', 'status': 'confirmed'},
+        {'player_id': 'p2', 'status': 'confirmed'},
+      ]);
+      stub('public_profiles', [
+        {'id': 'p1', 'username': 'Zoe', 'country_code': 'CM'},
+        {'id': 'p2', 'username': 'Adam', 'country_code': 'CM'},
+      ]);
+
+      final parts = await repo.getParticipants('c1');
+      expect(parts.first.username, 'Adam');
+      expect(parts.last.username, 'Zoe');
+    });
+
+    test('profil manquant → fallback username "—"', () async {
+      stub('competition_registrations', [
+        {'player_id': 'ghost', 'status': 'confirmed'},
+      ]);
+      stub('public_profiles', <Map<String, dynamic>>[]);
+
+      final parts = await repo.getParticipants('c1');
+      expect(parts.single.username, '—');
+      expect(parts.single.avatarColor, '#4C7AFF');
+    });
+  });
 }
