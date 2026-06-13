@@ -105,6 +105,13 @@ mixin _$Competition {
   String? get androidStoreUrl => throw _privateConstructorUsedError;
   String? get iosStoreUrl => throw _privateConstructorUsedError;
 
+  /// Dernier échec de génération/scheduling AUTO du bracket (NULL si aucun).
+  /// Renseigné par les triggers DB `trigger_auto_generate_bracket` /
+  /// `trigger_try_schedule_next_round` (migration 20260613120000) à la place
+  /// d'un WARNING invisible. Affiché en bandeau dans la console admin.
+  String? get lastBracketError => throw _privateConstructorUsedError;
+  DateTime? get lastBracketErrorAt => throw _privateConstructorUsedError;
+
   /// Serializes this Competition to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
 
@@ -156,7 +163,9 @@ abstract class $CompetitionCopyWith<$Res> {
       List<int>? roundIntervals,
       Map<String, dynamic> formatConfig,
       String? androidStoreUrl,
-      String? iosStoreUrl});
+      String? iosStoreUrl,
+      String? lastBracketError,
+      DateTime? lastBracketErrorAt});
 }
 
 /// @nodoc
@@ -209,6 +218,8 @@ class _$CompetitionCopyWithImpl<$Res, $Val extends Competition>
     Object? formatConfig = null,
     Object? androidStoreUrl = freezed,
     Object? iosStoreUrl = freezed,
+    Object? lastBracketError = freezed,
+    Object? lastBracketErrorAt = freezed,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -351,6 +362,14 @@ class _$CompetitionCopyWithImpl<$Res, $Val extends Competition>
           ? _value.iosStoreUrl
           : iosStoreUrl // ignore: cast_nullable_to_non_nullable
               as String?,
+      lastBracketError: freezed == lastBracketError
+          ? _value.lastBracketError
+          : lastBracketError // ignore: cast_nullable_to_non_nullable
+              as String?,
+      lastBracketErrorAt: freezed == lastBracketErrorAt
+          ? _value.lastBracketErrorAt
+          : lastBracketErrorAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
     ) as $Val);
   }
 }
@@ -398,7 +417,9 @@ abstract class _$$CompetitionImplCopyWith<$Res>
       List<int>? roundIntervals,
       Map<String, dynamic> formatConfig,
       String? androidStoreUrl,
-      String? iosStoreUrl});
+      String? iosStoreUrl,
+      String? lastBracketError,
+      DateTime? lastBracketErrorAt});
 }
 
 /// @nodoc
@@ -449,6 +470,8 @@ class __$$CompetitionImplCopyWithImpl<$Res>
     Object? formatConfig = null,
     Object? androidStoreUrl = freezed,
     Object? iosStoreUrl = freezed,
+    Object? lastBracketError = freezed,
+    Object? lastBracketErrorAt = freezed,
   }) {
     return _then(_$CompetitionImpl(
       id: null == id
@@ -591,6 +614,14 @@ class __$$CompetitionImplCopyWithImpl<$Res>
           ? _value.iosStoreUrl
           : iosStoreUrl // ignore: cast_nullable_to_non_nullable
               as String?,
+      lastBracketError: freezed == lastBracketError
+          ? _value.lastBracketError
+          : lastBracketError // ignore: cast_nullable_to_non_nullable
+              as String?,
+      lastBracketErrorAt: freezed == lastBracketErrorAt
+          ? _value.lastBracketErrorAt
+          : lastBracketErrorAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
     ));
   }
 }
@@ -633,7 +664,9 @@ class _$CompetitionImpl extends _Competition {
       final List<int>? roundIntervals,
       final Map<String, dynamic> formatConfig = const <String, dynamic>{},
       this.androidStoreUrl,
-      this.iosStoreUrl})
+      this.iosStoreUrl,
+      this.lastBracketError,
+      this.lastBracketErrorAt})
       : _prizeDistribution = prizeDistribution,
         _roundIntervals = roundIntervals,
         _formatConfig = formatConfig,
@@ -808,9 +841,18 @@ class _$CompetitionImpl extends _Competition {
   @override
   final String? iosStoreUrl;
 
+  /// Dernier échec de génération/scheduling AUTO du bracket (NULL si aucun).
+  /// Renseigné par les triggers DB `trigger_auto_generate_bracket` /
+  /// `trigger_try_schedule_next_round` (migration 20260613120000) à la place
+  /// d'un WARNING invisible. Affiché en bandeau dans la console admin.
+  @override
+  final String? lastBracketError;
+  @override
+  final DateTime? lastBracketErrorAt;
+
   @override
   String toString() {
-    return 'Competition(id: $id, name: $name, game: $game, format: $format, startDate: $startDate, status: $status, maxPlayers: $maxPlayers, currentPlayers: $currentPlayers, registrationFee: $registrationFee, registrationCurrency: $registrationCurrency, commissionPct: $commissionPct, prizePoolLocal: $prizePoolLocal, commissionXaf: $commissionXaf, sponsorBonusLocal: $sponsorBonusLocal, description: $description, bannerUrl: $bannerUrl, registrationOpensAt: $registrationOpensAt, registrationClosesAt: $registrationClosesAt, endDate: $endDate, prizePoolCurrency: $prizePoolCurrency, createdBy: $createdBy, createdAt: $createdAt, updatedAt: $updatedAt, orangeMoneyCode: $orangeMoneyCode, mtnMomoCode: $mtnMomoCode, prizeDistribution: $prizeDistribution, matchIntervalMinutes: $matchIntervalMinutes, autoGenerateBracket: $autoGenerateBracket, thirdPlaceMatch: $thirdPlaceMatch, referralQuota: $referralQuota, referralActivityMode: $referralActivityMode, roundIntervals: $roundIntervals, formatConfig: $formatConfig, androidStoreUrl: $androidStoreUrl, iosStoreUrl: $iosStoreUrl)';
+    return 'Competition(id: $id, name: $name, game: $game, format: $format, startDate: $startDate, status: $status, maxPlayers: $maxPlayers, currentPlayers: $currentPlayers, registrationFee: $registrationFee, registrationCurrency: $registrationCurrency, commissionPct: $commissionPct, prizePoolLocal: $prizePoolLocal, commissionXaf: $commissionXaf, sponsorBonusLocal: $sponsorBonusLocal, description: $description, bannerUrl: $bannerUrl, registrationOpensAt: $registrationOpensAt, registrationClosesAt: $registrationClosesAt, endDate: $endDate, prizePoolCurrency: $prizePoolCurrency, createdBy: $createdBy, createdAt: $createdAt, updatedAt: $updatedAt, orangeMoneyCode: $orangeMoneyCode, mtnMomoCode: $mtnMomoCode, prizeDistribution: $prizeDistribution, matchIntervalMinutes: $matchIntervalMinutes, autoGenerateBracket: $autoGenerateBracket, thirdPlaceMatch: $thirdPlaceMatch, referralQuota: $referralQuota, referralActivityMode: $referralActivityMode, roundIntervals: $roundIntervals, formatConfig: $formatConfig, androidStoreUrl: $androidStoreUrl, iosStoreUrl: $iosStoreUrl, lastBracketError: $lastBracketError, lastBracketErrorAt: $lastBracketErrorAt)';
   }
 
   @override
@@ -881,7 +923,11 @@ class _$CompetitionImpl extends _Competition {
             (identical(other.androidStoreUrl, androidStoreUrl) ||
                 other.androidStoreUrl == androidStoreUrl) &&
             (identical(other.iosStoreUrl, iosStoreUrl) ||
-                other.iosStoreUrl == iosStoreUrl));
+                other.iosStoreUrl == iosStoreUrl) &&
+            (identical(other.lastBracketError, lastBracketError) ||
+                other.lastBracketError == lastBracketError) &&
+            (identical(other.lastBracketErrorAt, lastBracketErrorAt) ||
+                other.lastBracketErrorAt == lastBracketErrorAt));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -922,7 +968,9 @@ class _$CompetitionImpl extends _Competition {
         const DeepCollectionEquality().hash(_roundIntervals),
         const DeepCollectionEquality().hash(_formatConfig),
         androidStoreUrl,
-        iosStoreUrl
+        iosStoreUrl,
+        lastBracketError,
+        lastBracketErrorAt
       ]);
 
   /// Create a copy of Competition
@@ -977,7 +1025,9 @@ abstract class _Competition extends Competition {
       final List<int>? roundIntervals,
       final Map<String, dynamic> formatConfig,
       final String? androidStoreUrl,
-      final String? iosStoreUrl}) = _$CompetitionImpl;
+      final String? iosStoreUrl,
+      final String? lastBracketError,
+      final DateTime? lastBracketErrorAt}) = _$CompetitionImpl;
   const _Competition._() : super._();
 
   factory _Competition.fromJson(Map<String, dynamic> json) =
@@ -1102,6 +1152,15 @@ abstract class _Competition extends Competition {
   String? get androidStoreUrl;
   @override
   String? get iosStoreUrl;
+
+  /// Dernier échec de génération/scheduling AUTO du bracket (NULL si aucun).
+  /// Renseigné par les triggers DB `trigger_auto_generate_bracket` /
+  /// `trigger_try_schedule_next_round` (migration 20260613120000) à la place
+  /// d'un WARNING invisible. Affiché en bandeau dans la console admin.
+  @override
+  String? get lastBracketError;
+  @override
+  DateTime? get lastBracketErrorAt;
 
   /// Create a copy of Competition
   /// with the given fields replaced by the non-null parameter values.

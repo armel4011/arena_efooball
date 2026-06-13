@@ -112,6 +112,19 @@ class _DesktopCompetitionDetailPageState
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _CompetitionHeaderBar(competition: comp),
+          if (comp.lastBracketError != null) ...[
+            const SizedBox(height: 12),
+            InfoBar(
+              title: const Text('Échec auto-bracket'),
+              content: Text(
+                comp.lastBracketErrorAt == null
+                    ? comp.lastBracketError!
+                    : '${comp.lastBracketError!}\n'
+                        '${DateFormat('d MMM y · HH:mm', 'fr').format(comp.lastBracketErrorAt!.toLocal())}',
+              ),
+              severity: InfoBarSeverity.warning,
+            ),
+          ],
           const SizedBox(height: 12),
           Expanded(
             child: TabView(

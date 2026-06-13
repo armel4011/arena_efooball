@@ -10,6 +10,7 @@ import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 /// PHASE 11 · A9 — admin competition detail with 5 tabs.
 ///
@@ -58,6 +59,11 @@ class AdminCompetitionDetailPage extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     AdminCompetitionHeader(competition: comp),
+                    if (comp.lastBracketError != null)
+                      _BracketErrorBanner(
+                        error: comp.lastBracketError!,
+                        at: comp.lastBracketErrorAt,
+                      ),
                     TabBar(
                       isScrollable: true,
                       labelStyle: ArenaText.button,
@@ -93,6 +99,69 @@ class AdminCompetitionDetailPage extends ConsumerWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Bandeau d'alerte affiché quand la génération/scheduling AUTO du bracket a
+/// échoué (colonne `competitions.last_bracket_error`, alimentée par les
+/// triggers DB). Rend visible un échec autrement avalé en WARNING.
+class _BracketErrorBanner extends StatelessWidget {
+  const _BracketErrorBanner({required this.error, this.at});
+
+  final String error;
+  final DateTime? at;
+
+  @override
+  Widget build(BuildContext context) {
+    final whenLabel = at == null
+        ? null
+        : DateFormat('d MMM y · HH:mm', 'fr').format(at!.toLocal());
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(
+        ArenaSpacing.lg,
+        ArenaSpacing.sm,
+        ArenaSpacing.lg,
+        0,
+      ),
+      padding: const EdgeInsets.all(ArenaSpacing.md),
+      decoration: BoxDecoration(
+        color: ArenaColors.statusWarn.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(ArenaRadius.md),
+        border: Border.all(color: ArenaColors.statusWarn),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.warning_amber_rounded,
+            color: ArenaColors.statusWarn,
+            size: 20,
+          ),
+          const SizedBox(width: ArenaSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Échec auto-bracket',
+                  style: ArenaText.body.copyWith(
+                    color: ArenaColors.statusWarn,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(error, style: ArenaText.bodyMuted),
+                if (whenLabel != null) ...[
+                  const SizedBox(height: 2),
+                  Text(whenLabel, style: ArenaText.monoSmall),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

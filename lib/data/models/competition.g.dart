@@ -64,6 +64,10 @@ _$CompetitionImpl _$$CompetitionImplFromJson(Map<String, dynamic> json) =>
           const <String, dynamic>{},
       androidStoreUrl: json['android_store_url'] as String?,
       iosStoreUrl: json['ios_store_url'] as String?,
+      lastBracketError: json['last_bracket_error'] as String?,
+      lastBracketErrorAt: json['last_bracket_error_at'] == null
+          ? null
+          : DateTime.parse(json['last_bracket_error_at'] as String),
     );
 
 Map<String, dynamic> _$$CompetitionImplToJson(_$CompetitionImpl instance) =>
@@ -116,4 +120,8 @@ Map<String, dynamic> _$$CompetitionImplToJson(_$CompetitionImpl instance) =>
       if (instance.androidStoreUrl case final value?)
         'android_store_url': value,
       if (instance.iosStoreUrl case final value?) 'ios_store_url': value,
+      if (instance.lastBracketError case final value?)
+        'last_bracket_error': value,
+      if (instance.lastBracketErrorAt?.toIso8601String() case final value?)
+        'last_bracket_error_at': value,
     };
