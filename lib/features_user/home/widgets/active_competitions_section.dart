@@ -25,6 +25,11 @@ class ActiveCompetitionsSection extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final filter = ref.watch(homeGameFilterProvider);
     final async = ref.watch(competitionsListProvider(filter));
+    // La section ne liste que les compétitions où l'utilisateur est INSCRIT
+    // (inscription confirmée). Offline-safe : {} tant que non résolu.
+    final registered =
+        ref.watch(myRegisteredCompetitionIdsProvider).valueOrNull ??
+            const <String>{};
     return Column(
       children: [
         const _GameFilterChips(),
@@ -44,8 +49,9 @@ class ActiveCompetitionsSection extends ConsumerWidget {
               final active = all
                   .where(
                     (c) =>
-                        c.status == CompetitionStatus.registrationOpen ||
-                        c.status == CompetitionStatus.ongoing,
+                        registered.contains(c.id) &&
+                        (c.status == CompetitionStatus.registrationOpen ||
+                            c.status == CompetitionStatus.ongoing),
                   )
                   .take(3)
                   .toList(growable: false);
