@@ -97,7 +97,7 @@ void main() {
     expect(find.textContaining('1 000'), findsWidgets);
   });
 
-  testWidgets('shows COMPLET label when status is registrationClosed',
+  testWidgets('statut "À venir" quand registrationClosed (phase upcoming)',
       (tester) async {
     await bumpViewport(tester);
     await tester.pumpWidget(
@@ -110,10 +110,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('COMPLET'), findsWidgets);
+    // Statut unifié en 3 phases : registration_closed reste "À venir".
+    expect(find.text('À venir'), findsWidgets);
   });
 
-  testWidgets('CTA reads "TERMINÉ" once status flips to completed',
+  testWidgets('statut "Terminés" une fois la compétition completed',
       (tester) async {
     await bumpViewport(tester);
     await tester.pumpWidget(
@@ -121,7 +122,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('TERMINÉ'), findsWidgets);
+    expect(find.text('Terminés'), findsWidgets);
   });
 
   testWidgets('round-robin format swaps the Bracket tab for GroupStandingsView',

@@ -40,13 +40,11 @@ enum StatusBucket {
         StatusBucket.completed => l10n.filterCompleted,
       };
 
+  // Délègue au mapping centralisé `CompetitionStatus.phase` (source unique).
   bool matches(CompetitionStatus status) => switch (this) {
         StatusBucket.all => true,
-        StatusBucket.upcoming => status == CompetitionStatus.draft ||
-            status == CompetitionStatus.registrationOpen ||
-            status == CompetitionStatus.registrationClosed,
-        StatusBucket.ongoing => status == CompetitionStatus.ongoing,
-        StatusBucket.completed => status == CompetitionStatus.completed ||
-            status == CompetitionStatus.cancelled,
+        StatusBucket.upcoming => status.phase == CompetitionPhase.upcoming,
+        StatusBucket.ongoing => status.phase == CompetitionPhase.ongoing,
+        StatusBucket.completed => status.phase == CompetitionPhase.finished,
       };
 }
