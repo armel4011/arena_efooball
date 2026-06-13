@@ -78,8 +78,10 @@ class CompetitionRepository {
   /// but handy for tests and for one-shot lookups. Cap à 50 pour
   /// borner le résultat à scale (1M users + 10k compétitions).
   Future<List<Competition>> list({GameType? game, int limit = 50}) async {
-    final query = _client.from(_table).select();
-    final filtered = game == null ? query : query.eq('game', game.value);
+    // Exclut les compétitions archivées (terminées depuis > 7 j, cf. cron
+    // archive_old_completed_competitions) des listes côté joueur.
+    final base = _client.from(_table).select().isFilter('archived_at', null);
+    final filtered = game == null ? base : base.eq('game', game.value);
     final rows =
         await filtered.order('start_date', ascending: true).limit(limit);
     final list = [
@@ -106,9 +108,13 @@ class CompetitionRepository {
         .stream(primaryKey: ['id'])
         .order('start_date')
         .map((rows) {
-          final list = [for (final row in rows) Competition.fromJson(row)];
+          // Exclut les archivées (filtre client-side : `.stream()` ne supporte
+          // pas le `is null` côté serveur).
+          final list = [
+            for (final row in rows) Competition.fromJson(row),
+          ].where((c) => c.archivedAt == null);
           final filtered = game == null
-              ? list
+              ? list.toList()
               : list.where((c) => c.game == game).toList();
           return _sortPinnedFirst(filtered);
         });

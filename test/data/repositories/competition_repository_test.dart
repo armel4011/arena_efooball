@@ -52,6 +52,8 @@ void main() {
       expect(from.filters.any((f) => f.startsWith('limit:')), isTrue);
       // Pas de filtre game quand game == null.
       expect(from.hasFilter('eq', 'game'), isFalse);
+      // Les compétitions archivées sont exclues (archived_at IS NULL).
+      expect(from.hasFilter('is', 'archived_at'), isTrue);
     });
 
     test('filtre par game quand fourni', () async {
