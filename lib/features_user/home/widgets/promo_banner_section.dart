@@ -4,6 +4,7 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/promo_banner.dart';
 import 'package:arena/data/repositories/promo_banner_repository.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -41,28 +42,25 @@ class PromoBannerSection extends ConsumerWidget {
           borderRadius: BorderRadius.circular(ArenaRadius.lg),
           child: AspectRatio(
             aspectRatio: 16 / 9,
-            child: Image.network(
-              banner.imageUrl,
+            child: CachedNetworkImage(
+              imageUrl: banner.imageUrl,
               fit: BoxFit.cover,
               // Pas de placeholder bruyant : si l'image casse, on replie la
               // section pour ne pas afficher un bloc d'erreur sur la home.
-              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-              loadingBuilder: (context, child, progress) {
-                if (progress == null) return child;
-                return const ColoredBox(
-                  color: ArenaColors.carbon,
-                  child: Center(
-                    child: SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: ArenaColors.silver,
-                      ),
+              errorWidget: (_, __, ___) => const SizedBox.shrink(),
+              placeholder: (_, __) => const ColoredBox(
+                color: ArenaColors.carbon,
+                child: Center(
+                  child: SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: ArenaColors.silver,
                     ),
                   ),
-                );
-              },
+                ),
+              ),
             ),
           ),
         ),

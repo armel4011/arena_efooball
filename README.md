@@ -196,8 +196,14 @@ flutter run --flavor admin --target lib/main_admin.dart
 ### Build release
 
 ```bash
-flutter build apk --flavor user  --target lib/main_user.dart  --release
-flutter build apk --flavor admin --target lib/main_admin.dart --release
+# Play Store / distribution — App Bundle (.aab). Google génère les APK
+# split-par-ABI côté serveur → ~3× plus léger au téléchargement que l'APK
+# universel (qui embarque les 4 ABI armeabi-v7a/arm64/x86/x86_64).
+flutter build appbundle --flavor user  --target lib/main_user.dart  --release
+flutter build appbundle --flavor admin --target lib/main_admin.dart --release
+
+# Sideload / test sur device — APK split-par-ABI (3 APK séparés, légers) :
+flutter build apk --split-per-abi --flavor user --target lib/main_user.dart --release
 ```
 
 VS Code / Cursor : configurations `Run user` et `Run admin` disponibles
