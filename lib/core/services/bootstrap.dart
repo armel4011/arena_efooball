@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:arena/core/flavors/flavor_config.dart';
 import 'package:arena/core/services/notification_service.dart';
 import 'package:arena/core/services/onboarding_service.dart';
+import 'package:arena/core/services/secure_local_storage.dart';
 import 'package:arena/core/utils/sentry_provider_observer.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -206,7 +207,14 @@ Future<void> _initSupabase() async {
     return;
   }
 
-  await Supabase.initialize(url: url, anonKey: anon);
+  // Session chiffrée au repos (refresh token) — voir [SecureLocalStorage].
+  await Supabase.initialize(
+    url: url,
+    anonKey: anon,
+    authOptions: FlutterAuthClientOptions(
+      localStorage: SecureLocalStorage.fromUrl(url),
+    ),
+  );
 
   // ─── Realtime auth refresh hook ──────────────────────────────────────
   // Supabase Flutter ne propage PAS automatiquement le nouveau JWT au
