@@ -26,7 +26,9 @@ const List<({String label, int size, int lastRank})> _prizeBlocks = [
   (label: '65ème – 128ème', size: 64, lastRank: 128),
 ];
 
-const List<String> _currencies = ['XAF', 'XOF', 'USD'];
+// V1.0 : paiement d'inscription disponible UNIQUEMENT au Cameroun (XAF).
+// XOF / USD (autres pays) reviendront dans une version ultérieure.
+const List<String> _currencies = ['XAF'];
 const List<int> _maxPlayersOptions = [2, 4, 8, 16, 32, 64, 128, 256, 512];
 const List<int> _intervalOptions = [30, 60, 120, 240, 1440];
 
