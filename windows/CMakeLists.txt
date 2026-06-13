@@ -39,6 +39,15 @@ set(CMAKE_CXX_FLAGS_PROFILE "${CMAKE_CXX_FLAGS_RELEASE}")
 # Use Unicode for all projects.
 add_definitions(-DUNICODE -D_UNICODE)
 
+# MSVC 14.51+ (Visual Studio 18, runner `windows-latest`) transforme l'usage
+# des en-têtes `<experimental/coroutine>` en ERREUR dure (static_assert
+# STL1011) au lieu d'un simple warning de dépréciation. Le plugin tiers
+# `permission_handler_windows` les inclut encore → le build échoue. On
+# rétablit le comportement « warning » via la macro documentée par l'erreur,
+# pour tous les sous-projets (l'app + les plugins). À retirer quand
+# permission_handler_windows migrera vers le `<coroutine>` C++20.
+add_definitions(-D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)
+
 # Compilation settings that should be applied to most targets.
 #
 # Be cautious about adding new options here, as plugins use this function by
