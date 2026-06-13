@@ -309,3 +309,40 @@ jobs:
           else
             echo "Aucun test Deno pour l'instant — step ignoré."
           fi
+
+  db-tests:
+    name: DB tests (pgTAP RLS)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # Tests pgTAP de `supabase/tests/` : RLS + gardes serveur « argent »
+    # (guard montant paiement, validation réservée super_admin, isolation
+    # des paiements/gains) + anti-régression RLS chat blocked-pair. C'était
+    # le trou P0 de l'audit 2026-06-13 : la sécurité d'accès aux données ne
+    # reposait sur AUCUN test automatisé.
+    #
+    # NON bloquant pour l'instant (même posture progressive que les garde-fous
+    # spacing / OSV / deno fmt) : le replay local des 138 migrations sur un
+    # Postgres neuf (vault, pg_cron, pg_net…) n'a pas encore été prouvé vert
+    # en CI. La LOGIQUE des assertions, elle, a été validée en prod via
+    # transaction ROLLBACK le 2026-06-13. Basculer en bloquant (retirer
+    # `continue-on-error`) une fois le 1er run vert observé.
+    continue-on-error: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.101.0
+
+      - name: Start local Supabase stack (applique les migrations)
+        # Démarre le Postgres local et rejoue toutes les migrations
+        # `supabase/migrations/`. Crée aussi les schémas auth/storage dont
+        # dépend le schéma public (ex. profiles.id → auth.users).
+        run: supabase start
+
+      - name: Run pgTAP tests
+        run: supabase test db
