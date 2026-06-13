@@ -103,22 +103,24 @@ class _TutorialBannerCard extends ConsumerWidget {
           decoration: BoxDecoration(
             color: ArenaColors.carbon,
             borderRadius: BorderRadius.circular(ArenaRadius.lg),
-            border: Border.all(color: ArenaColors.signalBlue),
+            border: Border.all(color: ArenaColors.neonRed),
           ),
           child: Row(
             children: [
+              // Badge « logo YouTube » : rectangle rouge arrondi + triangle
+              // play blanc (forme reconnaissable du bouton lecture YouTube).
               Container(
-                width: 44,
-                height: 44,
+                width: 46,
+                height: 32,
                 decoration: BoxDecoration(
-                  color: ArenaColors.signalBlue.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
+                  color: ArenaColors.neonRed,
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 alignment: Alignment.center,
                 child: const Icon(
                   Icons.play_arrow_rounded,
-                  color: ArenaColors.signalBlue,
-                  size: 28,
+                  color: ArenaColors.bone,
+                  size: 24,
                 ),
               ),
               const SizedBox(width: ArenaSpacing.md),
@@ -137,7 +139,7 @@ class _TutorialBannerCard extends ConsumerWidget {
                     Text(
                       l10n.tutorialWatchCta,
                       style: ArenaText.monoSmall.copyWith(
-                        color: ArenaColors.signalBlue,
+                        color: ArenaColors.neonRed,
                         letterSpacing: 1,
                       ),
                     ),
