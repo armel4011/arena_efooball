@@ -6,6 +6,8 @@ import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_users_repository.dart';
 import 'package:arena/features_admin_desktop/shared/desktop_totp_gate.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
+import 'package:arena/features_shared/whatsapp_export.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -28,6 +30,7 @@ class DesktopUsersPage extends ConsumerStatefulWidget {
 class _DesktopUsersPageState extends ConsumerState<DesktopUsersPage> {
   final _searchController = TextEditingController();
   AdminUsersFilter _filter = const AdminUsersFilter();
+  bool _exporting = false;
 
   static const _statusOptions = <(String?, String)>[
     (null, 'Tous'),
@@ -60,6 +63,54 @@ class _DesktopUsersPageState extends ConsumerState<DesktopUsersPage> {
     });
   }
 
+  /// Exporte en CSV les numéros WhatsApp de TOUS les utilisateurs (avec
+  /// indicatif pays), indépendamment des filtres affichés.
+  Future<void> _exportWhatsapp() async {
+    setState(() => _exporting = true);
+    try {
+      final users = await ref.read(adminUsersRepositoryProvider).list(
+            filter: const AdminUsersFilter(),
+            limit: 100000,
+          );
+      final bytes = buildWhatsappCsvBytes(users);
+      final savedPath = await FilePicker.platform.saveFile(
+        dialogTitle: 'Exporter les numéros WhatsApp',
+        fileName: 'arena-whatsapp.csv',
+        bytes: bytes,
+        type: FileType.custom,
+        allowedExtensions: const ['csv'],
+      );
+      if (!mounted) return;
+      await displayInfoBar(
+        context,
+        builder: (ctx, close) => InfoBar(
+          title: Text(
+            savedPath == null
+                ? 'Export annulé.'
+                : '${users.length} numéros exportés',
+          ),
+          severity: savedPath == null
+              ? InfoBarSeverity.warning
+              : InfoBarSeverity.success,
+          onClose: close,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      await displayInfoBar(
+        context,
+        builder: (ctx, close) => InfoBar(
+          title: const Text('Export WhatsApp échoué'),
+          content: Text('$e'),
+          severity: InfoBarSeverity.error,
+          onClose: close,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final usersAsync = ref.watch(adminUsersProvider(_filter));
@@ -74,6 +125,11 @@ class _DesktopUsersPageState extends ConsumerState<DesktopUsersPage> {
               icon: const Icon(FluentIcons.refresh),
               label: const Text('Actualiser'),
               onPressed: () => ref.invalidate(adminUsersProvider),
+            ),
+            CommandBarButton(
+              icon: const Icon(FluentIcons.download),
+              label: const Text('Exporter WhatsApp'),
+              onPressed: _exporting ? null : _exportWhatsapp,
             ),
           ],
         ),

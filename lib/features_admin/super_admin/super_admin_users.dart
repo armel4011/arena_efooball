@@ -6,6 +6,7 @@ import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_users_repository.dart';
 import 'package:arena/features_admin/auth_admin/widgets/totp_gate.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
+import 'package:arena/features_shared/whatsapp_export.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
@@ -13,6 +14,7 @@ import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_filter_menu.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -33,11 +35,56 @@ class SuperAdminUsers extends ConsumerStatefulWidget {
 class _SuperAdminUsersState extends ConsumerState<SuperAdminUsers> {
   final _searchCtrl = TextEditingController();
   AdminUsersFilter _filter = const AdminUsersFilter();
+  bool _exporting = false;
 
   @override
   void dispose() {
     _searchCtrl.dispose();
     super.dispose();
+  }
+
+  /// Exporte en CSV les numéros WhatsApp de TOUS les utilisateurs (avec
+  /// indicatif pays). Indépendant des filtres affichés : on repart d'un
+  /// filtre vide + limite élevée pour récupérer tout le monde.
+  Future<void> _exportWhatsapp() async {
+    final scaffold = ScaffoldMessenger.of(context);
+    setState(() => _exporting = true);
+    try {
+      final users = await ref.read(adminUsersRepositoryProvider).list(
+            filter: const AdminUsersFilter(),
+            limit: 100000,
+          );
+      final bytes = buildWhatsappCsvBytes(users);
+      final savedPath = await FilePicker.platform.saveFile(
+        dialogTitle: 'Exporter les numéros WhatsApp',
+        fileName: 'arena-whatsapp.csv',
+        bytes: bytes,
+        type: FileType.custom,
+        allowedExtensions: const ['csv'],
+      );
+      if (!mounted) return;
+      if (savedPath == null) {
+        scaffold.showSnackBar(
+          const SnackBar(content: Text('Export annulé.')),
+        );
+        return;
+      }
+      scaffold.showSnackBar(
+        SnackBar(
+          content: Text('${users.length} numéros exportés : $savedPath'),
+          backgroundColor: ArenaColors.statusOk,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        scaffold.showSnackBar(
+          SnackBar(content: Text('Export WhatsApp échoué : $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
   }
 
   @override
@@ -64,6 +111,14 @@ class _SuperAdminUsersState extends ConsumerState<SuperAdminUsers> {
             ),
             tooltip: 'Notif broadcast',
             onPressed: () => context.go(AdminRoutes.superBroadcast),
+          ),
+          IconButton(
+            icon: const Icon(
+              Icons.download_outlined,
+              color: ArenaColors.bone,
+            ),
+            tooltip: 'Exporter les numéros WhatsApp (CSV)',
+            onPressed: _exporting ? null : _exportWhatsapp,
           ),
         ],
       ),
