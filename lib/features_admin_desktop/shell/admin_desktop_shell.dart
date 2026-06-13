@@ -96,6 +96,12 @@ const List<_NavEntry> _superEntries = [
     superAdminOnly: true,
   ),
   _NavEntry(
+    route: AdminDesktopRoutes.superPromoBanner,
+    icon: FluentIcons.photo2,
+    label: 'Bannière promo',
+    superAdminOnly: true,
+  ),
+  _NavEntry(
     route: AdminDesktopRoutes.superReintegration,
     icon: FluentIcons.follow_user,
     label: 'Réintégrations',
