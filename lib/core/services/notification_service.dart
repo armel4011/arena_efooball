@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:arena/core/services/callkit_service.dart';
 import 'package:arena/core/theme/arena_theme.dart' show ArenaColors;
+import 'package:arena/core/utils/error_reporter.dart';
 import 'package:arena/data/repositories/notification_repository.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -75,9 +76,7 @@ class NotificationService {
         await _repository.saveFcmToken(userId: userId, token: token);
       }
     } catch (e, st) {
-      if (kDebugMode) {
-        debugPrint('[notifs] getToken failed: $e\n$st');
-      }
+      unawaited(reportError(e, st, context: 'NotificationService.attach'));
     }
 
     _onTokenRefreshSub = _messaging.onTokenRefresh.listen((token) async {
@@ -86,9 +85,13 @@ class NotificationService {
       try {
         await _repository.saveFcmToken(userId: id, token: token);
       } catch (e, st) {
-        if (kDebugMode) {
-          debugPrint('[notifs] token refresh save failed: $e\n$st');
-        }
+        unawaited(
+          reportError(
+            e,
+            st,
+            context: 'NotificationService.onTokenRefresh',
+          ),
+        );
       }
     });
 
@@ -118,9 +121,7 @@ class NotificationService {
       try {
         await _repository.clearFcmToken(id);
       } catch (e, st) {
-        if (kDebugMode) {
-          debugPrint('[notifs] clearFcmToken failed: $e\n$st');
-        }
+        unawaited(reportError(e, st, context: 'NotificationService.detach'));
       }
     }
   }
@@ -139,7 +140,8 @@ class NotificationService {
 
   Future<void> _ensureLocalPlugin() async {
     if (_localReady) return;
-    const androidInit = AndroidInitializationSettings('@drawable/ic_notification');
+    const androidInit =
+        AndroidInitializationSettings('@drawable/ic_notification');
     const iosInit = DarwinInitializationSettings();
     await _local.initialize(
       const InitializationSettings(android: androidInit, iOS: iosInit),
@@ -151,9 +153,8 @@ class NotificationService {
       },
     );
 
-    final android =
-        _local.resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
+    final android = _local.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
     await android?.createNotificationChannel(_androidChannel);
     _localReady = true;
   }
@@ -173,9 +174,8 @@ class NotificationService {
     final imageUrl = notif?.android?.imageUrl ??
         message.data['image_url'] as String? ??
         notif?.apple?.imageUrl;
-    final bigPicturePath = imageUrl == null
-        ? null
-        : await _downloadImageToCache(imageUrl);
+    final bigPicturePath =
+        imageUrl == null ? null : await _downloadImageToCache(imageUrl);
 
     final androidDetails = AndroidNotificationDetails(
       _androidChannel.id,
@@ -267,9 +267,7 @@ class NotificationService {
     try {
       _router.go(route);
     } catch (e, st) {
-      if (kDebugMode) {
-        debugPrint('[notifs] navigate to "$route" failed: $e\n$st');
-      }
+      unawaited(reportError(e, st, context: 'NotificationService._navigate'));
     }
   }
 }

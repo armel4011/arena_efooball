@@ -2,9 +2,9 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:arena/core/utils/error_reporter.dart';
 import 'package:arena/data/models/match_stream.dart';
 import 'package:arena/data/repositories/match_stream_repository.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -133,9 +133,9 @@ class RecordingService {
     // No PII, sorts chronologically in the Téléchargements › ARENA
     // folder, and the random suffix keeps two recordings from the
     // same second on the same device from colliding.
-    final rand =
-        _filenameRandom.nextInt(999999).toString().padLeft(6, '0');
-    final filename = 'match_${rand}_${_formatFilenameTimestamp(DateTime.now())}';
+    final rand = _filenameRandom.nextInt(999999).toString().padLeft(6, '0');
+    final filename =
+        'match_${rand}_${_formatFilenameTimestamp(DateTime.now())}';
     bool started;
     try {
       started = await _platform.startRecording(
@@ -228,9 +228,16 @@ class RecordingService {
     try {
       await _repo.markEnded(streamId);
     } catch (e, st) {
-      if (kDebugMode) {
-        debugPrint('[recording] markEnded($streamId) failed: $e\n$st');
-      }
+      unawaited(
+        reportError(
+          e,
+          st,
+          context: 'RecordingService._safeMarkEnded',
+          extra: {
+            'stream': {'id': streamId},
+          },
+        ),
+      );
     }
   }
 

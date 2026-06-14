@@ -1,6 +1,7 @@
+import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
+import 'package:arena/core/utils/error_reporter.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -31,9 +32,7 @@ class BringToFront {
       // Fail silently — the overlay tap is best-effort.
       return false;
     } catch (e, st) {
-      if (kDebugMode) {
-        debugPrint('[bring-to-front] failed: $e\n$st');
-      }
+      unawaited(reportError(e, st, context: 'BringToFront.bringArenaToFront'));
       return false;
     }
   }

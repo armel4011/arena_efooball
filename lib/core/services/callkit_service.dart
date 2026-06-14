@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
+import 'package:arena/core/utils/error_reporter.dart';
 import 'package:flutter_callkit_incoming/entities/entities.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 
@@ -36,8 +36,7 @@ class CallkitService {
 
     try {
       final active = await FlutterCallkitIncoming.activeCalls();
-      if (active is List &&
-          active.any((c) => c is Map && c['id'] == callId)) {
+      if (active is List && active.any((c) => c is Map && c['id'] == callId)) {
         return;
       }
     } catch (_) {
@@ -74,8 +73,8 @@ class CallkitService {
 
     try {
       await FlutterCallkitIncoming.showCallkitIncoming(params);
-    } catch (e) {
-      if (kDebugMode) debugPrint('[callkit] showIncoming failed: $e');
+    } catch (e, st) {
+      unawaited(reportError(e, st, context: 'CallKitService.showIncoming'));
     }
   }
 

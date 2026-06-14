@@ -67,7 +67,10 @@ final currentProfileProvider = StreamProvider<Profile?>((ref) async* {
   }
   final cache = await ref.watch(persistentCacheProvider.future);
   final source = _fetchProfileOnce(ref, session.user.id);
-  yield* cache.hydrateSingle<Profile>(
+  // Sécurité (M-3, audit 2026-06-14) : le profil contient de la PII (email,
+  // WhatsApp, kycStatus) — on le cache CHIFFRÉ au repos, pas en clair dans
+  // SharedPreferences (lisible sur device rooté). Cf. hydrateSingleSecure.
+  yield* cache.hydrateSingleSecure<Profile>(
     namespace: 'profile.${session.user.id}',
     source: source,
     fromJson: Profile.fromJson,
