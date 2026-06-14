@@ -104,6 +104,14 @@ sealed class Competition with _$Competition {
     /// d'un WARNING invisible. Affiché en bandeau dans la console admin.
     String? lastBracketError,
     DateTime? lastBracketErrorAt,
+
+    /// Feature « épinglage admin » — quand `true`, la compétition est
+    /// remontée en tête des listes côté user (avec un badge « À LA UNE »).
+    /// `pinnedAt` horodate la dernière mise en avant et sert au tri entre
+    /// épinglées (la plus récemment épinglée en premier). Mappés sur
+    /// `is_pinned` / `pinned_at` via `fieldRename: snake`.
+    @Default(false) bool isPinned,
+    DateTime? pinnedAt,
   }) = _Competition;
 
   const Competition._();

@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/models/user_role.dart';
+import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -42,11 +43,12 @@ class AdminCompetitionRegistrant {
 /// The user-facing repo is read-only — admin writes happen through
 /// here so the `is_admin()` RLS guard scopes the queries naturally.
 class AdminCompetitionsRepository {
-  const AdminCompetitionsRepository(this._client);
+  const AdminCompetitionsRepository(this._client, this._auditLog);
 
   static const _table = 'competitions';
 
   final SupabaseClient _client;
+  final AdminAuditLogRepository _auditLog;
 
   /// Realtime list of every competition, optionally filtered by
   /// [status] (any of `draft`, `registration_open`, `ongoing`,
@@ -218,6 +220,30 @@ class AdminCompetitionsRepository {
     );
   }
 
+  /// Épingle (ou désépingle) une compétition pour la mettre « à la une » :
+  /// elle remonte alors en tête des listes côté user avec un badge. Écrit
+  /// `is_pinned` + `pinned_at` (horodatage UTC quand on épingle, `null`
+  /// sinon), PUIS trace l'action dans `admin_audit_log`
+  /// (`competition_pinned` / `competition_unpinned`).
+  Future<void> setPinned({
+    required String competitionId,
+    required bool pinned,
+    required String adminId,
+  }) async {
+    await _client.from(_table).update({
+      'is_pinned': pinned,
+      'pinned_at': pinned ? DateTime.now().toUtc().toIso8601String() : null,
+    }).eq('id', competitionId);
+
+    await _auditLog.record(
+      adminId: adminId,
+      action: pinned ? 'competition_pinned' : 'competition_unpinned',
+      targetType: 'competition',
+      targetId: competitionId,
+      afterState: {'is_pinned': pinned},
+    );
+  }
+
   /// Annule une compétition via la RPC `cancel_competition` (SECURITY
   /// DEFINER, gate `is_admin()`) : flip `status=cancelled` ET notifie chaque
   /// joueur ayant un paiement `succeeded`/`awaiting_admin` qu'un remboursement
@@ -247,7 +273,10 @@ class AdminCompetitionsRepository {
 
 final adminCompetitionsRepositoryProvider =
     Provider<AdminCompetitionsRepository>((ref) {
-  return AdminCompetitionsRepository(ref.watch(supabaseClientProvider));
+  return AdminCompetitionsRepository(
+    ref.watch(supabaseClientProvider),
+    ref.watch(adminAuditLogRepositoryProvider),
+  );
 });
 
 @immutable

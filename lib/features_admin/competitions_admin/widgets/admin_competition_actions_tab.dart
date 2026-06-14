@@ -44,6 +44,15 @@ class AdminCompetitionActionsTab extends ConsumerWidget {
         ),
         const SizedBox(height: ArenaSpacing.xs),
         ArenaButton(
+          label: competition.isPinned
+              ? '📌 DÉSÉPINGLER (RETIRER DE LA UNE)'
+              : '📌 ÉPINGLER À LA UNE',
+          variant: ArenaButtonVariant.secondary,
+          fullWidth: true,
+          onPressed: () => _togglePinned(context, ref),
+        ),
+        const SizedBox(height: ArenaSpacing.xs),
+        ArenaButton(
           label: '🏆 GÉRER LE BRACKET',
           fullWidth: true,
           onPressed: () => context.push(
@@ -112,6 +121,39 @@ class AdminCompetitionActionsTab extends ConsumerWidget {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Statut → ${status.value}.')),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Échec : $e')),
+      );
+    }
+  }
+
+  Future<void> _togglePinned(BuildContext context, WidgetRef ref) async {
+    final adminId = ref.read(currentSessionProvider)?.user.id;
+    if (adminId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Session admin introuvable.')),
+      );
+      return;
+    }
+    final willPin = !competition.isPinned;
+    try {
+      await ref.read(adminCompetitionsRepositoryProvider).setPinned(
+            competitionId: competition.id,
+            pinned: willPin,
+            adminId: adminId,
+          );
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            willPin
+                ? '« ${competition.name} » épinglée à la une.'
+                : '« ${competition.name} » retirée de la une.',
+          ),
+        ),
       );
     } catch (e) {
       if (!context.mounted) return;

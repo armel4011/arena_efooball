@@ -54,6 +54,10 @@ class AdminCompetitionInfosTab extends StatelessWidget {
               ? '✓ quota atteint'
               : '${competition.spotsLeft} places à pourvoir',
         ),
+        _InfoRow(
+          label: 'À la une',
+          value: competition.isPinned ? '📌 Épinglée' : 'Non épinglée',
+        ),
         if (competition.description != null) ...[
           const SizedBox(height: ArenaSpacing.md),
           Text('Description', style: ArenaText.inputLabel),

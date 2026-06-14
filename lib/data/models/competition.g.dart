@@ -68,6 +68,10 @@ _$CompetitionImpl _$$CompetitionImplFromJson(Map<String, dynamic> json) =>
       lastBracketErrorAt: json['last_bracket_error_at'] == null
           ? null
           : DateTime.parse(json['last_bracket_error_at'] as String),
+      isPinned: json['is_pinned'] as bool? ?? false,
+      pinnedAt: json['pinned_at'] == null
+          ? null
+          : DateTime.parse(json['pinned_at'] as String),
     );
 
 Map<String, dynamic> _$$CompetitionImplToJson(_$CompetitionImpl instance) =>
@@ -124,4 +128,7 @@ Map<String, dynamic> _$$CompetitionImplToJson(_$CompetitionImpl instance) =>
         'last_bracket_error': value,
       if (instance.lastBracketErrorAt?.toIso8601String() case final value?)
         'last_bracket_error_at': value,
+      'is_pinned': instance.isPinned,
+      if (instance.pinnedAt?.toIso8601String() case final value?)
+        'pinned_at': value,
     };

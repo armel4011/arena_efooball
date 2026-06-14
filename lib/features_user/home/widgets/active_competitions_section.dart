@@ -242,6 +242,13 @@ class _CompetitionBanner extends StatelessWidget {
             Row(
               children: [
                 _TierMiniBadge(label: tierLabel, color: tierColor),
+                if (c.isPinned) ...[
+                  const SizedBox(width: 6),
+                  const _TierMiniBadge(
+                    label: '📌 À LA UNE',
+                    color: ArenaColors.tierGoldWarm,
+                  ),
+                ],
                 const Spacer(),
                 _StatusPill(label: statusLabel),
               ],

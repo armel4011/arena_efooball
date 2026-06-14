@@ -103,6 +103,10 @@ class CompetitionListCard extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          if (c.isPinned) ...[
+                            const SizedBox(width: ArenaSpacing.xs),
+                            const _PinnedBadge(),
+                          ],
                           if (isRegistered) ...[
                             const SizedBox(width: ArenaSpacing.xs),
                             const _Tag(label: '✓ INSCRIT', color: ArenaColors.statusOk),
@@ -273,6 +277,40 @@ class _RewardBlock extends StatelessWidget {
 
   static String _money(double v) =>
       NumberFormat.decimalPattern('fr').format(v).replaceAll(',', ' ');
+}
+
+/// Badge « À LA UNE » — signale une compétition épinglée par l'admin.
+/// Icône épingle + libellé, en accent OR (`tierGoldWarm`) pour évoquer
+/// la mise en avant premium. Réutilise le rendu de [_Tag].
+class _PinnedBadge extends StatelessWidget {
+  const _PinnedBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    const color = ArenaColors.tierGoldWarm;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(ArenaRadius.round),
+        border: Border.all(color: color),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.push_pin, size: 11, color: color),
+          const SizedBox(width: 3),
+          Text(
+            'À LA UNE',
+            style: ArenaText.monoSmall.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// Petit tag arrondi (ex. « ✓ INSCRIT »).

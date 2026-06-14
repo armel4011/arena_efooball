@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -64,6 +66,91 @@ void main() {
     test('liste vide → []', () async {
       stub('competitions', <Map<String, dynamic>>[]);
       expect(await repo.list(), isEmpty);
+    });
+  });
+
+  group("tri épinglées d'abord", () {
+    Map<String, dynamic> pinnedRow({
+      required String id,
+      required bool isPinned,
+      String? pinnedAt,
+      String startDate = '2026-07-01T18:00:00.000Z',
+    }) =>
+        {
+          'id': id,
+          'name': id,
+          'game': 'efootball',
+          'format': 'single_elimination',
+          'start_date': startDate,
+          'status': 'registration_open',
+          'max_players': 16,
+          'is_pinned': isPinned,
+          if (pinnedAt != null) 'pinned_at': pinnedAt,
+        };
+
+    test('list : épinglées en tête, par pinnedAt desc, autres par startDate',
+        () async {
+      // La requête renvoie déjà l'ordre start_date croissant (a, b, c, d).
+      stub('competitions', [
+        pinnedRow(id: 'a', isPinned: false, startDate: '2026-07-01T00:00:00Z'),
+        pinnedRow(
+          id: 'b',
+          isPinned: true,
+          pinnedAt: '2026-06-01T00:00:00Z',
+          startDate: '2026-07-02T00:00:00Z',
+        ),
+        pinnedRow(id: 'c', isPinned: false, startDate: '2026-07-03T00:00:00Z'),
+        pinnedRow(
+          id: 'd',
+          isPinned: true,
+          pinnedAt: '2026-06-10T00:00:00Z',
+          startDate: '2026-07-04T00:00:00Z',
+        ),
+      ]);
+
+      final comps = await repo.list();
+      // d épinglé le 10/06 (plus récent) avant b épinglé le 01/06 ;
+      // puis les non-épinglés a, c dans l'ordre start_date d'origine.
+      expect(comps.map((c) => c.id).toList(), ['d', 'b', 'a', 'c']);
+    });
+
+    test('list : épinglée sans pinnedAt passe après celle qui en a un',
+        () async {
+      stub('competitions', [
+        pinnedRow(id: 'x', isPinned: true), // pinnedAt absent → null
+        pinnedRow(id: 'y', isPinned: true, pinnedAt: '2026-06-01T00:00:00Z'),
+      ]);
+      final comps = await repo.list();
+      expect(comps.map((c) => c.id).toList(), ['y', 'x']);
+    });
+
+    test("list : tri stable — non-épinglées gardent l'ordre d'entrée",
+        () async {
+      stub('competitions', [
+        pinnedRow(id: 'a', isPinned: false),
+        pinnedRow(id: 'b', isPinned: false),
+        pinnedRow(id: 'c', isPinned: false),
+      ]);
+      final comps = await repo.list();
+      expect(comps.map((c) => c.id).toList(), ['a', 'b', 'c']);
+    });
+
+    test("watch : applique le même tri épinglées-d'abord", () async {
+      stubStream(
+        client,
+        'competitions',
+        Stream.value([
+          pinnedRow(id: 'a', isPinned: false),
+          pinnedRow(
+            id: 'b',
+            isPinned: true,
+            pinnedAt: '2026-06-10T00:00:00Z',
+          ),
+        ]),
+      );
+
+      final list = await repo.watch().first;
+      expect(list.map((c) => c.id).toList(), ['b', 'a']);
     });
   });
 
