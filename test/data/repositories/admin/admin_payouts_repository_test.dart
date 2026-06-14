@@ -103,4 +103,44 @@ void main() {
       expect(from.filters.any((f) => f == 'eq:id=po1'), isTrue);
     });
   });
+
+  // ── Invariants « argent sortant » : le client ne forge JAMAIS le montant
+  //    ni le bénéficiaire ; seuls le statut + l'estampille admin partent. ──
+  group('invariants argent', () {
+    test('validate ne touche NI le montant NI le user_id (anti-forge)',
+        () async {
+      final from = stub('payouts', null);
+      await repo.validate(payoutId: 'po1', adminId: 'a1', justification: 'ok');
+      final v = from.updatedValues!;
+      // Le payload d'update ne contient que statut + estampille.
+      expect(v.keys, containsAll(<String>['status', 'validated_by_admin_id']));
+      expect(v.containsKey('amount_local'), isFalse);
+      expect(v.containsKey('amount_usd'), isFalse);
+      expect(v.containsKey('user_id'), isFalse);
+      expect(v.containsKey('payout_destination'), isFalse);
+    });
+
+    test('validate ne saute jamais directement à completed côté client',
+        () async {
+      final from = stub('payouts', null);
+      await repo.validate(payoutId: 'po1', adminId: 'a1', justification: 'ok');
+      // L'état terminal `completed` est posé par le dispatch provider (EF),
+      // pas par l'admin : l'écriture client s'arrête à `validated`.
+      expect(from.updatedValues!['status'], 'validated');
+      expect(from.updatedValues!['status'], isNot('completed'));
+    });
+
+    test('validate et refuse estampillent un horodatage UTC ISO-8601',
+        () async {
+      final fromV = stub('payouts', null);
+      await repo.validate(payoutId: 'po1', adminId: 'a1', justification: 'ok');
+      final tsV = DateTime.parse(fromV.updatedValues!['validated_at'] as String);
+      expect(tsV.isUtc, isTrue);
+
+      final fromR = stub('payouts', null);
+      await repo.refuse(payoutId: 'po1', adminId: 'a1', justification: 'no');
+      final tsR = DateTime.parse(fromR.updatedValues!['validated_at'] as String);
+      expect(tsR.isUtc, isTrue);
+    });
+  });
 }
