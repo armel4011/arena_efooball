@@ -28,6 +28,7 @@ _$ArenaMatchImpl _$$ArenaMatchImplFromJson(Map<String, dynamic> json) =>
       player2TeamName: json['player2_team_name'] as String?,
       nextMatchId: json['next_match_id'] as String?,
       isThirdPlace: json['is_third_place'] as bool? ?? false,
+      isStreamed: json['is_streamed'] as bool? ?? false,
       scheduledAt: json['scheduled_at'] == null
           ? null
           : DateTime.parse(json['scheduled_at'] as String),
@@ -69,6 +70,7 @@ Map<String, dynamic> _$$ArenaMatchImplToJson(_$ArenaMatchImpl instance) =>
         'player2_team_name': value,
       if (instance.nextMatchId case final value?) 'next_match_id': value,
       'is_third_place': instance.isThirdPlace,
+      'is_streamed': instance.isStreamed,
       if (instance.scheduledAt?.toIso8601String() case final value?)
         'scheduled_at': value,
       if (instance.startedAt?.toIso8601String() case final value?)
