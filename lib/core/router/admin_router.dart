@@ -13,6 +13,7 @@ import 'package:arena/features_admin/competitions_admin/admin_competition_detail
 import 'package:arena/features_admin/competitions_admin/admin_competitions_list_page.dart';
 import 'package:arena/features_admin/competitions_admin/create_competition_page.dart';
 import 'package:arena/features_admin/dashboard/admin_dashboard_page.dart';
+import 'package:arena/features_admin/disputes_admin/admin_disputes_list_page.dart';
 import 'package:arena/features_admin/disputes_admin/admin_disputes_page.dart';
 import 'package:arena/features_admin/matches_admin/admin_matches_list_page.dart';
 import 'package:arena/features_admin/profile_admin/admin_profile_page.dart';
@@ -62,6 +63,7 @@ abstract final class AdminRoutes {
   static const streamWatch = '/streams/watch/:matchId';
   static const payouts = '/payouts';
   static const disputes = '/disputes/:matchId';
+  static const disputesList = '/disputes-list';
   static const auditLog = '/audit';
   static const profile = '/profile';
 
@@ -261,6 +263,11 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => AdminWatchStreamPage(
           matchId: state.pathParameters['matchId'] ?? '',
         ),
+      ),
+      GoRoute(
+        path: AdminRoutes.disputesList,
+        name: 'admin.disputesList',
+        builder: (context, state) => const AdminDisputesListPage(),
       ),
       GoRoute(
         path: AdminRoutes.disputes,
