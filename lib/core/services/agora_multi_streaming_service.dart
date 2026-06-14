@@ -319,9 +319,7 @@ class _DefaultAgoraMultiEnginePlatform implements AgoraMultiEnginePlatform {
 
   @override
   Future<void> releaseEngine(RtcEngineEx engine) async {
-    for (final h in _handlers.values) {
-      engine.unregisterEventHandler(h);
-    }
+    _handlers.values.forEach(engine.unregisterEventHandler);
     _handlers.clear();
     await engine.release();
   }

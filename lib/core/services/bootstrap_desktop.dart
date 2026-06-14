@@ -166,14 +166,12 @@ Future<void> _initSupabase() async {
   // (no-op si Sentry n'est pas initialisé).
   final initial = client.auth.currentSession?.user;
   if (initial != null) {
-    // ignore: discarded_futures
     Sentry.configureScope((scope) {
       scope.setUser(SentryUser(id: initial.id));
     });
   }
   client.auth.onAuthStateChange.listen((data) {
     final user = data.session?.user;
-    // ignore: discarded_futures
     Sentry.configureScope((scope) {
       scope.setUser(user == null ? null : SentryUser(id: user.id));
     });

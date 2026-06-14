@@ -42,8 +42,8 @@ class FeatureFlags {
   /// `app_config` est une table CLÉ/VALEUR (`{key, value}`), agrégée par
   /// `FeatureFlagsService.fetch` en une map `{clé: valeur jsonb}`. On lit donc
   /// les clés RÉELLES de la table :
-  ///   * `supported_languages`  (List<String>) → [enabledLanguages]
-  ///   * `supported_currencies` (List<String>) → [enabledCurrencies]
+  ///   * `supported_languages`  (`List<String>`) → [enabledLanguages]
+  ///   * `supported_currencies` (`List<String>`) → [enabledCurrencies]
   ///   * `feature_flags` (objet jsonb) → sous-clés `streaming_finals_only`,
   ///     `anti_cheat_recording`, `chat_moderation`.
   /// Toute clé absente retombe sur `defaultsV1_0`.

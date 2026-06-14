@@ -27,6 +27,25 @@ linter:
     # We group deps by PHASE, not alphabetically — see pubspec.yaml.
     sort_pub_dependencies: false
 
+    # ─── Règles désactivées au bump very_good_analysis 6 → 10 (2026-06-14) ──
+    # Ces 3 règles, nouvelles en v7-v10, vont à l'encontre de choix
+    # d'architecture VOLONTAIRES d'Arena. On les neutralise explicitement
+    # plutôt que de rester 4 majeures en retard sur le lint set.
+    #
+    # 1) avoid_catches_without_on_clauses (207 hits) : Arena est offline-first.
+    #    Les repositories/services attrapent volontairement `catch (e)` large
+    #    pour figer sur le cache et ne jamais crasher hors-ligne (cf.
+    #    persistent_cache, NetworkStatusService). Forcer `on Exception` casserait
+    #    ce filet (les erreurs Realtime ne sont pas toutes des Exception).
+    avoid_catches_without_on_clauses: false
+    # 2) discarded_futures (80 hits) : le fire-and-forget est intentionnel et
+    #    déjà explicité par `unawaited(...)` aux endroits critiques (persist
+    #    cache, setAuth Realtime). La règle reste bruyante sur les callbacks UI.
+    discarded_futures: false
+    # 3) specify_nonobvious_property_types (80 hits) : très opinionnée (v10),
+    #    redondante avec l'inférence ; faible valeur pour le surcoût de churn.
+    specify_nonobvious_property_types: false
+
 # Custom lints — design system guards
 # ─────────────────────────────────────────────────────────────────────────────
 # The analyzer can't natively enforce "no numeric literal in EdgeInsets/SizedBox"

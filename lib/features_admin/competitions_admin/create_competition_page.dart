@@ -771,7 +771,7 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
   /// Quota parrainages requis (Lot D). 0 = pas de gating.
   int _referralQuota() => int.tryParse(_referralQuotaCtrl.text.trim()) ?? 0;
 
-  /// Lot A.2 — Parse `_roundIntervalsCtrl` CSV → List<int>?. Vide ou
+  /// Lot A.2 — Parse `_roundIntervalsCtrl` CSV → `List<int>?`. Vide ou
   /// malformé → null (utilise l'intervalle global).
   List<int>? _roundIntervals() {
     final raw = _roundIntervalsCtrl.text.trim();
