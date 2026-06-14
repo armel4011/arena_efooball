@@ -1080,7 +1080,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeSectionLive => 'LIVE NOW';
 
   @override
-  String get homeSectionActiveTournaments => '★ ACTIVE TOURNAMENTS';
+  String get homeSectionActiveTournaments => '★ MY TOURNAMENTS';
 
   @override
   String get homeSectionYourStats => '📊 YOUR STATS';
@@ -3066,6 +3066,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get activeCompetitionsEmpty =>
       'No active competition for this filter.';
+
+  @override
+  String get myTournamentsEmpty =>
+      'You\'re not registered for any tournament yet.';
+
+  @override
+  String get myTournamentsBrowseCta => 'Browse tournaments';
 
   @override
   String get filterAll => 'All';

@@ -13,6 +13,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+/// Demande de bascule d'onglet depuis ailleurs dans l'app (ex. le CTA
+/// « Parcourir les tournois » de l'empty state de la home). `null` = pas de
+/// demande en attente ; [MainLayout] la consomme puis la remet à `null`.
+/// Index : 0 Accueil · 1 Compétitions · 2 Chat · 3 Profil.
+final mainTabRequestProvider = StateProvider<int?>((_) => null);
+
 /// Root scaffold of the User app once authenticated.
 ///
 /// Holds 4 tabs: Home, Compétitions, Chat, Profil. Tabs 2-4 are
@@ -47,7 +53,13 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
     ref
       ..watch(realtimeResumeServiceProvider)
       ..watch(networkStatusServiceProvider)
-      ..watch(syncQueueServiceProvider);
+      ..watch(syncQueueServiceProvider)
+      // Bascule d'onglet demandée ailleurs (ex. CTA empty state home).
+      ..listen<int?>(mainTabRequestProvider, (_, next) {
+        if (next == null) return;
+        setState(() => _currentIndex = next);
+        ref.read(mainTabRequestProvider.notifier).state = null;
+      });
     return PopScope(
       // On gere le back system manuellement :
       //  - sur un tab non-home  -> revient sur Home

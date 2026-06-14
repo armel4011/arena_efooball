@@ -37,42 +37,85 @@ class CompetitionsListPage extends StatefulWidget {
   State<CompetitionsListPage> createState() => _CompetitionsListPageState();
 }
 
+/// Ordre d'affichage des onglets — **Dames en 1er**, eFootball en 2e, EA FC
+/// en 3e. Liste LOCALE (l'enum [GameType] garde son ordre natif pour ne pas
+/// casser les effets de bord ailleurs) : on mappe systématiquement l'index
+/// d'onglet → jeu via cette liste.
+const _orderedGames = <GameType>[
+  GameType.draughts,
+  GameType.efootball,
+  GameType.eaSportsFc,
+];
+
+/// Couleur d'accent par jeu (indicateur + label actif de l'onglet).
+Color _gameAccent(GameType g) => switch (g) {
+      GameType.draughts => ArenaColors.gameDraughts,
+      GameType.efootball => ArenaColors.gameEfoot,
+      GameType.eaSportsFc => ArenaColors.gameFc,
+    };
+
 class _CompetitionsListPageState extends State<CompetitionsListPage>
     with SingleTickerProviderStateMixin {
   late final TabController _tab =
-      TabController(length: GameType.values.length, vsync: this);
+      TabController(length: _orderedGames.length, vsync: this);
+
+  @override
+  void initState() {
+    super.initState();
+    // Recalcule l'accent (indicateur + label actif) à chaque changement
+    // d'onglet — y compris pendant le swipe (index courant suivi).
+    _tab.addListener(_onTabChanged);
+  }
+
+  void _onTabChanged() {
+    if (mounted) setState(() {});
+  }
 
   @override
   void dispose() {
-    _tab.dispose();
+    _tab
+      ..removeListener(_onTabChanged)
+      ..dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final currentGame = _orderedGames[_tab.index];
+    final accent = _gameAccent(currentGame);
     return ArenaScreenBackground(
       child: Column(
         children: [
           const TutorialBannerSection(page: TutorialPage.competitions),
           TabBar(
             controller: _tab,
-            indicatorColor: ArenaColors.signalBlue,
+            indicatorColor: accent,
             indicatorWeight: 2.5,
             indicatorSize: TabBarIndicatorSize.tab,
             dividerColor: ArenaColors.border,
-            labelColor: ArenaColors.bone,
+            labelColor: accent,
             unselectedLabelColor: ArenaColors.textMuted,
             labelStyle: ArenaText.button,
             unselectedLabelStyle: ArenaText.button,
             tabs: [
-              for (final g in GameType.values) Tab(text: _tabLabel(g)),
+              for (var i = 0; i < _orderedGames.length; i++)
+                Tab(
+                  child: Text(
+                    _tabLabel(_orderedGames[i]),
+                    style: ArenaText.button.copyWith(
+                      color: _tab.index == i
+                          ? accent
+                          : ArenaColors.textMuted,
+                    ),
+                  ),
+                ),
             ],
           ),
           Expanded(
             child: TabBarView(
               controller: _tab,
               children: [
-                for (final g in GameType.values)
+                for (final g in _orderedGames)
                   _CompetitionTab(key: ValueKey(g), game: g),
               ],
             ),
@@ -83,12 +126,12 @@ class _CompetitionsListPageState extends State<CompetitionsListPage>
   }
 }
 
-/// Libellé court (avec emoji) pour l'onglet d'un jeu — `GameType.label` est
-/// trop long pour 3 onglets fixes (« EA SPORTS FC Mobile »).
+/// Libellé court et pro (sans emoji) pour l'onglet d'un jeu — `GameType.label`
+/// est trop long pour 3 onglets fixes (« EA SPORTS FC Mobile »).
 String _tabLabel(GameType g) => switch (g) {
-      GameType.efootball => '⚽  eFootball',
-      GameType.draughts => '🔴  Dames',
-      GameType.eaSportsFc => '🎮  EA FC',
+      GameType.draughts => 'Dames',
+      GameType.efootball => 'eFootball',
+      GameType.eaSportsFc => 'EA FC',
     };
 
 /// Onglet d'un jeu : la liste filtrée d'un seul [GameType], avec son propre

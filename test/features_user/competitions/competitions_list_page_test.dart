@@ -57,13 +57,13 @@ void main() {
     await tester.pumpWidget(_scoped(const []));
     await tester.pumpAndSettle();
 
-    // La liste est organisée en onglets — un par jeu (eFootball · Dames ·
-    // EA FC), plus d'onglet « Tous ». L'onglet par défaut (eFootball) sans
-    // compétition affiche un empty state dédié au jeu, et conserve le menu
-    // de filtres (statut + tarif).
+    // La liste est organisée en onglets — un par jeu, désormais ordonnés
+    // Dames · eFootball · EA FC (plus d'onglet « Tous »). L'onglet par
+    // défaut (Dames) sans compétition affiche un empty state dédié au jeu,
+    // et conserve le menu de filtres (statut + tarif).
     expect(find.byType(TabBar), findsOneWidget);
     expect(find.byType(Tab), findsNWidgets(3));
-    expect(find.text('Aucune compétition sur eFootball'), findsOneWidget);
+    expect(find.text('Aucune compétition sur Jeu de Dames'), findsOneWidget);
     expect(find.text('FILTRES'), findsOneWidget);
   });
 
@@ -71,22 +71,23 @@ void main() {
       (tester) async {
     // Bucket statut "À venir" par défaut → ne montre que les comps en
     // registrationOpen / draft / registrationClosed. On donne 2 comps
-    // qui matchent ce bucket pour vérifier qu'elles rendent toutes.
-    // (Le bandeau de titre rend le nom en MAJUSCULES — restyle premium.)
+    // sur le jeu de l'onglet par défaut (Dames) pour vérifier qu'elles
+    // rendent toutes. (Le titre est rendu en MAJUSCULES — restyle premium.)
     await bumpViewport(tester);
     await tester.pumpWidget(
       _scoped([
-        _comp(id: 'c-1', name: 'Coupe Cameroun'),
-        _comp(id: 'c-2', name: 'Trophée RDC'),
+        _comp(id: 'c-1', name: 'Coupe Cameroun', game: GameType.draughts),
+        _comp(id: 'c-2', name: 'Trophée RDC', game: GameType.draughts),
       ]),
     );
     await tester.pumpAndSettle();
 
     expect(find.text('COUPE CAMEROUN'), findsOneWidget);
     expect(find.text('TROPHÉE RDC'), findsOneWidget);
-    // Deux comps gratuites (fee = 0 par défaut) → 2 fee labels "GRATUIT"
-    // dans le banner premium (cf. CompetitionListCard, restyle #10).
-    expect(find.text('GRATUIT'), findsNWidgets(2));
+    // Deux comps gratuites pures (fee = 0, pas de gain) → chacune affiche un
+    // badge tier "GRATUIT" + un label de frais "GRATUIT" (cf. restyle #10)
+    // = 4 occurrences au total.
+    expect(find.text('GRATUIT'), findsNWidgets(4));
   });
 
   testWidgets('switching tab filters by game (empty copy follows the tab)',
@@ -96,12 +97,13 @@ void main() {
     await tester.pumpAndSettle();
 
     // Le filtrage par jeu se fait désormais via les onglets : on bascule
-    // sur l'onglet « Dames » (2e onglet) et l'empty state suit le jeu.
+    // sur l'onglet « eFootball » (2e onglet, ordre Dames · eFootball · EA FC)
+    // et l'empty state suit le jeu.
     await tester.tap(find.byType(Tab).at(1));
     await tester.pumpAndSettle();
 
     expect(
-      find.text('Aucune compétition sur Jeu de Dames'),
+      find.text('Aucune compétition sur eFootball'),
       findsOneWidget,
     );
   });

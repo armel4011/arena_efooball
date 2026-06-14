@@ -56,7 +56,7 @@ void main() {
     // Captions v2 : mono small uppercase, lettrage 1.5, couleurs marker.
     expect(find.text('⚡ PROCHAIN MATCH'), findsOneWidget);
     expect(find.text('EN DIRECT'), findsOneWidget);
-    expect(find.text('★ TOURNOIS ACTIFS'), findsOneWidget);
+    expect(find.text('★ MES TOURNOIS'), findsOneWidget);
     expect(find.text('📊 TES STATS'), findsOneWidget);
   });
 

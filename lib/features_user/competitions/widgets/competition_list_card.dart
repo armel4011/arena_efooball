@@ -7,16 +7,16 @@ import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-/// Card d'une compétition dans la liste #10 — **design « bande latérale »**
-/// (compact, pro). Une bande de couleur à gauche identifie le tier au scroll,
-/// la **valeur de la récompense** et le **nombre de récompensés** sont mis en
-/// avant, et un CTA d'inscription est rendu sous la carte.
+/// Card d'une compétition dans la liste #10 — **design premium** (fond en
+/// dégradé subtil par tier + bande latérale colorée). La **valeur de la
+/// récompense** et le **nombre de récompensés** sont le bloc le plus
+/// proéminent ; un CTA d'inscription est rendu sous la carte.
 ///
-/// **3 tiers** (couleur de bande + accent) :
-/// * **Payante** (`registrationFee > 0`) → OR (`tierGoldWarm`).
+/// **3 tiers** (gradient de fond + accent) :
+/// * **Payante** (`registrationFee > 0`) → OR (`tierGoldWarm`), badge PREMIUM.
 /// * **Gratuite + récompense** (`isFree && prizePoolLocal > 0`) → TURQUOISE
-///   (`iceCyan`).
-/// * **Gratuite pure** → VERT (`statusOk`) — pas de gain, « jeu amical ».
+///   (`iceCyan`), badge + GAINS.
+/// * **Gratuite pure** → VERT (`statusOk`), badge GRATUIT — « jeu amical ».
 class CompetitionListCard extends StatelessWidget {
   const CompetitionListCard({
     required this.competition,
@@ -54,6 +54,17 @@ class CompetitionListCard extends StatelessWidget {
   int get _rewardedCount =>
       competition.prizeDistribution.where((m) => m > 0).length;
 
+  /// Dégradé de fond subtil par tier : carbon → légère teinte de l'accent,
+  /// pour un rendu premium sans nuire à la lisibilité du texte.
+  LinearGradient get _bgGradient => LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          _accent.withValues(alpha: 0.10),
+          ArenaColors.carbon,
+        ],
+      );
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -68,9 +79,9 @@ class CompetitionListCard extends StatelessWidget {
       child: Container(
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: ArenaColors.carbon,
+          gradient: _bgGradient,
           borderRadius: BorderRadius.circular(ArenaRadius.lg),
-          border: Border.all(color: ArenaColors.border),
+          border: Border.all(color: accent.withValues(alpha: 0.45)),
         ),
         child: IntrinsicHeight(
           child: Row(
@@ -84,7 +95,23 @@ class CompetitionListCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Ligne 1 : jeu + titre + badge inscrit
+                      // Ligne 1 : badge tier en évidence + badges À LA UNE/INSCRIT
+                      Row(
+                        children: [
+                          _TierBadge(label: _tierLabel, color: accent),
+                          const Spacer(),
+                          if (c.isPinned) const _PinnedBadge(),
+                          if (isRegistered) ...[
+                            const SizedBox(width: ArenaSpacing.xs),
+                            const _Tag(
+                              label: '✓ INSCRIT',
+                              color: ArenaColors.statusOk,
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: ArenaSpacing.sm),
+                      // Ligne 2 : jeu + titre
                       Row(
                         children: [
                           Text(
@@ -103,28 +130,19 @@ class CompetitionListCard extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          if (c.isPinned) ...[
-                            const SizedBox(width: ArenaSpacing.xs),
-                            const _PinnedBadge(),
-                          ],
-                          if (isRegistered) ...[
-                            const SizedBox(width: ArenaSpacing.xs),
-                            const _Tag(label: '✓ INSCRIT', color: ArenaColors.statusOk),
-                          ],
                         ],
                       ),
-                      const SizedBox(height: 4),
-                      // Ligne 2 : tier · statut · joueurs
+                      const SizedBox(height: ArenaSpacing.xs),
+                      // Statut de la compétition
                       Text(
-                        '$_tierLabel · $phaseLabel · '
-                        '${c.currentPlayers}/${c.maxPlayers} joueurs',
+                        phaseLabel,
                         style: ArenaText.monoSmall.copyWith(
                           color: ArenaColors.silver,
                           letterSpacing: 0.5,
                         ),
                       ),
                       const SizedBox(height: ArenaSpacing.sm),
-                      // Bloc récompense mis en avant
+                      // Bloc récompense mis en avant (le plus proéminent)
                       if (_hasPrize)
                         _RewardBlock(
                           amount: c.prizePoolLocal,
@@ -140,6 +158,14 @@ class CompetitionListCard extends StatelessWidget {
                             fontWeight: FontWeight.w600,
                           ),
                         ),
+                      const SizedBox(height: ArenaSpacing.sm),
+                      // Participants + barre de remplissage colorée par tier
+                      _ParticipantsBar(
+                        current: c.currentPlayers,
+                        max: c.maxPlayers,
+                        ratio: c.fillRatio,
+                        accent: accent,
+                      ),
                       const SizedBox(height: ArenaSpacing.sm),
                       // Ligne bas : frais + date de début
                       Row(
@@ -209,7 +235,7 @@ class CompetitionListCard extends StatelessWidget {
   static String _gameEmoji(GameType g) => switch (g) {
         GameType.efootball => '⚽',
         GameType.draughts => '🔴',
-        GameType.eaSportsFc => '🎯',
+        GameType.eaSportsFc => '🎮',
       };
 
   static String _money(double v) =>
@@ -277,6 +303,83 @@ class _RewardBlock extends StatelessWidget {
 
   static String _money(double v) =>
       NumberFormat.decimalPattern('fr').format(v).replaceAll(',', ' ');
+}
+
+/// Badge tier mis en évidence (« PREMIUM » / « + GAINS » / « GRATUIT »).
+/// Fond translucide de l'accent + bordure + texte coloré.
+class _TierBadge extends StatelessWidget {
+  const _TierBadge({required this.label, required this.color});
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(ArenaRadius.round),
+        border: Border.all(color: color),
+      ),
+      child: Text(
+        label,
+        style: ArenaText.badge.copyWith(
+          color: color,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.8,
+        ),
+      ),
+    );
+  }
+}
+
+/// Barre de remplissage des participants : « X/Y joueurs » + jauge fine
+/// colorée selon le tier (fond border, remplissage accent).
+class _ParticipantsBar extends StatelessWidget {
+  const _ParticipantsBar({
+    required this.current,
+    required this.max,
+    required this.ratio,
+    required this.accent,
+  });
+
+  final int current;
+  final int max;
+  final double ratio;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(
+              Icons.group_outlined,
+              size: 13,
+              color: ArenaColors.silver,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              '$current/$max joueurs',
+              style: ArenaText.monoSmall.copyWith(color: ArenaColors.silver),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(ArenaRadius.round),
+          child: LinearProgressIndicator(
+            value: ratio,
+            minHeight: 4,
+            backgroundColor: ArenaColors.border,
+            valueColor: AlwaysStoppedAnimation<Color>(accent),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 /// Badge « À LA UNE » — signale une compétition épinglée par l'admin.
