@@ -6,10 +6,31 @@
 -- =============================================================================
 
 -- -----------------------------------------------------------------------------
--- Extensions (uuid-ossp, pgcrypto, pg_cron déjà activés par Supabase)
+-- Extensions (uuid-ossp, pgcrypto, pg_cron, pg_net)
 -- -----------------------------------------------------------------------------
 create extension if not exists "uuid-ossp";
 create extension if not exists pgcrypto;
+
+-- pg_cron / pg_net sont préinstallés sur le projet hébergé Supabase, mais PAS
+-- créés sur le stack local / CI (`supabase start`) — d'où l'échec historique du
+-- job "DB tests (pgTAP RLS)" : `relation "cron.job" does not exist`, qui avorte
+-- toute la séquence avant d'atteindre les tests. On les crée ici de façon
+-- idempotente et tolérante : no-op en prod (déjà présents), créés sur le stack
+-- local (l'image supabase/postgres les précharge via shared_preload_libraries).
+-- Si une image ne les supporte pas, on skip avec un NOTICE plutôt que d'avorter.
+do $$
+begin
+  create extension if not exists pg_cron;
+exception when others then
+  raise notice 'pg_cron indisponible (% — %), création ignorée.', sqlstate, sqlerrm;
+end $$;
+
+do $$
+begin
+  create extension if not exists pg_net;
+exception when others then
+  raise notice 'pg_net indisponible (% — %), création ignorée.', sqlstate, sqlerrm;
+end $$;
 
 -- -----------------------------------------------------------------------------
 -- ENUM : user_role
