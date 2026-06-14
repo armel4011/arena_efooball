@@ -88,7 +88,7 @@ insert into _r select 'payout_isolation', count(*)::text from payouts;
 
 -- (9) Payouts : un joueur ne peut PAS valider (0 ligne).
 with upd as (
-  update payouts set status='paid' where id='eeeeeeee-0000-0000-0000-000000000011' returning 1
+  update payouts set status='validated' where id='eeeeeeee-0000-0000-0000-000000000011' returning 1
 )
 insert into _r select 'payout_user_cannot_update', count(*)::text from upd;
 
@@ -106,7 +106,7 @@ insert into _r select 'sadmin_sees_all', (count(*) >= 3)::text from payments;
 
 -- (10) Payouts : le super_admin PEUT valider (1 ligne).
 with upd as (
-  update payouts set status='paid' where id='eeeeeeee-0000-0000-0000-000000000011' returning 1
+  update payouts set status='validated' where id='eeeeeeee-0000-0000-0000-000000000011' returning 1
 )
 insert into _r select 'payout_sadmin_can_update', count(*)::text from upd;
 
