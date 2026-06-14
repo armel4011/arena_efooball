@@ -52,7 +52,11 @@ android {
     productFlavors {
         create("user") {
             dimension = "app"
-            applicationId = "com.arena.app"
+            // applicationId enregistré sur la Play Console (com.arena.app était
+            // déjà pris par un autre développeur → conflit firebaseinitprovider).
+            // Les authorities de providers (firebaseinitprovider, fileprovider…)
+            // dérivent de l'applicationId, donc ce renommage résout le conflit.
+            applicationId = "com.arena_skill.app"
             resValue("string", "app_name", "ARENA")
         }
         create("admin") {
