@@ -14,10 +14,23 @@
 -- profiles : volume écriture modéré en V1 (mostly fcm_token + stats),
 -- à monitorer côté Realtime pricing si MAU explose.
 
-ALTER PUBLICATION supabase_realtime ADD TABLE
-  public.match_events,
-  public.competitions,
-  public.profiles,
-  public.disputes,
-  public.payouts,
-  public.notifications;
+-- Idempotent par table : `match_events` est déjà ajouté (de façon guardée) par
+-- 20260506200001. Un `ALTER PUBLICATION ... ADD TABLE a, b, c` est atomique et
+-- échoue en entier dès qu'UNE table est déjà membre — ce qui cassait toute la
+-- séquence sur un stack à neuf (CI) : `relation "match_events" is already member
+-- of publication "supabase_realtime"`. On ajoute donc chaque table dans son
+-- propre bloc tolérant au doublon. No-op en prod (déjà appliqué).
+do $$
+declare
+  v_tbl text;
+begin
+  foreach v_tbl in array array[
+    'match_events', 'competitions', 'profiles', 'disputes', 'payouts', 'notifications'
+  ]
+  loop
+    begin
+      execute format('alter publication supabase_realtime add table public.%I', v_tbl);
+    exception when duplicate_object then null;
+    end;
+  end loop;
+end $$;
