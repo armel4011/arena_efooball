@@ -1,5 +1,6 @@
 import 'package:arena/core/utils/poll_stream.dart';
 import 'package:arena/data/models/dispute.dart';
+import 'package:arena/data/models/dispute_proof.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -15,6 +16,8 @@ class AdminDisputesRepository {
   const AdminDisputesRepository(this._client);
 
   static const _table = 'disputes';
+  static const _eventsTable = 'match_events';
+  static const _proofBucket = 'match-proofs';
 
   final SupabaseClient _client;
 
@@ -51,6 +54,50 @@ class AdminDisputesRepository {
         .maybeSingle();
     if (row == null) return null;
     return Dispute.fromJson(row);
+  }
+
+  /// Proof files (screenshots / clips) the players submitted for [matchId].
+  ///
+  /// Players attach proofs to their `score_submitted` events
+  /// (`match_events.proof_path` / `proof_mime`, cf. `ScoreProofUploader`).
+  /// We keep only rows that actually carry a `proof_path`, newest first.
+  /// The bucket is private — callers sign each `DisputeProof.path` via
+  /// [signedProofUrl] right before display.
+  Future<List<DisputeProof>> fetchProofs(String matchId) async {
+    final rows = await _client
+        .from(_eventsTable)
+        .select('proof_path, proof_mime, created_by, created_at')
+        .eq('match_id', matchId)
+        .not('proof_path', 'is', null)
+        .order('created_at', ascending: false);
+    final out = <DisputeProof>[];
+    for (final row in rows as List<dynamic>) {
+      final map = row as Map<String, dynamic>;
+      final path = map['proof_path'] as String?;
+      if (path == null || path.isEmpty) continue;
+      out.add(
+        DisputeProof(
+          path: path,
+          mime: map['proof_mime'] as String?,
+          playerId: map['created_by'] as String?,
+          createdAt: map['created_at'] == null
+              ? null
+              : DateTime.tryParse(map['created_at'] as String),
+        ),
+      );
+    }
+    return out;
+  }
+
+  /// Signs a private `match-proofs` storage [path] for read (default 1h),
+  /// mirroring the chat-media convention (`ChatRepository.signedMediaUrl`).
+  Future<String> signedProofUrl(
+    String path, {
+    Duration expiresIn = const Duration(hours: 1),
+  }) {
+    return _client.storage
+        .from(_proofBucket)
+        .createSignedUrl(path, expiresIn.inSeconds);
   }
 
   /// Resolves a dispute. The admin's written reasoning is required —
@@ -115,4 +162,31 @@ final adminOpenDisputesProvider =
 final adminDisputeByMatchProvider =
     FutureProvider.family.autoDispose<Dispute?, String>((ref, matchId) {
   return ref.watch(adminDisputesRepositoryProvider).getByMatchId(matchId);
+});
+
+/// A proof paired with a freshly-signed read URL, ready for display.
+class SignedDisputeProof {
+  const SignedDisputeProof({required this.proof, required this.url});
+
+  final DisputeProof proof;
+  final String url;
+
+  bool get isVideo => proof.isVideo;
+  String? get playerId => proof.playerId;
+  DateTime? get createdAt => proof.createdAt;
+}
+
+/// Fetches every proof attached to `matchId` and signs each one (1h).
+/// Drives the « Preuves » section in both the mobile and desktop dispute
+/// screens. autoDispose so the signed URLs aren't kept around stale.
+final adminDisputeProofsProvider = FutureProvider.family
+    .autoDispose<List<SignedDisputeProof>, String>((ref, matchId) async {
+  final repo = ref.watch(adminDisputesRepositoryProvider);
+  final proofs = await repo.fetchProofs(matchId);
+  final signed = <SignedDisputeProof>[];
+  for (final proof in proofs) {
+    final url = await repo.signedProofUrl(proof.path);
+    signed.add(SignedDisputeProof(proof: proof, url: url));
+  }
+  return signed;
 });

@@ -8,9 +8,11 @@ import 'package:arena/data/repositories/admin/admin_matches_repository.dart';
 import 'package:arena/data/repositories/match_repository.dart';
 import 'package:arena/features_admin_desktop/shared/desktop_totp_gate.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Finance · Litige (desktop) — détail d'un litige sur un match donné +
 /// résolution (verdict J1 / J2 / annulation), protégée par le step-up
@@ -70,6 +72,13 @@ class _DesktopDisputesPageState extends ConsumerState<DesktopDisputesPage> {
                   )
                 : _DisputeHeader(dispute: dispute),
           ),
+          const SizedBox(height: 24),
+          Text(
+            'PREUVES',
+            style: _sectionStyle,
+          ),
+          const SizedBox(height: 12),
+          _ProofsSection(matchId: widget.matchId),
           const SizedBox(height: 24),
           Text(
             'SCORES SAISIS',
@@ -273,6 +282,107 @@ class _ScoresCard extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Section « Preuves » (desktop, Fluent UI) : miniatures images + tuiles
+/// vidéo ouvrant le clip dans le lecteur système (url_launcher).
+class _ProofsSection extends ConsumerWidget {
+  const _ProofsSection({required this.matchId});
+
+  final String matchId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final proofs = ref.watch(adminDisputeProofsProvider(matchId));
+    return proofs.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.all(16),
+        child: Center(child: ProgressRing()),
+      ),
+      error: (e, _) => InfoBar(
+        title: const Text('Preuves indisponibles'),
+        content: Text('$e'),
+        severity: InfoBarSeverity.error,
+      ),
+      data: (list) {
+        if (list.isEmpty) {
+          return Text(
+            'Aucune preuve soumise',
+            style: GoogleFonts.spaceGrotesk(
+              color: ArenaColors.silver,
+              fontSize: 13,
+            ),
+          );
+        }
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            for (final p in list) _ProofTile(proof: p),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ProofTile extends StatelessWidget {
+  const _ProofTile({required this.proof});
+
+  final SignedDisputeProof proof;
+
+  static const double _size = 110;
+
+  @override
+  Widget build(BuildContext context) {
+    if (proof.isVideo) {
+      return SizedBox(
+        width: _size,
+        height: _size,
+        child: Button(
+          onPressed: () => _openVideo(context),
+          child: const Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(FluentIcons.play, size: 24),
+              SizedBox(height: 6),
+              Text('Vidéo'),
+            ],
+          ),
+        ),
+      );
+    }
+    return GestureDetector(
+      onTap: () => _openVideo(context),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: CachedNetworkImage(
+          imageUrl: proof.url,
+          width: _size,
+          height: _size,
+          fit: BoxFit.cover,
+          placeholder: (_, __) => Container(
+            width: _size,
+            height: _size,
+            color: ArenaColors.carbon,
+            child: const Center(child: ProgressRing()),
+          ),
+          errorWidget: (_, __, ___) => Container(
+            width: _size,
+            height: _size,
+            color: ArenaColors.carbon,
+            child: const Icon(FluentIcons.photo_error),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openVideo(BuildContext context) async {
+    final uri = Uri.tryParse(proof.url);
+    if (uri == null) return;
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 }
 
