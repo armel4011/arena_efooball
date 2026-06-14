@@ -2283,6 +2283,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get playerProfileTierBronze => '🥉 BRONZE';
 
   @override
+  String get playerProfileTierSilver => '🥈 SILVER';
+
+  @override
+  String get playerProfileTierGold => '🥇 GOLD';
+
+  @override
+  String get playerProfileTierElite => '💎 ELITE';
+
+  @override
   String get playerProfileEditTooltip => 'Edit';
 
   @override

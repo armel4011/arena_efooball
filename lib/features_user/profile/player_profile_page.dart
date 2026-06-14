@@ -7,6 +7,7 @@ import 'package:arena/data/models/tutorial_video.dart';
 import 'package:arena/data/repositories/friends_repository.dart';
 import 'package:arena/data/repositories/match_stats_repository.dart';
 import 'package:arena/data/repositories/referral_repository.dart';
+import 'package:arena/features_shared/player_tier.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_card.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
@@ -89,7 +90,10 @@ class _ProfileBody extends ConsumerWidget {
         padding: const EdgeInsets.all(ArenaSpacing.lg),
         children: [
           const TutorialBannerSection(page: TutorialPage.profile),
-          _Header(profile: profile),
+          _Header(
+            profile: profile,
+            wins: statsAsync.valueOrNull?.wins ?? 0,
+          ),
           const SizedBox(height: ArenaSpacing.lg),
           _StatsRow(stats: statsAsync),
           const SizedBox(height: ArenaSpacing.lg),
@@ -146,14 +150,16 @@ class _ProfileBody extends ConsumerWidget {
 /// Le bouton "modifier" est posé en overlay top-right pour rester
 /// visible même sans AppBar (la page est embeddée dans MainLayout).
 class _Header extends StatelessWidget {
-  const _Header({required this.profile});
+  const _Header({required this.profile, required this.wins});
 
   final Profile profile;
+  final int wins;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final color = AvatarPalette.colorFromHex(profile.avatarColor);
+    final tier = tierFor(wins);
     final initial =
         profile.username.isEmpty ? '?' : profile.username[0].toUpperCase();
     final country = _countryLabel(profile.countryCode);
@@ -209,7 +215,10 @@ class _Header extends StatelessWidget {
               style: ArenaText.small.copyWith(color: ArenaColors.silver),
             ),
             const SizedBox(height: 8),
-            _TierBadge(label: l10n.playerProfileTierBronze),
+            _TierBadge(
+              label: _tierLabel(l10n, tier),
+              gradient: tier.gradient,
+            ),
           ],
         ),
         Positioned(
@@ -260,27 +269,36 @@ class _Header extends StatelessWidget {
   }
 }
 
-/// Tier badge gradient gold→hotCoral — placeholder visuel pour V1 (le
-/// vrai tier sera dérivé de `profile.stats.elo` ou similaire en V1.5).
+/// Traduit un [PlayerTier] en libellé localisé pour le badge.
+String _tierLabel(AppLocalizations l10n, PlayerTier tier) => switch (tier) {
+      PlayerTier.bronze => l10n.playerProfileTierBronze,
+      PlayerTier.silver => l10n.playerProfileTierSilver,
+      PlayerTier.gold => l10n.playerProfileTierGold,
+      PlayerTier.elite => l10n.playerProfileTierElite,
+    };
+
+/// Tier badge — couleur dérivée du palier réel du joueur ([gradient]),
+/// libellé localisé. Le palier est calculé via `tierFor(wins)`.
 class _TierBadge extends StatelessWidget {
-  const _TierBadge({required this.label});
+  const _TierBadge({required this.label, required this.gradient});
 
   final String label;
+  final List<Color> gradient;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [ArenaColors.tierGoldWarm, ArenaColors.hotCoral],
+          colors: gradient,
         ),
         borderRadius: BorderRadius.circular(ArenaRadius.round),
         boxShadow: [
           BoxShadow(
-            color: ArenaColors.tierGoldWarm.withValues(alpha: 0.35),
+            color: gradient.first.withValues(alpha: 0.35),
             blurRadius: 14,
             spreadRadius: -2,
           ),

@@ -2271,6 +2271,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get playerProfileTierBronze => '🥉 برونزي';
 
   @override
+  String get playerProfileTierSilver => '🥈 فضي';
+
+  @override
+  String get playerProfileTierGold => '🥇 ذهبي';
+
+  @override
+  String get playerProfileTierElite => '💎 نخبة';
+
+  @override
   String get playerProfileEditTooltip => 'تعديل';
 
   @override
