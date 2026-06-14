@@ -7,28 +7,16 @@ import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-/// Card d'une competition dans la liste #10 — **style Trading Card FUT**.
+/// Card d'une compétition dans la liste #10 — **design « bande latérale »**
+/// (compact, pro). Une bande de couleur à gauche identifie le tier au scroll,
+/// la **valeur de la récompense** et le **nombre de récompensés** sont mis en
+/// avant, et un CTA d'inscription est rendu sous la carte.
 ///
-/// Structure (de haut en bas) :
-///   ╭──────────────────────────────╮
-///   │ [TIER BADGE]     [GAME LOGO] │ ← header sur fond accent tier
-///   │┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉│ ← dotted divider
-///   │            🏆               │ ← hero : emoji + montant en gros
-///   │       240 000 XAF            │
-///   │       ★ A GAGNER ★           │
-///   │┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉┉│
-///   │   TOURNOI DU WEEKEND         │ ← titre centre en Bebas
-///   │  ⬢64j  ⬢5000  ⬢24/05         │ ← stats hexagones
-///   ╰──────────────────────────────╯
-///   + bordure DOUBLE (anneau exterieur + interieur) coloree par tier
-///
-/// **3 tiers** identifiables au scroll :
-/// * **Payante** (`registrationFee > 0`) → OR (`tierGoldWarm`), emoji 🏆,
-///   montant = prizePool. CTA "S'INSCRIRE · X XAF" en or.
-/// * **Gratuite + recompense** (`isFree && prizePoolLocal > 0`) →
-///   TURQUOISE (`iceCyan`), emoji 🎁, montant = prizePool.
-/// * **Gratuite pure** → VERT (`statusOk`), emoji ⚔️, pas de montant
-///   (label "JEU AMICAL" a la place).
+/// **3 tiers** (couleur de bande + accent) :
+/// * **Payante** (`registrationFee > 0`) → OR (`tierGoldWarm`).
+/// * **Gratuite + récompense** (`isFree && prizePoolLocal > 0`) → TURQUOISE
+///   (`iceCyan`).
+/// * **Gratuite pure** → VERT (`statusOk`) — pas de gain, « jeu amical ».
 class CompetitionListCard extends StatelessWidget {
   const CompetitionListCard({
     required this.competition,
@@ -48,114 +36,141 @@ class CompetitionListCard extends StatelessWidget {
   bool get _isPaid => !competition.isFree;
   bool get _hasPrize => competition.prizePoolLocal > 0;
 
-  /// Couleur principale par tier (border, badge, montant).
+  /// Couleur d'accent (bande + valeur) par tier.
   Color get _accent {
     if (_isPaid) return ArenaColors.tierGoldWarm;
     if (_hasPrize) return ArenaColors.iceCyan;
     return ArenaColors.statusOk;
   }
 
-  /// Gradient de fond par tier — donne le hero du tier en arriere-plan.
-  LinearGradient get _gradient {
-    if (_isPaid) return ArenaColors.compTierPaid;
-    if (_hasPrize) return ArenaColors.compTierFreePrize;
-    return ArenaColors.compTierFreePure;
+  /// Libellé du tier (haut, à côté du jeu).
+  String get _tierLabel {
+    if (_isPaid) return 'PREMIUM';
+    if (_hasPrize) return '+ GAINS';
+    return 'GRATUIT';
   }
 
-  /// Glow assorti — donne du caractere a la card.
-  Color get _glow {
-    if (_isPaid) return ArenaColors.tierGoldWarm.withValues(alpha: 0.4);
-    if (_hasPrize) return ArenaColors.iceCyanGlow;
-    return ArenaColors.statusOk.withValues(alpha: 0.32);
-  }
-
-  /// (label, emoji) du badge tier en haut a gauche.
-  (String, String) get _tierBadge {
-    if (_isPaid) return ('PREMIUM', '★');
-    if (_hasPrize) return ('+ GAINS', '🎁');
-    return ('GRATUIT', '⚔');
-  }
-
-  /// Emoji XL du hero — depend du tier.
-  String get _heroEmoji {
-    if (_isPaid) return '🏆';
-    if (_hasPrize) return '🎁';
-    return '⚔️';
-  }
+  /// Nombre de places récompensées = entrées > 0 dans la répartition des gains.
+  int get _rewardedCount =>
+      competition.prizeDistribution.where((m) => m > 0).length;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final c = competition;
     final accent = _accent;
-    final (tierLabel, tierEmoji) = _tierBadge;
-    final gameLabel = _gameLabel(c.game);
-    // Statut clair en 3 phases (À VENIR / EN COURS / TERMINÉ) — source unique.
-    final statusLabel = competitionPhaseLabel(
-      c.status.phase,
-      AppLocalizations.of(context),
-    ).toUpperCase();
+    final currency = c.prizePoolCurrency ?? c.registrationCurrency;
+    final phaseLabel = competitionPhaseLabel(c.status.phase, l10n).toUpperCase();
 
     final card = InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(ArenaRadius.lg),
       child: Container(
-        // ─── Bordure double : outer ring or/turquoise/vert ────────────
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: ArenaColors.void_,
+          color: ArenaColors.carbon,
           borderRadius: BorderRadius.circular(ArenaRadius.lg),
-          border: Border.all(color: accent, width: 1.5),
-          boxShadow: [
-            BoxShadow(
-              color: ArenaColors.void_.withValues(alpha: 0.5),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-            BoxShadow(
-              color: _glow,
-              blurRadius: 22,
-              spreadRadius: -6,
-            ),
-          ],
+          border: Border.all(color: ArenaColors.border),
         ),
-        padding: const EdgeInsets.all(3),
-        child: Container(
-          // ─── Bordure interieure (ring inside) ───────────────────────
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            gradient: _gradient,
-            borderRadius: BorderRadius.circular(ArenaRadius.md),
-            border: Border.all(
-              color: ArenaColors.void_.withValues(alpha: 0.6),
-              width: 1,
-            ),
-          ),
-          child: Column(
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _Header(
-                tierLabel: tierLabel,
-                tierEmoji: tierEmoji,
-                gameLabel: gameLabel,
-                statusLabel: statusLabel,
-                isRegistered: isRegistered,
-              ),
-              _DottedDivider(color: accent),
-              _HeroSection(
-                emoji: _heroEmoji,
-                hasPrize: _hasPrize || _isPaid,
-                prizeAmount: c.prizePoolLocal,
-                prizeCurrency:
-                    c.prizePoolCurrency ?? c.registrationCurrency,
-                accent: accent,
-              ),
-              _DottedDivider(color: accent),
-              _Footer(
-                title: c.name,
-                playersLabel:
-                    '${c.currentPlayers}/${c.maxPlayers} joueurs',
-                dateLabel: _dateLabel(c.startDate),
-                feeLabel: _isPaid
-                    ? '${_money(c.registrationFee)} ${c.registrationCurrency}'
-                    : 'GRATUIT',
+              // ─── Bande latérale couleur = tier ──────────────────────────
+              Container(width: 5, color: accent),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(ArenaSpacing.md),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Ligne 1 : jeu + titre + badge inscrit
+                      Row(
+                        children: [
+                          Text(
+                            _gameEmoji(c.game),
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                          const SizedBox(width: ArenaSpacing.xs),
+                          Expanded(
+                            child: Text(
+                              c.name.toUpperCase(),
+                              style: ArenaText.body.copyWith(
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.3,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (isRegistered) ...[
+                            const SizedBox(width: ArenaSpacing.xs),
+                            const _Tag(label: '✓ INSCRIT', color: ArenaColors.statusOk),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      // Ligne 2 : tier · statut · joueurs
+                      Text(
+                        '$_tierLabel · $phaseLabel · '
+                        '${c.currentPlayers}/${c.maxPlayers} joueurs',
+                        style: ArenaText.monoSmall.copyWith(
+                          color: ArenaColors.silver,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: ArenaSpacing.sm),
+                      // Bloc récompense mis en avant
+                      if (_hasPrize)
+                        _RewardBlock(
+                          amount: c.prizePoolLocal,
+                          currency: currency,
+                          rewardedCount: _rewardedCount,
+                          accent: accent,
+                        )
+                      else
+                        Text(
+                          '⚔️  Jeu amical · pas de gain',
+                          style: ArenaText.body.copyWith(
+                            color: ArenaColors.statusOk,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      const SizedBox(height: ArenaSpacing.sm),
+                      // Ligne bas : frais + date de début
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.confirmation_number_outlined,
+                            size: 13,
+                            color: ArenaColors.silver,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            _isPaid
+                                ? '${_money(c.registrationFee)} '
+                                    '${c.registrationCurrency}'
+                                : 'GRATUIT',
+                            style: ArenaText.monoSmall
+                                .copyWith(color: ArenaColors.silver),
+                          ),
+                          const SizedBox(width: ArenaSpacing.md),
+                          const Icon(
+                            Icons.schedule,
+                            size: 13,
+                            color: ArenaColors.silver,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            _dateLabel(c.startDate),
+                            style: ArenaText.monoSmall
+                                .copyWith(color: ArenaColors.silver),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
@@ -165,9 +180,8 @@ class CompetitionListCard extends StatelessWidget {
 
     if (onRegister == null) return card;
 
-    final ctaVariant = _isPaid
-        ? ArenaButtonVariant.primary
-        : ArenaButtonVariant.success;
+    final ctaVariant =
+        _isPaid ? ArenaButtonVariant.primary : ArenaButtonVariant.success;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -179,9 +193,8 @@ class CompetitionListCard extends StatelessWidget {
               : _isPaid
                   ? "S'INSCRIRE · ${_money(c.registrationFee)} ${c.registrationCurrency}"
                   : "S'INSCRIRE GRATUITEMENT",
-          variant: hasPendingPayment
-              ? ArenaButtonVariant.secondary
-              : ctaVariant,
+          variant:
+              hasPendingPayment ? ArenaButtonVariant.secondary : ctaVariant,
           fullWidth: true,
           onPressed: onRegister,
         ),
@@ -189,10 +202,10 @@ class CompetitionListCard extends StatelessWidget {
     );
   }
 
-  static String _gameLabel(GameType g) => switch (g) {
-        GameType.efootball => '⚽ EFOOT',
-        GameType.draughts => '🔴 DAMES',
-        GameType.eaSportsFc => '🎯 FC',
+  static String _gameEmoji(GameType g) => switch (g) {
+        GameType.efootball => '⚽',
+        GameType.draughts => '🔴',
+        GameType.eaSportsFc => '🎯',
       };
 
   static String _money(double v) =>
@@ -202,370 +215,88 @@ class CompetitionListCard extends StatelessWidget {
       DateFormat('d MMM · HH:mm', 'fr').format(startUtc.toLocal());
 }
 
-// ════════════════════════════════════════════════════════════════════════
-// HEADER
-// ════════════════════════════════════════════════════════════════════════
-
-/// Bandeau du haut — fond noir translucide pour rester lisible sur le
-/// gradient tier, avec le badge tier a gauche et le badge game a droite.
-class _Header extends StatelessWidget {
-  const _Header({
-    required this.tierLabel,
-    required this.tierEmoji,
-    required this.gameLabel,
-    required this.statusLabel,
-    required this.isRegistered,
-  });
-
-  final String tierLabel;
-  final String tierEmoji;
-  final String gameLabel;
-  final String statusLabel;
-  final bool isRegistered;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: ArenaSpacing.md,
-        vertical: ArenaSpacing.sm,
-      ),
-      color: ArenaColors.void_.withValues(alpha: 0.55),
-      child: Row(
-        children: [
-          Text(
-            '$tierEmoji  $tierLabel',
-            style: ArenaText.badge.copyWith(
-              color: ArenaColors.bone,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1.2,
-              fontSize: 11,
-            ),
-          ),
-          if (isRegistered) ...[
-            const SizedBox(width: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 6,
-                vertical: 2,
-              ),
-              decoration: BoxDecoration(
-                color: ArenaColors.statusOk,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                '✓ INSCRIT',
-                style: ArenaText.small.copyWith(
-                  color: ArenaColors.void_,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 9,
-                  letterSpacing: 0.6,
-                ),
-              ),
-            ),
-          ],
-          const Spacer(),
-          Text(
-            statusLabel,
-            style: ArenaText.small.copyWith(
-              color: ArenaColors.bone.withValues(alpha: 0.75),
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1,
-              fontSize: 10,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            width: 4,
-            height: 4,
-            decoration: BoxDecoration(
-              color: ArenaColors.bone.withValues(alpha: 0.4),
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            gameLabel,
-            style: ArenaText.small.copyWith(
-              color: ArenaColors.bone,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.8,
-              fontSize: 11,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ════════════════════════════════════════════════════════════════════════
-// HERO (zone valeur du gain)
-// ════════════════════════════════════════════════════════════════════════
-
-/// Section centrale "trading card" — emoji XL + montant XXL + label.
-/// Cas gratuite pure (sans prize) : message "JEU AMICAL" a la place.
-class _HeroSection extends StatelessWidget {
-  const _HeroSection({
-    required this.emoji,
-    required this.hasPrize,
-    required this.prizeAmount,
-    required this.prizeCurrency,
+/// Bloc « récompense » : montant XL + nombre de récompensés (médailles).
+class _RewardBlock extends StatelessWidget {
+  const _RewardBlock({
+    required this.amount,
+    required this.currency,
+    required this.rewardedCount,
     required this.accent,
   });
 
-  final String emoji;
-  final bool hasPrize;
-  final double prizeAmount;
-  final String prizeCurrency;
+  final double amount;
+  final String currency;
+  final int rewardedCount;
   final Color accent;
 
   @override
   Widget build(BuildContext context) {
-    if (!hasPrize || prizeAmount <= 0) {
-      // Gratuit pur — pas de gain a montrer
-      return Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: ArenaSpacing.md,
-          vertical: ArenaSpacing.lg,
-        ),
-        child: Column(
+    final rewardedLabel = rewardedCount <= 1
+        ? '1 place récompensée'
+        : '$rewardedCount places récompensées';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
           children: [
-            Text(emoji, style: const TextStyle(fontSize: 40)),
-            const SizedBox(height: 6),
+            const Text('🏆', style: TextStyle(fontSize: 18)),
+            const SizedBox(width: 6),
             Text(
-              'JEU AMICAL',
-              style: ArenaText.h3.copyWith(
-                color: ArenaColors.bone,
-                fontSize: 20,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 2,
+              _money(amount),
+              style: ArenaText.mono.copyWith(
+                color: accent,
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+                height: 1,
               ),
             ),
-            const SizedBox(height: 2),
-            Text(
-              'Pas de gain · Pour le fun',
-              style: ArenaText.small.copyWith(
-                color: ArenaColors.bone.withValues(alpha: 0.75),
-                fontSize: 11,
-                letterSpacing: 0.8,
+            const SizedBox(width: 4),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 2),
+              child: Text(
+                currency,
+                style: ArenaText.monoSmall.copyWith(color: accent),
               ),
             ),
           ],
         ),
-      );
-    }
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: ArenaSpacing.md,
-        vertical: ArenaSpacing.lg,
-      ),
-      child: Column(
-        children: [
-          Text(emoji, style: const TextStyle(fontSize: 40)),
-          const SizedBox(height: 6),
-          // ─── Montant XXL ───────────────────────────────────────────
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                Text(
-                  _formatMoney(prizeAmount),
-                  style: ArenaText.mono.copyWith(
-                    color: ArenaColors.bone,
-                    fontSize: 34,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0.5,
-                    height: 1,
-                    shadows: [
-                      Shadow(
-                        color: ArenaColors.void_.withValues(alpha: 0.5),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  prizeCurrency,
-                  style: ArenaText.mono.copyWith(
-                    color: ArenaColors.bone.withValues(alpha: 0.85),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 4),
-          // ─── Label etoiles "★ A GAGNER ★" ──────────────────────────
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 20,
-                height: 1,
-                color: ArenaColors.bone.withValues(alpha: 0.5),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                '★  À GAGNER  ★',
-                style: ArenaText.badge.copyWith(
-                  color: ArenaColors.bone,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.6,
-                  fontSize: 10,
-                ),
-              ),
-              const SizedBox(width: 6),
-              Container(
-                width: 20,
-                height: 1,
-                color: ArenaColors.bone.withValues(alpha: 0.5),
-              ),
-            ],
-          ),
-        ],
-      ),
+        const SizedBox(height: 2),
+        Text(
+          '🥇🥈🥉  $rewardedLabel',
+          style: ArenaText.monoSmall.copyWith(color: ArenaColors.bone),
+        ),
+      ],
     );
   }
 
-  static String _formatMoney(double v) =>
+  static String _money(double v) =>
       NumberFormat.decimalPattern('fr').format(v).replaceAll(',', ' ');
 }
 
-// ════════════════════════════════════════════════════════════════════════
-// FOOTER (titre + stats)
-// ════════════════════════════════════════════════════════════════════════
-
-/// Bandeau du bas — titre Bebas centre + 3 hex stats (joueurs · entrée · date).
-class _Footer extends StatelessWidget {
-  const _Footer({
-    required this.title,
-    required this.playersLabel,
-    required this.dateLabel,
-    required this.feeLabel,
-  });
-
-  final String title;
-  final String playersLabel;
-  final String dateLabel;
-  final String feeLabel;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: ArenaSpacing.md,
-        vertical: ArenaSpacing.sm + 2,
-      ),
-      color: ArenaColors.void_.withValues(alpha: 0.55),
-      child: Column(
-        children: [
-          Text(
-            title.toUpperCase(),
-            style: ArenaText.h3.copyWith(
-              color: ArenaColors.bone,
-              fontSize: 14,
-              letterSpacing: 1.2,
-              fontWeight: FontWeight.w800,
-            ),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 8),
-          // ─── Stats : 3 hexagones (joueurs · entrée · date) ─────────
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _HexStat(icon: '⬢', label: playersLabel),
-              _HexStat(icon: '⬢', label: feeLabel),
-              _HexStat(icon: '⬢', label: dateLabel),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HexStat extends StatelessWidget {
-  const _HexStat({required this.icon, required this.label});
-  final String icon;
+/// Petit tag arrondi (ex. « ✓ INSCRIT »).
+class _Tag extends StatelessWidget {
+  const _Tag({required this.label, required this.color});
   final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Flexible(
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            icon,
-            style: TextStyle(
-              fontSize: 9,
-              color: ArenaColors.bone.withValues(alpha: 0.7),
-              height: 1,
-            ),
-          ),
-          const SizedBox(width: 4),
-          Flexible(
-            child: Text(
-              label,
-              style: ArenaText.small.copyWith(
-                color: ArenaColors.bone.withValues(alpha: 0.85),
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.3,
-              ),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ════════════════════════════════════════════════════════════════════════
-// DOTTED DIVIDER
-// ════════════════════════════════════════════════════════════════════════
-
-/// Divider en pointilles (style ticket / trading card) couleur tier.
-/// Calcule dynamiquement le nombre de dashes selon la largeur disponible.
-class _DottedDivider extends StatelessWidget {
-  const _DottedDivider({required this.color});
   final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        const dashWidth = 4.0;
-        const gapWidth = 4.0;
-        final count =
-            (constraints.maxWidth / (dashWidth + gapWidth)).floor();
-        return SizedBox(
-          height: 1,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: List<Widget>.generate(
-              count,
-              (_) => Container(
-                width: dashWidth,
-                height: 1,
-                color: color.withValues(alpha: 0.65),
-              ),
-            ),
-          ),
-        );
-      },
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(ArenaRadius.round),
+        border: Border.all(color: color),
+      ),
+      child: Text(
+        label,
+        style: ArenaText.monoSmall.copyWith(
+          color: color,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
     );
   }
 }
