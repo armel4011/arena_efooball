@@ -211,6 +211,87 @@ class FakeQueryChain<T> extends Fake implements PostgrestFilterBuilder<T> {
   }
 }
 
+/// Branche `client.from(table).stream(primaryKey: …)` sur un flux contrôlé
+/// d'événements Realtime (chaque événement est la liste complète des rows,
+/// comme le vrai builder Supabase). Renvoie le [StreamProbe] partagé pour
+/// asserter le primaryKey et le filtre `.eq()` appliqués.
+StreamProbe stubStream(
+  MockSupabaseClient client,
+  String table,
+  Stream<List<Map<String, dynamic>>> events,
+) {
+  final from = FakeStreamFromBuilder(events);
+  when(() => client.from(table)).thenAnswer((_) => from);
+  return from.streamProbe;
+}
+
+/// Inspecte les paramètres passés à `.stream()` / `.eq()`.
+class StreamProbe {
+  List<String>? primaryKey;
+  String? eqColumn;
+  Object? eqValue;
+}
+
+/// Maillon `from(table).stream(...)` — émule [SupabaseStreamFilterBuilder].
+/// `.eq()` renvoie un [SupabaseStreamBuilder] qui EST un `Stream`, donc le
+/// `.map(...)` du repo s'applique nativement dessus.
+class FakeStreamFromBuilder extends Fake implements SupabaseQueryBuilder {
+  FakeStreamFromBuilder(this._events) : streamProbe = StreamProbe();
+
+  final Stream<List<Map<String, dynamic>>> _events;
+  final StreamProbe streamProbe;
+
+  @override
+  SupabaseStreamFilterBuilder stream({required List<String> primaryKey}) {
+    streamProbe.primaryKey = primaryKey;
+    return FakeStreamFilterBuilder(_events, streamProbe);
+  }
+}
+
+class FakeStreamFilterBuilder extends Fake
+    implements SupabaseStreamFilterBuilder {
+  FakeStreamFilterBuilder(this._events, this._probe);
+
+  final Stream<List<Map<String, dynamic>>> _events;
+  final StreamProbe _probe;
+
+  @override
+  SupabaseStreamBuilder eq(String column, Object value) {
+    _probe
+      ..eqColumn = column
+      ..eqValue = value;
+    return FakeStreamBuilder(_events);
+  }
+}
+
+/// [SupabaseStreamBuilder] étant un `Stream<SupabaseStreamEvent>`, on délègue
+/// les opérateurs de flux utilisés par les repos (`map`, `listen`) au flux de
+/// test fourni.
+class FakeStreamBuilder extends Fake implements SupabaseStreamBuilder {
+  FakeStreamBuilder(this._events);
+
+  final Stream<List<Map<String, dynamic>>> _events;
+
+  @override
+  Stream<S> map<S>(S Function(List<Map<String, dynamic>> event) convert) =>
+      _events.map(convert);
+
+  @override
+  StreamSubscription<List<Map<String, dynamic>>> listen(
+    void Function(List<Map<String, dynamic>> event)? onData, {
+    Function? onError,
+    void Function()? onDone,
+    bool? cancelOnError,
+  }) {
+    return _events.listen(
+      onData,
+      onError: onError,
+      onDone: onDone,
+      cancelOnError: cancelOnError,
+    );
+  }
+}
+
 /// Niveau `from(table)` : implémente [SupabaseQueryBuilder]. Les verbes
 /// `select`/`insert`/`update`/`delete` renvoient un maillon partageant le
 /// même [probe] et le même `Future` de résultat.

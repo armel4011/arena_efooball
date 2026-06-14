@@ -85,8 +85,34 @@ void main() {
     });
   });
 
+  group('watchById (Realtime)', () {
+    test('liste vide → null, filtre id + primaryKey', () async {
+      final probe = stubStream(
+        client,
+        'disputes',
+        Stream.value(<Map<String, dynamic>>[]),
+      );
+      final first = await repo.watchById('d1').first;
+      expect(first, isNull);
+      expect(probe.primaryKey, ['id']);
+      expect(probe.eqColumn, 'id');
+      expect(probe.eqValue, 'd1');
+    });
+
+    test('row → Dispute (première ligne)', () async {
+      stubStream(
+        client,
+        'disputes',
+        Stream.value([disputeRow(id: 'd1', status: 'escalated')]),
+      );
+      final d = await repo.watchById('d1').first;
+      expect(d!.id, 'd1');
+      expect(d.isOpen, isTrue);
+    });
+  });
+
   group('resolveAtomic (RPC transactionnelle)', () {
-    test('délègue à resolve_dispute avec tous les params', () async {
+    test('verdict : délègue à resolve_dispute avec tous les params', () async {
       when(
         () => client.rpc<void>('resolve_dispute', params: any(named: 'params')),
       ).thenAnswer((_) => FakeQueryChain<void>(Future<void>.value()));
@@ -116,6 +142,33 @@ void main() {
       ).called(1);
       // Pas d'écriture directe : tout passe par la transaction serveur.
       verifyNever(() => client.from('disputes'));
+    });
+
+    test('annulation : p_cancel=true, sans winner ni score', () async {
+      when(
+        () => client.rpc<void>('resolve_dispute', params: any(named: 'params')),
+      ).thenAnswer((_) => FakeQueryChain<void>(Future<void>.value()));
+
+      await repo.resolveAtomic(
+        matchId: 'm1',
+        justification: 'match annulé',
+        cancel: true,
+      );
+
+      verify(
+        () => client.rpc<void>(
+          'resolve_dispute',
+          params: {
+            'p_match_id': 'm1',
+            'p_dispute_id': null,
+            'p_justification': 'match annulé',
+            'p_cancel': true,
+            'p_winner_id': null,
+            'p_score1': null,
+            'p_score2': null,
+          },
+        ),
+      ).called(1);
     });
   });
 }
