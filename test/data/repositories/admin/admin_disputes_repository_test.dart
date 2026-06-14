@@ -57,6 +57,67 @@ void main() {
     });
   });
 
+  group('fetchProofs', () {
+    Map<String, dynamic> eventRow({
+      String? proofPath = 'm1/p1/1.png',
+      String? proofMime = 'image/png',
+      String createdBy = 'p1',
+    }) =>
+        {
+          'proof_path': proofPath,
+          'proof_mime': proofMime,
+          'created_by': createdBy,
+          'created_at': '2026-06-14T10:00:00Z',
+        };
+
+    test('interroge match_events, filtre proof_path non null pour le match',
+        () async {
+      final from = stubFrom(client, 'match_events', [eventRow()]);
+      final proofs = await repo.fetchProofs('m1');
+      expect(proofs, hasLength(1));
+      expect(from.selectedColumns, contains('proof_path'));
+      expect(from.hasFilter('eq', 'match_id'), isTrue);
+      expect(from.filters.any((f) => f == 'eq:match_id=m1'), isTrue);
+      // .not('proof_path', 'is', null) → filtre 'not'
+      expect(from.filters.any((f) => f.startsWith('not:proof_path=')), isTrue);
+      expect(from.hasFilter('order', 'created_at'), isTrue);
+    });
+
+    test('distingue image vs vidéo selon le mime', () async {
+      stubFrom(client, 'match_events', [
+        eventRow(proofPath: 'm1/p1/a.png', proofMime: 'image/png'),
+        eventRow(proofPath: 'm1/p2/b.mp4', proofMime: 'video/mp4'),
+      ]);
+      final proofs = await repo.fetchProofs('m1');
+      expect(proofs[0].isImage, isTrue);
+      expect(proofs[0].isVideo, isFalse);
+      expect(proofs[1].isVideo, isTrue);
+      expect(proofs[1].isImage, isFalse);
+    });
+
+    test('mime manquant → repli sur l’extension du chemin', () async {
+      stubFrom(client, 'match_events', [
+        eventRow(proofPath: 'm1/p1/clip.mov', proofMime: null),
+        eventRow(proofPath: 'm1/p2/shot.jpg', proofMime: null),
+      ]);
+      final proofs = await repo.fetchProofs('m1');
+      expect(proofs[0].isVideo, isTrue);
+      expect(proofs[1].isVideo, isFalse);
+    });
+
+    test('ignore les lignes sans proof_path exploitable', () async {
+      stubFrom(client, 'match_events', [
+        eventRow(),
+        eventRow(proofPath: null),
+        eventRow(proofPath: ''),
+      ]);
+      final proofs = await repo.fetchProofs('m1');
+      expect(proofs, hasLength(1));
+      expect(proofs.single.playerId, 'p1');
+      expect(proofs.single.createdAt, isNotNull);
+    });
+  });
+
   group('resolve', () {
     test('update status/resolution + resolved_at/by, cible le litige',
         () async {

@@ -9,10 +9,13 @@ import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:arena/features_shared/widgets/arena_image_viewer.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// PHASE 11 · A14 — dispute resolution screen.
 ///
@@ -66,6 +69,10 @@ class _AdminDisputesPageState extends ConsumerState<AdminDisputesPage> {
                       )
                     : _DisputeHeader(dispute: d),
               ),
+              const SizedBox(height: ArenaSpacing.lg),
+              Text('PREUVES', style: ArenaText.inputLabel),
+              const SizedBox(height: ArenaSpacing.sm),
+              _ProofsSection(matchId: widget.matchId),
               const SizedBox(height: ArenaSpacing.lg),
               Text('SCORES SAISIS', style: ArenaText.inputLabel),
               const SizedBox(height: ArenaSpacing.sm),
@@ -268,6 +275,121 @@ class _Row extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Section « Preuves » : miniatures des captures (tap → visionneuse plein
+/// écran) et tuiles vidéo (bouton → lecteur externe via url_launcher).
+class _ProofsSection extends ConsumerWidget {
+  const _ProofsSection({required this.matchId});
+
+  final String matchId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final proofs = ref.watch(adminDisputeProofsProvider(matchId));
+    return proofs.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.all(ArenaSpacing.md),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, _) => Text(
+        'Erreur de chargement des preuves : ${arenaErrorMessage(e)}',
+        style: ArenaText.bodyMuted,
+      ),
+      data: (list) {
+        if (list.isEmpty) {
+          return Text('Aucune preuve soumise', style: ArenaText.bodyMuted);
+        }
+        return Wrap(
+          spacing: ArenaSpacing.sm,
+          runSpacing: ArenaSpacing.sm,
+          children: [
+            for (final p in list) _ProofTile(proof: p),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ProofTile extends StatelessWidget {
+  const _ProofTile({required this.proof});
+
+  final SignedDisputeProof proof;
+
+  static const double _size = 96;
+
+  @override
+  Widget build(BuildContext context) {
+    if (proof.isVideo) {
+      return InkWell(
+        onTap: () => _openVideo(context),
+        borderRadius: BorderRadius.circular(ArenaRadius.md),
+        child: Container(
+          width: _size,
+          height: _size,
+          decoration: BoxDecoration(
+            color: ArenaColors.carbon,
+            borderRadius: BorderRadius.circular(ArenaRadius.md),
+            border: Border.all(color: ArenaColors.border),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.play_circle_outline,
+                color: ArenaColors.neonRed,
+                size: 32,
+              ),
+              const SizedBox(height: ArenaSpacing.xs),
+              Text('Vidéo', style: ArenaText.bodyMuted),
+            ],
+          ),
+        ),
+      );
+    }
+    return InkWell(
+      onTap: () => ArenaImageViewer.show(context, imageUrl: proof.url),
+      borderRadius: BorderRadius.circular(ArenaRadius.md),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(ArenaRadius.md),
+        child: CachedNetworkImage(
+          imageUrl: proof.url,
+          width: _size,
+          height: _size,
+          fit: BoxFit.cover,
+          placeholder: (_, __) => Container(
+            width: _size,
+            height: _size,
+            color: ArenaColors.carbon,
+            child: const Center(child: CircularProgressIndicator()),
+          ),
+          errorWidget: (_, __, ___) => Container(
+            width: _size,
+            height: _size,
+            color: ArenaColors.carbon,
+            child: const Icon(
+              Icons.broken_image_outlined,
+              color: ArenaColors.silverDim,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openVideo(BuildContext context) async {
+    final uri = Uri.tryParse(proof.url);
+    var ok = false;
+    if (uri != null) {
+      ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Impossible d’ouvrir la vidéo.')),
+      );
+    }
   }
 }
 
