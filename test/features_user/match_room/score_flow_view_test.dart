@@ -67,6 +67,15 @@ ArenaMatch _groupMatch() => const ArenaMatch(
       groupId: 'g1',
     );
 
+// Match à élimination directe (groupId == null) → section pénalités (tirs au
+// but) disponible en cas d'égalité.
+ArenaMatch _koMatch() => const ArenaMatch(
+      id: 'm2',
+      competitionId: 'c1',
+      player1Id: 'p1',
+      player2Id: 'p2',
+    );
+
 Widget _scoped({
   required ArenaMatch match,
   required _FakeMatchRepo repo,
@@ -142,5 +151,51 @@ void main() {
     expect(repo.submitCalls, 0);
     // Le formulaire reste affiché (pas de transition vers l'écran d'attente).
     expect(submitButton, findsOneWidget);
+  });
+
+  testWidgets('KO : pénalités activées mais scores non égaux → rejet',
+      (tester) async {
+    await bumpViewport(tester);
+    final repo = _FakeMatchRepo();
+    await tester.pumpWidget(_scoped(match: _koMatch(), repo: repo));
+    await tester.pumpAndSettle();
+
+    // Scores non égaux (2-1) puis activation des pénalités.
+    await tester.enterText(find.byType(TextField).at(0), '2');
+    await tester.enterText(find.byType(TextField).at(1), '1');
+    await tester.tap(find.byType(SwitchListTile));
+    await tester.pumpAndSettle();
+
+    await tester.tap(submitButton);
+    await tester.pumpAndSettle();
+
+    // Pénalités ⇒ il faut une égalité avant les tirs au but → rejeté.
+    expect(repo.submitCalls, 0);
+    expect(submitButton, findsOneWidget);
+  });
+
+  testWidgets('KO : égalité + pénalités valides → submit avec decidedByPenalties',
+      (tester) async {
+    await bumpViewport(tester);
+    final repo = _FakeMatchRepo();
+    await tester.pumpWidget(_scoped(match: _koMatch(), repo: repo));
+    await tester.pumpAndSettle();
+
+    // Égalité 2-2 puis activation des pénalités.
+    await tester.enterText(find.byType(TextField).at(0), '2');
+    await tester.enterText(find.byType(TextField).at(1), '2');
+    await tester.tap(find.byType(SwitchListTile));
+    await tester.pumpAndSettle();
+
+    // Champs de pénalités (5-3).
+    await tester.enterText(find.byType(TextField).at(2), '5');
+    await tester.enterText(find.byType(TextField).at(3), '3');
+    await tester.tap(submitButton);
+    await tester.pumpAndSettle();
+
+    expect(repo.submitCalls, 1);
+    expect(repo.lastViaPenalties, true);
+    expect(repo.lastP1, 2);
+    expect(repo.lastP2, 2);
   });
 }
