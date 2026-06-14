@@ -232,31 +232,98 @@ class _AdminMatchActions extends ConsumerWidget {
 
   final ArenaMatch match;
 
+  /// Le HOME player détient la session de broadcast. Fallback player1 si le
+  /// champ dédié n'est pas renseigné (matchs anciens / cascade bracket).
+  String? get _homePlayerId => match.homePlayerId ?? match.player1Id;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Row(
+    final homeId = _homePlayerId;
+    final isStreamed = match.isStreamed;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(
-          child: ArenaButton(
-            label: '✅ VALIDER SCORE',
-            fullWidth: true,
-            onPressed: () => _openVerdictDialog(context, ref),
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: ArenaButton(
+                label: '✅ VALIDER SCORE',
+                fullWidth: true,
+                onPressed: () => _openVerdictDialog(context, ref),
+              ),
+            ),
+            const SizedBox(width: ArenaSpacing.sm),
+            Expanded(
+              child: ArenaButton(
+                label: '🚫 ANNULER',
+                fullWidth: true,
+                variant: ArenaButtonVariant.danger,
+                onPressed: () async {
+                  await _cancel(context, ref);
+                  if (context.mounted) Navigator.of(context).pop();
+                },
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: ArenaSpacing.sm),
-        Expanded(
-          child: ArenaButton(
-            label: '🚫 ANNULER',
+        // Toggle diffusion live : seulement si un joueur HOME est connu
+        // (sinon aucune session streams à publier).
+        if (homeId != null) ...[
+          const SizedBox(height: ArenaSpacing.sm),
+          ArenaButton(
+            label: isStreamed
+                ? '⏹ COUPER LA DIFFUSION'
+                : '📡 ACTIVER LA DIFFUSION LIVE',
             fullWidth: true,
-            variant: ArenaButtonVariant.danger,
+            variant: isStreamed
+                ? ArenaButtonVariant.danger
+                : ArenaButtonVariant.secondary,
             onPressed: () async {
-              await _cancel(context, ref);
+              await _toggleStreaming(context, ref, homeId, enable: !isStreamed);
               if (context.mounted) Navigator.of(context).pop();
             },
           ),
-        ),
+        ],
       ],
     );
+  }
+
+  Future<void> _toggleStreaming(
+    BuildContext context,
+    WidgetRef ref,
+    String homePlayerId, {
+    required bool enable,
+  }) async {
+    final adminId = ref.read(currentSessionProvider)?.user.id;
+    if (adminId == null) return;
+    try {
+      await ref.read(adminMatchesRepositoryProvider).setManualStreaming(
+            matchId: match.id,
+            homePlayerId: homePlayerId,
+            enabled: enable,
+            adminId: adminId,
+          );
+      await ref.read(adminAuditLogRepositoryProvider).record(
+        adminId: adminId,
+        action: enable ? 'stream_enabled' : 'stream_disabled',
+        targetType: 'match',
+        targetId: match.id,
+        afterState: {'home_player_id': homePlayerId, 'from': 'bracket_sheet'},
+      );
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            enable ? 'Diffusion live activée.' : 'Diffusion coupée.',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Échec : ${arenaErrorMessage(e)}')),
+      );
+    }
   }
 
   Future<void> _openVerdictDialog(BuildContext context, WidgetRef ref) async {

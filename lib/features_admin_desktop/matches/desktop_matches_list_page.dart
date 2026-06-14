@@ -2,8 +2,10 @@ import 'package:arena/core/theme/arena_fluent_theme.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/models/match_status.dart';
+import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_matches_repository.dart';
 import 'package:arena/features_admin_desktop/competitions/desktop_competition_visuals.dart';
+import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -179,19 +181,23 @@ class _HeaderRow extends StatelessWidget {
           Expanded(child: Text('SCORE', style: style())),
           Expanded(flex: 2, child: Text('STATUT', style: style())),
           Expanded(flex: 2, child: Text('HORODATAGE', style: style())),
+          Expanded(flex: 2, child: Text('DIFFUSION', style: style())),
         ],
       ),
     );
   }
 }
 
-class _MatchRow extends StatelessWidget {
+class _MatchRow extends ConsumerWidget {
   const _MatchRow({required this.match});
 
   final ArenaMatch match;
 
+  /// Le HOME player détient la session de broadcast (fallback player1).
+  String? get _homePlayerId => match.homePlayerId ?? match.player1Id;
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final visual = matchStatusVisual(match.status);
     final bodyStyle = GoogleFonts.spaceGrotesk(
       color: ArenaColors.bone,
@@ -251,9 +257,88 @@ class _MatchRow extends StatelessWidget {
             flex: 2,
             child: Text(_timeText(match), style: mutedStyle),
           ),
+          Expanded(
+            flex: 2,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: _streamToggle(context, ref),
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  /// Bouton de bascule de la diffusion live. Masqué si aucun joueur HOME
+  /// n'est connu ou si le match est clôturé/annulé (rien à diffuser).
+  Widget _streamToggle(BuildContext context, WidgetRef ref) {
+    final homeId = _homePlayerId;
+    final closed = match.status == MatchStatus.completed ||
+        match.status == MatchStatus.cancelled;
+    if (homeId == null || closed) return const SizedBox.shrink();
+
+    final on = match.isStreamed;
+    return Button(
+      style: ButtonStyle(
+        backgroundColor: WidgetStateProperty.all(
+          on ? ArenaColors.neonRed : ArenaColors.carbon,
+        ),
+      ),
+      onPressed: () => _toggle(context, ref, homeId, enable: !on),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(on ? FluentIcons.stop : FluentIcons.streaming, size: 12),
+          const SizedBox(width: 6),
+          Text(on ? 'Couper' : 'Diffuser'),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _toggle(
+    BuildContext context,
+    WidgetRef ref,
+    String homePlayerId, {
+    required bool enable,
+  }) async {
+    final adminId = ref.read(currentSessionProvider)?.user.id;
+    if (adminId == null) return;
+    try {
+      await ref.read(adminMatchesRepositoryProvider).setManualStreaming(
+            matchId: match.id,
+            homePlayerId: homePlayerId,
+            enabled: enable,
+            adminId: adminId,
+          );
+      await ref.read(adminAuditLogRepositoryProvider).record(
+        adminId: adminId,
+        action: enable ? 'stream_enabled' : 'stream_disabled',
+        targetType: 'match',
+        targetId: match.id,
+        afterState: {'home_player_id': homePlayerId, 'from': 'desktop_matches'},
+      );
+      if (!context.mounted) return;
+      await displayInfoBar(
+        context,
+        builder: (context, close) => InfoBar(
+          title: Text(enable ? 'Diffusion activée' : 'Diffusion coupée'),
+          severity: InfoBarSeverity.success,
+          onClose: close,
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      await displayInfoBar(
+        context,
+        builder: (context, close) => InfoBar(
+          title: const Text('Échec de la bascule'),
+          content: Text('$e'),
+          severity: InfoBarSeverity.error,
+          onClose: close,
+        ),
+      );
+    }
   }
 
   static String _short(String? id) {

@@ -17,6 +17,7 @@ class AdminMatchesRepository {
   const AdminMatchesRepository(this._client);
 
   static const _table = 'matches';
+  static const _streamsTable = 'streams';
 
   final SupabaseClient _client;
 
@@ -96,6 +97,78 @@ class AdminMatchesRepository {
         'streaming_activated_at': null,
       },
     }).eq('id', matchId);
+  }
+
+  /// Orchestre l'activation/désactivation MANUELLE de la diffusion live
+  /// d'un match depuis l'UI admin.
+  ///
+  /// [setStreamingEnabled] ne flippe que le flag `matches.is_streamed` ;
+  /// or pour qu'un broadcast Agora soit visible côté grand public il faut
+  /// AUSSI une row `streams` du joueur HOME avec `is_public = true` ET
+  /// `is_active = true`. En activation manuelle (avant même que le joueur
+  /// ait lancé sa session), cette row peut ne pas exister — on l'upsert.
+  ///
+  /// ACTIVER :
+  ///   1. `is_streamed = true` (+ métadonnées manual_admin).
+  ///   2. Si une row `streams` ACTIVE existe déjà pour (match, home) →
+  ///      `is_public = true` ; sinon INSERT une nouvelle row publique
+  ///      active. (Le check par match_id + player_id + is_active évite
+  ///      les doublons avec la row créée par `auto_publish_late_stream`.)
+  ///
+  /// DÉSACTIVER :
+  ///   1. `is_streamed = false` (+ métadonnées remises à null).
+  ///   2. Toutes les row(s) `streams` publiques du match → `is_public =
+  ///      false` (sans toucher `is_active` : on masque le live sans
+  ///      clôturer l'enregistrement sous-jacent).
+  ///
+  /// La row `streams` est manipulée directement ici (et non via
+  /// `MatchStreamRepository`) car l'orchestration appartient au flux
+  /// admin du match. L'audit (`stream_enabled` / `stream_disabled`) est
+  /// écrit par l'appelant UI, qui détient l'adminId de session.
+  Future<void> setManualStreaming({
+    required String matchId,
+    required String homePlayerId,
+    required bool enabled,
+    required String adminId,
+  }) async {
+    await setStreamingEnabled(
+      matchId: matchId,
+      enabled: enabled,
+      adminId: adminId,
+    );
+
+    if (enabled) {
+      // Cherche une row active existante pour ce match + ce home player.
+      final existing = await _client
+          .from(_streamsTable)
+          .select('id')
+          .eq('match_id', matchId)
+          .eq('player_id', homePlayerId)
+          .eq('is_active', true)
+          .limit(1)
+          .maybeSingle();
+
+      if (existing != null) {
+        await _client
+            .from(_streamsTable)
+            .update({'is_public': true})
+            .eq('id', existing['id'] as String);
+      } else {
+        await _client.from(_streamsTable).insert({
+          'match_id': matchId,
+          'player_id': homePlayerId,
+          'is_public': true,
+          'is_active': true,
+        });
+      }
+    } else {
+      // Masque tous les flux publics du match (broadcaster + éventuels).
+      await _client
+          .from(_streamsTable)
+          .update({'is_public': false})
+          .eq('match_id', matchId)
+          .eq('is_public', true);
+    }
   }
 
   /// Reschedules a match — admin-only path used from the bracket
