@@ -58,27 +58,31 @@ class AdminDisputesRepository {
 
   /// Proof files (screenshots / clips) the players submitted for [matchId].
   ///
-  /// Players attach proofs to their `score_submitted` events
-  /// (`match_events.proof_path` / `proof_mime`, cf. `ScoreProofUploader`).
-  /// We keep only rows that actually carry a `proof_path`, newest first.
-  /// The bucket is private — callers sign each `DisputeProof.path` via
-  /// [signedProofUrl] right before display.
+  /// Les preuves sont attachées au **`payload` JSONB** des events
+  /// `score_submitted` (`match_events.payload->>'proof_path'` /
+  /// `->>'proof_mime'`, cf. `MatchRepository.submitScore` /
+  /// `ScoreProofUploader`) — `match_events` n'a PAS de colonnes dédiées.
+  /// On lit le payload de chaque event du match et on ne garde que ceux
+  /// qui portent un `proof_path`, plus récents en tête. Le bucket est privé
+  /// — l'appelant signe chaque `DisputeProof.path` via [signedProofUrl]
+  /// juste avant l'affichage.
   Future<List<DisputeProof>> fetchProofs(String matchId) async {
     final rows = await _client
         .from(_eventsTable)
-        .select('proof_path, proof_mime, created_by, created_at')
+        .select('payload, created_by, created_at')
         .eq('match_id', matchId)
-        .not('proof_path', 'is', null)
         .order('created_at', ascending: false);
     final out = <DisputeProof>[];
     for (final row in rows as List<dynamic>) {
       final map = row as Map<String, dynamic>;
-      final path = map['proof_path'] as String?;
+      final payload = map['payload'];
+      if (payload is! Map<String, dynamic>) continue;
+      final path = payload['proof_path'] as String?;
       if (path == null || path.isEmpty) continue;
       out.add(
         DisputeProof(
           path: path,
-          mime: map['proof_mime'] as String?,
+          mime: payload['proof_mime'] as String?,
           playerId: map['created_by'] as String?,
           createdAt: map['created_at'] == null
               ? null

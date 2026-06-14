@@ -58,28 +58,35 @@ void main() {
   });
 
   group('fetchProofs', () {
+    // Les preuves vivent dans match_events.payload (jsonb), pas dans des
+    // colonnes dédiées. Un event sans proof_path dans le payload n'est PAS
+    // une preuve (ex: score_submitted sans capture).
     Map<String, dynamic> eventRow({
       String? proofPath = 'm1/p1/1.png',
       String? proofMime = 'image/png',
       String createdBy = 'p1',
     }) =>
         {
-          'proof_path': proofPath,
-          'proof_mime': proofMime,
+          'payload': <String, dynamic>{
+            'score1': 2,
+            'score2': 1,
+            if (proofPath != null) 'proof_path': proofPath,
+            if (proofMime != null) 'proof_mime': proofMime,
+          },
           'created_by': createdBy,
           'created_at': '2026-06-14T10:00:00Z',
         };
 
-    test('interroge match_events, filtre proof_path non null pour le match',
+    test('interroge match_events.payload pour le match, plus récents en tête',
         () async {
       final from = stubFrom(client, 'match_events', [eventRow()]);
       final proofs = await repo.fetchProofs('m1');
       expect(proofs, hasLength(1));
-      expect(from.selectedColumns, contains('proof_path'));
+      expect(proofs.single.path, 'm1/p1/1.png');
+      // On lit le payload jsonb (pas de colonne proof_path).
+      expect(from.selectedColumns, contains('payload'));
       expect(from.hasFilter('eq', 'match_id'), isTrue);
       expect(from.filters.any((f) => f == 'eq:match_id=m1'), isTrue);
-      // .not('proof_path', 'is', null) → filtre 'not'
-      expect(from.filters.any((f) => f.startsWith('not:proof_path=')), isTrue);
       expect(from.hasFilter('order', 'created_at'), isTrue);
     });
 
@@ -105,7 +112,7 @@ void main() {
       expect(proofs[1].isVideo, isFalse);
     });
 
-    test('ignore les lignes sans proof_path exploitable', () async {
+    test('ignore les events sans proof_path dans le payload', () async {
       stubFrom(client, 'match_events', [
         eventRow(),
         eventRow(proofPath: null),
