@@ -92,7 +92,20 @@ create policy "match_recordings_admin_read"
     )
   );
 
-comment on policy "match_recordings_owner_insert" on storage.objects is
-  'PHASE 8.1 — Players may upload to their own match folder. Path: {match_id}/{owner_uid}/{file}.';
-comment on policy "match_recordings_admin_read" on storage.objects is
-  'PHASE 8.1 — Admins read every recording during dispute review.';
+-- `COMMENT ON POLICY ... ON storage.objects` requires ownership of the
+-- `storage.objects` relation. The hosted project applies migrations as the
+-- owner, but the local stack / CI (`supabase start`) runs as a less-privileged
+-- role and raises `must be owner of relation objects` (SQLSTATE 42501), which
+-- aborts the whole migration apply. The comments are purely documentary, so we
+-- wrap them in a guarded block: applied where we own the table, gracefully
+-- skipped (with a notice) where we don't.
+do $$
+begin
+  comment on policy "match_recordings_owner_insert" on storage.objects is
+    'PHASE 8.1 — Players may upload to their own match folder. Path: {match_id}/{owner_uid}/{file}.';
+  comment on policy "match_recordings_admin_read" on storage.objects is
+    'PHASE 8.1 — Admins read every recording during dispute review.';
+exception
+  when insufficient_privilege then
+    raise notice 'Skipping COMMENT on storage.objects policies (not owner of storage.objects) — local/CI stack.';
+end$$;
