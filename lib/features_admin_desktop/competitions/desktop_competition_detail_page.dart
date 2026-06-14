@@ -9,6 +9,7 @@ import 'package:arena/data/repositories/admin/admin_competitions_repository.dart
 import 'package:arena/data/repositories/competition_repository.dart';
 import 'package:arena/features_admin_desktop/competitions/desktop_competition_visuals.dart';
 import 'package:arena/features_admin_desktop/matches/desktop_matches_list_page.dart';
+import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -260,6 +261,10 @@ class _InfosTab extends StatelessWidget {
                 value: c.spotsLeft == 0
                     ? 'Quota atteint'
                     : '${c.spotsLeft} place(s)',
+              ),
+              _InfoRow(
+                label: 'À la une',
+                value: c.isPinned ? '📌 Épinglée' : 'Non épinglée',
               ),
             ],
           ),
@@ -698,6 +703,13 @@ class _ActionsTab extends ConsumerWidget {
           ),
         ),
         _ActionButton(
+          icon: FluentIcons.pinned,
+          label: c.isPinned
+              ? 'Désépingler (retirer de la une)'
+              : 'Épingler à la une',
+          onPressed: () => _togglePinned(context, ref),
+        ),
+        _ActionButton(
           icon: FluentIcons.org,
           label: 'Gérer le bracket',
           onPressed: () =>
@@ -754,6 +766,39 @@ class _ActionsTab extends ConsumerWidget {
       await ref.read(adminCompetitionsRepositoryProvider).update(
         competition.id,
         {'status': status.value},
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      await _showError(context, e);
+    }
+  }
+
+  Future<void> _togglePinned(BuildContext context, WidgetRef ref) async {
+    final adminId = ref.read(currentSessionProvider)?.user.id;
+    if (adminId == null) {
+      await _showError(context, 'Session admin introuvable.');
+      return;
+    }
+    final willPin = !competition.isPinned;
+    try {
+      await ref.read(adminCompetitionsRepositoryProvider).setPinned(
+            competitionId: competition.id,
+            pinned: willPin,
+            adminId: adminId,
+          );
+      if (!context.mounted) return;
+      await displayInfoBar(
+        context,
+        builder: (ctx, close) => InfoBar(
+          title: Text(willPin ? 'Épinglée' : 'Désépinglée'),
+          content: Text(
+            willPin
+                ? '« ${competition.name} » est désormais à la une.'
+                : '« ${competition.name} » a été retirée de la une.',
+          ),
+          severity: InfoBarSeverity.success,
+          onClose: close,
+        ),
       );
     } catch (e) {
       if (!context.mounted) return;

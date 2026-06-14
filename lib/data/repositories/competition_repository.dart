@@ -74,10 +74,11 @@ class CompetitionRepository {
     final filtered = game == null ? query : query.eq('game', game.value);
     final rows =
         await filtered.order('start_date', ascending: true).limit(limit);
-    return [
+    final list = [
       for (final row in rows as List<dynamic>)
         Competition.fromJson(row as Map<String, dynamic>),
     ];
+    return _sortPinnedFirst(list);
   }
 
   Future<Competition?> getById(String id) async {
@@ -98,9 +99,40 @@ class CompetitionRepository {
         .order('start_date')
         .map((rows) {
           final list = [for (final row in rows) Competition.fromJson(row)];
-          if (game == null) return list;
-          return list.where((c) => c.game == game).toList(growable: false);
+          final filtered = game == null
+              ? list
+              : list.where((c) => c.game == game).toList();
+          return _sortPinnedFirst(filtered);
         });
+  }
+
+  /// Tri « épinglées d'abord », **stable** : les compétitions `isPinned`
+  /// remontent en tête, ordonnées entre elles par `pinnedAt` décroissant
+  /// (la plus récemment épinglée en premier, `null` traité comme le plus
+  /// ancien). Les non-épinglées conservent l'ordre d'entrée (déjà trié par
+  /// `start_date` croissant côté requête/stream). On s'appuie sur
+  /// `List.sort` qui n'est pas garanti stable → on ré-implémente un tri
+  /// stable explicite via un index d'origine comme dernier critère.
+  static List<Competition> _sortPinnedFirst(List<Competition> input) {
+    final indexed = [
+      for (var i = 0; i < input.length; i++) (i, input[i]),
+    ]..sort((a, b) {
+        final ca = a.$2;
+        final cb = b.$2;
+        if (ca.isPinned != cb.isPinned) return ca.isPinned ? -1 : 1;
+        if (ca.isPinned && cb.isPinned) {
+          final pa = ca.pinnedAt;
+          final pb = cb.pinnedAt;
+          if (pa != null && pb != null && pa != pb) {
+            return pb.compareTo(pa); // plus récent d'abord
+          }
+          if (pa == null && pb != null) return 1;
+          if (pa != null && pb == null) return -1;
+        }
+        // Égalité de critère → on préserve l'ordre d'origine (stabilité).
+        return a.$1.compareTo(b.$1);
+      });
+    return [for (final e in indexed) e.$2];
   }
 
   /// Realtime stream of a single competition. Emits `null` if the row

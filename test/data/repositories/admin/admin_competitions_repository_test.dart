@@ -1,4 +1,5 @@
 import 'package:arena/data/models/user_role.dart';
+import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_competitions_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -11,7 +12,10 @@ void main() {
 
   setUp(() {
     client = MockSupabaseClient();
-    repo = AdminCompetitionsRepository(client);
+    repo = AdminCompetitionsRepository(
+      client,
+      AdminAuditLogRepository(client),
+    );
   });
 
   QueryProbe stub(String table, Object? result) =>
@@ -251,6 +255,55 @@ void main() {
         ),
         isTrue,
       );
+    });
+  });
+
+  group('setPinned', () {
+    test('épingle → update is_pinned/pinned_at + audit competition_pinned',
+        () async {
+      final comp = stub('competitions', null);
+      final audit = stub('admin_audit_log', null);
+
+      await repo.setPinned(
+        competitionId: 'c1',
+        pinned: true,
+        adminId: 'admin-1',
+      );
+
+      // UPDATE sur competitions : is_pinned = true + pinned_at horodaté.
+      final updated = comp.updatedValues!;
+      expect(updated['is_pinned'], isTrue);
+      expect(updated['pinned_at'], isA<String>());
+      expect(updated['pinned_at'], isNotNull);
+      expect(comp.filters.any((f) => f == 'eq:id=c1'), isTrue);
+
+      // Audit log : insert competition_pinned ciblant la compétition.
+      final logged = audit.insertedValues! as Map<String, dynamic>;
+      expect(logged['admin_id'], 'admin-1');
+      expect(logged['action'], 'competition_pinned');
+      expect(logged['target_type'], 'competition');
+      expect(logged['target_id'], 'c1');
+      expect(logged['after_state'], {'is_pinned': true});
+    });
+
+    test('désépingle → pinned_at null + audit competition_unpinned',
+        () async {
+      final comp = stub('competitions', null);
+      final audit = stub('admin_audit_log', null);
+
+      await repo.setPinned(
+        competitionId: 'c1',
+        pinned: false,
+        adminId: 'admin-1',
+      );
+
+      final updated = comp.updatedValues!;
+      expect(updated['is_pinned'], isFalse);
+      expect(updated['pinned_at'], isNull);
+
+      final logged = audit.insertedValues! as Map<String, dynamic>;
+      expect(logged['action'], 'competition_unpinned');
+      expect(logged['after_state'], {'is_pinned': false});
     });
   });
 

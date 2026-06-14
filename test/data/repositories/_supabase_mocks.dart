@@ -262,6 +262,11 @@ class FakeStreamFilterBuilder extends Fake
       ..eqValue = value;
     return FakeStreamBuilder(_events);
   }
+
+  @override
+  SupabaseStreamBuilder order(String column, {bool ascending = false}) {
+    return FakeStreamBuilder(_events);
+  }
 }
 
 /// [SupabaseStreamBuilder] étant un `Stream<SupabaseStreamEvent>`, on délègue

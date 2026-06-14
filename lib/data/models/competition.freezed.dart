@@ -112,6 +112,14 @@ mixin _$Competition {
   String? get lastBracketError => throw _privateConstructorUsedError;
   DateTime? get lastBracketErrorAt => throw _privateConstructorUsedError;
 
+  /// Feature « épinglage admin » — quand `true`, la compétition est
+  /// remontée en tête des listes côté user (avec un badge « À LA UNE »).
+  /// `pinnedAt` horodate la dernière mise en avant et sert au tri entre
+  /// épinglées (la plus récemment épinglée en premier). Mappés sur
+  /// `is_pinned` / `pinned_at` via `fieldRename: snake`.
+  bool get isPinned => throw _privateConstructorUsedError;
+  DateTime? get pinnedAt => throw _privateConstructorUsedError;
+
   /// Serializes this Competition to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
 
@@ -165,7 +173,9 @@ abstract class $CompetitionCopyWith<$Res> {
       String? androidStoreUrl,
       String? iosStoreUrl,
       String? lastBracketError,
-      DateTime? lastBracketErrorAt});
+      DateTime? lastBracketErrorAt,
+      bool isPinned,
+      DateTime? pinnedAt});
 }
 
 /// @nodoc
@@ -220,6 +230,8 @@ class _$CompetitionCopyWithImpl<$Res, $Val extends Competition>
     Object? iosStoreUrl = freezed,
     Object? lastBracketError = freezed,
     Object? lastBracketErrorAt = freezed,
+    Object? isPinned = null,
+    Object? pinnedAt = freezed,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -370,6 +382,14 @@ class _$CompetitionCopyWithImpl<$Res, $Val extends Competition>
           ? _value.lastBracketErrorAt
           : lastBracketErrorAt // ignore: cast_nullable_to_non_nullable
               as DateTime?,
+      isPinned: null == isPinned
+          ? _value.isPinned
+          : isPinned // ignore: cast_nullable_to_non_nullable
+              as bool,
+      pinnedAt: freezed == pinnedAt
+          ? _value.pinnedAt
+          : pinnedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
     ) as $Val);
   }
 }
@@ -419,7 +439,9 @@ abstract class _$$CompetitionImplCopyWith<$Res>
       String? androidStoreUrl,
       String? iosStoreUrl,
       String? lastBracketError,
-      DateTime? lastBracketErrorAt});
+      DateTime? lastBracketErrorAt,
+      bool isPinned,
+      DateTime? pinnedAt});
 }
 
 /// @nodoc
@@ -472,6 +494,8 @@ class __$$CompetitionImplCopyWithImpl<$Res>
     Object? iosStoreUrl = freezed,
     Object? lastBracketError = freezed,
     Object? lastBracketErrorAt = freezed,
+    Object? isPinned = null,
+    Object? pinnedAt = freezed,
   }) {
     return _then(_$CompetitionImpl(
       id: null == id
@@ -622,6 +646,14 @@ class __$$CompetitionImplCopyWithImpl<$Res>
           ? _value.lastBracketErrorAt
           : lastBracketErrorAt // ignore: cast_nullable_to_non_nullable
               as DateTime?,
+      isPinned: null == isPinned
+          ? _value.isPinned
+          : isPinned // ignore: cast_nullable_to_non_nullable
+              as bool,
+      pinnedAt: freezed == pinnedAt
+          ? _value.pinnedAt
+          : pinnedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
     ));
   }
 }
@@ -666,7 +698,9 @@ class _$CompetitionImpl extends _Competition {
       this.androidStoreUrl,
       this.iosStoreUrl,
       this.lastBracketError,
-      this.lastBracketErrorAt})
+      this.lastBracketErrorAt,
+      this.isPinned = false,
+      this.pinnedAt})
       : _prizeDistribution = prizeDistribution,
         _roundIntervals = roundIntervals,
         _formatConfig = formatConfig,
@@ -850,9 +884,20 @@ class _$CompetitionImpl extends _Competition {
   @override
   final DateTime? lastBracketErrorAt;
 
+  /// Feature « épinglage admin » — quand `true`, la compétition est
+  /// remontée en tête des listes côté user (avec un badge « À LA UNE »).
+  /// `pinnedAt` horodate la dernière mise en avant et sert au tri entre
+  /// épinglées (la plus récemment épinglée en premier). Mappés sur
+  /// `is_pinned` / `pinned_at` via `fieldRename: snake`.
+  @override
+  @JsonKey()
+  final bool isPinned;
+  @override
+  final DateTime? pinnedAt;
+
   @override
   String toString() {
-    return 'Competition(id: $id, name: $name, game: $game, format: $format, startDate: $startDate, status: $status, maxPlayers: $maxPlayers, currentPlayers: $currentPlayers, registrationFee: $registrationFee, registrationCurrency: $registrationCurrency, commissionPct: $commissionPct, prizePoolLocal: $prizePoolLocal, commissionXaf: $commissionXaf, sponsorBonusLocal: $sponsorBonusLocal, description: $description, bannerUrl: $bannerUrl, registrationOpensAt: $registrationOpensAt, registrationClosesAt: $registrationClosesAt, endDate: $endDate, prizePoolCurrency: $prizePoolCurrency, createdBy: $createdBy, createdAt: $createdAt, updatedAt: $updatedAt, orangeMoneyCode: $orangeMoneyCode, mtnMomoCode: $mtnMomoCode, prizeDistribution: $prizeDistribution, matchIntervalMinutes: $matchIntervalMinutes, autoGenerateBracket: $autoGenerateBracket, thirdPlaceMatch: $thirdPlaceMatch, referralQuota: $referralQuota, referralActivityMode: $referralActivityMode, roundIntervals: $roundIntervals, formatConfig: $formatConfig, androidStoreUrl: $androidStoreUrl, iosStoreUrl: $iosStoreUrl, lastBracketError: $lastBracketError, lastBracketErrorAt: $lastBracketErrorAt)';
+    return 'Competition(id: $id, name: $name, game: $game, format: $format, startDate: $startDate, status: $status, maxPlayers: $maxPlayers, currentPlayers: $currentPlayers, registrationFee: $registrationFee, registrationCurrency: $registrationCurrency, commissionPct: $commissionPct, prizePoolLocal: $prizePoolLocal, commissionXaf: $commissionXaf, sponsorBonusLocal: $sponsorBonusLocal, description: $description, bannerUrl: $bannerUrl, registrationOpensAt: $registrationOpensAt, registrationClosesAt: $registrationClosesAt, endDate: $endDate, prizePoolCurrency: $prizePoolCurrency, createdBy: $createdBy, createdAt: $createdAt, updatedAt: $updatedAt, orangeMoneyCode: $orangeMoneyCode, mtnMomoCode: $mtnMomoCode, prizeDistribution: $prizeDistribution, matchIntervalMinutes: $matchIntervalMinutes, autoGenerateBracket: $autoGenerateBracket, thirdPlaceMatch: $thirdPlaceMatch, referralQuota: $referralQuota, referralActivityMode: $referralActivityMode, roundIntervals: $roundIntervals, formatConfig: $formatConfig, androidStoreUrl: $androidStoreUrl, iosStoreUrl: $iosStoreUrl, lastBracketError: $lastBracketError, lastBracketErrorAt: $lastBracketErrorAt, isPinned: $isPinned, pinnedAt: $pinnedAt)';
   }
 
   @override
@@ -927,7 +972,11 @@ class _$CompetitionImpl extends _Competition {
             (identical(other.lastBracketError, lastBracketError) ||
                 other.lastBracketError == lastBracketError) &&
             (identical(other.lastBracketErrorAt, lastBracketErrorAt) ||
-                other.lastBracketErrorAt == lastBracketErrorAt));
+                other.lastBracketErrorAt == lastBracketErrorAt) &&
+            (identical(other.isPinned, isPinned) ||
+                other.isPinned == isPinned) &&
+            (identical(other.pinnedAt, pinnedAt) ||
+                other.pinnedAt == pinnedAt));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -970,7 +1019,9 @@ class _$CompetitionImpl extends _Competition {
         androidStoreUrl,
         iosStoreUrl,
         lastBracketError,
-        lastBracketErrorAt
+        lastBracketErrorAt,
+        isPinned,
+        pinnedAt
       ]);
 
   /// Create a copy of Competition
@@ -1027,7 +1078,9 @@ abstract class _Competition extends Competition {
       final String? androidStoreUrl,
       final String? iosStoreUrl,
       final String? lastBracketError,
-      final DateTime? lastBracketErrorAt}) = _$CompetitionImpl;
+      final DateTime? lastBracketErrorAt,
+      final bool isPinned,
+      final DateTime? pinnedAt}) = _$CompetitionImpl;
   const _Competition._() : super._();
 
   factory _Competition.fromJson(Map<String, dynamic> json) =
@@ -1161,6 +1214,16 @@ abstract class _Competition extends Competition {
   String? get lastBracketError;
   @override
   DateTime? get lastBracketErrorAt;
+
+  /// Feature « épinglage admin » — quand `true`, la compétition est
+  /// remontée en tête des listes côté user (avec un badge « À LA UNE »).
+  /// `pinnedAt` horodate la dernière mise en avant et sert au tri entre
+  /// épinglées (la plus récemment épinglée en premier). Mappés sur
+  /// `is_pinned` / `pinned_at` via `fieldRename: snake`.
+  @override
+  bool get isPinned;
+  @override
+  DateTime? get pinnedAt;
 
   /// Create a copy of Competition
   /// with the given fields replaced by the non-null parameter values.
