@@ -326,26 +326,15 @@ jobs:
     # le trou P0 de l'audit 2026-06-13 : la sécurité d'accès aux données ne
     # reposait sur AUCUN test automatisé.
     #
-    # NON bloquant (même posture progressive que les garde-fous spacing / OSV
-    # / deno fmt). La LOGIQUE des assertions a été validée en prod via
-    # transaction ROLLBACK le 2026-06-13 ; ce qui empêche le run vert est un
-    # PROBLÈME DE REPLAY DES MIGRATIONS, indépendant des tests :
-    #
-    #   1er run (2026-06-13) → `supabase start` échoue à la migration
-    #   20260507100001_phase8_match_recordings_storage.sql :
-    #     ERROR: must be owner of relation objects (SQLSTATE 42501)
-    #     statement: COMMENT ON POLICY "match_recordings_owner_insert"
-    #                ON storage.objects ...
-    #   En local, le runner de migrations n'est pas owner de `storage.objects`
-    #   (owned par supabase_storage_admin), donc le COMMENT échoue — alors
-    #   qu'en prod la migration a été appliquée par un rôle privilégié.
-    #
-    # À RÉSOUDRE avant de rendre ce job bloquant (retirer `continue-on-error`) :
-    #   envelopper les opérations storage.objects des migrations dans un
-    #   `SET LOCAL ROLE supabase_storage_admin`, ou les rendre tolérantes en
-    #   local. D'ici là, le job reste informatif (rouge non bloquant) et
-    #   documente l'écart prod↔local.
-    continue-on-error: true
+    # BLOQUANT depuis le 2026-06-14 (audit reproductibilité). Le blocage
+    # historique — replay de `20260507100001_phase8_match_recordings_storage`
+    # qui échouait sur `COMMENT ON POLICY ... ON storage.objects` (must be
+    # owner) en local — a été résorbé par les fixes d'idempotence (PR
+    # #122/#123). Le job tourne désormais vert de bout en bout (start stack +
+    # pgTAP), donc la sécurité d'accès aux données (RLS + gardes « argent » :
+    # montant paiement, validation super_admin, isolation paiements/gains,
+    # anti-régression chat blocked-pair) est validée à CHAQUE PR. Ajouté aux
+    # required status checks de `main`.
 
     steps:
       - name: Checkout
