@@ -2149,7 +2149,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeSectionActiveTournaments.
   ///
   /// In fr, this message translates to:
-  /// **'★ TOURNOIS ACTIFS'**
+  /// **'★ MES TOURNOIS'**
   String get homeSectionActiveTournaments;
 
   /// No description provided for @homeSectionYourStats.
@@ -5661,6 +5661,18 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Aucune compétition active pour ce filtre.'**
   String get activeCompetitionsEmpty;
+
+  /// No description provided for @myTournamentsEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu n\'es inscrit à aucun tournoi pour l\'instant.'**
+  String get myTournamentsEmpty;
+
+  /// No description provided for @myTournamentsBrowseCta.
+  ///
+  /// In fr, this message translates to:
+  /// **'Parcourir les tournois'**
+  String get myTournamentsBrowseCta;
 
   /// No description provided for @filterAll.
   ///

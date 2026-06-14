@@ -3,151 +3,117 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
+import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:arena/features_user/home/main_layout.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-/// Filtre courant (par jeu) appliqué à la liste des compétitions
-/// actives sur la home. `null` = "Tous".
-final homeGameFilterProvider = StateProvider<GameType?>((_) => null);
-
-/// Section "★ ACTIVE TOURNAMENTS" — chips de filtre par jeu + jusqu'à
-/// 3 banners game-themed (gradient eFoot/Dames/FC) pour les compétitions
-/// en `registrationOpen` / `ongoing`. Reproduit `.m-banner-efoot/draughts/fc`
-/// de la maquette : gradient corner-to-corner, badge OUVERT/EN COURS/
-/// BIENTÔT translucide sur fond couleur, meta blanche en mono.
+/// Section « MES TOURNOIS » — ne liste QUE les compétitions où le joueur
+/// courant est **inscrit** (croisement `competitionsListProvider` ×
+/// `myRegisteredCompetitionIdsProvider`). Les tournois en cours / inscription
+/// ouverte sont remontés en tête, puis le reste, dans la limite de 5 banners.
+/// Empty state dédié + CTA vers la liste complète (onglet Compétitions).
 class ActiveCompetitionsSection extends ConsumerWidget {
   const ActiveCompetitionsSection({super.key});
+
+  /// Priorité de tri : en cours / inscription ouverte d'abord.
+  static int _priority(CompetitionStatus s) => switch (s) {
+        CompetitionStatus.ongoing => 0,
+        CompetitionStatus.registrationOpen => 1,
+        _ => 2,
+      };
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final filter = ref.watch(homeGameFilterProvider);
-    final async = ref.watch(competitionsListProvider(filter));
-    return Column(
-      children: [
-        const _GameFilterChips(),
-        const SizedBox(height: ArenaSpacing.sm),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: ArenaSpacing.lg),
-          child: async.when(
-            loading: () => const SizedBox(
-              height: 80,
-              child: Center(child: CircularProgressIndicator()),
-            ),
-            error: (e, _) => Text(
-              'Erreur : $e',
-              style: ArenaText.body.copyWith(color: ArenaColors.danger),
-            ),
-            data: (all) {
-              final active = all
-                  .where(
-                    (c) =>
-                        c.status == CompetitionStatus.registrationOpen ||
-                        c.status == CompetitionStatus.ongoing,
-                  )
-                  .take(3)
-                  .toList(growable: false);
-              if (active.isEmpty) {
-                return Container(
-                  decoration: BoxDecoration(
-                    color: ArenaColors.carbon,
-                    borderRadius: BorderRadius.circular(ArenaRadius.lg),
-                    border: Border.all(color: ArenaColors.border),
-                  ),
-                  padding: const EdgeInsets.all(ArenaSpacing.md),
-                  alignment: Alignment.center,
-                  child: Text(
-                    l10n.activeCompetitionsEmpty,
-                    style: ArenaText.bodyMuted,
-                  ),
-                );
-              }
-              return Column(
-                children: [
-                  for (final c in active) ...[
-                    _CompetitionBanner(competition: c),
-                    const SizedBox(height: ArenaSpacing.sm),
-                  ],
-                ],
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _GameFilterChips extends ConsumerWidget {
-  const _GameFilterChips();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final current = ref.watch(homeGameFilterProvider);
-    final items = <(String, GameType?)>[
-      ('Tous', null),
-      ('eFoot', GameType.efootball),
-      ('Dames', GameType.draughts),
-      ('FC Mobile', GameType.eaSportsFc),
-    ];
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
+    final async = ref.watch(competitionsListProvider(null));
+    final registeredIds =
+        ref.watch(myRegisteredCompetitionIdsProvider).valueOrNull ??
+            const <String>{};
+    return Padding(
       padding: const EdgeInsets.symmetric(horizontal: ArenaSpacing.lg),
-      child: Row(
-        children: [
-          for (var i = 0; i < items.length; i++) ...[
-            _Chip(
-              label: items[i].$1,
-              selected: items[i].$2 == current,
-              onTap: () =>
-                  ref.read(homeGameFilterProvider.notifier).state = items[i].$2,
-            ),
-            if (i < items.length - 1) const SizedBox(width: ArenaSpacing.xs),
-          ],
-        ],
+      child: async.when(
+        loading: () => const SizedBox(
+          height: 80,
+          child: Center(child: CircularProgressIndicator()),
+        ),
+        error: (e, _) => Text(
+          'Erreur : $e',
+          style: ArenaText.body.copyWith(color: ArenaColors.danger),
+        ),
+        data: (all) {
+          final mine = all
+              .where((c) => registeredIds.contains(c.id))
+              .toList(growable: false)
+            ..sort(
+              (a, b) => _priority(a.status).compareTo(_priority(b.status)),
+            );
+          final shown = mine.take(5).toList(growable: false);
+          if (shown.isEmpty) {
+            return _EmptyState(
+              message: l10n.myTournamentsEmpty,
+              ctaLabel: l10n.myTournamentsBrowseCta,
+              onCta: () =>
+                  ref.read(mainTabRequestProvider.notifier).state = 1,
+            );
+          }
+          return Column(
+            children: [
+              for (final c in shown) ...[
+                _CompetitionBanner(competition: c),
+                const SizedBox(height: ArenaSpacing.sm),
+              ],
+            ],
+          );
+        },
       ),
     );
   }
 }
 
-class _Chip extends StatelessWidget {
-  const _Chip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
+/// Empty state de « MES TOURNOIS » : message + CTA vers la liste complète.
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({
+    required this.message,
+    required this.ctaLabel,
+    required this.onCta,
   });
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
+  final String message;
+  final String ctaLabel;
+  final VoidCallback onCta;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(ArenaRadius.round),
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: ArenaSpacing.md,
-          vertical: 6,
-        ),
-        decoration: BoxDecoration(
-          color: selected
-              ? ArenaColors.signalBlue.withValues(alpha: 0.15)
-              : ArenaColors.carbon,
-          borderRadius: BorderRadius.circular(ArenaRadius.round),
-          border: Border.all(
-            color: selected ? ArenaColors.signalBlue : ArenaColors.border,
+    return Container(
+      decoration: BoxDecoration(
+        color: ArenaColors.carbon,
+        borderRadius: BorderRadius.circular(ArenaRadius.lg),
+        border: Border.all(color: ArenaColors.border),
+      ),
+      padding: const EdgeInsets.all(ArenaSpacing.md),
+      child: Column(
+        children: [
+          const Icon(
+            Icons.emoji_events_outlined,
+            size: 32,
+            color: ArenaColors.silver,
           ),
-        ),
-        child: Text(
-          label,
-          style: ArenaText.body.copyWith(
-            color: selected ? ArenaColors.signalBlue : ArenaColors.silver,
-            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+          const SizedBox(height: ArenaSpacing.sm),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: ArenaText.bodyMuted,
           ),
-        ),
+          const SizedBox(height: ArenaSpacing.md),
+          ArenaButton(
+            label: ctaLabel,
+            variant: ArenaButtonVariant.secondary,
+            fullWidth: true,
+            onPressed: onCta,
+          ),
+        ],
       ),
     );
   }

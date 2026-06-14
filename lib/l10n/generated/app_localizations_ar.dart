@@ -1075,7 +1075,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get homeSectionLive => 'مباشر الآن';
 
   @override
-  String get homeSectionActiveTournaments => '★ البطولات النشطة';
+  String get homeSectionActiveTournaments => '★ بطولاتي';
 
   @override
   String get homeSectionYourStats => '📊 إحصائياتك';
@@ -3055,6 +3055,12 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get activeCompetitionsEmpty => 'لا توجد منافسة نشطة لهذا الفلتر.';
+
+  @override
+  String get myTournamentsEmpty => 'لست مسجّلاً في أي بطولة حتى الآن.';
+
+  @override
+  String get myTournamentsBrowseCta => 'تصفّح البطولات';
 
   @override
   String get filterAll => 'الكل';

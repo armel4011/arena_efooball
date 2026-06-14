@@ -1088,7 +1088,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get homeSectionLive => 'EN DIRECT';
 
   @override
-  String get homeSectionActiveTournaments => '★ TOURNOIS ACTIFS';
+  String get homeSectionActiveTournaments => '★ MES TOURNOIS';
 
   @override
   String get homeSectionYourStats => '📊 TES STATS';
@@ -3087,6 +3087,13 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get activeCompetitionsEmpty =>
       'Aucune compétition active pour ce filtre.';
+
+  @override
+  String get myTournamentsEmpty =>
+      'Tu n\'es inscrit à aucun tournoi pour l\'instant.';
+
+  @override
+  String get myTournamentsBrowseCta => 'Parcourir les tournois';
 
   @override
   String get filterAll => 'Toutes';
