@@ -22,14 +22,14 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   // Baselines figées au 2026-06-14 (hors lib/core/theme, fichiers générés, l10n).
   // NE JAMAIS AUGMENTER. À faire décroître au fil des migrations vers ArenaColors.
-  const int colorsDotBaseline = 2179; // occurrences de `Colors.`
-  const int colorHexBaseline = 28; // occurrences de `Color(0x`
+  const colorsDotBaseline = 2179; // occurrences de `Colors.`
+  const colorHexBaseline = 28; // occurrences de `Color(0x`
 
   final colorsDotRe = RegExp(r'Colors\.');
   final colorHexRe = RegExp(r'Color\(0x');
 
   bool isExcluded(String path) {
-    final p = path.replaceAll('\\', '/');
+    final p = path.replaceAll(r'\', '/');
     return p.contains('lib/core/theme/') ||
         p.contains('lib/l10n/') ||
         p.endsWith('.g.dart') ||

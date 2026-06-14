@@ -311,7 +311,7 @@ class ChatRepository {
   }
 
   /// Compte les messages non-lus pour chaque channel passé en input.
-  /// Returns un Map<channelId, count>. Un channel sans messages non-lus
+  /// Returns un `Map<channelId, count>`. Un channel sans messages non-lus
   /// est absent de la map (≠ count=0 si la row n'a pas been initialisée
   /// pour ce user).
   ///
@@ -500,7 +500,7 @@ final myMatchChannelIdsMapProvider =
 });
 
 /// Item 3 wave F (2026-05-19) — compteurs de messages non-lus par
-/// channel, alimente les badges sur les rows inbox. Map<channelId, int>.
+/// channel, alimente les badges sur les rows inbox. `Map<channelId, int>`.
 /// Channels sans messages non-lus sont absents (= 0).
 ///
 /// Le provider est invalidé quand :

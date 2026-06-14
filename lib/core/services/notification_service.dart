@@ -1,3 +1,7 @@
+// NotificationService est instancié dynamiquement (initState de main_user /
+// main_admin) et non depuis main() — faux positif unreachable_from_main.
+// ignore_for_file: unreachable_from_main
+
 import 'dart:async';
 import 'dart:io';
 
