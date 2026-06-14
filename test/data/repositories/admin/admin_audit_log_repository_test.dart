@@ -105,8 +105,10 @@ void main() {
       await repo.list(searchQuery: 'ban');
       final orFilter =
           from.filters.firstWhere((f) => f.startsWith('or:'));
-      expect(orFilter, contains('action.ilike.%ban%'));
-      expect(orFilter, contains('target_id::text.ilike.%ban%'));
+      // M-2 : la valeur est quotée (guillemets doubles) pour neutraliser
+      // toute réécriture de la structure du filtre PostgREST `.or(...)`.
+      expect(orFilter, contains('action.ilike."%ban%"'));
+      expect(orFilter, contains('target_id::text.ilike."%ban%"'));
     });
 
     test('searchQuery vide (espaces) → pas de filtre or', () async {

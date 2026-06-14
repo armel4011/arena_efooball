@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:io';
 
+import 'package:arena/core/utils/error_reporter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -34,13 +36,17 @@ class GalleryExporter {
       }
       return null;
     } catch (e, st) {
-      if (kDebugMode) {
-        debugPrint('[gallery] saveVideoToGallery failed: $e\n$st');
-      }
+      unawaited(
+        reportError(
+          e,
+          st,
+          context: 'GalleryExporter.saveVideoToGallery',
+        ),
+      );
       return null;
     }
   }
-
 }
 
-final galleryExporterProvider = Provider<GalleryExporter>((_) => GalleryExporter());
+final galleryExporterProvider =
+    Provider<GalleryExporter>((_) => GalleryExporter());

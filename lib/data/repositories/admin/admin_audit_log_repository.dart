@@ -46,9 +46,17 @@ class AdminAuditLogRepository {
     }
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
-      final needle = '%${searchQuery.trim()}%';
+      // Sécurité (M-2, audit 2026-06-14) : sans quoting, une virgule ou une
+      // parenthèse dans `searchQuery` réécrit la structure du filtre PostgREST
+      // `.or(...)`. On entoure la valeur de guillemets doubles (neutralise les
+      // séparateurs) après avoir échappé `\` et `"` internes. Pas d'escalade
+      // possible (la table reste sous RLS is_admin()), mais on ferme la
+      // réécriture de filtre par principe.
+      final escaped =
+          searchQuery.trim().replaceAll(r'\', r'\\').replaceAll('"', r'\"');
+      final needle = '%$escaped%';
       query = query.or(
-        'action.ilike.$needle,target_id::text.ilike.$needle',
+        'action.ilike."$needle",target_id::text.ilike."$needle"',
       );
     }
 

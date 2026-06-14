@@ -21,6 +21,12 @@ import {
   hashBackupCodes,
   verifyTotp,
 } from "../_shared/totp.ts";
+import {
+  checkTotpLock,
+  lockedBody,
+  recordTotpFailure,
+  recordTotpSuccess,
+} from "../_shared/totp_rate_limit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -100,13 +106,30 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return jsonResponse({ error: "no_secret_pending" }, 412);
   }
 
+  // Rate-limit (M-4, audit 2026-06-14) : même protection que admin-verify-totp
+  // / admin-stepup-totp — 3 échecs consécutifs → verrou 30 min, compteur
+  // partagé via la table `totp_attempts`. Empêche le brute-force du code à
+  // l'enrôlement. Lock vérifié AVANT verifyTotp (pas d'oracle).
+  const lock = await checkTotpLock(service, user.id);
+  if (lock.locked) {
+    return jsonResponse(lockedBody(lock), 429);
+  }
+
   const ok = await verifyTotp({
     secretBase32: profile.totp_secret,
     code,
   });
   if (!ok) {
-    return jsonResponse({ error: "invalid_code" }, 401);
+    const failure = await recordTotpFailure(service, user.id);
+    if (failure.locked) {
+      return jsonResponse(lockedBody(failure), 429);
+    }
+    return jsonResponse({
+      error: "invalid_code",
+      attempts_remaining: failure.attemptsRemaining,
+    }, 401);
   }
+  await recordTotpSuccess(service, user.id);
 
   const backupCodes = generateBackupCodes();
   const backupCodesHashed = await hashBackupCodes(backupCodes, hmacKey);

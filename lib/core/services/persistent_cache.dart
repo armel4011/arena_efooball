@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Cache JSON-on-disk via `SharedPreferences` — pour afficher la dernière
@@ -23,8 +24,24 @@ import 'package:shared_preferences/shared_preferences.dart';
 class PersistentCache {
   PersistentCache(this._prefs);
 
-  static const _schemaVersion = 'v1';
+  // v2 (audit 2026-06-14, M-3) : le profil (PII : email, WhatsApp, kycStatus)
+  // n'est plus caché en clair dans SharedPreferences mais chiffré via
+  // `flutter_secure_storage`. Le bump v1→v2 purge tout l'ancien cache clair —
+  // dont le profil clair legacy — au prochain boot (cf. [ensureSchema]).
+  static const _schemaVersion = 'v2';
   static const _versionKey = 'arena.cache.schema';
+
+  /// Storage chiffré au repos pour les namespaces sensibles (PII).
+  /// Mêmes options que `SecureLocalStorage` :
+  ///  * Android : EncryptedSharedPreferences (clé AES dans le Keystore)
+  ///  * iOS/macOS : Keychain (first_unlock_this_device)
+  ///  * Windows : DPAPI
+  static const FlutterSecureStorage _secure = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    iOptions: IOSOptions(
+      accessibility: KeychainAccessibility.first_unlock_this_device,
+    ),
+  );
 
   final SharedPreferences _prefs;
 
@@ -287,6 +304,87 @@ class PersistentCache {
     } catch (e, st) {
       if (kDebugMode) {
         debugPrint('[cache] hydrateSingle($namespace) source error swallowed: $e\n$st');
+      }
+    }
+  }
+
+  // ───────────────────────────────────────────────────────────────────────
+  // Variantes CHIFFRÉES (PII) — adossées à flutter_secure_storage.
+  // Mêmes contrats que readObject/writeObject/hydrateSingle, mais le blob
+  // JSON est chiffré au repos. Réservé aux namespaces sensibles (profil).
+  // I/O async (vs SharedPreferences sync) : surcoût ~10-50 ms acceptable car
+  // hors de la 1re frame (l'appelant est un async generator).
+  // ───────────────────────────────────────────────────────────────────────
+
+  String _secureKey(String namespace) => 'arena.scache.$namespace';
+
+  /// Lit un objet T depuis le cache chiffré. `null` si absent/invalide.
+  Future<T?> readObjectSecure<T>(
+    String namespace,
+    T Function(Map<String, dynamic>) fromJson,
+  ) async {
+    String? raw;
+    try {
+      raw = await _secure.read(key: _secureKey(namespace));
+    } catch (e, st) {
+      if (kDebugMode) {
+        debugPrint('[cache] readObjectSecure($namespace) read failed: $e\n$st');
+      }
+      return null;
+    }
+    if (raw == null) return null;
+    try {
+      return fromJson(jsonDecode(raw) as Map<String, dynamic>);
+    } catch (e, st) {
+      if (kDebugMode) {
+        debugPrint('[cache] readObjectSecure($namespace) decode failed: $e\n$st');
+      }
+      unawaited(_secure.delete(key: _secureKey(namespace)));
+      return null;
+    }
+  }
+
+  /// Persiste un objet T dans le cache chiffré.
+  Future<void> writeObjectSecure<T>(
+    String namespace,
+    T value,
+    Map<String, dynamic> Function(T) toJson,
+  ) async {
+    try {
+      await _secure.write(
+        key: _secureKey(namespace),
+        value: jsonEncode(toJson(value)),
+      );
+    } catch (e, st) {
+      if (kDebugMode) {
+        debugPrint('[cache] writeObjectSecure($namespace) failed: $e\n$st');
+      }
+    }
+  }
+
+  /// Équivalent chiffré de [hydrateSingle] : émet d'abord le cache chiffré
+  /// (si présent), puis chaque valeur de [source] (persistée chiffrée).
+  /// Offline-safe (erreur source avalée → l'UI reste figée sur le cache).
+  Stream<T?> hydrateSingleSecure<T>({
+    required String namespace,
+    required Stream<T?> source,
+    required T Function(Map<String, dynamic>) fromJson,
+    required Map<String, dynamic> Function(T) toJson,
+  }) async* {
+    final cached = await readObjectSecure<T>(namespace, fromJson);
+    if (cached != null) yield cached;
+    try {
+      await for (final value in source) {
+        yield value;
+        if (value != null) {
+          unawaited(writeObjectSecure<T>(namespace, value, toJson));
+        }
+      }
+    } catch (e, st) {
+      if (kDebugMode) {
+        debugPrint(
+          '[cache] hydrateSingleSecure($namespace) source error swallowed: $e\n$st',
+        );
       }
     }
   }

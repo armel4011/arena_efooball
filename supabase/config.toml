@@ -406,3 +406,66 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 # declarative_schema_path = "./database"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
+
+# =============================================================================
+# Edge Functions — verify_jwt versionné (audit 2026-06-14, M-1)
+# =============================================================================
+# Avant ce bloc, le statut verify_jwt de chaque fonction n'existait QUE côté
+# Dashboard, non versionné → risque de dérive au re-déploiement CLI. On fige
+# ici l'état prod réel (relevé via `supabase functions list` / MCP) pour le
+# rendre reproductible.
+#
+#  * verify_jwt = true  → JWT vérifié par la gateway AVANT d'entrer dans la
+#    fonction. Pour toutes les EF appelées par un utilisateur/admin authentifié
+#    (elles re-vérifient ensuite l'identité via auth.getUser()).
+#  * verify_jwt = false → fonctions appelées SANS JWT user : webhooks pg_net
+#    (triggers DB), crons, ou flux pré-auth. Leur garde propre = WEBHOOK_SECRET
+#    constant-time / rate-limit IP (register-admin). NE PAS passer à true sans
+#    adapter l'appelant, sous peine de casser le webhook/cron en prod.
+
+[functions.get_agora_token]
+verify_jwt = true
+
+[functions."get-agora-rtm-token"]
+verify_jwt = true
+
+[functions."get-agora-call-token"]
+verify_jwt = true
+
+[functions."draughts-game"]
+verify_jwt = true
+
+[functions."export-user-data"]
+verify_jwt = true
+
+[functions."setup-totp"]
+verify_jwt = true
+
+[functions."verify-totp-setup"]
+verify_jwt = true
+
+[functions."admin-stepup-totp"]
+verify_jwt = true
+
+[functions."admin-verify-totp"]
+verify_jwt = true
+
+# ─── Webhooks / crons / flux pré-auth (pas de JWT user) ─────────────────────
+
+[functions.dispatch_notification]
+verify_jwt = false
+
+[functions."send-transactional-email"]
+verify_jwt = false
+
+[functions."moderate-chat-message"]
+verify_jwt = false
+
+[functions."cleanup-deleted-accounts"]
+verify_jwt = false
+
+[functions."cleanup-streams"]
+verify_jwt = false
+
+[functions."register-admin"]
+verify_jwt = false

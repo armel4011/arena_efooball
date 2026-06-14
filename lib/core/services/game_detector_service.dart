@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:app_usage/app_usage.dart';
+import 'package:arena/core/utils/error_reporter.dart';
 import 'package:arena/data/models/target_game.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:installed_apps/installed_apps.dart';
 
@@ -47,9 +47,13 @@ class GameDetectorService {
         final present = await _platform.isAppInstalled(game.packageAndroid);
         if (present) installed.add(game);
       } catch (e, st) {
-        if (kDebugMode) {
-          debugPrint('[game-detector] isAppInstalled(${game.packageAndroid}) failed: $e\n$st');
-        }
+        unawaited(
+          reportError(
+            e,
+            st,
+            context: 'GameDetectorService.checkInstalledTargetGames',
+          ),
+        );
       }
     }
     return installed;
@@ -70,9 +74,13 @@ class GameDetectorService {
     } on PlatformException {
       return false;
     } catch (e, st) {
-      if (kDebugMode) {
-        debugPrint('[game-detector] hasUsageStatsAccess failed: $e\n$st');
-      }
+      unawaited(
+        reportError(
+          e,
+          st,
+          context: 'GameDetectorService.hasUsageStatsAccess',
+        ),
+      );
       return false;
     }
   }
@@ -87,13 +95,18 @@ class GameDetectorService {
     final now = DateTime.now();
     List<AppUsageInfo> infos;
     try {
-      infos = await _platform.getAppUsage(now.subtract(_foregroundLookback), now);
+      infos =
+          await _platform.getAppUsage(now.subtract(_foregroundLookback), now);
     } on PlatformException {
       return null;
     } catch (e, st) {
-      if (kDebugMode) {
-        debugPrint('[game-detector] currentForegroundGame failed: $e\n$st');
-      }
+      unawaited(
+        reportError(
+          e,
+          st,
+          context: 'GameDetectorService.currentForegroundGame',
+        ),
+      );
       return null;
     }
 
@@ -139,9 +152,13 @@ class GameDetectorService {
       try {
         current = await currentForegroundGame();
       } catch (e, st) {
-        if (kDebugMode) {
-          debugPrint('[game-detector] poll failed: $e\n$st');
-        }
+        unawaited(
+          reportError(
+            e,
+            st,
+            context: 'GameDetectorService.foregroundGameStream',
+          ),
+        );
         continue;
       }
       if (current != last) {
