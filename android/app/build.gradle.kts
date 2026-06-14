@@ -117,6 +117,31 @@ android {
             pickFirsts += setOf(
                 "**/libaosl.so",
             )
+            // Extensions Agora OPTIONNELLES non utilisées par Arena : le code
+            // n'appelle que `enableAudio()` / `enableVideo()` (cf.
+            // agora_*_service.dart) — aucune beauté vidéo, suppression de bruit
+            // IA, audio spatial, lip-sync, segmentation/fond virtuel, détection
+            // de visage, inspection de contenu, etc. Agora charge ces .so à la
+            // demande ; non activées, leur absence est inoffensive. Les exclure
+            // allège chaque ABI d'~38 Mo (≈ -38 Mo sur le download Play Store
+            // de l'app user). NE PAS exclure libagora-ffmpeg (encodage stream).
+            // ⚠️ Re-tester streaming + appels sur un build RELEASE réel après
+            // toute modif de cette liste.
+            excludes += setOf(
+                "**/libagora_lip_sync_extension.so",
+                "**/libagora_clear_vision_extension.so",
+                "**/libagora_spatial_audio_extension.so",
+                "**/libagora_ai_noise_suppression_extension.so",
+                "**/libagora_ai_noise_suppression_ll_extension.so",
+                "**/libagora_ai_echo_cancellation_extension.so",
+                "**/libagora_ai_echo_cancellation_ll_extension.so",
+                "**/libagora_segmentation_extension.so",
+                "**/libagora_face_capture_extension.so",
+                "**/libagora_face_detection_extension.so",
+                "**/libagora_audio_beauty_extension.so",
+                "**/libagora_content_inspect_extension.so",
+                "**/libagora_video_quality_analyzer_extension.so",
+            )
         }
     }
 }
