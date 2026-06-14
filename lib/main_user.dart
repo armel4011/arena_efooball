@@ -25,7 +25,11 @@ Future<void> main() async {
   await bootstrap(
     flavor: Flavor.user,
     appName: 'ARENA',
-    bundleId: 'com.arena.app',
+    // Aligné sur l'applicationId (cf. android/app/build.gradle.kts). Sert de
+    // tag d'observabilité (Sentry bundle_id). NB : le scheme de deep link
+    // reste `com.arena.app` (cf. deep_link_service / AndroidManifest) car lié
+    // aux redirect URLs Supabase/OAuth — indépendant de l'applicationId.
+    bundleId: 'com.arena_skill.app',
     builder: ArenaUserApp.new,
   );
 }
