@@ -26,7 +26,11 @@ void main() {
   // monter le compte sans vraie régression. 2179 → 2182 le 2026-06-14 : +3
   // `ArenaColors.*` de la page d'entrée des litiges (check_colors.sh --strict
   // = 0 régression). À faire décroître via migration vers tokens.
-  const colorsDotBaseline = 2182; // occurrences de `Colors.`
+  // 2182 → 2187 le 2026-06-14 : +5 `ArenaColors.*` du tier badge dérivé des
+  // victoires (helper player_tier.dart + badges profil perso/public, gradients
+  // bronze/argent/or/élite). check_colors.sh --strict = 0 régression (aucun
+  // vrai `Colors.*` ajouté). À faire décroître via migration vers tokens.
+  const colorsDotBaseline = 2187; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
 
   final colorsDotRe = RegExp(r'Colors\.');

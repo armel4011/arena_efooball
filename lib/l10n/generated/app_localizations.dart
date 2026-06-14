@@ -4414,6 +4414,24 @@ abstract class AppLocalizations {
   /// **'🥉 BRONZE'**
   String get playerProfileTierBronze;
 
+  /// No description provided for @playerProfileTierSilver.
+  ///
+  /// In fr, this message translates to:
+  /// **'🥈 ARGENT'**
+  String get playerProfileTierSilver;
+
+  /// No description provided for @playerProfileTierGold.
+  ///
+  /// In fr, this message translates to:
+  /// **'🥇 OR'**
+  String get playerProfileTierGold;
+
+  /// No description provided for @playerProfileTierElite.
+  ///
+  /// In fr, this message translates to:
+  /// **'💎 ÉLITE'**
+  String get playerProfileTierElite;
+
   /// No description provided for @playerProfileEditTooltip.
   ///
   /// In fr, this message translates to:

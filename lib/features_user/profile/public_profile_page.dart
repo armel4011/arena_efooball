@@ -6,6 +6,7 @@ import 'package:arena/data/models/profile.dart';
 import 'package:arena/data/repositories/friends_repository.dart';
 import 'package:arena/data/repositories/match_stats_repository.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
+import 'package:arena/features_shared/player_tier.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_card.dart';
@@ -129,11 +130,20 @@ class _Header extends StatelessWidget {
   const _Header({required this.profile});
   final Profile profile;
 
+  int _wins() {
+    final v = profile.stats['wins'];
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    return 0;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final color = AvatarPalette.colorFromHex(profile.avatarColor);
     final initial =
         profile.username.isEmpty ? '?' : profile.username[0].toUpperCase();
+    final tier = tierFor(_wins());
 
     return ArenaCard(
       child: Row(
@@ -178,10 +188,61 @@ class _Header extends StatelessWidget {
                     color: ArenaColors.textMuted,
                   ),
                 ),
+                const SizedBox(height: ArenaSpacing.sm),
+                _TierBadge(
+                  label: _publicTierLabel(l10n, tier),
+                  gradient: tier.gradient,
+                ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Traduit un [PlayerTier] en libellé localisé pour le badge public.
+String _publicTierLabel(AppLocalizations l10n, PlayerTier tier) =>
+    switch (tier) {
+      PlayerTier.bronze => l10n.playerProfileTierBronze,
+      PlayerTier.silver => l10n.playerProfileTierSilver,
+      PlayerTier.gold => l10n.playerProfileTierGold,
+      PlayerTier.elite => l10n.playerProfileTierElite,
+    };
+
+/// Tier badge — variante profil public, couleur dérivée du palier réel.
+class _TierBadge extends StatelessWidget {
+  const _TierBadge({required this.label, required this.gradient});
+
+  final String label;
+  final List<Color> gradient;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: gradient,
+        ),
+        borderRadius: BorderRadius.circular(ArenaRadius.round),
+        boxShadow: [
+          BoxShadow(
+            color: gradient.first.withValues(alpha: 0.35),
+            blurRadius: 12,
+            spreadRadius: -2,
+          ),
+        ],
+      ),
+      child: Text(
+        label,
+        style: ArenaText.badge.copyWith(
+          color: ArenaColors.bone,
+          letterSpacing: 1.2,
+        ),
       ),
     );
   }
