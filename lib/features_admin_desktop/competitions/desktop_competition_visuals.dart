@@ -29,7 +29,7 @@ DesktopStatusVisual competitionStatusVisual(CompetitionStatus status) {
       );
     case CompetitionStatus.registrationClosed:
       return const DesktopStatusVisual(
-        label: 'COMPLET',
+        label: 'INSCRIPTIONS CLOSES',
         color: ArenaColors.statusWarn,
       );
     case CompetitionStatus.draft:

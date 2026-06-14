@@ -833,7 +833,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get compDetailStatusOpen => 'مفتوح';
 
   @override
-  String get compDetailStatusFull => 'مكتمل';
+  String get compDetailStatusFull => 'التسجيلات مغلقة';
 
   @override
   String get compDetailStatusOngoing => 'جارية';

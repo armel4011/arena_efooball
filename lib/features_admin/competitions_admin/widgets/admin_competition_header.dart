@@ -63,7 +63,7 @@ class AdminCompetitionHeader extends StatelessWidget {
       case CompetitionStatus.registrationOpen:
         return 'INSCRIPTIONS';
       case CompetitionStatus.registrationClosed:
-        return 'COMPLET';
+        return 'INSCRIPTIONS CLOSES';
       case CompetitionStatus.draft:
         return 'DRAFT';
       case CompetitionStatus.completed:

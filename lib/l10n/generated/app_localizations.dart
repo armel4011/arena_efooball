@@ -1675,7 +1675,7 @@ abstract class AppLocalizations {
   /// No description provided for @compDetailStatusFull.
   ///
   /// In fr, this message translates to:
-  /// **'COMPLET'**
+  /// **'INSCRIPTIONS CLOSES'**
   String get compDetailStatusFull;
 
   /// No description provided for @compDetailStatusOngoing.

@@ -282,7 +282,7 @@
   "compDetailNotFoundDesc": "Elle a peut-être été supprimée par un admin.",
   "compDetailStatusDraft": "BROUILLON",
   "compDetailStatusOpen": "OUVERT",
-  "compDetailStatusFull": "COMPLET",
+  "compDetailStatusFull": "INSCRIPTIONS CLOSES",
   "compDetailStatusOngoing": "EN COURS",
   "compDetailStatusCompleted": "TERMINÉ",
   "compDetailStatusCancelled": "ANNULÉ",
