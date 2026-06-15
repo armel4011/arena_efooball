@@ -56,6 +56,10 @@ lib/features_admin/bracket_admin/admin_bracket_management_page.dart
 lib/features_admin/bracket_admin/admin_bracket_management_page_widgets.dart
 lib/features_admin/auth_admin/totp_setup_screen.dart
 
+# Part extrait de player_profile_page (refactor god file 2026-06-15, PR #157) :
+# hérite du Colors.white de contraste déjà allowlisté sur player_profile_page.
+lib/features_user/profile/player_profile_social.dart
+
 # ─── Widgets shared : contrast sur gradient / dark surface ────────────
 # Colors.white explicite pour garantir contraste lecture sur gradients
 # / surfaces sombres. Le token ArenaColors.bone (#F5F5F0) est légèrement
