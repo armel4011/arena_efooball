@@ -264,9 +264,13 @@ class _CompetitionTabState extends ConsumerState<_CompetitionTab>
         id: 'status',
         title: l10n.compListFilterStatus,
         mode: ArenaFilterMode.radio,
+        // Pas d'option « Toutes » : aucune sélection = tous les statuts
+        // (cohérent avec la liste admin). Le bouton « Réinitialiser » du
+        // menu remet _bucket à StatusBucket.all.
         options: [
           for (final b in StatusBucket.values)
-            ArenaFilterOption(id: b.name, label: b.labelOf(l10n)),
+            if (b != StatusBucket.all)
+              ArenaFilterOption(id: b.name, label: b.labelOf(l10n)),
         ],
       ),
       ArenaFilterSection(
@@ -283,7 +287,7 @@ class _CompetitionTabState extends ConsumerState<_CompetitionTab>
 
   Map<String, List<String>> _selectionSnapshot() {
     return {
-      'status': [_bucket.name],
+      'status': _bucket == StatusBucket.all ? const [] : [_bucket.name],
       'pricing': _pricing == PricingBucket.all ? const [] : [_pricing.name],
     };
   }
