@@ -12,6 +12,19 @@ import 'package:intl/intl.dart';
 /// sous 1000 lignes — chacun ici est une présentation pure (input + onChange)
 /// qui ne touche pas au state du wizard.
 
+/// Blocs de récompenses au-delà du top 4 : (libellé, taille, dernier rang).
+/// Le bloc d'index `i` est actif dès que le nombre de récompensés atteint son
+/// `lastRank`. La valeur saisie pour un bloc est le % attribué à *chaque* place
+/// du bloc. Partagé par [BlockShareRow], `WizardStepPrizes` et le State du
+/// wizard (calcul cagnotte / redistribution).
+const List<({String label, int size, int lastRank})> prizeBlocks = [
+  (label: '5ème – 8ème', size: 4, lastRank: 8),
+  (label: '9ème – 16ème', size: 8, lastRank: 16),
+  (label: '17ème – 32ème', size: 16, lastRank: 32),
+  (label: '33ème – 64ème', size: 32, lastRank: 64),
+  (label: '65ème – 128ème', size: 64, lastRank: 128),
+];
+
 /// Libellé public du format de tournoi. Utilisé à la fois par
 /// [FormatPicker] et par le rendu Review du wizard.
 String formatLabel(TournamentFormat f) {

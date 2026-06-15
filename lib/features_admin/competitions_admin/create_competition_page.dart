@@ -8,6 +8,8 @@ import 'package:arena/features_admin/competitions_admin/widgets/competition_form
 import 'package:arena/features_admin/competitions_admin/widgets/wizard_step_fees.dart';
 import 'package:arena/features_admin/competitions_admin/widgets/wizard_step_format.dart';
 import 'package:arena/features_admin/competitions_admin/widgets/wizard_step_infos.dart';
+import 'package:arena/features_admin/competitions_admin/widgets/wizard_step_prizes.dart';
+import 'package:arena/features_admin/competitions_admin/widgets/wizard_step_review.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/prize_ranks.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
@@ -16,7 +18,6 @@ import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_stepper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 /// PHASE 11 · A8 — 5-step competition creation wizard.
 ///
@@ -36,18 +37,6 @@ import 'package:intl/intl.dart';
 /// verrouillés (ils impactent bracket et paiements).
 ///
 /// Maps to screen A8 of `arena_v2.html`.
-
-/// Blocs de récompenses au-delà du top 4 : (libellé, taille, dernier
-/// rang). Le bloc d'index `i` est actif dès que le nombre de
-/// récompensés atteint son `lastRank`. La valeur saisie pour un bloc
-/// est le % attribué à *chaque* place du bloc.
-const List<({String label, int size, int lastRank})> _prizeBlocks = [
-  (label: '5ème – 8ème', size: 4, lastRank: 8),
-  (label: '9ème – 16ème', size: 8, lastRank: 16),
-  (label: '17ème – 32ème', size: 16, lastRank: 32),
-  (label: '33ème – 64ème', size: 32, lastRank: 64),
-  (label: '65ème – 128ème', size: 64, lastRank: 128),
-];
 
 class CreateCompetitionPage extends ConsumerStatefulWidget {
   const CreateCompetitionPage({this.editing, super.key});
@@ -87,10 +76,10 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
     TextEditingController(text: '10'),
   ];
   // Blocs 5-8 / 9-16 / 17-32 / 33-64 / 65-128 : un % « par place » saisi par
-  // bloc. Dimensionné sur `_prizeBlocks` pour rester aligné si on ajoute un
+  // bloc. Dimensionné sur `prizeBlocks` pour rester aligné si on ajoute un
   // palier.
   final List<TextEditingController> _blockShareCtrls = List.generate(
-    _prizeBlocks.length,
+    prizeBlocks.length,
     (_) => TextEditingController(text: '0'),
   );
   // Nombre de récompensés : 1 / 2 / 4 (places individuelles seules) puis
@@ -173,8 +162,8 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
     for (var i = 0; i < topCount && i < dist.length; i++) {
       _topShareCtrls[i].text = dist[i].toString();
     }
-    for (var b = 0; b < _prizeBlocks.length; b++) {
-      final block = _prizeBlocks[b];
+    for (var b = 0; b < prizeBlocks.length; b++) {
+      final block = prizeBlocks[b];
       if (_rewardedCount < block.lastRank) break;
       final firstIndex = block.lastRank - block.size;
       if (firstIndex < dist.length) {
@@ -312,7 +301,16 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
                             setState(() => _thirdPlaceMatch = v),
                         onChanged: () => setState(() {}),
                       ),
-                    if (_step == 2) ..._buildPrizesStep(),
+                    if (_step == 2)
+                      WizardStepPrizes(
+                        rewardedCount: _rewardedCount,
+                        currency: _currency,
+                        topShareCtrls: _topShareCtrls,
+                        blockShareCtrls: _blockShareCtrls,
+                        shareTotal: _shareTotal(),
+                        onRewardedCountChanged: _setRewardedCount,
+                        onChanged: () => setState(() {}),
+                      ),
                     if (_step == 3)
                       WizardStepFees(
                         entryFeeCtrl: _entryFeeCtrl,
@@ -325,7 +323,27 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
                         onChanged: () => setState(() {}),
                         onCurrencyChanged: (c) => setState(() => _currency = c),
                       ),
-                    if (_step == 4) ..._buildReviewStep(),
+                    if (_step == 4)
+                      WizardStepReview(
+                        name: _nameCtrl.text.trim(),
+                        gameLabel: _game.label,
+                        format: _format,
+                        maxPlayers: _maxPlayers,
+                        startDate: _startDate,
+                        fee: double.tryParse(_entryFeeCtrl.text) ?? 0,
+                        currency: _currency,
+                        pool: _computedPool(),
+                        commissionXaf: _commissionXaf(),
+                        autoGenerateBracket: _autoGenerateBracket,
+                        matchIntervalMinutes: _matchIntervalMinutes,
+                        thirdPlaceMatch: _thirdPlaceMatch,
+                        referralQuota: _referralQuota(),
+                        isEditing: _isEditing,
+                        publishNow: _publishNow,
+                        submitting: _submitting,
+                        onPublishChanged: (v) =>
+                            setState(() => _publishNow = v),
+                      ),
                   ],
                 ),
               ),
@@ -368,120 +386,6 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
         ),
       ),
     );
-  }
-
-  // ─── Steps ────────────────────────────────────────────────────────
-
-  List<Widget> _buildPrizesStep() {
-    final topCount = _rewardedCount < 4 ? _rewardedCount : 4;
-    return [
-      Container(
-        padding: const EdgeInsets.all(ArenaSpacing.md),
-        decoration: BoxDecoration(
-          color: ArenaColors.signalBlue.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(ArenaRadius.md),
-          border: Border.all(
-            color: ArenaColors.signalBlue.withValues(alpha: 0.3),
-          ),
-        ),
-        child: Text(
-          'ℹ Saisis le montant attribué à chaque place — en $_currency. '
-          'La cagnotte de la compétition est la somme de ces montants.',
-          style: ArenaText.body,
-        ),
-      ),
-      const SizedBox(height: ArenaSpacing.lg),
-      Text('Nombre de récompensés', style: ArenaText.inputLabel),
-      const SizedBox(height: ArenaSpacing.xs),
-      RewardedCountPicker(
-        current: _rewardedCount,
-        onChanged: _setRewardedCount,
-      ),
-      const SizedBox(height: ArenaSpacing.lg),
-      // Places 1 à 4 : une ligne individuelle modifiable chacune.
-      for (var i = 0; i < topCount; i++) ...[
-        ShareRow(
-          position: i,
-          controller: _topShareCtrls[i],
-          onChanged: () => setState(() {}),
-        ),
-        const SizedBox(height: ArenaSpacing.sm),
-      ],
-      // Blocs 5-8 / 9-16 / 17-32 / 33-64 : un montant par place, saisi une fois.
-      for (var b = 0; b < _prizeBlocks.length; b++)
-        if (_rewardedCount >= _prizeBlocks[b].lastRank) ...[
-          BlockShareRow(
-            block: _prizeBlocks[b],
-            controller: _blockShareCtrls[b],
-            onChanged: () => setState(() {}),
-          ),
-          const SizedBox(height: ArenaSpacing.sm),
-        ],
-      const SizedBox(height: ArenaSpacing.md),
-      ShareTotalCard(total: _shareTotal(), currency: _currency),
-    ];
-  }
-
-  List<Widget> _buildReviewStep() {
-    final fee = double.tryParse(_entryFeeCtrl.text) ?? 0;
-    final pool = _computedPool();
-    final fmt = NumberFormat('#,###', 'fr_FR');
-
-    return [
-      Text('Récap', style: ArenaText.h3),
-      const SizedBox(height: ArenaSpacing.md),
-      ReviewRow(label: 'Nom', value: _nameCtrl.text.trim()),
-      ReviewRow(label: 'Jeu', value: _game.label),
-      ReviewRow(
-        label: 'Format',
-        value: formatLabel(_format),
-      ),
-      ReviewRow(label: 'Joueurs', value: '$_maxPlayers max'),
-      ReviewRow(
-        label: 'Date',
-        value: _startDate == null
-            ? '—'
-            : DateFormat('dd/MM/yyyy HH:mm').format(_startDate!),
-      ),
-      ReviewRow(
-        label: 'Inscription',
-        value: fee == 0 ? 'Gratuit' : '${fmt.format(fee.round())} $_currency',
-      ),
-      ReviewRow(
-        label: 'Cagnotte (somme des récompenses)',
-        value: '${fmt.format(pool.round())} $_currency',
-      ),
-      ReviewRow(
-        label: 'Commission ARENA',
-        value: '${fmt.format(_commissionXaf().round())} $_currency',
-      ),
-      ReviewRow(
-        label: 'Bracket auto',
-        value: _autoGenerateBracket ? 'Oui — au quota atteint' : 'Non — manuel',
-      ),
-      ReviewRow(
-        label: 'Intervalle entre rounds',
-        value: _matchIntervalLabel(_matchIntervalMinutes),
-      ),
-      if (_format != TournamentFormat.roundRobin)
-        ReviewRow(
-          label: 'Match de classement (3e place)',
-          value: _thirdPlaceMatch ? 'Oui' : 'Non',
-        ),
-      if (_referralQuota() > 0)
-        ReviewRow(
-          label: 'Parrainages requis',
-          value: '${_referralQuota()} ami(s) via code ARN-XXXX',
-        ),
-      const SizedBox(height: ArenaSpacing.lg),
-      if (!_isEditing)
-        PublishToggleCard(
-          publishNow: _publishNow,
-          onChanged: (v) => setState(() => _publishNow = v),
-        ),
-      const SizedBox(height: ArenaSpacing.md),
-      if (_submitting) const Center(child: CircularProgressIndicator()),
-    ];
   }
 
   // ─── Submit ───────────────────────────────────────────────────────
@@ -658,8 +562,8 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
     for (var i = 0; i < topCount; i++) {
       raw.add(int.tryParse(_topShareCtrls[i].text) ?? 0);
     }
-    for (var b = 0; b < _prizeBlocks.length; b++) {
-      final block = _prizeBlocks[b];
+    for (var b = 0; b < prizeBlocks.length; b++) {
+      final block = prizeBlocks[b];
       if (_rewardedCount < block.lastRank) break;
       final perPlace = int.tryParse(_blockShareCtrls[b].text) ?? 0;
       for (var k = 0; k < block.size; k++) {
@@ -677,8 +581,8 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
     for (var i = 0; i < topCount; i++) {
       total += int.tryParse(_topShareCtrls[i].text) ?? 0;
     }
-    for (var b = 0; b < _prizeBlocks.length; b++) {
-      final block = _prizeBlocks[b];
+    for (var b = 0; b < prizeBlocks.length; b++) {
+      final block = prizeBlocks[b];
       if (_rewardedCount < block.lastRank) break;
       total += (int.tryParse(_blockShareCtrls[b].text) ?? 0) * block.size;
     }
@@ -752,17 +656,6 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
         time.minute,
       );
     });
-  }
-
-  /// Format humain pour l'intervalle entre rounds (Lot A).
-  static String _matchIntervalLabel(int minutes) {
-    if (minutes < 60) return '$minutes min';
-    if (minutes < 1440) {
-      final h = minutes ~/ 60;
-      return '${h}h';
-    }
-    final d = minutes ~/ 1440;
-    return d == 1 ? '1 jour' : '$d jours';
   }
 
   static String _stepTitle(int step) {
