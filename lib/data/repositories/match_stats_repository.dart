@@ -5,15 +5,13 @@ import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// Reads completed matches for a player and folds them into a
-/// [PlayerStats] summary (PHASE 9.1).
+/// Accès aux stats joueur + listes de matchs.
 ///
-/// Depuis Phase 12.5, `profiles.stats jsonb` est aussi recalculé
-/// server-side par la fonction `recalculate_player_stats` (trigger
-/// AFTER UPDATE matches.status='completed'). Ce repository garde le
-/// fold client pour les écrans qui ont déjà la liste de matches en main
-/// (évite un round-trip) ; pour les leaderboards / classements,
-/// lire directement `profiles.stats`.
+/// `getForPlayer` lit le compteur de carrière persisté `profiles.stats`
+/// (incrémenté server-side au passage à `completed`, jamais décrémenté).
+/// [foldMatches] reste exposé (pur, testé) pour agréger une liste de
+/// matchs déjà en main, mais n'est plus la source des stats de profil :
+/// folder `matches` ramènerait les stats à zéro dès qu'un match est purgé.
 class MatchStatsRepository {
   const MatchStatsRepository(this._client);
 
@@ -21,24 +19,22 @@ class MatchStatsRepository {
 
   final SupabaseClient _client;
 
-  /// Aggregates W/L/D + goals scored/conceded for [playerId] across
-  /// every `matches.status = 'completed'` row they are seated in.
+  /// Lit le compteur de carrière persisté dans `profiles.stats`.
   ///
-  /// Cap à 500 matches pour borner le travail de serialization (power
-  /// users 10k+ matches). Quand l'agrégat persistant `profiles.stats`
-  /// devient autoritaire, ce repo passe en pure read sur stats — d'ici
-  /// là on plafonne.
-  Future<PlayerStats> getForPlayer(String playerId, {int limit = 500}) async {
-    final rows = await _client
-        .from(_table)
-        .select()
-        .or('player1_id.eq.$playerId,player2_id.eq.$playerId')
-        .eq('status', 'completed')
-        .order('finished_at', ascending: false)
-        .limit(limit);
-
-    final matches = [for (final r in rows) ArenaMatch.fromJson(r)];
-    return foldMatches(playerId, matches);
+  /// `profiles.stats` est la source autoritaire : incrémenté server-side
+  /// au passage d'un match à `completed` (trigger), JAMAIS recalculé
+  /// depuis zéro ni décrémenté. Lire ici (et non plus folder la table
+  /// `matches`) garantit que les stats survivent à la purge / suppression
+  /// des matchs — une compétition close ou un cleanup ne remet rien à zéro.
+  Future<PlayerStats> getForPlayer(String playerId) async {
+    final row = await _client
+        .from('profiles')
+        .select('stats')
+        .eq('id', playerId)
+        .maybeSingle();
+    final stats = (row?['stats'] as Map?)?.cast<String, dynamic>();
+    if (stats == null || stats.isEmpty) return const PlayerStats.empty();
+    return PlayerStats.fromJson(stats);
   }
 
   /// Returns the [limit] most recent completed matches for [playerId],
