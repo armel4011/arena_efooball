@@ -235,7 +235,7 @@ class _StatusBadge extends StatelessWidget {
         CompetitionStatus.registrationOpen =>
           ('INSCRIPTIONS', ArenaColors.success),
         CompetitionStatus.registrationClosed =>
-          ('COMPLET', ArenaColors.warning),
+          ('INSCRIPTIONS CLOSES', ArenaColors.warning),
         CompetitionStatus.ongoing => ('EN COURS', ArenaColors.success),
         CompetitionStatus.completed => ('TERMINÉ', ArenaColors.textMuted),
         CompetitionStatus.cancelled => ('ANNULÉ', ArenaColors.danger),

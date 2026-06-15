@@ -262,7 +262,7 @@
   "compDetailNotFoundDesc": "It may have been deleted by an admin.",
   "compDetailStatusDraft": "DRAFT",
   "compDetailStatusOpen": "OPEN",
-  "compDetailStatusFull": "FULL",
+  "compDetailStatusFull": "REGISTRATIONS CLOSED",
   "compDetailStatusOngoing": "ONGOING",
   "compDetailStatusCompleted": "COMPLETED",
   "compDetailStatusCancelled": "CANCELLED",

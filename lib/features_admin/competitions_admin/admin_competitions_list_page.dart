@@ -459,7 +459,7 @@ _StatusVisual _visualFor(CompetitionStatus status) {
       );
     case CompetitionStatus.registrationClosed:
       return const _StatusVisual(
-        label: 'COMPLET',
+        label: 'INSCRIPTIONS CLOSES',
         color: ArenaColors.statusWarn,
         variant: ArenaBadgeVariant.warn,
       );

@@ -836,7 +836,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get compDetailStatusOpen => 'OPEN';
 
   @override
-  String get compDetailStatusFull => 'FULL';
+  String get compDetailStatusFull => 'REGISTRATIONS CLOSED';
 
   @override
   String get compDetailStatusOngoing => 'ONGOING';
