@@ -34,6 +34,17 @@
 --   20260518202313 (generate_round_robin_bracket).
 -- ════════════════════════════════════════════════════════════════════
 
+-- ─── 0. Fix bug latent : phases.status accepte 'in_progress' ────────
+-- Les générateurs (generate_round_robin_bracket / _groups_then_knockout)
+-- insèrent une phase active à `status = 'in_progress'`, mais le check
+-- d'origine n'autorisait que ('pending','ongoing','completed') → toute
+-- génération de bracket round_robin/groups échouait au 1er INSERT phases
+-- (jamais déclenché en prod : aucune compétition n'avait encore atteint la
+-- génération). On élargit la contrainte (additif, aucune ligne ne peut violer).
+alter table public.phases drop constraint if exists phases_status_check;
+alter table public.phases add constraint phases_status_check
+  check (status in ('pending', 'ongoing', 'in_progress', 'completed'));
+
 -- ─── 1. Recalcul du classement d'un groupe ──────────────────────────
 create or replace function public.recalculate_group_standings(p_group_id uuid)
 returns void
