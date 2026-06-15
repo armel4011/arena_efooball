@@ -174,87 +174,28 @@ void main() {
     });
   });
 
-  group('autoRankFromResults', () {
-    test('sans inscrits → ne touche pas matches', () async {
-      stub('competition_registrations', <Map<String, dynamic>>[]);
-      await repo.autoRankFromResults('c1');
-      verifyNever(() => client.from('matches'));
-    });
-
-    test('classe par niveau > buts > pseudo et upsert rangs séquentiels',
-        () async {
-      // On capture chaque FakeFromBuilder créé pour la table registrations :
-      // le 1er sert à listRegistrations, le 2e porte le payload upsert.
-      final regBuilders = <FakeFromBuilder>[];
-      when(() => client.from('competition_registrations')).thenAnswer((_) {
-        final from = regBuilders.isEmpty
-            ? FakeFromBuilder(
-                Future<dynamic>.value([
-                  registrationRow(
-                    playerId: 'pAlpha',
-                    profile: const {'username': 'Alpha', 'role': 'player'},
-                  ),
-                  registrationRow(
-                    playerId: 'pBravo',
-                    profile: const {'username': 'Bravo', 'role': 'player'},
-                  ),
-                  registrationRow(
-                    playerId: 'pCharlie',
-                    profile: const {'username': 'Charlie', 'role': 'player'},
-                  ),
-                ]),
-              )
-            : FakeFromBuilder(Future<dynamic>.value(null));
-        regBuilders.add(from);
-        return from;
-      });
-
-      // Bravo bat Alpha en finale (round 3) → Bravo et Alpha atteignent le
-      // round 3. Charlie tombe au round 1. Donc Bravo=1, Alpha=2, Charlie=3.
-      final matchesProbe = stub('matches', [
-        {
-          'round': 3,
-          'player1_id': 'pBravo',
-          'player2_id': 'pAlpha',
-          'score1': 2,
-          'score2': 0,
-        },
-        {
-          'round': 1,
-          'player1_id': 'pCharlie',
-          'player2_id': 'pBravo',
-          'score1': 0,
-          'score2': 1,
-        },
-      ]);
-
-      await repo.autoRankFromResults('c1');
-
-      expect(matchesProbe.filters.any((f) => f == 'eq:competition_id=c1'),
-          isTrue,);
-
-      // Le builder qui porte le payload upsert (peu importe son rang).
-      final upsertBuilder = regBuilders.firstWhere(
-        (b) => b.probe.upsertedValues != null,
-      );
-      final upserted = upsertBuilder.probe.upsertedValues! as List<dynamic>;
-      expect(upserted, hasLength(3));
-      final ranks = {
-        for (final e in upserted)
-          (e as Map<String, dynamic>)['player_id'] as String:
-              e['final_rank'] as int,
-      };
-      // Bravo (round 3) = 1 ; Alpha (round 3, perdant) = 2 ; Charlie (r1) = 3.
-      expect(ranks['pBravo'], 1);
-      expect(ranks['pAlpha'], 2);
-      expect(ranks['pCharlie'], 3);
-      // competition_id propagé sur chaque ligne.
-      expect(
-        upserted.every(
-          (e) => (e as Map<String, dynamic>)['competition_id'] == 'c1',
+  group('autoRankFromResults (RPC)', () {
+    // Délègue désormais à la RPC serveur admin_recompute_final_ranks (même
+    // logique que la clôture auto) au lieu d'un calcul client divergent.
+    test('appelle admin_recompute_final_ranks avec p_competition_id', () async {
+      when(
+        () => client.rpc<dynamic>(
+          'admin_recompute_final_ranks',
+          params: any(named: 'params'),
         ),
-        isTrue,
+      ).thenAnswer(
+        (_) => FakeQueryChain<dynamic>(Future<dynamic>.value(null)),
       );
+
+      await repo.autoRankFromResults('c1');
+
+      final captured = verify(
+        () => client.rpc<dynamic>(
+          'admin_recompute_final_ranks',
+          params: captureAny(named: 'params'),
+        ),
+      ).captured.single as Map<String, dynamic>;
+      expect(captured, {'p_competition_id': 'c1'});
     });
   });
 

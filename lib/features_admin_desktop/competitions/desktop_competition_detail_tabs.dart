@@ -41,11 +41,20 @@ class _RankingTab extends ConsumerWidget {
         return ListView(
           padding: const EdgeInsets.symmetric(vertical: 16),
           children: [
+            const InfoBar(
+              title: Text('Classement automatique'),
+              content: Text(
+                'Le classement final est calculé et publié automatiquement '
+                'dès que tous les matchs sont terminés. Ce bouton le recalcule '
+                'à la demande ; le menu déroulant permet un ajustement manuel.',
+              ),
+            ),
+            const SizedBox(height: 12),
             Row(
               children: [
                 FilledButton(
                   onPressed: () => _autoRank(context, ref),
-                  child: const Text('Classement automatique'),
+                  child: const Text('Recalculer'),
                 ),
                 const SizedBox(width: 16),
                 Text(
@@ -136,10 +145,12 @@ class _RankingTab extends ConsumerWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => ContentDialog(
-        title: const Text('Calculer le classement ?'),
+        title: const Text('Recalculer le classement ?'),
         content: const Text(
-          'Les rangs seront recalculés à partir des résultats de matchs. '
-          'Cela écrase les rangs déjà saisis manuellement.',
+          'Les rangs seront recalculés côté serveur — le MÊME classement que '
+          'celui publié automatiquement à la clôture de la compétition '
+          '(champion, finaliste, classement de poule…). Cela écrase les rangs '
+          'saisis manuellement.',
         ),
         actions: [
           Button(

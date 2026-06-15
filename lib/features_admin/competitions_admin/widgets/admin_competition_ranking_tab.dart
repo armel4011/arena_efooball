@@ -79,9 +79,9 @@ class AdminCompetitionRankingTab extends ConsumerWidget {
                       ),
                       const SizedBox(height: ArenaSpacing.xs),
                       Text(
-                        'Critères : niveau atteint dans la compétition, '
-                        'puis buts marqués, puis ordre alphabétique. '
-                        'Ajustable manuellement ensuite.',
+                        'Le classement final est publié automatiquement à la '
+                        'fin de la compétition. Ce bouton le recalcule à la '
+                        'demande (même logique) ; ajustable manuellement ensuite.',
                         style: ArenaText.small,
                       ),
                       const SizedBox(height: ArenaSpacing.sm),
@@ -124,8 +124,8 @@ class AdminCompetitionRankingTab extends ConsumerWidget {
         backgroundColor: ArenaColors.carbon,
         title: Text('Calculer le classement ?', style: ArenaText.h3),
         content: Text(
-          'Les rangs seront recalculés à partir des résultats de matchs '
-          '(niveau atteint, buts marqués, ordre alphabétique). Cela '
+          'Les rangs seront recalculés côté serveur — le même classement que '
+          'celui publié automatiquement à la clôture de la compétition. Cela '
           'écrase les rangs déjà saisis manuellement.',
           style: ArenaText.bodyMuted,
         ),
