@@ -1,5 +1,5 @@
 import 'package:arena/data/repositories/auth_failure.dart';
-import 'package:arena/features_user/auth/widgets/auth_failure_message.dart';
+import 'package:arena/features_shared/auth_common/auth_failure_message.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

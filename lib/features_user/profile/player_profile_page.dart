@@ -7,21 +7,21 @@ import 'package:arena/data/models/tutorial_video.dart';
 import 'package:arena/data/repositories/friends_repository.dart';
 import 'package:arena/data/repositories/match_stats_repository.dart';
 import 'package:arena/data/repositories/referral_repository.dart';
+import 'package:arena/features_shared/avatar_palette.dart';
 import 'package:arena/features_shared/player_tier.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_card.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/home/widgets/tutorial_video_section.dart';
-import 'package:arena/features_user/profile/avatar_palette.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-part 'player_profile_widgets.dart';
 part 'player_profile_social.dart';
+part 'player_profile_widgets.dart';
 
 /// Tab "Profil" of the user app (PHASE 9.1).
 ///

@@ -1,9 +1,9 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/auth_failure.dart';
 import 'package:arena/features_admin/auth_admin/admin_auth_providers.dart';
+import 'package:arena/features_shared/auth_common/auth_failure_message.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
-import 'package:arena/features_user/auth/widgets/auth_failure_message.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
