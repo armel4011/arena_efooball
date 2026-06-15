@@ -13,7 +13,7 @@
 ; ─────────────────────────────────────────────────────────────────────
 
 #define AppName "ARENA Admin"
-#define AppVersion "1.0.3"
+#define AppVersion "1.0.4"
 #define AppPublisher "Arena"
 #define AppExeName "arena.exe"
 ; Chemins relatifs à ce fichier .iss (windows/installer/)
