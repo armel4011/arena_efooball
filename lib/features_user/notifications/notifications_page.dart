@@ -478,6 +478,8 @@ _NotifVisual _visualFor(ArenaNotification n) {
       return const _NotifVisual(emoji: '📺', color: ArenaColors.signalBlue);
     case 'competition_starting':
       return const _NotifVisual(emoji: '🏆', color: ArenaColors.tierGoldWarm);
+    case 'competition_result':
+      return const _NotifVisual(emoji: '🏅', color: ArenaColors.tierGoldWarm);
     case 'payout_received':
     case 'payout_available':
     case 'payout_paid':
