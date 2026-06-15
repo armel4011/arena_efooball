@@ -33,7 +33,9 @@ void main() {
   // 2187 → 2191 le 2026-06-15 : +4 `ArenaColors.*` du podium top-3 du classement
   // final (gold / silver / tierBronze / statusOk dans `_PodiumPlace`).
   // check_colors.sh --strict = 0 régression. À faire décroître via tokens.
-  const colorsDotBaseline = 2191; // occurrences de `Colors.`
+  // 2191 → 2192 le 2026-06-15 : +1 `ArenaColors.tierGoldWarm` de l'icône notif
+  // `competition_result` (feed). check_colors.sh --strict = 0 régression.
+  const colorsDotBaseline = 2192; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
 
   final colorsDotRe = RegExp(r'Colors\.');
