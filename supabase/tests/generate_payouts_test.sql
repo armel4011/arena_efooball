@@ -16,7 +16,7 @@
 -- ════════════════════════════════════════════════════════════════════
 
 begin;
-select plan(10);
+select plan(11);
 
 alter table public.notifications disable trigger trg_notifications_dispatch;
 
