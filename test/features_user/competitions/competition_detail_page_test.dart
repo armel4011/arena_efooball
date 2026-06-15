@@ -37,6 +37,7 @@ Widget _scoped({
   required Competition comp,
   List<ArenaMatch> matches = const [],
   List<StandingsBucket> buckets = const [],
+  List<CompetitionRankingEntry> ranking = const [],
 }) =>
     ProviderScope(
       overrides: [
@@ -45,6 +46,7 @@ Widget _scoped({
         competitionMatchesProvider
             .overrideWith((ref, _) => Stream<List<ArenaMatch>>.value(matches)),
         competitionStandingsProvider.overrideWith((ref, _) async => buckets),
+        competitionRankingProvider.overrideWith((ref, _) async => ranking),
         // La detail page est gated derrière `myRegisteredCompetitionIdsProvider` :
         // sans inscription, on tombe sur `_GatedDetailView` au lieu du body
         // taggé. On force le joueur "inscrit" pour ces tests.
@@ -143,5 +145,58 @@ void main() {
     // GroupStandingsView en empty state) varie, on assert juste que le
     // tap n'a pas crashé et que le tab reste visible.
     expect(find.text('CLASSEMENT'), findsOneWidget);
+  });
+
+  testWidgets('classement publié → podium top-3 + reste en liste',
+      (tester) async {
+    await bumpViewport(tester);
+    const ranking = [
+      CompetitionRankingEntry(
+        playerId: 'p1',
+        username: 'Drogba',
+        countryCode: 'CI',
+        avatarColor: '#FF6A00',
+        finalRank: 1,
+      ),
+      CompetitionRankingEntry(
+        playerId: 'p2',
+        username: 'Eto',
+        countryCode: 'CM',
+        avatarColor: '#4C7AFF',
+        finalRank: 2,
+      ),
+      CompetitionRankingEntry(
+        playerId: 'p3',
+        username: 'Salah',
+        countryCode: 'EG',
+        avatarColor: '#00C896',
+        finalRank: 3,
+      ),
+      CompetitionRankingEntry(
+        playerId: 'p4',
+        username: 'Mane',
+        countryCode: 'SN',
+        avatarColor: '#FFB020',
+        finalRank: 4,
+      ),
+    ];
+    await tester.pumpWidget(
+      _scoped(
+        comp: _open(status: CompetitionStatus.completed),
+        ranking: ranking,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('CLASSEMENT'));
+    await tester.pumpAndSettle();
+
+    // Podium : les 3 médailles + le 1er du podium.
+    expect(find.text('🥇'), findsOneWidget);
+    expect(find.text('🥈'), findsOneWidget);
+    expect(find.text('🥉'), findsOneWidget);
+    expect(find.text('Drogba'), findsWidgets);
+    // Le 4e (hors podium) apparaît dans la liste en dessous.
+    expect(find.text('Mane'), findsOneWidget);
   });
 }

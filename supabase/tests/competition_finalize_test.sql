@@ -64,22 +64,29 @@ select is((select final_rank from competition_registrations where competition_id
 select is((select final_rank from competition_registrations where competition_id='c1c1c1c1-0000-0000-0000-000000000001' and player_id='a1a1a1a1-0000-0000-0000-000000000004'),
   4, 'demi-finaliste D = rang 4');
 
--- ═══ ROUND ROBIN (A,B,C) ════════════════════════════════════════════
+-- ═══ ROUND ROBIN (A,B,C) — groupe + matchs MANUELS (déterministe) ═══
+-- On évite generate_round_robin_bracket (ORDER BY random() + garde « already
+-- exists ») : sa création de groupe est déjà couverte par
+-- group_standings_recalc_test. Ici on cible la clôture + le final_rank.
 insert into competitions(id,name,game,format,status,start_date,max_players,registration_fee,registration_currency) values
-  ('c2c2c2c2-0000-0000-0000-000000000001','RR','efootball','round_robin','registration_closed',now()-interval '1 hour',3,0,'XOF');
+  ('c2c2c2c2-0000-0000-0000-000000000001','RR','efootball','round_robin','ongoing',now()-interval '1 hour',3,0,'XOF');
 insert into competition_registrations(competition_id,player_id,status) values
   ('c2c2c2c2-0000-0000-0000-000000000001','a1a1a1a1-0000-0000-0000-000000000001','confirmed'),
   ('c2c2c2c2-0000-0000-0000-000000000001','a1a1a1a1-0000-0000-0000-000000000002','confirmed'),
   ('c2c2c2c2-0000-0000-0000-000000000001','a1a1a1a1-0000-0000-0000-000000000003','confirmed');
-select public.generate_round_robin_bracket('c2c2c2c2-0000-0000-0000-000000000001');
+insert into phases(id,competition_id,phase_order,type,status) values
+  ('f2f2f2f2-0000-0000-0000-000000000001','c2c2c2c2-0000-0000-0000-000000000001',1,'round_robin','in_progress');
+insert into groups(id,competition_id,phase_id,name,group_number) values
+  ('e2e2e2e2-0000-0000-0000-000000000001','c2c2c2c2-0000-0000-0000-000000000001','f2f2f2f2-0000-0000-0000-000000000001','Classement',1);
+insert into matches(id,competition_id,phase_id,group_id,player1_id,player2_id,status) values
+  ('d2d2d2d2-0000-0000-0000-0000000000ab','c2c2c2c2-0000-0000-0000-000000000001','f2f2f2f2-0000-0000-0000-000000000001','e2e2e2e2-0000-0000-0000-000000000001','a1a1a1a1-0000-0000-0000-000000000001','a1a1a1a1-0000-0000-0000-000000000002','scheduled'),
+  ('d2d2d2d2-0000-0000-0000-0000000000ac','c2c2c2c2-0000-0000-0000-000000000001','f2f2f2f2-0000-0000-0000-000000000001','e2e2e2e2-0000-0000-0000-000000000001','a1a1a1a1-0000-0000-0000-000000000001','a1a1a1a1-0000-0000-0000-000000000003','scheduled'),
+  ('d2d2d2d2-0000-0000-0000-0000000000bc','c2c2c2c2-0000-0000-0000-000000000001','f2f2f2f2-0000-0000-0000-000000000001','e2e2e2e2-0000-0000-0000-000000000001','a1a1a1a1-0000-0000-0000-000000000002','a1a1a1a1-0000-0000-0000-000000000003','scheduled');
 
--- Tous les matchs : vainqueur = plus petit uuid (a1 > a2 > a3 en priorité).
-update matches set
-  winner_id = least(player1_id, player2_id),
-  score1 = case when player1_id < player2_id then 1 else 0 end,
-  score2 = case when player2_id < player1_id then 1 else 0 end,
-  status = 'completed'
-where competition_id='c2c2c2c2-0000-0000-0000-000000000001';
+-- A bat B 2-0, A bat C 1-0, B bat C 3-0 → A 6pts (1), B 3pts (2), C 0pt (3)
+update matches set status='completed',score1=2,score2=0,winner_id='a1a1a1a1-0000-0000-0000-000000000001' where id='d2d2d2d2-0000-0000-0000-0000000000ab';
+update matches set status='completed',score1=1,score2=0,winner_id='a1a1a1a1-0000-0000-0000-000000000001' where id='d2d2d2d2-0000-0000-0000-0000000000ac';
+update matches set status='completed',score1=3,score2=0,winner_id='a1a1a1a1-0000-0000-0000-000000000002' where id='d2d2d2d2-0000-0000-0000-0000000000bc';
 
 select is((select status::text from competitions where id='c2c2c2c2-0000-0000-0000-000000000001'),
   'completed', 'round-robin terminé → completed');

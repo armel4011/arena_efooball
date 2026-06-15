@@ -333,20 +333,29 @@ class _RankingTab extends ConsumerWidget {
             description: l10n.compDetailRankingNotPublishedDesc,
           );
         }
+        // Top 3 → podium ; le reste (rangs 4+ et non classés) → liste.
+        final ranked =
+            entries.where((e) => e.finalRank != null).toList(growable: false);
+        final podium = ranked.take(3).toList(growable: false);
+        final rest = [
+          ...ranked.skip(3),
+          ...entries.where((e) => e.finalRank == null),
+        ];
         return RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(competitionRankingProvider(competition.id));
             await ref.read(competitionRankingProvider(competition.id).future);
           },
-          child: ListView.separated(
+          child: ListView(
             padding: const EdgeInsets.all(ArenaSpacing.lg),
-            itemCount: entries.length,
-            separatorBuilder: (_, __) =>
+            children: [
+              _RankingPodium(places: podium, competition: competition),
+              if (rest.isNotEmpty) const SizedBox(height: ArenaSpacing.lg),
+              for (final e in rest) ...[
+                _RankingEntryRow(entry: e, competition: competition),
                 const SizedBox(height: ArenaSpacing.xs),
-            itemBuilder: (_, i) => _RankingEntryRow(
-              entry: entries[i],
-              competition: competition,
-            ),
+              ],
+            ],
           ),
         );
       },
@@ -434,6 +443,138 @@ class _RankingEntryRow extends StatelessWidget {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Podium top-3 du classement final : 2ᵉ à gauche, 1ᵉʳ surélevé au centre,
+/// 3ᵉ à droite. En tête de l'onglet Classement d'une compétition terminée.
+class _RankingPodium extends StatelessWidget {
+  const _RankingPodium({required this.places, required this.competition});
+
+  /// Triés par `finalRank` croissant (1, 2, 3), au plus 3 entrées.
+  final List<CompetitionRankingEntry> places;
+  final Competition competition;
+
+  @override
+  Widget build(BuildContext context) {
+    final first = places.isNotEmpty ? places[0] : null;
+    final second = places.length > 1 ? places[1] : null;
+    final third = places.length > 2 ? places[2] : null;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Expanded(
+          child: second == null
+              ? const SizedBox.shrink()
+              : _PodiumPlace(
+                  entry: second,
+                  blockHeight: 54,
+                  competition: competition,
+                ),
+        ),
+        const SizedBox(width: ArenaSpacing.xs),
+        Expanded(
+          child: first == null
+              ? const SizedBox.shrink()
+              : _PodiumPlace(
+                  entry: first,
+                  blockHeight: 84,
+                  competition: competition,
+                ),
+        ),
+        const SizedBox(width: ArenaSpacing.xs),
+        Expanded(
+          child: third == null
+              ? const SizedBox.shrink()
+              : _PodiumPlace(
+                  entry: third,
+                  blockHeight: 38,
+                  competition: competition,
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PodiumPlace extends StatelessWidget {
+  const _PodiumPlace({
+    required this.entry,
+    required this.blockHeight,
+    required this.competition,
+  });
+
+  final CompetitionRankingEntry entry;
+  final double blockHeight;
+  final Competition competition;
+
+  @override
+  Widget build(BuildContext context) {
+    final rank = entry.finalRank ?? 0;
+    final dist = competition.prizeDistribution;
+    final hasPrize =
+        rank >= 1 && rank <= dist.length && dist[rank - 1] > 0;
+    final prize = hasPrize ? dist[rank - 1] : null;
+    final currency =
+        competition.prizePoolCurrency ?? competition.registrationCurrency;
+    final medal = switch (rank) {
+      1 => ArenaColors.gold,
+      2 => ArenaColors.silver,
+      _ => ArenaColors.tierBronze,
+    };
+    final initials = entry.username.isNotEmpty
+        ? entry.username.substring(0, 1).toUpperCase()
+        : '?';
+
+    return InkWell(
+      onTap: entry.username.isEmpty
+          ? null
+          : () => context.push(UserRoutes.publicProfilePath(entry.username)),
+      borderRadius: BorderRadius.circular(ArenaRadius.lg),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            prizeRankEmoji(rank - 1),
+            style: const TextStyle(fontSize: 26),
+          ),
+          const SizedBox(height: 4),
+          ArenaAvatar(
+            initials: initials,
+            color: _avatarColorForSeed(entry.username),
+            size: rank == 1 ? ArenaAvatarSize.lg : ArenaAvatarSize.md,
+          ),
+          const SizedBox(height: ArenaSpacing.xs),
+          Text(
+            entry.username,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: ArenaText.bodyMuted,
+          ),
+          if (prize != null)
+            Text(
+              '${_formatMoney(prize)} $currency',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: ArenaText.monoSmall.copyWith(color: ArenaColors.statusOk),
+            ),
+          const SizedBox(height: ArenaSpacing.xs),
+          Container(
+            height: blockHeight,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: medal.withValues(alpha: 0.18),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(ArenaRadius.sm)),
+              border: Border.all(color: medal.withValues(alpha: 0.5)),
+            ),
+            alignment: Alignment.center,
+            child: Text('$rank', style: ArenaText.h2.copyWith(color: medal)),
+          ),
+        ],
       ),
     );
   }

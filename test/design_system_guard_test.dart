@@ -30,7 +30,10 @@ void main() {
   // victoires (helper player_tier.dart + badges profil perso/public, gradients
   // bronze/argent/or/élite). check_colors.sh --strict = 0 régression (aucun
   // vrai `Colors.*` ajouté). À faire décroître via migration vers tokens.
-  const colorsDotBaseline = 2187; // occurrences de `Colors.`
+  // 2187 → 2191 le 2026-06-15 : +4 `ArenaColors.*` du podium top-3 du classement
+  // final (gold / silver / tierBronze / statusOk dans `_PodiumPlace`).
+  // check_colors.sh --strict = 0 régression. À faire décroître via tokens.
+  const colorsDotBaseline = 2191; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
 
   final colorsDotRe = RegExp(r'Colors\.');
