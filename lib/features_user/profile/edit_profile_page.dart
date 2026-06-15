@@ -1,13 +1,13 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/core/utils/supported_countries.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
+import 'package:arena/features_shared/avatar_palette.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_card.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
-import 'package:arena/features_user/profile/avatar_palette.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
