@@ -12,7 +12,11 @@
 -- ════════════════════════════════════════════════════════════════════
 
 begin;
-select plan(10);
+select plan(13);
+
+-- La clôture insère des notifications `competition_result` ; on coupe le
+-- trigger de dispatch FCM (net.http_post / pg_net) pour ce test transactionnel.
+alter table public.notifications disable trigger trg_notifications_dispatch;
 
 -- ─── Fixtures communes ──────────────────────────────────────────────
 insert into auth.users(id) values
@@ -63,6 +67,26 @@ select is((select final_rank from competition_registrations where competition_id
   3, 'demi-finaliste B = rang 3 (départage buts)');
 select is((select final_rank from competition_registrations where competition_id='c1c1c1c1-0000-0000-0000-000000000001' and player_id='a1a1a1a1-0000-0000-0000-000000000004'),
   4, 'demi-finaliste D = rang 4');
+
+-- ─── Notifications de classement ────────────────────────────────────
+select is(
+  (select count(*)::int from notifications
+     where type='competition_result'
+       and data->>'competition_id'='c1c1c1c1-0000-0000-0000-000000000001'),
+  4, 'une notification competition_result par participant');
+select is(
+  (select title from notifications
+     where type='competition_result'
+       and user_id='a1a1a1a1-0000-0000-0000-000000000001'
+       and data->>'competition_id'='c1c1c1c1-0000-0000-0000-000000000001'),
+  '🥇 Champion !', 'le champion reçoit le titre Champion');
+select is(
+  (select data->>'route' from notifications
+     where type='competition_result'
+       and user_id='a1a1a1a1-0000-0000-0000-000000000001'
+       and data->>'competition_id'='c1c1c1c1-0000-0000-0000-000000000001'),
+  '/competitions/c1c1c1c1-0000-0000-0000-000000000001',
+  'la notif deep-linke vers la compétition');
 
 -- ═══ ROUND ROBIN (A,B,C) — groupe + matchs MANUELS (déterministe) ═══
 -- On évite generate_round_robin_bracket (ORDER BY random() + garde « already
