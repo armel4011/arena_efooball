@@ -7,13 +7,13 @@ import 'package:arena/data/repositories/admin/admin_competitions_repository.dart
 import 'package:arena/features_admin/competitions_admin/widgets/competition_form_widgets.dart';
 import 'package:arena/features_admin/competitions_admin/widgets/wizard_step_fees.dart';
 import 'package:arena/features_admin/competitions_admin/widgets/wizard_step_format.dart';
+import 'package:arena/features_admin/competitions_admin/widgets/wizard_step_infos.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/prize_ranks.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_stepper.dart';
-import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -277,7 +277,19 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
                 child: ListView(
                   padding: const EdgeInsets.all(ArenaSpacing.lg),
                   children: [
-                    if (_step == 0) ..._buildInfosStep(),
+                    if (_step == 0)
+                      WizardStepInfos(
+                        nameCtrl: _nameCtrl,
+                        descCtrl: _descCtrl,
+                        androidStoreUrlCtrl: _androidStoreUrlCtrl,
+                        iosStoreUrlCtrl: _iosStoreUrlCtrl,
+                        game: _game,
+                        startDate: _startDate,
+                        isEditing: _isEditing,
+                        onChanged: () => setState(() {}),
+                        onGameChanged: (g) => setState(() => _game = g),
+                        onPickStartDate: _pickStartDate,
+                      ),
                     if (_step == 1)
                       WizardStepFormat(
                         format: _format,
@@ -359,93 +371,6 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
   }
 
   // ─── Steps ────────────────────────────────────────────────────────
-
-  /// En mode édition, grise et désactive un champ verrouillé (jeu,
-  /// format, capacité, frais). En création, renvoie [child] tel quel.
-  Widget _lockable(Widget child) {
-    if (!_isEditing) return child;
-    return IgnorePointer(
-      child: Opacity(opacity: 0.45, child: child),
-    );
-  }
-
-  List<Widget> _buildInfosStep() => [
-        Text('Nom de la compétition', style: ArenaText.inputLabel),
-        const SizedBox(height: ArenaSpacing.xs),
-        ArenaTextField(
-          controller: _nameCtrl,
-          hint: 'Cameroon eFootball Cup',
-          onChanged: (_) => setState(() {}),
-        ),
-        const SizedBox(height: ArenaSpacing.md),
-        Text('Jeu', style: ArenaText.inputLabel),
-        const SizedBox(height: ArenaSpacing.xs),
-        _lockable(
-          GamePicker(
-            current: _game,
-            onChanged: (g) => setState(() => _game = g),
-          ),
-        ),
-        const SizedBox(height: ArenaSpacing.md),
-        Text('Description (optionnel)', style: ArenaText.inputLabel),
-        const SizedBox(height: ArenaSpacing.xs),
-        ArenaTextField(
-          controller: _descCtrl,
-          hint: 'Petite phrase de pitch…',
-          minLines: 2,
-          maxLines: 4,
-        ),
-        const SizedBox(height: ArenaSpacing.md),
-        Text('Date de début', style: ArenaText.inputLabel),
-        const SizedBox(height: ArenaSpacing.xs),
-        InkWell(
-          onTap: _pickStartDate,
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: ArenaSpacing.md,
-              vertical: 12,
-            ),
-            decoration: BoxDecoration(
-              color: ArenaColors.carbon,
-              borderRadius: BorderRadius.circular(ArenaRadius.md),
-              border: Border.all(color: ArenaColors.border),
-            ),
-            child: Text(
-              _startDate == null
-                  ? 'Choisir une date'
-                  : DateFormat('EEEE dd/MM/yyyy HH:mm', 'fr_FR')
-                      .format(_startDate!),
-              style: ArenaText.body,
-            ),
-          ),
-        ),
-        const SizedBox(height: ArenaSpacing.lg),
-        Text('Liens stores du jeu (optionnel)', style: ArenaText.h3),
-        const SizedBox(height: ArenaSpacing.xs),
-        Text(
-          "Le joueur verra 2 boutons sur la page d'inscription pour "
-          'télécharger le jeu. Laisse vide pour ne pas afficher.',
-          style: ArenaText.small,
-        ),
-        const SizedBox(height: ArenaSpacing.sm),
-        Text('Play Store (Android)', style: ArenaText.inputLabel),
-        const SizedBox(height: ArenaSpacing.xs),
-        ArenaTextField(
-          controller: _androidStoreUrlCtrl,
-          hint: 'https://play.google.com/store/apps/details?id=…',
-          keyboardType: TextInputType.url,
-          onChanged: (_) => setState(() {}),
-        ),
-        const SizedBox(height: ArenaSpacing.sm),
-        Text('App Store (iOS)', style: ArenaText.inputLabel),
-        const SizedBox(height: ArenaSpacing.xs),
-        ArenaTextField(
-          controller: _iosStoreUrlCtrl,
-          hint: 'https://apps.apple.com/app/id…',
-          keyboardType: TextInputType.url,
-          onChanged: (_) => setState(() {}),
-        ),
-      ];
 
   List<Widget> _buildPrizesStep() {
     final topCount = _rewardedCount < 4 ? _rewardedCount : 4;
