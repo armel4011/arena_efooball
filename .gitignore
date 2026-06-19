@@ -113,6 +113,10 @@ _restyle_ref/
 # Site web statique (landing / downloads) — gestion séparée.
 site web/
 
+# Landing Next.js : artefacts de build/déps jamais versionnés (source OK).
+landing/node_modules/
+landing/out/
+
 # Screenshots de test manuels à la racine (captures device ad-hoc).
 /_t*.png
 # Captures temporaires ad-hoc (préfixe .tmp_) à la racine — jamais à versionner.
