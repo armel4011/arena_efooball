@@ -40,7 +40,11 @@ void main() {
   // danger, repli initiales dans arena_avatar / edit_profile / profils / amis).
   // check_colors.sh --strict = 0 régression (aucun vrai `Colors.*` ajouté ;
   // les 3 `Colors.white` déplacés sont compensés par 3 retraits).
-  const colorsDotBaseline = 2203; // occurrences de `Colors.`
+  // 2203 → 2211 le 2026-06-19 : +8 `ArenaColors.*` des chips de filtre directs
+  // de la liste des compétitions (statut signalBlue/statusWarn/silver, tarif
+  // signalBlue/statusOk/tierGoldWarm, fond carbon + border dans _FilterPill).
+  // check_colors.sh --strict = 0 régression (aucun vrai `Colors.*` ajouté).
+  const colorsDotBaseline = 2211; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
 
   final colorsDotRe = RegExp(r'Colors\.');

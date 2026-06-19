@@ -60,11 +60,16 @@ void main() {
     // La liste est organisée en onglets — un par jeu, désormais ordonnés
     // Dames · eFootball · EA FC (plus d'onglet « Tous »). L'onglet par
     // défaut (Dames) sans compétition affiche un empty state dédié au jeu,
-    // et conserve le menu de filtres (statut + tarif).
+    // et expose les filtres en chips directs (statut + tarif) au lieu de
+    // l'ancien menu groupé « FILTRES ».
     expect(find.byType(TabBar), findsOneWidget);
     expect(find.byType(Tab), findsNWidgets(3));
     expect(find.text('Aucune compétition sur Jeu de Dames'), findsOneWidget);
-    expect(find.text('FILTRES'), findsOneWidget);
+    // Chips de statut (À venir par défaut) + chip de tarif distinctif.
+    expect(find.text('À venir'), findsOneWidget);
+    expect(find.text('En cours'), findsOneWidget);
+    expect(find.text('Terminés'), findsOneWidget);
+    expect(find.text('Gratuites'), findsOneWidget);
   });
 
   testWidgets('renders one card per competition under the default filter',

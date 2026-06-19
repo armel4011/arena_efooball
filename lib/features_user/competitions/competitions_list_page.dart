@@ -5,7 +5,6 @@ import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/models/tutorial_video.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
 import 'package:arena/data/repositories/payment_repository.dart';
-import 'package:arena/features_shared/widgets/arena_filter_menu.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:arena/features_shared/widgets/error_state.dart';
@@ -147,7 +146,11 @@ class _CompetitionTab extends ConsumerStatefulWidget {
 
 class _CompetitionTabState extends ConsumerState<_CompetitionTab>
     with AutomaticKeepAliveClientMixin {
-  StatusBucket _bucket = StatusBucket.all;
+  // L'onglet démarre sur « À venir » (plus de menu de filtres groupé : les
+  // statuts sont exposés directement en chips ci-dessous). Pas d'option
+  // « Toutes » côté user, cf. #168.
+  StatusBucket _bucket = StatusBucket.upcoming;
+  // Filtre tarif : « Toutes » par défaut (gratuites + payantes).
   PricingBucket _pricing = PricingBucket.all;
 
   @override
@@ -168,25 +171,18 @@ class _CompetitionTabState extends ConsumerState<_CompetitionTab>
             ArenaSpacing.lg,
             ArenaSpacing.sm,
           ),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ArenaFilterMenu(
-                activeCount: _activeFilterCount(),
-                sections: _buildSections(l10n),
-                initialSelection: _selectionSnapshot(),
-                onApply: _applySelection,
+              _StatusChips(
+                current: _bucket,
+                onChanged: (b) => setState(() => _bucket = b),
               ),
-              const Spacer(),
-              if (_activeFilterCount() > 0)
-                TextButton(
-                  onPressed: _resetAll,
-                  child: Text(
-                    l10n.compListReset,
-                    style: ArenaText.small.copyWith(
-                      color: ArenaColors.signalBlue,
-                    ),
-                  ),
-                ),
+              const SizedBox(height: ArenaSpacing.sm),
+              _PricingChips(
+                current: _pricing,
+                onChanged: (p) => setState(() => _pricing = p),
+              ),
             ],
           ),
         ),
@@ -255,69 +251,120 @@ class _CompetitionTabState extends ConsumerState<_CompetitionTab>
     );
   }
 
-  // ─── Filter helpers (mapping tab state ↔ ArenaFilterMenu) ───────────
-  // La section « jeu » a disparu : le jeu est porté par l'onglet courant.
+}
 
-  List<ArenaFilterSection> _buildSections(AppLocalizations l10n) {
-    return [
-      ArenaFilterSection(
-        id: 'status',
-        title: l10n.compListFilterStatus,
-        mode: ArenaFilterMode.radio,
-        // Pas d'option « Toutes » : aucune sélection = tous les statuts
-        // (cohérent avec la liste admin). Le bouton « Réinitialiser » du
-        // menu remet _bucket à StatusBucket.all.
-        options: [
-          for (final b in StatusBucket.values)
-            if (b != StatusBucket.all)
-              ArenaFilterOption(id: b.name, label: b.labelOf(l10n)),
+/// Chips de filtre de statut — remplacent l'ancien menu groupé
+/// `ArenaFilterMenu`. Pas d'option « Toutes » (cf. #168) ; trois statuts :
+/// à venir / en cours / terminé. L'onglet démarre sur « À venir ».
+class _StatusChips extends StatelessWidget {
+  const _StatusChips({required this.current, required this.onChanged});
+
+  final StatusBucket current;
+  final ValueChanged<StatusBucket> onChanged;
+
+  static const _options = <(StatusBucket, Color)>[
+    (StatusBucket.upcoming, ArenaColors.signalBlue),
+    (StatusBucket.ongoing, ArenaColors.statusWarn),
+    (StatusBucket.completed, ArenaColors.silver),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return SizedBox(
+      height: 36,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          for (final (b, accent) in _options) ...[
+            _FilterPill(
+              label: b.labelOf(l10n),
+              accent: accent,
+              active: b == current,
+              onTap: () => onChanged(b),
+            ),
+            const SizedBox(width: ArenaSpacing.sm),
+          ],
         ],
       ),
-      ArenaFilterSection(
-        id: 'pricing',
-        title: l10n.compListFilterPricing,
-        mode: ArenaFilterMode.radio,
-        options: [
-          for (final p in PricingBucket.values)
-            ArenaFilterOption(id: p.name, label: p.labelOf(l10n)),
+    );
+  }
+}
+
+/// Chips de filtre tarif (Toutes / Gratuites / Payantes). « Toutes » par
+/// défaut afin d'afficher gratuites + payantes.
+class _PricingChips extends StatelessWidget {
+  const _PricingChips({required this.current, required this.onChanged});
+
+  final PricingBucket current;
+  final ValueChanged<PricingBucket> onChanged;
+
+  static const _options = <(PricingBucket, Color)>[
+    (PricingBucket.all, ArenaColors.signalBlue),
+    (PricingBucket.free, ArenaColors.statusOk),
+    (PricingBucket.paid, ArenaColors.tierGoldWarm),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return SizedBox(
+      height: 36,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          for (final (p, accent) in _options) ...[
+            _FilterPill(
+              label: p.labelOf(l10n),
+              accent: accent,
+              active: p == current,
+              onTap: () => onChanged(p),
+            ),
+            const SizedBox(width: ArenaSpacing.sm),
+          ],
         ],
       ),
-    ];
+    );
   }
+}
 
-  Map<String, List<String>> _selectionSnapshot() {
-    return {
-      'status': _bucket == StatusBucket.all ? const [] : [_bucket.name],
-      'pricing': _pricing == PricingBucket.all ? const [] : [_pricing.name],
-    };
-  }
+/// Pastille de filtre générique (statut ou tarif). Active : fond
+/// `accent @ 18 %` + border accent, sinon carbon neutre — même style que les
+/// chips de l'historique de matchs.
+class _FilterPill extends StatelessWidget {
+  const _FilterPill({
+    required this.label,
+    required this.accent,
+    required this.active,
+    required this.onTap,
+  });
 
-  void _applySelection(Map<String, List<String>> selection) {
-    setState(() {
-      final statusId = selection['status']?.firstOrNull;
-      _bucket = statusId == null
-          ? StatusBucket.all
-          : StatusBucket.values.firstWhere((b) => b.name == statusId);
+  final String label;
+  final Color accent;
+  final bool active;
+  final VoidCallback onTap;
 
-      final pricingId = selection['pricing']?.firstOrNull;
-      _pricing = pricingId == null
-          ? PricingBucket.all
-          : PricingBucket.values.firstWhere((p) => p.name == pricingId);
-    });
-  }
-
-  int _activeFilterCount() {
-    var n = 0;
-    if (_bucket != StatusBucket.all) n++;
-    if (_pricing != PricingBucket.all) n++;
-    return n;
-  }
-
-  void _resetAll() {
-    setState(() {
-      _bucket = StatusBucket.all;
-      _pricing = PricingBucket.all;
-    });
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(ArenaRadius.round),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: active ? accent.withValues(alpha: 0.18) : ArenaColors.carbon,
+          borderRadius: BorderRadius.circular(ArenaRadius.round),
+          border: Border.all(color: active ? accent : ArenaColors.border),
+        ),
+        child: Text(
+          label,
+          style: ArenaText.button.copyWith(
+            color: active ? accent : ArenaColors.silver,
+            fontSize: 12,
+          ),
+        ),
+      ),
+    );
   }
 }
 
