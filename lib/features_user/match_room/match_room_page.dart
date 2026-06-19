@@ -142,9 +142,7 @@ class _MatchRoomBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final players = ref.watch(matchPlayersProvider(match.id));
     final step = MatchStep.fromStatus(match.status);
-    final isDraughts =
-        ref.watch(matchGameTypeProvider(match.id)).valueOrNull ==
-            GameType.draughts;
+    final gameTypeAsync = ref.watch(matchGameTypeProvider(match.id));
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(
@@ -166,19 +164,46 @@ class _MatchRoomBody extends ConsumerWidget {
             p1: players.value?.p1,
             p2: players.value?.p2,
           ),
-          // Anti-cheat recording banner (Android-only, no-op elsewhere).
-          // Inutile pour les dames : la partie est jouée in-app, le serveur
-          // tient l'historique des coups (pas d'écran de jeu tiers à filmer).
-          if (!isDraughts)
-            MatchRecordingLifecycle(match: match, selfId: selfId),
-          if (role != MatchRole.observer)
-            StartStreamingBanner(matchId: match.id),
-          const SizedBox(height: ArenaSpacing.lg),
-          StepBody(
-            match: match,
-            role: role,
-            selfId: selfId,
-            isDraughts: isDraughts,
+          // Le type de jeu décide tout le bas de la room (plateau de dames
+          // in-app vs flux déclaratif code + preuve). On ATTEND sa résolution :
+          // un défaut « non-dames » afficherait le formulaire de preuve sur une
+          // room de dames pendant le chargement (flash de demande de preuve).
+          gameTypeAsync.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: ArenaSpacing.xxl),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (e, _) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: ArenaSpacing.xxl),
+              child: ErrorState(
+                description: e.toString(),
+                onRetry: () =>
+                    ref.invalidate(matchGameTypeProvider(match.id)),
+              ),
+            ),
+            data: (gameType) {
+              final isDraughts = gameType == GameType.draughts;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Anti-cheat recording banner (Android-only, no-op ailleurs).
+                  // Inutile pour les dames : la partie est jouée in-app, le
+                  // serveur tient l'historique des coups (pas d'écran tiers à
+                  // filmer).
+                  if (!isDraughts)
+                    MatchRecordingLifecycle(match: match, selfId: selfId),
+                  if (role != MatchRole.observer)
+                    StartStreamingBanner(matchId: match.id),
+                  const SizedBox(height: ArenaSpacing.lg),
+                  StepBody(
+                    match: match,
+                    role: role,
+                    selfId: selfId,
+                    isDraughts: isDraughts,
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),

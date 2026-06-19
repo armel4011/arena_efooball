@@ -1,8 +1,8 @@
 // =============================================================================
 // ARENA — Plateau de dames : widget interactif (pseudo-3D).
 // =============================================================================
-// Damier plat (DraughtsBoardPainter) incliné en perspective par un Transform
-// (rotateX + perspective ; rotateZ pour le joueur Noir). `transformHitTests`
+// Damier vu de dessus (2D plat, DraughtsBoardPainter). Seul un rotateZ oriente
+// le plateau côté Noirs (le joueur voit ses pions en bas). `transformHitTests`
 // renvoie les taps vers les coordonnées plates → hit-testing trivial.
 //
 // Animation pilotée par l'ÉTAT AUTORITAIRE : à chaque changement de `state`
@@ -170,9 +170,9 @@ class _DraughtsBoardViewState extends State<DraughtsBoardView>
         return Center(
           child: Transform(
             alignment: Alignment.center,
+            // Vue de dessus (2D plat) : plus d'inclinaison ni de perspective.
+            // Seul le rotateZ subsiste pour orienter le plateau côté Noirs.
             transform: Matrix4.identity()
-              ..setEntry(3, 2, 0.0011) // force de la perspective
-              ..rotateX(0.52) // inclinaison ~30°
               ..rotateZ(widget.flip ? math.pi : 0), // orientation Noirs
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
