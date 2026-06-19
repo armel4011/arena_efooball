@@ -20,6 +20,9 @@ sealed class Profile with _$Profile {
     // en pratique pour le profil de l'utilisateur courant (lu sur la table).
     String? email,
     @Default('#4C7AFF') String avatarColor,
+    // Photo d'avatar (bucket Storage `avatars`). NULL → repli cercle coloré
+    // + initiale via [avatarColor].
+    String? avatarUrl,
     @Default(UserRole.player) @UserRoleConverter() UserRole role,
     @Default(true) bool isActive,
     @Default(false) bool permanentBan,

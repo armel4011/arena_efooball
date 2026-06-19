@@ -451,6 +451,8 @@ class _PeerRow extends StatelessWidget {
     final color = AvatarPalette.colorFromHex(profile.avatarColor);
     final initial =
         profile.username.isEmpty ? '?' : profile.username[0].toUpperCase();
+    final photoUrl = profile.avatarUrl;
+    final hasPhoto = photoUrl != null && photoUrl.isNotEmpty;
     return ArenaCard(
       onTap: onTap ??
           () => context.push(UserRoutes.publicProfilePath(profile.username)),
@@ -463,15 +465,26 @@ class _PeerRow extends StatelessWidget {
           Container(
             width: 44,
             height: 44,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            alignment: Alignment.center,
-            child: Text(
-              initial,
-              style: ArenaTypography.headlineMedium.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
-              ),
+            decoration: BoxDecoration(
+              color: hasPhoto ? null : color,
+              shape: BoxShape.circle,
+              image: hasPhoto
+                  ? DecorationImage(
+                      image: NetworkImage(photoUrl),
+                      fit: BoxFit.cover,
+                    )
+                  : null,
             ),
+            alignment: Alignment.center,
+            child: hasPhoto
+                ? null
+                : Text(
+                    initial,
+                    style: ArenaTypography.headlineMedium.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
           ),
           const SizedBox(width: ArenaSpacing.md),
           Expanded(

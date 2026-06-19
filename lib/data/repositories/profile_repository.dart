@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:arena/data/models/profile.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -8,6 +10,11 @@ class ProfileRepository {
 
   static const _table = 'profiles';
 
+  /// Bucket Storage public des photos d'avatar (créé migration
+  /// `add_avatar_url_to_profiles` + bucket `avatars`). Convention de chemin :
+  /// `avatars/<uid>/avatar_<ts>.<ext>` — le 1er segment = uid impose la RLS.
+  static const _avatarsBucket = 'avatars';
+
   /// Colonnes lues côté client. **Liste explicite volontaire** : ni
   /// `totp_secret` ni `backup_codes` n'y figurent — ces colonnes sont
   /// réservées au service role (Edge Functions TOTP) et `REVOKE`'d pour
@@ -15,7 +22,8 @@ class ProfileRepository {
   /// `select()` implicite (`*`) lèverait désormais `permission denied for
   /// column profiles.totp_secret`. Garder synchro avec le modèle [Profile].
   static const _columns =
-      'id, username, email, country_code, avatar_color, role, is_active, '
+      'id, username, email, country_code, avatar_color, avatar_url, role, '
+      'is_active, '
       'permanent_ban, fcm_token, stats, auth_provider, auth_provider_id, '
       'whatsapp_number, preferred_language, preferred_currency, timezone, '
       'onboarding_completed, onboarding_completed_at, totp_enabled, '
@@ -30,8 +38,9 @@ class ProfileRepository {
   /// migration 20260601130000). `email` n'y figure pas → null côté Profile.
   static const _publicView = 'public_profiles';
   static const _publicColumns =
-      'id, username, avatar_color, country_code, stats, role, is_active, '
-      'permanent_ban, totp_enabled, last_seen_at, created_at, updated_at';
+      'id, username, avatar_color, avatar_url, country_code, stats, role, '
+      'is_active, permanent_ban, totp_enabled, last_seen_at, created_at, '
+      'updated_at';
 
   final SupabaseClient _client;
 
@@ -111,6 +120,37 @@ class ProfileRepository {
         .select(_columns)
         .single();
     return Profile.fromJson(row);
+  }
+
+  /// Téléverse une photo d'avatar dans le bucket public `avatars` puis écrit
+  /// son URL publique dans `profiles.avatar_url`. Le chemin est
+  /// `<profileId>/avatar_<ts>.<ext>` (1er segment = uid → RLS owner-only) ; un
+  /// nom horodaté évite le cache CDN sur une nouvelle photo. Retourne l'URL.
+  Future<String> uploadAvatar({
+    required String profileId,
+    required String filePath,
+    required String fileExt,
+    required String contentType,
+  }) async {
+    final path =
+        '$profileId/avatar_${DateTime.now().millisecondsSinceEpoch}.$fileExt';
+    // Aligné sur ScoreProofUploader (pattern éprouvé) : upload(File) +
+    // upsert:false. Noms horodatés → jamais de collision, upsert inutile.
+    await _client.storage.from(_avatarsBucket).upload(
+          path,
+          File(filePath),
+          fileOptions: FileOptions(contentType: contentType, upsert: false),
+        );
+    final url = _client.storage.from(_avatarsBucket).getPublicUrl(path);
+    await _client.from(_table).update({'avatar_url': url}).eq('id', profileId);
+    return url;
+  }
+
+  /// Retire la photo d'avatar : remet `avatar_url` à NULL (repli cercle
+  /// coloré + initiale). Le fichier Storage n'est pas supprimé (les noms
+  /// horodatés ne se réutilisent pas ; nettoyage éventuel via cron).
+  Future<void> removeAvatar(String profileId) async {
+    await _client.from(_table).update({'avatar_url': null}).eq('id', profileId);
   }
 
   /// Soft-deletes the account: stamps `account_deletion_requested_at`,
