@@ -35,7 +35,11 @@ void main() {
   // check_colors.sh --strict = 0 régression. À faire décroître via tokens.
   // 2191 → 2192 le 2026-06-15 : +1 `ArenaColors.tierGoldWarm` de l'icône notif
   // `competition_result` (feed). check_colors.sh --strict = 0 régression.
-  const colorsDotBaseline = 2192; // occurrences de `Colors.`
+  // 2192 → 2200 le 2026-06-19 : +8 `ArenaColors.*` des chips de filtre directs
+  // de la liste des compétitions (statut signalBlue/statusWarn/silver, tarif
+  // signalBlue/statusOk/tierGoldWarm, fond carbon + border dans _FilterPill).
+  // check_colors.sh --strict = 0 régression (aucun vrai `Colors.*` ajouté).
+  const colorsDotBaseline = 2200; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
 
   final colorsDotRe = RegExp(r'Colors\.');
