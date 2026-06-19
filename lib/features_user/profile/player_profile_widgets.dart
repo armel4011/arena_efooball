@@ -18,6 +18,8 @@ class _Header extends StatelessWidget {
     final tier = tierFor(wins);
     final initial =
         profile.username.isEmpty ? '?' : profile.username[0].toUpperCase();
+    final photoUrl = profile.avatarUrl;
+    final hasPhoto = photoUrl != null && photoUrl.isNotEmpty;
     final country = _countryLabel(profile.countryCode);
     final joinedAt = _joinedLabel(profile.createdAt);
 
@@ -26,32 +28,79 @@ class _Header extends StatelessWidget {
       children: [
         Column(
           children: [
-            Container(
+            SizedBox(
               width: 86,
               height: 86,
-              decoration: BoxDecoration(
-                color: color,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: color.withValues(alpha: 0.6),
-                    blurRadius: 36,
-                    spreadRadius: -2,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    width: 86,
+                    height: 86,
+                    decoration: BoxDecoration(
+                      color: hasPhoto ? null : color,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: color.withValues(alpha: 0.6),
+                          blurRadius: 36,
+                          spreadRadius: -2,
+                        ),
+                      ],
+                      border: Border.all(
+                        color: ArenaColors.bone.withValues(alpha: 0.18),
+                        width: 1.5,
+                      ),
+                      image: hasPhoto
+                          ? DecorationImage(
+                              image: NetworkImage(photoUrl),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
+                    ),
+                    alignment: Alignment.center,
+                    child: hasPhoto
+                        ? null
+                        : Text(
+                            initial,
+                            style: ArenaText.h1.copyWith(
+                              color: ArenaColors.bone,
+                              fontSize: 38,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                  ),
+                  // Pastille « modifier l'avatar » ancrée sur le cercle —
+                  // ouvre l'édition de profil (section couleur d'avatar).
+                  Positioned(
+                    right: -2,
+                    bottom: -2,
+                    child: Tooltip(
+                      message: l10n.playerProfileEditAvatarTooltip,
+                      child: GestureDetector(
+                        onTap: () => context.push(UserRoutes.profileEdit),
+                        child: Container(
+                          width: 30,
+                          height: 30,
+                          decoration: BoxDecoration(
+                            color: ArenaColors.signalBlue,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: ArenaColors.carbon,
+                              width: 2.5,
+                            ),
+                          ),
+                          alignment: Alignment.center,
+                          child: const Icon(
+                            Icons.camera_alt,
+                            color: ArenaColors.bone,
+                            size: 15,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
-                border: Border.all(
-                  color: ArenaColors.bone.withValues(alpha: 0.18),
-                  width: 1.5,
-                ),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                initial,
-                style: ArenaText.h1.copyWith(
-                  color: ArenaColors.bone,
-                  fontSize: 38,
-                  fontWeight: FontWeight.w800,
-                ),
               ),
             ),
             const SizedBox(height: ArenaSpacing.sm),

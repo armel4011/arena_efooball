@@ -4150,6 +4150,36 @@ abstract class AppLocalizations {
   /// **'Couleur modifiable ci-dessous'**
   String get editProfileColorEditableHint;
 
+  /// No description provided for @editProfileAvatarChangeHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modifier la photo'**
+  String get editProfileAvatarChangeHint;
+
+  /// No description provided for @editProfileAvatarFromGallery.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisir dans la galerie'**
+  String get editProfileAvatarFromGallery;
+
+  /// No description provided for @editProfileAvatarFromCamera.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prendre une photo'**
+  String get editProfileAvatarFromCamera;
+
+  /// No description provided for @editProfileAvatarRemove.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer la photo'**
+  String get editProfileAvatarRemove;
+
+  /// No description provided for @editProfileAvatarUpdatedSnack.
+  ///
+  /// In fr, this message translates to:
+  /// **'Photo de profil mise à jour.'**
+  String get editProfileAvatarUpdatedSnack;
+
   /// No description provided for @editProfileUsernameCaption.
   ///
   /// In fr, this message translates to:
@@ -4437,6 +4467,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Modifier'**
   String get playerProfileEditTooltip;
+
+  /// No description provided for @playerProfileEditAvatarTooltip.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modifier l\'avatar'**
+  String get playerProfileEditAvatarTooltip;
 
   /// No description provided for @playerProfileStatWins.
   ///

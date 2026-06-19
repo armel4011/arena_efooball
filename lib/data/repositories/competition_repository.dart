@@ -21,12 +21,16 @@ class CompetitionRankingEntry {
     required this.countryCode,
     required this.avatarColor,
     required this.finalRank,
+    this.avatarUrl,
   });
 
   final String playerId;
   final String username;
   final String countryCode;
   final String avatarColor;
+
+  /// Photo d'avatar (NULL → repli cercle coloré).
+  final String? avatarUrl;
 
   /// Rang d'arrivée — `null` tant que l'admin n'a pas publié le classement.
   final int? finalRank;
@@ -42,12 +46,16 @@ class CompetitionParticipant {
     required this.countryCode,
     required this.avatarColor,
     required this.status,
+    this.avatarUrl,
   });
 
   final String playerId;
   final String username;
   final String countryCode;
   final String avatarColor;
+
+  /// Photo d'avatar (NULL → repli cercle coloré).
+  final String? avatarUrl;
 
   /// Statut d'inscription : `confirmed` · `pending` · …
   final String status;
@@ -180,7 +188,7 @@ class CompetitionRepository {
     if (ids.isNotEmpty) {
       final pr = await _client
           .from('public_profiles')
-          .select('id, username, country_code, avatar_color')
+          .select('id, username, country_code, avatar_color, avatar_url')
           .inFilter('id', ids);
       for (final p in pr as List<dynamic>) {
         final m = p as Map<String, dynamic>;
@@ -221,7 +229,7 @@ class CompetitionRepository {
     if (ids.isNotEmpty) {
       final pr = await _client
           .from('public_profiles')
-          .select('id, username, country_code, avatar_color')
+          .select('id, username, country_code, avatar_color, avatar_url')
           .inFilter('id', ids);
       for (final p in pr as List<dynamic>) {
         final m = p as Map<String, dynamic>;
@@ -249,6 +257,7 @@ class CompetitionRepository {
       username: p['username'] as String? ?? '—',
       countryCode: p['country_code'] as String? ?? '',
       avatarColor: p['avatar_color'] as String? ?? '#4C7AFF',
+      avatarUrl: p['avatar_url'] as String?,
       status: row['status'] as String? ?? 'pending',
     );
   }
@@ -263,6 +272,7 @@ class CompetitionRepository {
       username: p['username'] as String? ?? '—',
       countryCode: p['country_code'] as String? ?? '',
       avatarColor: p['avatar_color'] as String? ?? '#4C7AFF',
+      avatarUrl: p['avatar_url'] as String?,
       finalRank: row['final_rank'] as int?,
     );
   }

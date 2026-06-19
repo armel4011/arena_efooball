@@ -434,6 +434,7 @@ class _FriendChatAppBar extends StatelessWidget {
                     initials: initials,
                     color: inboxAvatarFor(username),
                     size: ArenaAvatarSize.sm,
+                    imageUrl: peer?.avatarUrl,
                   ),
                   const SizedBox(width: 8),
                   Expanded(

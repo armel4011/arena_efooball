@@ -16,6 +16,7 @@ class ArenaAvatar extends StatelessWidget {
     this.color = ArenaAvatarColor.blue,
     this.size = ArenaAvatarSize.md,
     this.selected = false,
+    this.imageUrl,
     super.key,
   });
 
@@ -23,6 +24,11 @@ class ArenaAvatar extends StatelessWidget {
   final ArenaAvatarColor color;
   final ArenaAvatarSize size;
   final bool selected;
+
+  /// Photo d'avatar. Si non-null/non-vide, on affiche la photo (recadrée en
+  /// cercle, `BoxFit.cover`) ; sinon (ou pendant le chargement / en erreur) on
+  /// retombe sur le cercle dégradé + initiales.
+  final String? imageUrl;
 
   double get _diameter => switch (size) {
         ArenaAvatarSize.sm => 26,
@@ -54,18 +60,44 @@ class ArenaAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasImage = imageUrl != null && imageUrl!.isNotEmpty;
     return Container(
       width: _diameter,
       height: _diameter,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: _gradient,
+        gradient: hasImage ? null : _gradient,
         border: selected
             ? Border.all(color: ArenaColors.bone, width: 2)
             : null,
       ),
+      clipBehavior: Clip.antiAlias,
       alignment: Alignment.center,
-      child: Text(
+      child: hasImage
+          ? Image.network(
+              imageUrl!,
+              width: _diameter,
+              height: _diameter,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => _initialsFill(),
+              loadingBuilder: (context, child, progress) =>
+                  progress == null ? child : _initialsFill(),
+            )
+          : _initialsLabel(),
+    );
+  }
+
+  /// Cercle dégradé plein + initiales — utilisé comme repli derrière la photo
+  /// (chargement / erreur) et comme rendu par défaut sans photo.
+  Widget _initialsFill() => Container(
+        width: _diameter,
+        height: _diameter,
+        decoration: BoxDecoration(shape: BoxShape.circle, gradient: _gradient),
+        alignment: Alignment.center,
+        child: _initialsLabel(),
+      );
+
+  Widget _initialsLabel() => Text(
         initials.toUpperCase(),
         style: ArenaText.h1.copyWith(
           fontSize: _fontSize,
@@ -73,7 +105,5 @@ class ArenaAvatar extends StatelessWidget {
           color: _textColor,
           letterSpacing: 0.5,
         ),
-      ),
-    );
-  }
+      );
 }

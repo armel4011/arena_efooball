@@ -27,7 +27,10 @@ mixin _$Profile {
 // par la vue `public_profiles` qui n'expose PAS l'email (PII). Non-null
 // en pratique pour le profil de l'utilisateur courant (lu sur la table).
   String? get email => throw _privateConstructorUsedError;
-  String get avatarColor => throw _privateConstructorUsedError;
+  String get avatarColor =>
+      throw _privateConstructorUsedError; // Photo d'avatar (bucket Storage `avatars`). NULL → repli cercle coloré
+// + initiale via [avatarColor].
+  String? get avatarUrl => throw _privateConstructorUsedError;
   @UserRoleConverter()
   UserRole get role => throw _privateConstructorUsedError;
   bool get isActive => throw _privateConstructorUsedError;
@@ -79,6 +82,7 @@ abstract class $ProfileCopyWith<$Res> {
       String countryCode,
       String? email,
       String avatarColor,
+      String? avatarUrl,
       @UserRoleConverter() UserRole role,
       bool isActive,
       bool permanentBan,
@@ -128,6 +132,7 @@ class _$ProfileCopyWithImpl<$Res, $Val extends Profile>
     Object? countryCode = null,
     Object? email = freezed,
     Object? avatarColor = null,
+    Object? avatarUrl = freezed,
     Object? role = null,
     Object? isActive = null,
     Object? permanentBan = null,
@@ -177,6 +182,10 @@ class _$ProfileCopyWithImpl<$Res, $Val extends Profile>
           ? _value.avatarColor
           : avatarColor // ignore: cast_nullable_to_non_nullable
               as String,
+      avatarUrl: freezed == avatarUrl
+          ? _value.avatarUrl
+          : avatarUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
       role: null == role
           ? _value.role
           : role // ignore: cast_nullable_to_non_nullable
@@ -302,6 +311,7 @@ abstract class _$$ProfileImplCopyWith<$Res> implements $ProfileCopyWith<$Res> {
       String countryCode,
       String? email,
       String avatarColor,
+      String? avatarUrl,
       @UserRoleConverter() UserRole role,
       bool isActive,
       bool permanentBan,
@@ -349,6 +359,7 @@ class __$$ProfileImplCopyWithImpl<$Res>
     Object? countryCode = null,
     Object? email = freezed,
     Object? avatarColor = null,
+    Object? avatarUrl = freezed,
     Object? role = null,
     Object? isActive = null,
     Object? permanentBan = null,
@@ -398,6 +409,10 @@ class __$$ProfileImplCopyWithImpl<$Res>
           ? _value.avatarColor
           : avatarColor // ignore: cast_nullable_to_non_nullable
               as String,
+      avatarUrl: freezed == avatarUrl
+          ? _value.avatarUrl
+          : avatarUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
       role: null == role
           ? _value.role
           : role // ignore: cast_nullable_to_non_nullable
@@ -519,6 +534,7 @@ class _$ProfileImpl extends _Profile {
       required this.countryCode,
       this.email,
       this.avatarColor = '#4C7AFF',
+      this.avatarUrl,
       @UserRoleConverter() this.role = UserRole.player,
       this.isActive = true,
       this.permanentBan = false,
@@ -566,6 +582,10 @@ class _$ProfileImpl extends _Profile {
   @override
   @JsonKey()
   final String avatarColor;
+// Photo d'avatar (bucket Storage `avatars`). NULL → repli cercle coloré
+// + initiale via [avatarColor].
+  @override
+  final String? avatarUrl;
   @override
   @JsonKey()
   @UserRoleConverter()
@@ -644,7 +664,7 @@ class _$ProfileImpl extends _Profile {
 
   @override
   String toString() {
-    return 'Profile(id: $id, username: $username, countryCode: $countryCode, email: $email, avatarColor: $avatarColor, role: $role, isActive: $isActive, permanentBan: $permanentBan, fcmToken: $fcmToken, stats: $stats, authProvider: $authProvider, authProviderId: $authProviderId, whatsappNumber: $whatsappNumber, preferredLanguage: $preferredLanguage, preferredCurrency: $preferredCurrency, timezone: $timezone, onboardingCompleted: $onboardingCompleted, onboardingCompletedAt: $onboardingCompletedAt, totpEnabled: $totpEnabled, cguAcceptedAt: $cguAcceptedAt, cguVersionAccepted: $cguVersionAccepted, privacyPolicyAcceptedAt: $privacyPolicyAcceptedAt, marketingConsent: $marketingConsent, accountDeletionRequestedAt: $accountDeletionRequestedAt, accountDeletionReason: $accountDeletionReason, deletedAt: $deletedAt, kycStatus: $kycStatus, kycVerifiedAt: $kycVerifiedAt, referralCode: $referralCode, referredBy: $referredBy, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'Profile(id: $id, username: $username, countryCode: $countryCode, email: $email, avatarColor: $avatarColor, avatarUrl: $avatarUrl, role: $role, isActive: $isActive, permanentBan: $permanentBan, fcmToken: $fcmToken, stats: $stats, authProvider: $authProvider, authProviderId: $authProviderId, whatsappNumber: $whatsappNumber, preferredLanguage: $preferredLanguage, preferredCurrency: $preferredCurrency, timezone: $timezone, onboardingCompleted: $onboardingCompleted, onboardingCompletedAt: $onboardingCompletedAt, totpEnabled: $totpEnabled, cguAcceptedAt: $cguAcceptedAt, cguVersionAccepted: $cguVersionAccepted, privacyPolicyAcceptedAt: $privacyPolicyAcceptedAt, marketingConsent: $marketingConsent, accountDeletionRequestedAt: $accountDeletionRequestedAt, accountDeletionReason: $accountDeletionReason, deletedAt: $deletedAt, kycStatus: $kycStatus, kycVerifiedAt: $kycVerifiedAt, referralCode: $referralCode, referredBy: $referredBy, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -660,6 +680,8 @@ class _$ProfileImpl extends _Profile {
             (identical(other.email, email) || other.email == email) &&
             (identical(other.avatarColor, avatarColor) ||
                 other.avatarColor == avatarColor) &&
+            (identical(other.avatarUrl, avatarUrl) ||
+                other.avatarUrl == avatarUrl) &&
             (identical(other.role, role) || other.role == role) &&
             (identical(other.isActive, isActive) ||
                 other.isActive == isActive) &&
@@ -726,6 +748,7 @@ class _$ProfileImpl extends _Profile {
         countryCode,
         email,
         avatarColor,
+        avatarUrl,
         role,
         isActive,
         permanentBan,
@@ -778,6 +801,7 @@ abstract class _Profile extends Profile {
       required final String countryCode,
       final String? email,
       final String avatarColor,
+      final String? avatarUrl,
       @UserRoleConverter() final UserRole role,
       final bool isActive,
       final bool permanentBan,
@@ -821,7 +845,11 @@ abstract class _Profile extends Profile {
   @override
   String? get email;
   @override
-  String get avatarColor;
+  String
+      get avatarColor; // Photo d'avatar (bucket Storage `avatars`). NULL → repli cercle coloré
+// + initiale via [avatarColor].
+  @override
+  String? get avatarUrl;
   @override
   @UserRoleConverter()
   UserRole get role;

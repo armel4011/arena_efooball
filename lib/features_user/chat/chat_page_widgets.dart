@@ -58,6 +58,7 @@ class _ChatAppBar extends StatelessWidget {
                         initials: initials,
                         color: inboxAvatarFor(username),
                         size: ArenaAvatarSize.sm,
+                        imageUrl: opponent?.avatarUrl,
                       ),
                       if (peerOnline)
                         Positioned(

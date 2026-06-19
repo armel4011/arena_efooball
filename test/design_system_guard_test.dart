@@ -35,7 +35,12 @@ void main() {
   // check_colors.sh --strict = 0 régression. À faire décroître via tokens.
   // 2191 → 2192 le 2026-06-15 : +1 `ArenaColors.tierGoldWarm` de l'icône notif
   // `competition_result` (feed). check_colors.sh --strict = 0 régression.
-  const colorsDotBaseline = 2192; // occurrences de `Colors.`
+  // 2192 → 2203 le 2026-06-19 : +11 `ArenaColors.*` de la feature photos
+  // d'avatar (pastille caméra signalBlue, bordures bone/carbon/surface, retrait
+  // danger, repli initiales dans arena_avatar / edit_profile / profils / amis).
+  // check_colors.sh --strict = 0 régression (aucun vrai `Colors.*` ajouté ;
+  // les 3 `Colors.white` déplacés sont compensés par 3 retraits).
+  const colorsDotBaseline = 2203; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
 
   final colorsDotRe = RegExp(r'Colors\.');

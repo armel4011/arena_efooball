@@ -56,7 +56,11 @@ class _MatchThreadRow extends StatelessWidget {
               Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  ArenaAvatar(initials: initials, color: color),
+                  ArenaAvatar(
+                    initials: initials,
+                    color: color,
+                    imageUrl: opponent?.avatarUrl,
+                  ),
                   if (highlighted)
                     Positioned(
                       right: -2,
@@ -421,6 +425,7 @@ class _FriendThreadRow extends StatelessWidget {
               ArenaAvatar(
                 initials: initials,
                 color: inboxAvatarFor(username),
+                imageUrl: peer?.avatarUrl,
               ),
               const SizedBox(width: ArenaSpacing.md),
               Expanded(

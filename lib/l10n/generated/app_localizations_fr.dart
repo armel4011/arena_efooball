@@ -2162,6 +2162,21 @@ class AppLocalizationsFr extends AppLocalizations {
   String get editProfileColorEditableHint => 'Couleur modifiable ci-dessous';
 
   @override
+  String get editProfileAvatarChangeHint => 'Modifier la photo';
+
+  @override
+  String get editProfileAvatarFromGallery => 'Choisir dans la galerie';
+
+  @override
+  String get editProfileAvatarFromCamera => 'Prendre une photo';
+
+  @override
+  String get editProfileAvatarRemove => 'Retirer la photo';
+
+  @override
+  String get editProfileAvatarUpdatedSnack => 'Photo de profil mise à jour.';
+
+  @override
   String get editProfileUsernameCaption => 'NOM D\'UTILISATEUR';
 
   @override
@@ -2306,6 +2321,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get playerProfileEditTooltip => 'Modifier';
+
+  @override
+  String get playerProfileEditAvatarTooltip => 'Modifier l\'avatar';
 
   @override
   String get playerProfileStatWins => 'Victoires';

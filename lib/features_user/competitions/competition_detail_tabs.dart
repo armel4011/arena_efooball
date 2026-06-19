@@ -274,6 +274,7 @@ class _ParticipantRow extends StatelessWidget {
               initials: initials,
               color: _avatarColorForSeed(name),
               size: ArenaAvatarSize.sm,
+              imageUrl: participant.avatarUrl,
             ),
             const SizedBox(width: ArenaSpacing.sm),
             Expanded(
@@ -412,6 +413,7 @@ class _RankingEntryRow extends StatelessWidget {
               initials: initials,
               color: _avatarColorForSeed(entry.username),
               size: ArenaAvatarSize.sm,
+              imageUrl: entry.avatarUrl,
             ),
             const SizedBox(width: ArenaSpacing.sm),
             Expanded(
@@ -545,6 +547,7 @@ class _PodiumPlace extends StatelessWidget {
             initials: initials,
             color: _avatarColorForSeed(entry.username),
             size: rank == 1 ? ArenaAvatarSize.lg : ArenaAvatarSize.md,
+            imageUrl: entry.avatarUrl,
           ),
           const SizedBox(height: ArenaSpacing.xs),
           Text(

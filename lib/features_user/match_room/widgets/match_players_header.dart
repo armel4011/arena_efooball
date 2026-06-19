@@ -102,6 +102,7 @@ class _PlayerSeat extends StatelessWidget {
           color: color,
           size: ArenaAvatarSize.lg,
           selected: isSelf,
+          imageUrl: profile?.avatarUrl,
         ),
         const SizedBox(height: ArenaSpacing.sm),
         Text(
