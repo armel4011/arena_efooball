@@ -13,16 +13,19 @@ import 'package:flutter/material.dart';
 class DraughtsBoardTheme {
   DraughtsBoardTheme._();
 
-  // ─── Damier ───────────────────────────────────────────────────────────
-  static final Color darkSquare =
-      Color.lerp(ArenaColors.void_, ArenaColors.carbon2, 0.55)!;
+  // ─── Damier (palette « Bleu ARENA » : cases jouables bleu signal,
+  // cases inertes crème) ─────────────────────────────────────────────────
+  // Les cases sombres sont les cases JOUABLES (les pièces s'y posent) ; on
+  // les passe en bleu signal avec un compagnon plus profond pour le dégradé.
+  static const Color darkSquare = ArenaColors.signalBlue;
   static final Color darkSquareLo =
-      Color.lerp(ArenaColors.void_, ArenaColors.blackPure, 0.5)!;
+      Color.lerp(ArenaColors.signalBlue, ArenaColors.signalBlueDark, 0.6)!;
+  // Cases claires (non jouables) : crème, léger dégradé vers le perle.
   static final Color lightSquare =
-      Color.lerp(ArenaColors.graphite, ArenaColors.steel, 0.65)!;
+      Color.lerp(ArenaColors.bone, ArenaColors.pearl, 0.12)!;
   static final Color lightSquareLo =
-      Color.lerp(ArenaColors.graphite, ArenaColors.carbon2, 0.5)!;
-  static final Color squareLine = ArenaColors.blackPure.withValues(alpha: 0.45);
+      Color.lerp(ArenaColors.bone, ArenaColors.pearl, 0.35)!;
+  static final Color squareLine = ArenaColors.blackPure.withValues(alpha: 0.25);
 
   // ─── Cadre / tranche (profondeur) ─────────────────────────────────────
   static final Color frame =
@@ -45,7 +48,9 @@ class DraughtsBoardTheme {
 
   // ─── Accents ──────────────────────────────────────────────────────────
   static const Color selection = ArenaColors.gold; // pièce sélectionnée
-  static const Color legalTarget = ArenaColors.signalBlue; // case jouable
+  // Cases sombres désormais bleues → le marqueur « jouable » passe en vert
+  // acide pour rester visible (le signalBlue se fondrait dans la case).
+  static const Color legalTarget = ArenaColors.acidGreen; // case jouable
   static const Color lastMove = ArenaColors.gameDraughts; // dernier coup
   static const Color kingMark = ArenaColors.gold; // couronne de dame
 

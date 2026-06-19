@@ -143,6 +143,8 @@ class _Header extends StatelessWidget {
     final color = AvatarPalette.colorFromHex(profile.avatarColor);
     final initial =
         profile.username.isEmpty ? '?' : profile.username[0].toUpperCase();
+    final photoUrl = profile.avatarUrl;
+    final hasPhoto = photoUrl != null && photoUrl.isNotEmpty;
     final tier = tierFor(_wins());
 
     return ArenaCard(
@@ -152,7 +154,7 @@ class _Header extends StatelessWidget {
             width: 64,
             height: 64,
             decoration: BoxDecoration(
-              color: color,
+              color: hasPhoto ? null : color,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
@@ -165,15 +167,23 @@ class _Header extends StatelessWidget {
                 color: Colors.white.withValues(alpha: 0.18),
                 width: 1.5,
               ),
+              image: hasPhoto
+                  ? DecorationImage(
+                      image: NetworkImage(photoUrl),
+                      fit: BoxFit.cover,
+                    )
+                  : null,
             ),
             alignment: Alignment.center,
-            child: Text(
-              initial,
-              style: ArenaTypography.headlineLarge.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
+            child: hasPhoto
+                ? null
+                : Text(
+                    initial,
+                    style: ArenaTypography.headlineLarge.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
           ),
           const SizedBox(width: ArenaSpacing.md),
           Expanded(

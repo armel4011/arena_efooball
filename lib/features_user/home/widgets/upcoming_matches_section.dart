@@ -125,6 +125,7 @@ class _UpcomingMatchCard extends StatelessWidget {
                   initials: opponentInitial,
                   color: opponentColor,
                   size: ArenaAvatarSize.sm,
+                  imageUrl: opponent?.avatarUrl,
                 ),
                 const SizedBox(width: ArenaSpacing.xs),
                 Expanded(

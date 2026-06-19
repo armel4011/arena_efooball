@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 /// Lets the player tweak their public-ish profile bits (PHASE 9.1).
 ///
@@ -35,6 +36,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   late String _countryCode;
   bool _saving = false;
   String? _error;
+
+  final ImagePicker _picker = ImagePicker();
+  bool _avatarBusy = false;
 
   /// Strip le préfixe `+XXX` du numéro stocké en DB pour qu'on l'édite
   /// comme un numéro local. L'utilisateur change de pays → le dial code
@@ -127,6 +131,127 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     }
   }
 
+  /// Bottom sheet de choix de source (galerie / caméra / retirer).
+  Future<void> _openAvatarSheet() async {
+    final l10n = AppLocalizations.of(context);
+    final profile = ref.read(currentProfileProvider).valueOrNull;
+    final hasPhoto =
+        profile?.avatarUrl != null && profile!.avatarUrl!.isNotEmpty;
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: ArenaColors.surface,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(
+                Icons.photo_library_outlined,
+                color: ArenaColors.signalBlue,
+              ),
+              title: Text(
+                l10n.editProfileAvatarFromGallery,
+                style: ArenaText.body,
+              ),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _changeAvatar(ImageSource.gallery);
+              },
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.photo_camera_outlined,
+                color: ArenaColors.signalBlue,
+              ),
+              title: Text(
+                l10n.editProfileAvatarFromCamera,
+                style: ArenaText.body,
+              ),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _changeAvatar(ImageSource.camera);
+              },
+            ),
+            if (hasPhoto)
+              ListTile(
+                leading: const Icon(
+                  Icons.delete_outline,
+                  color: ArenaColors.danger,
+                ),
+                title: Text(
+                  l10n.editProfileAvatarRemove,
+                  style: ArenaText.body.copyWith(color: ArenaColors.danger),
+                ),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _removeAvatar();
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _changeAvatar(ImageSource source) async {
+    final l10n = AppLocalizations.of(context);
+    final profile = ref.read(currentProfileProvider).valueOrNull;
+    if (profile == null) return;
+    try {
+      final picked = await _picker.pickImage(
+        source: source,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 85,
+      );
+      if (picked == null) return;
+      setState(() => _avatarBusy = true);
+      final ext = _avatarExt(picked);
+      await ref.read(profileRepositoryProvider).uploadAvatar(
+            profileId: profile.id,
+            filePath: picked.path,
+            fileExt: ext,
+            contentType: _contentType(ext),
+          );
+      ref.invalidate(currentProfileProvider);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.editProfileAvatarUpdatedSnack)),
+      );
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _avatarBusy = false);
+    }
+  }
+
+  Future<void> _removeAvatar() async {
+    final profile = ref.read(currentProfileProvider).valueOrNull;
+    if (profile == null) return;
+    setState(() => _avatarBusy = true);
+    try {
+      await ref.read(profileRepositoryProvider).removeAvatar(profile.id);
+      ref.invalidate(currentProfileProvider);
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _avatarBusy = false);
+    }
+  }
+
+  String _avatarExt(XFile f) {
+    final name = f.name.toLowerCase();
+    if (name.endsWith('.png')) return 'png';
+    if (name.endsWith('.webp')) return 'webp';
+    return 'jpg';
+  }
+
+  String _contentType(String ext) => switch (ext) {
+        'png' => 'image/png',
+        'webp' => 'image/webp',
+        _ => 'image/jpeg',
+      };
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -135,6 +260,8 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         ? profile!.username[0].toUpperCase()
         : '?';
     final avatarColor = AvatarPalette.colorFromHex(_avatarColor);
+    final photoUrl = profile?.avatarUrl;
+    final hasPhoto = photoUrl != null && photoUrl.isNotEmpty;
 
     return Scaffold(
       appBar: ArenaAppBar(
@@ -164,34 +291,80 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                 // sur la section couleur en dessous (scroll au lieu de
                 // bottom-sheet pour rester simple en V1).
                 Center(
-                  child: Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: avatarColor,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: avatarColor.withValues(alpha: 0.55),
-                          blurRadius: 28,
-                          spreadRadius: -2,
+                  child: GestureDetector(
+                    onTap: _avatarBusy ? null : _openAvatarSheet,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            color: hasPhoto ? null : avatarColor,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: avatarColor.withValues(alpha: 0.55),
+                                blurRadius: 28,
+                                spreadRadius: -2,
+                              ),
+                            ],
+                            image: hasPhoto
+                                ? DecorationImage(
+                                    image: NetworkImage(photoUrl),
+                                    fit: BoxFit.cover,
+                                  )
+                                : null,
+                          ),
+                          alignment: Alignment.center,
+                          child: _avatarBusy
+                              ? const SizedBox(
+                                  width: 26,
+                                  height: 26,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : hasPhoto
+                                  ? null
+                                  : Text(
+                                      initial,
+                                      style: ArenaText.h1.copyWith(
+                                        color: ArenaColors.bone,
+                                        fontSize: 34,
+                                      ),
+                                    ),
+                        ),
+                        Positioned(
+                          right: -2,
+                          bottom: -2,
+                          child: Container(
+                            width: 28,
+                            height: 28,
+                            decoration: BoxDecoration(
+                              color: ArenaColors.signalBlue,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: ArenaColors.surface,
+                                width: 2,
+                              ),
+                            ),
+                            alignment: Alignment.center,
+                            child: const Icon(
+                              Icons.camera_alt,
+                              color: ArenaColors.bone,
+                              size: 14,
+                            ),
+                          ),
                         ),
                       ],
                     ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      initial,
-                      style: ArenaText.h1.copyWith(
-                        color: ArenaColors.bone,
-                        fontSize: 34,
-                      ),
-                    ),
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 Center(
                   child: Text(
-                    l10n.editProfileColorEditableHint,
+                    l10n.editProfileAvatarChangeHint,
                     style: ArenaText.small.copyWith(
                       color: ArenaColors.signalBlue,
                     ),

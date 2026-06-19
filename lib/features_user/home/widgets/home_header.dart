@@ -48,7 +48,11 @@ class HomeHeader extends ConsumerWidget {
           GestureDetector(
             onLongPress:
                 kDebugMode ? () => context.push(UserRoutes.devShowcase) : null,
-            child: ArenaAvatar(initials: initial, color: color),
+            child: ArenaAvatar(
+              initials: initial,
+              color: color,
+              imageUrl: profile?.avatarUrl,
+            ),
           ),
           const SizedBox(width: ArenaSpacing.sm),
           Expanded(
