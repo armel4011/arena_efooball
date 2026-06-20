@@ -1,0 +1,30 @@
+-- ════════════════════════════════════════════════════════════════════
+-- Fix régression — GRANT SELECT manquant sur profiles.avatar_url
+-- ════════════════════════════════════════════════════════════════════
+-- ✅ APPLIQUÉE EN PROD le 2026-06-20 via MCP (version remote 20260620021927).
+-- Fichier recréé dans le repo pour la reproductibilité. Idempotent.
+--
+-- Contexte : le design C-1 (20260601134730_c1_revoke_profiles_secret_columns)
+-- a retiré le SELECT *table-level* sur `profiles` et re-accordé le SELECT
+-- COLONNE PAR COLONNE (en excluant les secrets totp_secret / backup_codes).
+-- Le commentaire de cette migration avertissait : « Tout NOUVEL ajout de
+-- colonne devra être explicitement GRANT'é ici (privé par défaut). »
+--
+-- La colonne `avatar_url` (ajoutée le 2026-06-17, migration 20260617131921,
+-- exploitée par la PR #173 « photos d'avatar ») a été ajoutée SANS ce grant.
+-- `ProfileRepository.getById` sélectionne désormais `avatar_url` dans sa liste
+-- de colonnes explicite → toute lecture du profil de SOI échouait en :
+--   42501 "permission denied for table profiles".
+-- Symptômes : profil null au boot → redirections /onboarding /login en boucle,
+-- avatar jamais affiché après upload (le re-fetch live échoue).
+--
+-- `avatar_url` n'est PAS un secret (déjà exposé par la vue `public_profiles`),
+-- on l'accorde donc à `anon` + `authenticated` comme les 34 autres colonnes
+-- publiques. La policy RLS `profiles_select` continue de restreindre les
+-- LIGNES à self + admin — le grant ne rouvre qu'une colonne, pas les lignes.
+--
+-- NB prod : la release 1.0.5+6 n'embarquait pas encore l'avatar (#173 mergé
+-- après le bump de version), donc aucun utilisateur prod n'était impacté ; le
+-- bug ne touchait que les builds issues de `main` post-#173.
+
+grant select (avatar_url) on public.profiles to anon, authenticated;
