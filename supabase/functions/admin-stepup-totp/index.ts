@@ -30,6 +30,12 @@ import {
   recordTotpFailure,
   recordTotpSuccess,
 } from "../_shared/totp_rate_limit.ts";
+import {
+  hasBearer,
+  isAdminRole,
+  isBackupCodeFormat,
+  isSixDigitCode,
+} from "../_shared/auth_guards.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -62,7 +68,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
 
   const authHeader = req.headers.get("Authorization") ?? "";
-  if (!authHeader.startsWith("Bearer ")) {
+  if (!hasBearer(authHeader)) {
     return jsonResponse({ error: "unauthenticated" }, 401);
   }
 
@@ -74,8 +80,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
   const code = typeof body.code === "string" ? body.code.trim() : "";
   // Accepte 6 chiffres (TOTP) OU un backup code "XXXX-XXXX".
-  const isTotp = /^\d{6}$/.test(code);
-  const isBackup = /^[A-Za-z0-9]{4}-[A-Za-z0-9]{4}$/.test(code);
+  const isTotp = isSixDigitCode(code);
+  const isBackup = isBackupCodeFormat(code);
   if (!isTotp && !isBackup) {
     return jsonResponse({ error: "bad_code_format" }, 400);
   }
@@ -102,7 +108,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (profileErr || !profile) {
     return jsonResponse({ error: "profile_not_found" }, 404);
   }
-  if (profile.role !== "admin" && profile.role !== "super_admin") {
+  if (!isAdminRole(profile.role)) {
     return jsonResponse({ error: "forbidden_role" }, 403);
   }
   if (!profile.totp_enabled || !profile.totp_secret) {
