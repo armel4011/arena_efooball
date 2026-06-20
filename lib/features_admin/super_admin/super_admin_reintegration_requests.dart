@@ -277,23 +277,60 @@ Future<String?> _promptForReason(
   required String title,
   required String hint,
   required bool required,
-}) async {
-  final ctrl = TextEditingController();
-  final result = await showDialog<String>(
+}) {
+  return showDialog<String>(
     context: context,
-    builder: (ctx) => AlertDialog(
+    builder: (ctx) => _ReasonDialog(
+      title: title,
+      hint: hint,
+      required: required,
+    ),
+  );
+}
+
+/// Dialog de saisie d'un motif. StatefulWidget pour POSSÉDER le
+/// `TextEditingController` et le disposer dans [State.dispose] — ne jamais le
+/// disposer via `showDialog(...).whenComplete(ctrl.dispose)` (crash
+/// `_dependents.isEmpty`, cf. conventions UI).
+class _ReasonDialog extends StatefulWidget {
+  const _ReasonDialog({
+    required this.title,
+    required this.hint,
+    required this.required,
+  });
+
+  final String title;
+  final String hint;
+  final bool required;
+
+  @override
+  State<_ReasonDialog> createState() => _ReasonDialogState();
+}
+
+class _ReasonDialogState extends State<_ReasonDialog> {
+  final _ctrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
       backgroundColor: ArenaColors.carbon,
-      title: Text(title, style: ArenaText.h3),
+      title: Text(widget.title, style: ArenaText.h3),
       content: ArenaTextField(
-        controller: ctrl,
-        hint: hint,
+        controller: _ctrl,
+        hint: widget.hint,
         minLines: 3,
         maxLines: 6,
         maxLength: 500,
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(ctx).pop(null),
+          onPressed: () => Navigator.of(context).pop(null),
           child: Text(
             'Annuler',
             style: ArenaText.body.copyWith(color: ArenaColors.silver),
@@ -301,9 +338,9 @@ Future<String?> _promptForReason(
         ),
         TextButton(
           onPressed: () {
-            final v = ctrl.text.trim();
-            if (required && v.isEmpty) return;
-            Navigator.of(ctx).pop(v);
+            final v = _ctrl.text.trim();
+            if (widget.required && v.isEmpty) return;
+            Navigator.of(context).pop(v);
           },
           child: Text(
             'Confirmer',
@@ -311,9 +348,8 @@ Future<String?> _promptForReason(
           ),
         ),
       ],
-    ),
-  );
-  return result;
+    );
+  }
 }
 
 /// Cache local du profil associé à une requête. AutoDispose pour éviter
