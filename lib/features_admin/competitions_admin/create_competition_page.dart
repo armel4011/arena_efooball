@@ -626,35 +626,13 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
     );
   }
 
-  /// Boîte de dialogue qui demande le nom d'un nouveau modèle.
-  Future<String?> _promptTemplateName() {
-    final ctrl = TextEditingController();
-    return showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: ArenaColors.surface,
-        title: Text('Nom du modèle', style: ArenaText.h3),
-        content: ArenaTextField(
-          controller: ctrl,
-          hint: 'Ex. Tournoi payant week-end',
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text('Annuler', style: ArenaText.body),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(ctrl.text),
-            child: Text(
-              'Enregistrer',
-              style: ArenaText.h3.copyWith(color: ArenaColors.neonRed),
-            ),
-          ),
-        ],
-      ),
-    ).whenComplete(ctrl.dispose);
-  }
+  /// Boîte de dialogue qui demande le nom d'un nouveau modèle. Déléguée à un
+  /// StatefulWidget qui possède son controller (disposé au bon moment) — sinon
+  /// disposer le controller à la fermeture casse l'arbre (`_dependents`).
+  Future<String?> _promptTemplateName() => showDialog<String>(
+        context: context,
+        builder: (_) => const _TemplateNameDialog(),
+      );
 
   /// Ouvre la bibliothèque de modèles enregistrés : choisir pour insérer,
   /// ou supprimer. Présentée en bottom sheet.
@@ -666,6 +644,7 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
       backgroundColor: ArenaColors.surface,
       isScrollControlled: true,
       builder: (ctx) => _TemplateLibrarySheet(
+        initial: templates.saved,
         onInsert: (tpl) {
           Navigator.of(ctx).pop();
           setState(() {
@@ -810,23 +789,83 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
   }
 }
 
+/// Petite popup qui demande le nom d'un modèle. StatefulWidget pour que le
+/// `TextEditingController` soit créé et disposé selon le cycle de vie du
+/// widget (et non à la complétion du `showDialog`, ce qui détruit le
+/// controller alors que le `TextField` est encore monté → assertion
+/// `_dependents.isEmpty`).
+class _TemplateNameDialog extends StatefulWidget {
+  const _TemplateNameDialog();
+
+  @override
+  State<_TemplateNameDialog> createState() => _TemplateNameDialogState();
+}
+
+class _TemplateNameDialogState extends State<_TemplateNameDialog> {
+  final _ctrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _submit() => Navigator.of(context).pop(_ctrl.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: ArenaColors.surface,
+      title: Text('Nom du modèle', style: ArenaText.h3),
+      content: ArenaTextField(
+        controller: _ctrl,
+        hint: 'Ex. Tournoi payant week-end',
+        autofocus: true,
+        textInputAction: TextInputAction.done,
+        onChanged: (_) {},
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text('Annuler', style: ArenaText.body),
+        ),
+        TextButton(
+          onPressed: _submit,
+          child: Text(
+            'Enregistrer',
+            style: ArenaText.h3.copyWith(color: ArenaColors.neonRed),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 /// Bottom sheet de la bibliothèque de modèles : liste les modèles nommés,
-/// chacun cliquable (insertion) avec une action de suppression. Observe le
-/// provider pour se rafraîchir en direct après une suppression.
-class _TemplateLibrarySheet extends ConsumerWidget {
+/// chacun cliquable (insertion) avec une action de suppression. État local
+/// (copie de la liste) pour se rafraîchir après suppression sans dépendre du
+/// provider dans la route modale.
+class _TemplateLibrarySheet extends StatefulWidget {
   const _TemplateLibrarySheet({
+    required this.initial,
     required this.onInsert,
     required this.onDelete,
   });
 
+  final List<DescriptionTemplate> initial;
   final ValueChanged<DescriptionTemplate> onInsert;
   final ValueChanged<DescriptionTemplate> onDelete;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final saved =
-        ref.watch(competitionDescTemplatesProvider).valueOrNull?.saved ??
-            const <DescriptionTemplate>[];
+  State<_TemplateLibrarySheet> createState() => _TemplateLibrarySheetState();
+}
+
+class _TemplateLibrarySheetState extends State<_TemplateLibrarySheet> {
+  late final List<DescriptionTemplate> _saved = [...widget.initial];
+
+  @override
+  Widget build(BuildContext context) {
+    final saved = _saved;
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(ArenaSpacing.lg),
@@ -860,7 +899,7 @@ class _TemplateLibrarySheet extends ConsumerWidget {
                       color: ArenaColors.carbon,
                       borderRadius: BorderRadius.circular(ArenaRadius.md),
                       child: InkWell(
-                        onTap: () => onInsert(tpl),
+                        onTap: () => widget.onInsert(tpl),
                         borderRadius: BorderRadius.circular(ArenaRadius.md),
                         child: Padding(
                           padding: const EdgeInsets.all(ArenaSpacing.md),
@@ -887,7 +926,10 @@ class _TemplateLibrarySheet extends ConsumerWidget {
                                   color: ArenaColors.danger,
                                 ),
                                 tooltip: 'Supprimer',
-                                onPressed: () => onDelete(tpl),
+                                onPressed: () {
+                                  widget.onDelete(tpl);
+                                  setState(() => _saved.removeAt(i));
+                                },
                               ),
                             ],
                           ),
