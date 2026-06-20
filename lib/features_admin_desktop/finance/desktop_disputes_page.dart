@@ -8,6 +8,7 @@ import 'package:arena/data/repositories/admin/admin_matches_repository.dart';
 import 'package:arena/data/repositories/match_repository.dart';
 import 'package:arena/features_admin_desktop/shared/desktop_totp_gate.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
+import 'package:arena/features_shared/widgets/arena_image_viewer.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -353,26 +354,29 @@ class _ProofTile extends StatelessWidget {
         ),
       );
     }
-    return GestureDetector(
-      onTap: () => _openVideo(context),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: CachedNetworkImage(
-          imageUrl: proof.url,
-          width: _size,
-          height: _size,
-          fit: BoxFit.cover,
-          placeholder: (_, __) => Container(
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () => ArenaImageViewer.show(context, imageUrl: proof.url),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: CachedNetworkImage(
+            imageUrl: proof.url,
             width: _size,
             height: _size,
-            color: ArenaColors.carbon,
-            child: const Center(child: ProgressRing()),
-          ),
-          errorWidget: (_, __, ___) => Container(
-            width: _size,
-            height: _size,
-            color: ArenaColors.carbon,
-            child: const Icon(FluentIcons.photo_error),
+            fit: BoxFit.cover,
+            placeholder: (_, __) => Container(
+              width: _size,
+              height: _size,
+              color: ArenaColors.carbon,
+              child: const Center(child: ProgressRing()),
+            ),
+            errorWidget: (_, __, ___) => Container(
+              width: _size,
+              height: _size,
+              color: ArenaColors.carbon,
+              child: const Icon(FluentIcons.photo_error),
+            ),
           ),
         ),
       ),
