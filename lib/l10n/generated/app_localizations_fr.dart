@@ -1221,6 +1221,25 @@ class AppLocalizationsFr extends AppLocalizations {
       'Le match a peut-être été annulé par un admin.';
 
   @override
+  String get matchLockedTitle => 'Salle verrouillée';
+
+  @override
+  String get matchLockedBody =>
+      'L\'accès à ce match ouvre 5 minutes avant le coup d\'envoi.';
+
+  @override
+  String matchLockedScheduled(String scheduled) {
+    return 'Coup d\'envoi : $scheduled';
+  }
+
+  @override
+  String get matchLockedNoScheduleTitle => 'Horaire à venir';
+
+  @override
+  String get matchLockedNoScheduleBody =>
+      'Ce match n\'a pas encore d\'horaire planifié. Tu seras notifié dès qu\'il sera programmé.';
+
+  @override
   String get manualUploadButtonLabel => 'Envoyer une vidéo de preuve';
 
   @override

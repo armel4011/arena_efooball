@@ -2,6 +2,7 @@ import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/models/competition_enums.dart';
+import 'package:arena/data/models/match_status.dart';
 import 'package:arena/data/repositories/match_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
@@ -9,6 +10,7 @@ import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:arena/features_shared/widgets/error_state.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/match_room/match_room_providers.dart';
+import 'package:arena/features_user/match_room/widgets/match_locked_view.dart';
 import 'package:arena/features_user/match_room/widgets/match_players_header.dart';
 import 'package:arena/features_user/match_room/widgets/match_recording_lifecycle.dart';
 import 'package:arena/features_user/match_room/widgets/match_step_body.dart';
@@ -40,6 +42,29 @@ enum MatchRole {
     if (selfId == match.player2Id) return MatchRole.player2;
     return MatchRole.observer;
   }
+}
+
+/// Politique d'accès « T-5 min » à la salle de match : on n'entre qu'à partir
+/// de 5 minutes avant `scheduledAt`. Retourne `null` si l'accès est ouvert,
+/// sinon un record dont `opensAt` est l'heure d'ouverture (`null` = match pas
+/// encore programmé → verrouillé sans rebours). Un match déjà actif ou terminé
+/// n'est jamais verrouillé (on n'enferme pas un match en cours / clôturé).
+({DateTime? opensAt})? matchAccessLock(ArenaMatch m) {
+  const openOnceReached = {
+    MatchStatus.inProgress,
+    MatchStatus.scorePending,
+    MatchStatus.awaitingValidation,
+    MatchStatus.disputed,
+    MatchStatus.completed,
+    MatchStatus.forfeited,
+    MatchStatus.cancelled,
+  };
+  if (openOnceReached.contains(m.status)) return null;
+  final at = m.scheduledAt;
+  if (at == null) return (opensAt: null);
+  final opensAt = at.subtract(const Duration(minutes: 5));
+  if (DateTime.now().isBefore(opensAt)) return (opensAt: opensAt);
+  return null;
 }
 
 /// PHASE 5 + v2 redesign — Match Room shell.
@@ -115,6 +140,19 @@ class MatchRoomPage extends ConsumerWidget {
                   icon: Icons.search_off_outlined,
                   title: l10n.matchRoomNotFoundTitle,
                   description: l10n.matchRoomNotFoundDescription,
+                );
+              }
+              // Verrou d'accès : la salle n'ouvre qu'à T-5 min avant le coup
+              // d'envoi planifié. L'app user n'héberge aucun admin
+              // (enforceRoleForFlavor) → ce verrou s'applique à tous ses
+              // utilisateurs (joueurs + observateurs) ; les admins gèrent les
+              // matchs via l'app admin, non verrouillée.
+              final lock = matchAccessLock(m);
+              if (lock != null) {
+                return MatchLockedView(
+                  matchId: matchId,
+                  scheduledAt: m.scheduledAt,
+                  opensAt: lock.opensAt,
                 );
               }
               final role = MatchRole.resolve(match: m, selfId: selfId);

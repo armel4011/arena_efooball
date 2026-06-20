@@ -44,7 +44,10 @@ void main() {
   // de la liste des compétitions (statut signalBlue/statusWarn/silver, tarif
   // signalBlue/statusOk/tierGoldWarm, fond carbon + border dans _FilterPill).
   // check_colors.sh --strict = 0 régression (aucun vrai `Colors.*` ajouté).
-  const colorsDotBaseline = 2211; // occurrences de `Colors.`
+  // 2211 → 2215 le 2026-06-20 : +4 `ArenaColors.*` de l'écran de verrou de la
+  // salle de match (signalBlue de l'icône + rebours, silver des textes).
+  // check_colors.sh --strict = 0 régression (aucun vrai `Colors.*` ajouté).
+  const colorsDotBaseline = 2215; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
 
   final colorsDotRe = RegExp(r'Colors\.');

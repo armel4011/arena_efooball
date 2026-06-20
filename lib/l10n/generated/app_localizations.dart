@@ -2410,6 +2410,36 @@ abstract class AppLocalizations {
   /// **'Le match a peut-être été annulé par un admin.'**
   String get matchRoomNotFoundDescription;
 
+  /// No description provided for @matchLockedTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Salle verrouillée'**
+  String get matchLockedTitle;
+
+  /// No description provided for @matchLockedBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'L\'accès à ce match ouvre 5 minutes avant le coup d\'envoi.'**
+  String get matchLockedBody;
+
+  /// No description provided for @matchLockedScheduled.
+  ///
+  /// In fr, this message translates to:
+  /// **'Coup d\'envoi : {scheduled}'**
+  String matchLockedScheduled(String scheduled);
+
+  /// No description provided for @matchLockedNoScheduleTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Horaire à venir'**
+  String get matchLockedNoScheduleTitle;
+
+  /// No description provided for @matchLockedNoScheduleBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce match n\'a pas encore d\'horaire planifié. Tu seras notifié dès qu\'il sera programmé.'**
+  String get matchLockedNoScheduleBody;
+
   /// No description provided for @manualUploadButtonLabel.
   ///
   /// In fr, this message translates to:

@@ -1213,6 +1213,25 @@ class AppLocalizationsEn extends AppLocalizations {
       'The match may have been cancelled by an admin.';
 
   @override
+  String get matchLockedTitle => 'Room locked';
+
+  @override
+  String get matchLockedBody =>
+      'Access to this match opens 5 minutes before kick-off.';
+
+  @override
+  String matchLockedScheduled(String scheduled) {
+    return 'Kick-off: $scheduled';
+  }
+
+  @override
+  String get matchLockedNoScheduleTitle => 'Time to be set';
+
+  @override
+  String get matchLockedNoScheduleBody =>
+      'This match has no scheduled time yet. You\'ll be notified as soon as it\'s scheduled.';
+
+  @override
   String get manualUploadButtonLabel => 'Send a proof video';
 
   @override

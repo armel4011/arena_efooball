@@ -385,6 +385,16 @@
   "matchRoomChatTooltip": "Chat with your opponent",
   "matchRoomNotFoundTitle": "Match not found",
   "matchRoomNotFoundDescription": "The match may have been cancelled by an admin.",
+  "matchLockedTitle": "Room locked",
+  "matchLockedBody": "Access to this match opens 5 minutes before kick-off.",
+  "matchLockedScheduled": "Kick-off: {scheduled}",
+  "@matchLockedScheduled": {
+    "placeholders": {
+      "scheduled": { "type": "String" }
+    }
+  },
+  "matchLockedNoScheduleTitle": "Time to be set",
+  "matchLockedNoScheduleBody": "This match has no scheduled time yet. You'll be notified as soon as it's scheduled.",
   "manualUploadButtonLabel": "Send a proof video",
   "manualUploadSuccess": "Video sent. Thank you!",
   "outcomeFinalScore": "FINAL SCORE",
