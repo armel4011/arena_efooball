@@ -50,7 +50,9 @@ void main() {
   // 2215 → 2220 le 2026-06-20 : +5 `ArenaColors.*` de la bibliothèque de
   // modèles de description (surface/neonRed du dialog de nom, surface/carbon/
   // danger du bottom sheet). check_colors.sh --strict = 0 (aucun vrai Colors.*).
-  const colorsDotBaseline = 2220; // occurrences de `Colors.`
+  // 2220 → 2231 le 2026-06-20 : +11 `ArenaColors.*` du flux finance desktop
+  // (page Versements génération/markPaid + volet Remboursements). 0 vrai Colors.*.
+  const colorsDotBaseline = 2231; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
 
   final colorsDotRe = RegExp(r'Colors\.');
