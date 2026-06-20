@@ -17,6 +17,7 @@ import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_stepper.dart';
+import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -128,20 +129,14 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
     super.initState();
     final c = widget.editing;
     if (c == null) {
-      // Mode création : pré-remplit la description avec le modèle (perso ou
-      // standard) du jeu par défaut, dès que les modèles sont chargés.
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        try {
-          final templates =
-              await ref.read(competitionDescTemplatesProvider.future);
-          if (!mounted || _descCtrl.text.trim().isNotEmpty) return;
-          setState(() {
-            _appliedDescTemplate = templates.templateFor(_game);
-            _descCtrl.text = _appliedDescTemplate;
-          });
-        } catch (_) {
-          // Cache local indisponible (ex. tests) → pas de pré-saisie.
-        }
+      // Mode création : pré-remplit la description avec le pitch standard
+      // du jeu par défaut (le champ est vide au démarrage).
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _descCtrl.text.trim().isNotEmpty) return;
+        setState(() {
+          _appliedDescTemplate = kDefaultDescriptionTemplates[_game] ?? '';
+          _descCtrl.text = _appliedDescTemplate;
+        });
       });
       return;
     }
@@ -298,16 +293,18 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
                         game: _game,
                         startDate: _startDate,
                         isEditing: _isEditing,
-                        hasSavedTemplate: ref
+                        savedCount: ref
                                 .watch(competitionDescTemplatesProvider)
                                 .valueOrNull
-                                ?.hasCustom(_game) ??
-                            false,
+                                ?.saved
+                                .length ??
+                            0,
                         onChanged: () => setState(() {}),
                         onGameChanged: _onGameChanged,
                         onPickStartDate: _pickStartDate,
-                        onInsertTemplate: _insertDescTemplate,
+                        onInsertStandard: _insertStandardDesc,
                         onSaveTemplate: _saveDescTemplate,
+                        onOpenLibrary: _openTemplateLibrary,
                       ),
                     if (_step == 1)
                       WizardStepFormat(
@@ -577,33 +574,30 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
   }
 
   /// Changement de jeu (mode création seulement). En plus de mettre à jour
-  /// `_game`, on bascule la description sur le modèle du nouveau jeu — mais
-  /// uniquement si l'admin n'a pas personnalisé le texte (champ vide ou
+  /// `_game`, on bascule la description sur le pitch standard du nouveau jeu —
+  /// mais uniquement si l'admin n'a pas personnalisé le texte (champ vide ou
   /// encore égal au modèle précédemment appliqué).
   void _onGameChanged(GameType g) {
-    final templates = ref.read(competitionDescTemplatesProvider).valueOrNull;
     setState(() {
-      _game = g;
-      if (templates == null) return;
       final current = _descCtrl.text.trim();
+      _game = g;
       if (current.isEmpty || _descCtrl.text == _appliedDescTemplate) {
-        _appliedDescTemplate = templates.templateFor(g);
+        _appliedDescTemplate = kDefaultDescriptionTemplates[g] ?? '';
         _descCtrl.text = _appliedDescTemplate;
       }
     });
   }
 
-  /// Insère le modèle (perso ou standard) du jeu courant dans la description.
-  void _insertDescTemplate() {
-    final templates = ref.read(competitionDescTemplatesProvider).valueOrNull;
-    if (templates == null) return;
+  /// Insère le pitch standard du jeu courant dans la description.
+  void _insertStandardDesc() {
     setState(() {
-      _appliedDescTemplate = templates.templateFor(_game);
+      _appliedDescTemplate = kDefaultDescriptionTemplates[_game] ?? '';
       _descCtrl.text = _appliedDescTemplate;
     });
   }
 
-  /// Enregistre la description courante comme modèle réutilisable du jeu.
+  /// Enregistre la description courante comme nouveau modèle nommé. Demande
+  /// d'abord un nom à l'admin via une boîte de dialogue.
   Future<void> _saveDescTemplate() async {
     final text = _descCtrl.text.trim();
     if (text.isEmpty) {
@@ -612,10 +606,12 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
       );
       return;
     }
+    final name = await _promptTemplateName();
+    if (name == null || name.trim().isEmpty) return;
     try {
       await ref
           .read(competitionDescTemplatesProvider.notifier)
-          .save(_game, text);
+          .saveTemplate(name.trim(), text);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -626,8 +622,39 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
     if (!mounted) return;
     setState(() => _appliedDescTemplate = text);
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Modèle de description enregistré pour ${_game.label}.'),
+      SnackBar(content: Text('Modèle « ${name.trim()} » enregistré.')),
+    );
+  }
+
+  /// Boîte de dialogue qui demande le nom d'un nouveau modèle. Déléguée à un
+  /// StatefulWidget qui possède son controller (disposé au bon moment) — sinon
+  /// disposer le controller à la fermeture casse l'arbre (`_dependents`).
+  Future<String?> _promptTemplateName() => showDialog<String>(
+        context: context,
+        builder: (_) => const _TemplateNameDialog(),
+      );
+
+  /// Ouvre la bibliothèque de modèles enregistrés : choisir pour insérer,
+  /// ou supprimer. Présentée en bottom sheet.
+  Future<void> _openTemplateLibrary() async {
+    final templates = ref.read(competitionDescTemplatesProvider).valueOrNull;
+    if (templates == null || templates.saved.isEmpty) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: ArenaColors.surface,
+      isScrollControlled: true,
+      builder: (ctx) => _TemplateLibrarySheet(
+        initial: templates.saved,
+        onInsert: (tpl) {
+          Navigator.of(ctx).pop();
+          setState(() {
+            _appliedDescTemplate = tpl.text;
+            _descCtrl.text = tpl.text;
+          });
+        },
+        onDelete: (tpl) => ref
+            .read(competitionDescTemplatesProvider.notifier)
+            .deleteTemplate(tpl.name),
       ),
     );
   }
@@ -759,5 +786,162 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
       default:
         return '';
     }
+  }
+}
+
+/// Petite popup qui demande le nom d'un modèle. StatefulWidget pour que le
+/// `TextEditingController` soit créé et disposé selon le cycle de vie du
+/// widget (et non à la complétion du `showDialog`, ce qui détruit le
+/// controller alors que le `TextField` est encore monté → assertion
+/// `_dependents.isEmpty`).
+class _TemplateNameDialog extends StatefulWidget {
+  const _TemplateNameDialog();
+
+  @override
+  State<_TemplateNameDialog> createState() => _TemplateNameDialogState();
+}
+
+class _TemplateNameDialogState extends State<_TemplateNameDialog> {
+  final _ctrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _submit() => Navigator.of(context).pop(_ctrl.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: ArenaColors.surface,
+      title: Text('Nom du modèle', style: ArenaText.h3),
+      content: ArenaTextField(
+        controller: _ctrl,
+        hint: 'Ex. Tournoi payant week-end',
+        autofocus: true,
+        textInputAction: TextInputAction.done,
+        onChanged: (_) {},
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text('Annuler', style: ArenaText.body),
+        ),
+        TextButton(
+          onPressed: _submit,
+          child: Text(
+            'Enregistrer',
+            style: ArenaText.h3.copyWith(color: ArenaColors.neonRed),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Bottom sheet de la bibliothèque de modèles : liste les modèles nommés,
+/// chacun cliquable (insertion) avec une action de suppression. État local
+/// (copie de la liste) pour se rafraîchir après suppression sans dépendre du
+/// provider dans la route modale.
+class _TemplateLibrarySheet extends StatefulWidget {
+  const _TemplateLibrarySheet({
+    required this.initial,
+    required this.onInsert,
+    required this.onDelete,
+  });
+
+  final List<DescriptionTemplate> initial;
+  final ValueChanged<DescriptionTemplate> onInsert;
+  final ValueChanged<DescriptionTemplate> onDelete;
+
+  @override
+  State<_TemplateLibrarySheet> createState() => _TemplateLibrarySheetState();
+}
+
+class _TemplateLibrarySheetState extends State<_TemplateLibrarySheet> {
+  late final List<DescriptionTemplate> _saved = [...widget.initial];
+
+  @override
+  Widget build(BuildContext context) {
+    final saved = _saved;
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(ArenaSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Mes modèles de description', style: ArenaText.h2),
+            const SizedBox(height: ArenaSpacing.xs),
+            Text(
+              'Touche un modèle pour insérer son texte dans la description.',
+              style: ArenaText.small,
+            ),
+            const SizedBox(height: ArenaSpacing.md),
+            if (saved.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: ArenaSpacing.lg),
+                child: Text('Aucun modèle enregistré.', style: ArenaText.body),
+              )
+            else
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: saved.length,
+                  separatorBuilder: (_, __) =>
+                      const SizedBox(height: ArenaSpacing.xs),
+                  itemBuilder: (_, i) {
+                    final tpl = saved[i];
+                    final preview = tpl.text.replaceAll('\n', ' ').trim();
+                    return Material(
+                      color: ArenaColors.carbon,
+                      borderRadius: BorderRadius.circular(ArenaRadius.md),
+                      child: InkWell(
+                        onTap: () => widget.onInsert(tpl),
+                        borderRadius: BorderRadius.circular(ArenaRadius.md),
+                        child: Padding(
+                          padding: const EdgeInsets.all(ArenaSpacing.md),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(tpl.name, style: ArenaText.h3),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      preview,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: ArenaText.small,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  color: ArenaColors.danger,
+                                ),
+                                tooltip: 'Supprimer',
+                                onPressed: () {
+                                  widget.onDelete(tpl);
+                                  setState(() => _saved.removeAt(i));
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 }

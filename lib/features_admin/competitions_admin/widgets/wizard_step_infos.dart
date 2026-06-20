@@ -20,9 +20,10 @@ class WizardStepInfos extends StatelessWidget {
     required this.onChanged,
     required this.onGameChanged,
     required this.onPickStartDate,
-    required this.onInsertTemplate,
+    required this.onInsertStandard,
     required this.onSaveTemplate,
-    required this.hasSavedTemplate,
+    required this.onOpenLibrary,
+    required this.savedCount,
     super.key,
   });
 
@@ -37,14 +38,18 @@ class WizardStepInfos extends StatelessWidget {
   final ValueChanged<GameType> onGameChanged;
   final VoidCallback onPickStartDate;
 
-  /// Insère le modèle (perso ou standard) du jeu courant dans la description.
-  final VoidCallback onInsertTemplate;
+  /// Insère le pitch standard du jeu courant dans la description.
+  final VoidCallback onInsertStandard;
 
-  /// Enregistre la description courante comme modèle réutilisable du jeu.
+  /// Enregistre la description courante comme nouveau modèle nommé
+  /// (demande un nom).
   final VoidCallback onSaveTemplate;
 
-  /// `true` si un modèle personnalisé est déjà enregistré pour ce jeu.
-  final bool hasSavedTemplate;
+  /// Ouvre la bibliothèque de modèles enregistrés (choisir / supprimer).
+  final VoidCallback onOpenLibrary;
+
+  /// Nombre de modèles nommés dans la bibliothèque.
+  final int savedCount;
 
   /// En mode édition, grise et désactive un champ verrouillé (ici le jeu).
   Widget _lockable(Widget child) {
@@ -90,11 +95,11 @@ class WizardStepInfos extends StatelessWidget {
           children: [
             Expanded(
               child: ArenaButton(
-                label: hasSavedTemplate ? 'MON MODÈLE' : 'MODÈLE STANDARD',
+                label: 'MODÈLE STANDARD',
                 variant: ArenaButtonVariant.ghost,
                 icon: Icons.auto_awesome,
                 fullWidth: true,
-                onPressed: onInsertTemplate,
+                onPressed: onInsertStandard,
               ),
             ),
             const SizedBox(width: ArenaSpacing.xs),
@@ -109,14 +114,27 @@ class WizardStepInfos extends StatelessWidget {
             ),
           ],
         ),
+        if (savedCount > 0) ...[
+          const SizedBox(height: ArenaSpacing.xs),
+          ArenaButton(
+            label: 'MES MODÈLES ($savedCount)',
+            variant: ArenaButtonVariant.secondary,
+            icon: Icons.bookmarks_outlined,
+            fullWidth: true,
+            onPressed: onOpenLibrary,
+          ),
+        ],
         Padding(
           padding: const EdgeInsets.only(top: ArenaSpacing.xs),
           child: Text(
-            hasSavedTemplate
-                ? 'Un modèle perso est enregistré pour ${game.label}. '
-                    '« ENREGISTRER » le met à jour avec le texte ci-dessus.'
+            savedCount > 0
+                ? 'Insère le pitch standard de ${game.label}, ouvre ta '
+                    'bibliothèque ($savedCount modèle'
+                    '${savedCount > 1 ? 's' : ''}), ou enregistre le texte '
+                    'actuel comme nouveau modèle nommé.'
                 : 'Insère le pitch standard de ${game.label} (modifiable), '
-                    'ou enregistre le tien pour le réutiliser à chaque fois.',
+                    'ou enregistre le texte actuel comme modèle nommé pour le '
+                    'réutiliser à chaque fois.',
             style: ArenaText.small,
           ),
         ),
