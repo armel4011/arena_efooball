@@ -23,7 +23,7 @@
 // Auth : webhook secret partagé (même secret que dispatch_notification).
 // =============================================================================
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.108.2";
 import type { ServiceClient } from "../_shared/db.ts";
 import { timingSafeEqual } from "../_shared/timing.ts";
 

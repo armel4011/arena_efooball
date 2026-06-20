@@ -13,7 +13,7 @@
 // Auth : JWT Supabase. Refuse si rôle ≠ admin/super_admin.
 // =============================================================================
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.108.2";
 import { generateSecretBase32, otpauthUri } from "../_shared/totp.ts";
 import { hasBearer, isAdminRole } from "../_shared/auth_guards.ts";
 
