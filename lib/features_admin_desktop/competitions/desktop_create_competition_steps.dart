@@ -9,7 +9,7 @@ part of 'desktop_create_competition_page.dart';
 // alléger le god file — aucun changement de comportement.
 // ─────────────────────────────────────────────────────────────────────
 
-mixin _StepBuilders on State<DesktopCreateCompetitionPage> {
+mixin _StepBuilders on ConsumerState<DesktopCreateCompetitionPage> {
   // Membres fournis par le State hôte.
   bool get _isEditing;
   GameType get _game;
@@ -60,9 +60,104 @@ mixin _StepBuilders on State<DesktopCreateCompetitionPage> {
     return IgnorePointer(child: Opacity(opacity: 0.45, child: child));
   }
 
+  // ─── Modèles de description (parité avec le wizard mobile #178/#180) ──
+
+  /// Insère le pitch standard du jeu courant dans la description.
+  void _insertStandardDesc() {
+    setState(() {
+      _descCtrl.text = kDefaultDescriptionTemplates[_game] ?? '';
+    });
+  }
+
+  /// Enregistre la description courante comme modèle nommé réutilisable.
+  Future<void> _saveDescTemplate() async {
+    final text = _descCtrl.text.trim();
+    if (text.isEmpty) return;
+    final nameCtrl = TextEditingController();
+    final name = await showDialog<String>(
+      context: context,
+      builder: (ctx) => ContentDialog(
+        title: const Text('Enregistrer le modèle'),
+        content: Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: TextBox(
+            controller: nameCtrl,
+            placeholder: 'Nom du modèle (ex. Tournoi du week-end)',
+          ),
+        ),
+        actions: [
+          Button(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(nameCtrl.text.trim()),
+            child: const Text('Enregistrer'),
+          ),
+        ],
+      ),
+    );
+    nameCtrl.dispose();
+    if (name == null || name.isEmpty) return;
+    await ref
+        .read(competitionDescTemplatesProvider.notifier)
+        .saveTemplate(name, text);
+  }
+
+  /// Ouvre la bibliothèque de modèles nommés : insérer ou supprimer.
+  Future<void> _openTemplateLibrary() async {
+    final lib = ref.read(competitionDescTemplatesProvider).valueOrNull;
+    if (lib == null || lib.saved.isEmpty) return;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => ContentDialog(
+        title: const Text('Mes modèles'),
+        content: SizedBox(
+          width: 460,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final tpl in lib.saved)
+                ListTile(
+                  title: Text(tpl.name),
+                  subtitle: Text(
+                    tpl.text,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  onPressed: () {
+                    setState(() => _descCtrl.text = tpl.text);
+                    Navigator.of(ctx).pop();
+                  },
+                  trailing: IconButton(
+                    icon: const Icon(FluentIcons.delete),
+                    onPressed: () {
+                      ref
+                          .read(competitionDescTemplatesProvider.notifier)
+                          .deleteTemplate(tpl.name);
+                      Navigator.of(ctx).pop();
+                    },
+                  ),
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          Button(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Fermer'),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ─── Étape 0 — Infos ────────────────────────────────────────────────
 
   Widget _buildInfosStep() {
+    final savedCount =
+        ref.watch(competitionDescTemplatesProvider).valueOrNull?.saved.length ??
+            0;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -86,7 +181,20 @@ mixin _StepBuilders on State<DesktopCreateCompetitionPage> {
                 for (final g in GameType.values)
                   ComboBoxItem<GameType>(value: g, child: Text(g.label)),
               ],
-              onChanged: (v) => setState(() => _game = v ?? _game),
+              onChanged: (v) => setState(() {
+                final ng = v ?? _game;
+                // Pré-remplit le pitch standard du nouveau jeu si le champ est
+                // vide OU contient encore le pitch standard du jeu précédent
+                // (ne jamais écraser un texte personnalisé).
+                final prevStd =
+                    (kDefaultDescriptionTemplates[_game] ?? '').trim();
+                if (ng != _game &&
+                    (_descCtrl.text.trim().isEmpty ||
+                        _descCtrl.text.trim() == prevStd)) {
+                  _descCtrl.text = kDefaultDescriptionTemplates[ng] ?? '';
+                }
+                _game = ng;
+              }),
             ),
           ),
         ),
@@ -96,8 +204,63 @@ mixin _StepBuilders on State<DesktopCreateCompetitionPage> {
           child: TextBox(
             controller: _descCtrl,
             placeholder: 'Petite phrase de pitch…',
-            maxLines: 3,
+            maxLines: 4,
+            onChanged: (_) => setState(() {}),
           ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: Button(
+                onPressed: _insertStandardDesc,
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(FluentIcons.lightbulb, size: 14),
+                    SizedBox(width: 6),
+                    Text('Modèle standard'),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Button(
+                onPressed: _saveDescTemplate,
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(FluentIcons.add_bookmark, size: 14),
+                    SizedBox(width: 6),
+                    Text('Enregistrer'),
+                  ],
+                ),
+              ),
+            ),
+            if (savedCount > 0) ...[
+              const SizedBox(width: 8),
+              Expanded(
+                child: Button(
+                  onPressed: _openTemplateLibrary,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(FluentIcons.library, size: 14),
+                      const SizedBox(width: 6),
+                      Text('Mes modèles ($savedCount)'),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Insère le pitch standard de ${_game.label} (modifiable), ou '
+          'enregistre le texte actuel comme modèle nommé pour le réutiliser.',
+          style: const TextStyle(fontSize: 12, color: ArenaColors.silver),
         ),
         const SizedBox(height: 16),
         InfoLabel(
