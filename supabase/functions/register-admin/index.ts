@@ -20,6 +20,12 @@
 // =============================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+import {
+  clientIp,
+  isInvitationExpired,
+  normalizeCode,
+  validateRegisterFields,
+} from "./logic.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -44,33 +50,8 @@ interface RegisterBody {
   cguVersionAccepted?: unknown;
 }
 
-// Règles de mot de passe admin (PHASE 2bis) : 12 chars + maj + min +
-// chiffre + symbole. Réplique côté serveur les contrôles du formulaire
-// Flutter — un client modifié pourrait soumettre un password faible.
-function validateAdminPassword(pw: string): string | null {
-  if (pw.length < 12) return "password_too_short";
-  if (!/[A-Z]/.test(pw)) return "password_no_uppercase";
-  if (!/[a-z]/.test(pw)) return "password_no_lowercase";
-  if (!/\d/.test(pw)) return "password_no_digit";
-  if (!/[!@#$%^&*(),.?":{}|<>_\-]/.test(pw)) return "password_no_symbol";
-  return null;
-}
-
-function normalizeCode(input: string): string {
-  // Le client envoie "ARENA-XXXX-XXXX-XXXX" mais la colonne `code` stocke
-  // seulement "XXXX-XXXX-XXXX". Strip le préfixe + uppercase pour matcher.
-  let v = input.trim().toUpperCase().replace(/\s+/g, "");
-  if (v.startsWith("ARENA-")) v = v.slice("ARENA-".length);
-  return v;
-}
-
-// IP de l'appelant (derrière le proxy Supabase). `x-forwarded-for` peut
-// contenir une liste "client, proxy1, proxy2" — on garde la première entrée.
-function clientIp(req: Request): string {
-  const fwd = req.headers.get("x-forwarded-for") ?? "";
-  const first = fwd.split(",")[0]?.trim();
-  return first && first.length > 0 ? first : "unknown";
-}
+// Validation pure (mot de passe / code / champs) + clientIp + expiration :
+// extraits dans ./logic.ts pour être testables hors `Deno.serve`.
 
 // deno-lint-ignore no-explicit-any
 type ServiceClient = any;
@@ -124,26 +105,18 @@ Deno.serve(async (req: Request): Promise<Response> => {
     ? body.cguVersionAccepted.trim()
     : "";
 
-  // Validation rapide côté serveur. Les messages sont volontairement peu
-  // bavards — l'UI a déjà fait sa passe et on ne veut pas leaker quelle
-  // partie a fait planter (rien d'oraculaire en validation auth).
-  if (!rawCode || !email || !password || !username) {
-    return jsonResponse({ error: "missing_fields" }, 400);
+  // Validation rapide côté serveur (séquence pure → register-admin/logic.ts).
+  // Messages peu bavards : pas d'oracle sur quelle partie a échoué.
+  const fieldError = validateRegisterFields({
+    rawCode,
+    email,
+    password,
+    username,
+  });
+  if (fieldError) {
+    return jsonResponse({ error: fieldError }, 400);
   }
   const code = normalizeCode(rawCode);
-  if (!/^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(code)) {
-    return jsonResponse({ error: "bad_code_format" }, 400);
-  }
-  if (!email.includes("@")) {
-    return jsonResponse({ error: "bad_email" }, 400);
-  }
-  if (username.length < 3 || username.length > 20) {
-    return jsonResponse({ error: "bad_username" }, 400);
-  }
-  const pwError = validateAdminPassword(password);
-  if (pwError) {
-    return jsonResponse({ error: pwError }, 400);
-  }
 
   const service = createClient(supabaseUrl, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -200,12 +173,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
     await recordFailure(service, ip);
     return jsonResponse({ error: "invitation_already_used" }, 409);
   }
-  if (invite.expires_at) {
-    const exp = new Date(invite.expires_at).getTime();
-    if (Number.isFinite(exp) && exp < Date.now()) {
-      await recordFailure(service, ip);
-      return jsonResponse({ error: "invitation_expired" }, 410);
-    }
+  if (isInvitationExpired(invite.expires_at, Date.now())) {
+    await recordFailure(service, ip);
+    return jsonResponse({ error: "invitation_expired" }, 410);
   }
   if (invite.target_email && invite.target_email !== email) {
     // Code émis pour une adresse précise — l'admin l'a saisie côté SA2,

@@ -27,6 +27,7 @@ import {
   recordTotpFailure,
   recordTotpSuccess,
 } from "../_shared/totp_rate_limit.ts";
+import { hasBearer, isAdminRole, isSixDigitCode } from "../_shared/auth_guards.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -59,7 +60,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
 
   const authHeader = req.headers.get("Authorization") ?? "";
-  if (!authHeader.startsWith("Bearer ")) {
+  if (!hasBearer(authHeader)) {
     return jsonResponse({ error: "unauthenticated" }, 401);
   }
 
@@ -70,7 +71,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return jsonResponse({ error: "bad_json" }, 400);
   }
   const code = typeof body.code === "string" ? body.code.trim() : "";
-  if (!/^\d{6}$/.test(code)) {
+  if (!isSixDigitCode(code)) {
     return jsonResponse({ error: "bad_code_format" }, 400);
   }
 
@@ -96,7 +97,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (profileErr || !profile) {
     return jsonResponse({ error: "profile_not_found" }, 404);
   }
-  if (profile.role !== "admin" && profile.role !== "super_admin") {
+  if (!isAdminRole(profile.role)) {
     return jsonResponse({ error: "forbidden_role" }, 403);
   }
   if (profile.totp_enabled) {

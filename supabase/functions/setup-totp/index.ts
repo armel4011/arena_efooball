@@ -15,6 +15,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import { generateSecretBase32, otpauthUri } from "../_shared/totp.ts";
+import { hasBearer, isAdminRole } from "../_shared/auth_guards.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -46,7 +47,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
 
   const authHeader = req.headers.get("Authorization") ?? "";
-  if (!authHeader.startsWith("Bearer ")) {
+  if (!hasBearer(authHeader)) {
     return jsonResponse({ error: "unauthenticated" }, 401);
   }
 
@@ -76,7 +77,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (profileErr || !profile) {
     return jsonResponse({ error: "profile_not_found" }, 404);
   }
-  if (profile.role !== "admin" && profile.role !== "super_admin") {
+  if (!isAdminRole(profile.role)) {
     return jsonResponse({ error: "forbidden_role" }, 403);
   }
   if (profile.totp_enabled) {
