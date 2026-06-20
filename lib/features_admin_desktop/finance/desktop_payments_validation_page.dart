@@ -42,6 +42,7 @@ class _DesktopPaymentsValidationPageState
               label: const Text('Actualiser'),
               onPressed: () => ref
                 ..invalidate(adminPendingPaymentsProvider)
+                ..invalidate(adminRefundPendingProvider)
                 ..invalidate(adminPaymentsHistoryProvider),
             ),
           ],
@@ -63,6 +64,12 @@ class _DesktopPaymentsValidationPageState
                 ToggleButton(
                   checked: _tab == 1,
                   onChanged: (_) => setState(() => _tab = 1),
+                  child: const Text('Remboursements'),
+                ),
+                const SizedBox(width: 8),
+                ToggleButton(
+                  checked: _tab == 2,
+                  onChanged: (_) => setState(() => _tab = 2),
                   child: const Text('Historique'),
                 ),
               ],
@@ -70,7 +77,11 @@ class _DesktopPaymentsValidationPageState
           ),
           const SizedBox(height: 16),
           Expanded(
-            child: _tab == 0 ? const _PendingList() : const _HistoryList(),
+            child: switch (_tab) {
+              0 => const _PendingList(),
+              1 => const _RefundList(),
+              _ => const _HistoryList(),
+            },
           ),
         ],
       ),
@@ -394,6 +405,184 @@ class _PendingCard extends ConsumerWidget {
     if (d.inHours < 1) return 'il y a ${d.inMinutes} min';
     if (d.inDays < 1) return 'il y a ${d.inHours}h';
     return 'il y a ${d.inDays}j';
+  }
+}
+
+class _RefundList extends ConsumerWidget {
+  const _RefundList();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(adminRefundPendingProvider);
+    return async.when(
+      loading: () => const Center(child: ProgressRing()),
+      error: (e, _) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: InfoBar(
+          title: const Text('Erreur de chargement'),
+          content: Text('$e'),
+          severity: InfoBarSeverity.error,
+        ),
+      ),
+      data: (list) {
+        if (list.isEmpty) {
+          return Center(
+            child: Text(
+              'Aucun remboursement à effectuer.',
+              style: GoogleFonts.spaceGrotesk(
+                color: ArenaColors.silver,
+                fontSize: 14,
+              ),
+            ),
+          );
+        }
+        return ListView.separated(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          itemCount: list.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          itemBuilder: (_, i) => _RefundCard(row: list[i]),
+        );
+      },
+    );
+  }
+}
+
+class _RefundCard extends ConsumerWidget {
+  const _RefundCard({required this.row});
+
+  final AdminPaymentRow row;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final payment = row.payment;
+    return Card(
+      backgroundColor: ArenaColors.carbon,
+      borderColor: ArenaColors.statusWarn.withValues(alpha: 0.4),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            row.username,
+            style: GoogleFonts.spaceGrotesk(
+              color: ArenaColors.bone,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${row.competitionName} · compétition annulée',
+            style: GoogleFonts.spaceGrotesk(
+              color: ArenaColors.silver,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 12),
+          _refundKv(
+            'À rembourser',
+            '${_money(payment.amountLocal)} ${payment.currency}',
+            emphasize: true,
+          ),
+          _refundKv('Méthode', _methodLabel(payment.payerMethod)),
+          _refundKv('Numéro payeur', payment.payerPhone ?? '—'),
+          const SizedBox(height: 16),
+          FilledButton(
+            onPressed: () => _refund(context, ref),
+            child: const Text('Marquer remboursé'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _refund(BuildContext context, WidgetRef ref) async {
+    final adminId = ref.read(currentSessionProvider)?.user.id;
+    if (adminId == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => ContentDialog(
+        title: const Text('Marquer remboursé ?'),
+        content: Text(
+          'Confirme avoir reversé ${_money(row.payment.amountLocal)} '
+          '${row.payment.currency} à ${row.username} sur le '
+          '${_methodLabel(row.payment.payerMethod)} '
+          '${row.payment.payerPhone ?? "—"} (compétition annulée).',
+        ),
+        actions: [
+          Button(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Marquer remboursé'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    final totpOk = await showDesktopTotpGate(
+      context,
+      ref,
+      reason: 'Marquer un remboursement · '
+          '${_money(row.payment.amountLocal)} ${row.payment.currency}',
+    );
+    if (!totpOk || !context.mounted) return;
+    try {
+      await ref
+          .read(adminPaymentsRepositoryProvider)
+          .markRefunded(row.payment.id);
+      await ref.read(adminAuditLogRepositoryProvider).record(
+        adminId: adminId,
+        action: 'payment_refunded',
+        targetType: 'payment',
+        targetId: row.payment.id,
+        afterState: {
+          'amount_local': row.payment.amountLocal,
+          'currency': row.payment.currency,
+        },
+      );
+      ref.invalidate(adminRefundPendingProvider);
+      if (!context.mounted) return;
+      await _showResult(
+        context,
+        'Remboursement marqué · ${row.username} notifié.',
+        isError: false,
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      await _showResult(context, arenaErrorMessage(e), isError: true);
+    }
+  }
+
+  Widget _refundKv(String key, String value, {bool emphasize = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            key,
+            style: GoogleFonts.spaceGrotesk(
+              color: ArenaColors.silver,
+              fontSize: 13,
+            ),
+          ),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: GoogleFonts.spaceGrotesk(
+                color: emphasize ? ArenaColors.statusWarn : ArenaColors.bone,
+                fontSize: 13,
+                fontWeight: emphasize ? FontWeight.w700 : FontWeight.w400,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
