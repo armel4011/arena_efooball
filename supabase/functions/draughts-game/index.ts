@@ -21,7 +21,7 @@
 //   * nulle en poule (group_id) → matches.completed, winner_id null (1-1... ici 0-0)
 // =============================================================================
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.108.2";
 import {
   applyMove,
   encodeFen,

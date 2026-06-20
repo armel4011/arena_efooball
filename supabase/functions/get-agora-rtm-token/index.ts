@@ -18,7 +18,7 @@
 //     hash) ; Agora RTM v2 supporte les userId string directement.
 // =============================================================================
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.108.2";
 import { RtmTokenBuilder } from "npm:agora-token@2.0.5";
 
 const APP_ID = Deno.env.get("AGORA_APP_ID");

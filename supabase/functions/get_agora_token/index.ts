@@ -25,7 +25,7 @@
 //     gate the channel name itself behind the public flag.
 // =============================================================================
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.108.2";
 import { RtcTokenBuilder, RtcRole } from "npm:agora-token@2.0.5";
 
 const APP_ID = Deno.env.get("AGORA_APP_ID");

@@ -17,7 +17,7 @@
 // record, old_record}` — on s'attend uniquement à `INSERT chat_messages`.
 // =============================================================================
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.108.2";
 import { timingSafeEqual } from "../_shared/timing.ts";
 
 const corsHeaders = {
