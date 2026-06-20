@@ -8,6 +8,7 @@ import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_competitions_repository.dart';
 import 'package:arena/features_admin_desktop/competitions/desktop_competition_visuals.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
+import 'package:arena/features_shared/competition_description_templates.dart';
 import 'package:arena/features_shared/prize_ranks.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter/services.dart';
@@ -130,7 +131,12 @@ class _DesktopCreateCompetitionPageState
   void initState() {
     super.initState();
     final c = widget.editing;
-    if (c == null) return;
+    if (c == null) {
+      // Création : pré-remplit la description avec le pitch standard du jeu
+      // par défaut (modifiable). Parité avec le wizard mobile.
+      _descCtrl.text = kDefaultDescriptionTemplates[_game] ?? '';
+      return;
+    }
     _nameCtrl.text = c.name;
     _descCtrl.text = c.description ?? '';
     _game = c.game;

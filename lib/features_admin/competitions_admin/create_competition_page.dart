@@ -4,7 +4,6 @@ import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_competitions_repository.dart';
-import 'package:arena/features_admin/competitions_admin/competition_description_templates.dart';
 import 'package:arena/features_admin/competitions_admin/widgets/competition_form_widgets.dart';
 import 'package:arena/features_admin/competitions_admin/widgets/wizard_step_fees.dart';
 import 'package:arena/features_admin/competitions_admin/widgets/wizard_step_format.dart';
@@ -12,6 +11,7 @@ import 'package:arena/features_admin/competitions_admin/widgets/wizard_step_info
 import 'package:arena/features_admin/competitions_admin/widgets/wizard_step_prizes.dart';
 import 'package:arena/features_admin/competitions_admin/widgets/wizard_step_review.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
+import 'package:arena/features_shared/competition_description_templates.dart';
 import 'package:arena/features_shared/prize_ranks.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';

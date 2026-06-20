@@ -290,9 +290,9 @@ msix_config:
   publisher_display_name: Arena
   identity_name: com.arena.admin.desktop
   publisher: CN=Arena Admin
-  # Aligné sur `version:` mobile (1.0.4) — MSIX exige un 4e segment (build).
+  # Aligné sur `version:` mobile (1.0.5) — MSIX exige un 4e segment (build).
   # À garder synchrone à chaque bump (audit 2026-06-14).
-  msix_version: 1.0.4.0
+  msix_version: 1.0.5.0
   logo_path: assets/icons/arena_admin_1024.png
   capabilities: internetClient
   certificate_path: windows/certificates/arena_admin.pfx
