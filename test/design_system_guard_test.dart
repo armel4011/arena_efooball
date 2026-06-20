@@ -47,7 +47,10 @@ void main() {
   // 2211 → 2215 le 2026-06-20 : +4 `ArenaColors.*` de l'écran de verrou de la
   // salle de match (signalBlue de l'icône + rebours, silver des textes).
   // check_colors.sh --strict = 0 régression (aucun vrai `Colors.*` ajouté).
-  const colorsDotBaseline = 2215; // occurrences de `Colors.`
+  // 2215 → 2220 le 2026-06-20 : +5 `ArenaColors.*` de la bibliothèque de
+  // modèles de description (surface/neonRed du dialog de nom, surface/carbon/
+  // danger du bottom sheet). check_colors.sh --strict = 0 (aucun vrai Colors.*).
+  const colorsDotBaseline = 2220; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
 
   final colorsDotRe = RegExp(r'Colors\.');
