@@ -1208,6 +1208,25 @@ class AppLocalizationsAr extends AppLocalizations {
       'ربما تم إلغاء المباراة من قبل المشرف.';
 
   @override
+  String get matchLockedTitle => 'الغرفة مقفلة';
+
+  @override
+  String get matchLockedBody =>
+      'يُفتح الوصول إلى هذه المباراة قبل 5 دقائق من انطلاقها.';
+
+  @override
+  String matchLockedScheduled(String scheduled) {
+    return 'الانطلاق: $scheduled';
+  }
+
+  @override
+  String get matchLockedNoScheduleTitle => 'الموعد قيد التحديد';
+
+  @override
+  String get matchLockedNoScheduleBody =>
+      'لا يوجد موعد محدد لهذه المباراة بعد. سيتم إعلامك بمجرد جدولتها.';
+
+  @override
   String get manualUploadButtonLabel => 'إرسال فيديو إثبات';
 
   @override

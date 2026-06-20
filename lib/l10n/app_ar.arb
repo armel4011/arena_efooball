@@ -385,6 +385,16 @@
   "matchRoomChatTooltip": "الدردشة مع خصمك",
   "matchRoomNotFoundTitle": "المباراة غير موجودة",
   "matchRoomNotFoundDescription": "ربما تم إلغاء المباراة من قبل المشرف.",
+  "matchLockedTitle": "الغرفة مقفلة",
+  "matchLockedBody": "يُفتح الوصول إلى هذه المباراة قبل 5 دقائق من انطلاقها.",
+  "matchLockedScheduled": "الانطلاق: {scheduled}",
+  "@matchLockedScheduled": {
+    "placeholders": {
+      "scheduled": { "type": "String" }
+    }
+  },
+  "matchLockedNoScheduleTitle": "الموعد قيد التحديد",
+  "matchLockedNoScheduleBody": "لا يوجد موعد محدد لهذه المباراة بعد. سيتم إعلامك بمجرد جدولتها.",
   "manualUploadButtonLabel": "إرسال فيديو إثبات",
   "manualUploadSuccess": "تم إرسال الفيديو. شكرًا!",
   "outcomeFinalScore": "النتيجة النهائية",

@@ -284,8 +284,65 @@ class _AdminMatchActions extends ConsumerWidget {
             },
           ),
         ],
+        // Édition de l'horaire du match (scheduled_at). Pilote le verrou
+        // d'accès « T-5 min » côté app user + les rappels T-60/30/10/5.
+        const SizedBox(height: ArenaSpacing.sm),
+        ArenaButton(
+          label: match.scheduledAt == null
+              ? "🕒 DÉFINIR L'HORAIRE"
+              : "🕒 MODIFIER L'HORAIRE",
+          fullWidth: true,
+          variant: ArenaButtonVariant.secondary,
+          onPressed: () => _reschedule(context, ref),
+        ),
       ],
     );
+  }
+
+  Future<void> _reschedule(BuildContext context, WidgetRef ref) async {
+    final adminId = ref.read(currentSessionProvider)?.user.id;
+    if (adminId == null) return;
+    final initial = match.scheduledAt?.toLocal() ?? DateTime.now();
+    final date = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime.now().subtract(const Duration(days: 1)),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (date == null || !context.mounted) return;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(initial),
+    );
+    if (time == null || !context.mounted) return;
+    final scheduledAt =
+        DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    try {
+      await ref.read(adminMatchesRepositoryProvider).reschedule(
+            matchId: match.id,
+            scheduledAt: scheduledAt,
+          );
+      await ref.read(adminAuditLogRepositoryProvider).record(
+        adminId: adminId,
+        action: 'match_rescheduled',
+        targetType: 'match',
+        targetId: match.id,
+        afterState: {
+          'scheduled_at': scheduledAt.toUtc().toIso8601String(),
+          'from': 'bracket_sheet',
+        },
+      );
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Horaire du match mis à jour.')),
+      );
+      Navigator.of(context).pop();
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Échec : ${arenaErrorMessage(e)}')),
+      );
+    }
   }
 
   Future<void> _toggleStreaming(

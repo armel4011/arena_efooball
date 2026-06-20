@@ -405,6 +405,16 @@
   "matchRoomChatTooltip": "Chat avec ton adversaire",
   "matchRoomNotFoundTitle": "Match introuvable",
   "matchRoomNotFoundDescription": "Le match a peut-être été annulé par un admin.",
+  "matchLockedTitle": "Salle verrouillée",
+  "matchLockedBody": "L'accès à ce match ouvre 5 minutes avant le coup d'envoi.",
+  "matchLockedScheduled": "Coup d'envoi : {scheduled}",
+  "@matchLockedScheduled": {
+    "placeholders": {
+      "scheduled": { "type": "String" }
+    }
+  },
+  "matchLockedNoScheduleTitle": "Horaire à venir",
+  "matchLockedNoScheduleBody": "Ce match n'a pas encore d'horaire planifié. Tu seras notifié dès qu'il sera programmé.",
   "manualUploadButtonLabel": "Envoyer une vidéo de preuve",
   "manualUploadSuccess": "Vidéo envoyée. Merci !",
   "outcomeFinalScore": "SCORE FINAL",
