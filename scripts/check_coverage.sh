@@ -10,18 +10,19 @@
 # baisser pour faire passer la CI — c'est tout l'intérêt du cliquet).
 #
 # Même posture progressive que `check_colors.sh --strict` (cf. audit 2026-06-14,
-# chantier tests). Plancher 29 % (couverture commitée mesurée en CI à 29,29 %
-# au 2026-06-14, hors tests UI non encore mergés). À relever quand ça monte.
+# chantier tests). Plancher 37 % (couverture mesurée à 38,35 % le 2026-06-20,
+# après les chantiers tests UI #6 + offline/pgTAP/EF de la dette P1 ; buffer
+# ~1,3 pt pour absorber la variance CI). À relever quand ça remonte.
 #
-# Usage:  bash scripts/check_coverage.sh           # plancher par défaut (30)
-#         MIN_COVERAGE=35 bash scripts/check_coverage.sh
+# Usage:  bash scripts/check_coverage.sh           # plancher par défaut (37)
+#         MIN_COVERAGE=40 bash scripts/check_coverage.sh
 # ─────────────────────────────────────────────────────────────────────────────
 
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-MIN_COVERAGE="${MIN_COVERAGE:-29}"
+MIN_COVERAGE="${MIN_COVERAGE:-37}"
 lcov_file="coverage/lcov.info"
 
 if [[ ! -f "$lcov_file" ]]; then

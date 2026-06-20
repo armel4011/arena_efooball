@@ -92,9 +92,10 @@ jobs:
 
       - name: Coverage ratchet (bloquant)
         # Cliquet anti-régression : échoue si la couverture de lignes globale
-        # passe sous le plancher figé (cf. scripts/check_coverage.sh). Même
-        # posture que le garde-fou couleurs --strict. Plancher 30 % au
-        # 2026-06-14 ; à RELEVER (jamais baisser) quand la couverture monte.
+        # passe sous le plancher figé. Le plancher (MIN_COVERAGE) est défini
+        # dans scripts/check_coverage.sh — source unique de vérité, à RELEVER
+        # (jamais baisser) quand la couverture monte. Même posture que le
+        # garde-fou couleurs --strict.
         run: bash scripts/check_coverage.sh
 
       - name: Upload coverage to Codecov
