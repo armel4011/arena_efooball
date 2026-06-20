@@ -252,6 +252,62 @@ jobs:
       - name: pub get
         run: flutter pub get
 
+      - name: Pré-stage SDK Agora (download robuste + skip extract through symlink)
+        # Contourne 2 échecs CI du build Windows, tous deux EXTERNES au code
+        # (cf. agora_rtc_engine/windows/cmake/DownloadSDK.cmake) :
+        #  (P1) DownloadSDK.cmake télécharge les SDK Iris/Native depuis le CDN
+        #       Aliyun (download.agora.io) via un `file(DOWNLOAD)` SANS retry,
+        #       dont la liaison vers les runners GitHub est flaky →
+        #       "Download failed". On pré-télécharge les .zip avec
+        #       `curl --retry` (robuste).
+        #  (P2) CMake extrait ces SDK via `cmake -E tar` DANS le dossier du
+        #       plugin, atteint par un SYMLINK (.plugin_symlinks/
+        #       agora_rtc_engine). Le libarchive récent du runner refuse
+        #       ("Cannot extract through symlink"). On extrait NOUS-MÊMES dans
+        #       le PUB_CACHE réel (hors symlink) puis on dépose un marqueur
+        #       `.plugin_dev` : CMake saute alors `download_and_extract` (les
+        #       deux SDK) et se contente de LIRE le SDK pré-stagé à travers le
+        #       symlink (lecture autorisée). Plus de download flaky NI
+        #       d'extraction à travers symlink.
+        # Idempotent : si `.plugin_dev` est déjà là (cache restauré), on skip.
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pubCache = $env:PUB_CACHE
+          if (-not $pubCache) { $pubCache = Join-Path $env:LOCALAPPDATA 'Pub\Cache' }
+          $pkg = Get-ChildItem -Path (Join-Path $pubCache 'hosted\pub.dev') `
+            -Filter 'agora_rtc_engine-*' -Directory -ErrorAction SilentlyContinue |
+            Select-Object -First 1
+          if (-not $pkg) { Write-Host 'agora_rtc_engine absent — rien à pré-stager.'; exit 0 }
+          $win = Join-Path $pkg.FullName 'windows'
+          $marker = Join-Path $win '.plugin_dev'
+          if (Test-Path $marker) {
+            Write-Host 'SDK Agora déjà pré-stagé (.plugin_dev présent) — skip.'
+            exit 0
+          }
+          # URLs des SDK lues depuis DownloadSDK.cmake (version-agnostique).
+          $cmake = Get-Content (Join-Path $win 'cmake\DownloadSDK.cmake') -Raw
+          $urls = [regex]::Matches($cmake, 'DOWNLOAD_URL\s+"([^"]+)"') |
+            ForEach-Object { $_.Groups[1].Value }
+          $iris   = $urls | Where-Object { $_ -match '/iris_' } | Select-Object -First 1
+          $native = $urls | Where-Object { $_ -match '/Agora_Native_SDK' } | Select-Object -First 1
+          function Stage-Sdk($url, $dir) {
+            if (-not $url) { throw 'URL SDK introuvable dans DownloadSDK.cmake' }
+            $lib = Join-Path $dir 'lib'
+            New-Item -ItemType Directory -Force -Path $lib | Out-Null
+            $zip = Join-Path $dir (Split-Path $url -Leaf)
+            Write-Host "Téléchargement (curl --retry) $url"
+            curl.exe --fail --location --retry 6 --retry-all-errors --retry-delay 5 `
+              --connect-timeout 30 --max-time 900 -o $zip $url
+            if ($LASTEXITCODE -ne 0) { throw "Échec téléchargement $url" }
+            Write-Host "Extraction -> $lib"
+            Expand-Archive -Path $zip -DestinationPath $lib -Force
+          }
+          Stage-Sdk $iris   (Join-Path $win 'third_party\iris')
+          Stage-Sdk $native (Join-Path $win 'third_party\native')
+          New-Item -ItemType File -Force -Path $marker | Out-Null
+          Write-Host 'Pré-stage SDK Agora OK.'
+
       - name: Build Windows (admin desktop)
         # Les fichiers générés (freezed / *.g.dart) sont committés, donc pas
         # de build_runner ici. Debug suffit pour valider la chaîne de build
