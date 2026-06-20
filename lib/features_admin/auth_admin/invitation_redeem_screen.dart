@@ -7,6 +7,7 @@ import 'package:arena/features_admin/auth_admin/totp_setup_screen.dart'
 import 'package:arena/features_shared/auth_common/auth_failure_message.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:arena/features_shared/widgets/arena_error_banner.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:flutter/material.dart';
@@ -262,7 +263,7 @@ class _InvitationRedeemScreenState
                   ),
                   if (errorMessage != null) ...[
                     const SizedBox(height: ArenaSpacing.sm),
-                    _ErrorBanner(message: errorMessage),
+                    ArenaErrorBanner(message: errorMessage),
                   ],
                   const SizedBox(height: ArenaSpacing.lg),
                   ArenaButton(
@@ -363,38 +364,4 @@ class _InvitationPreviewCard extends StatelessWidget {
   }
 }
 
-class _ErrorBanner extends StatelessWidget {
-  const _ErrorBanner({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(ArenaSpacing.md),
-      decoration: BoxDecoration(
-        color: ArenaColors.danger.withValues(alpha: 0.12),
-        borderRadius: ArenaRadius.button,
-        border: Border.all(color: ArenaColors.danger.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.error_outline,
-            color: ArenaColors.danger,
-            size: 20,
-          ),
-          const SizedBox(width: ArenaSpacing.sm),
-          Expanded(
-            child: Text(
-              message,
-              style: ArenaText.body.copyWith(
-                color: ArenaColors.danger,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+// _ErrorBanner factorisé → ArenaErrorBanner (features_shared/widgets).
