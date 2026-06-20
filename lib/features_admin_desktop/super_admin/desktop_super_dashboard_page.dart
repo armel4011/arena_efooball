@@ -1,5 +1,6 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/admin/super_admin_dashboard_repository.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -20,6 +21,8 @@ class DesktopSuperDashboardPage extends ConsumerWidget {
     final kpisAsync = ref.watch(superAdminKpisProvider);
     final topPlayersAsync = ref.watch(superAdminTopPlayersProvider);
     final countriesAsync = ref.watch(superAdminCountryBreakdownProvider);
+    final signupsAsync = ref.watch(superAdminMonthlySignupsProvider);
+    final monthlyRevenueAsync = ref.watch(superAdminMonthlyRevenueProvider);
     final monthLabel =
         DateFormat('LLLL yyyy', 'fr').format(DateTime.now()).toUpperCase();
 
@@ -35,7 +38,9 @@ class DesktopSuperDashboardPage extends ConsumerWidget {
               onPressed: () => ref
                 ..invalidate(superAdminKpisProvider)
                 ..invalidate(superAdminTopPlayersProvider)
-                ..invalidate(superAdminCountryBreakdownProvider),
+                ..invalidate(superAdminCountryBreakdownProvider)
+                ..invalidate(superAdminMonthlySignupsProvider)
+                ..invalidate(superAdminMonthlyRevenueProvider),
             ),
           ],
         ),
@@ -129,6 +134,27 @@ class DesktopSuperDashboardPage extends ConsumerWidget {
                 );
               },
             ),
+          ),
+          const SizedBox(height: 32),
+          Text('ÉVOLUTION MENSUELLE (12 MOIS)', style: _sectionStyle),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _ChartCard(
+                  title: 'Inscriptions / mois',
+                  child: _SignupsLineChart(async: signupsAsync),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _ChartCard(
+                  title: 'Revenu / mois (XAF)',
+                  child: _RevenueBarChart(async: monthlyRevenueAsync),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 32),
           Text(
@@ -379,6 +405,178 @@ class _CountryBreakdown extends StatelessWidget {
                       ),
                     ],
                   ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Charts d'évolution mensuelle (fl_chart) — port du dashboard mobile.
+// ════════════════════════════════════════════════════════════════════
+class _ChartCard extends StatelessWidget {
+  const _ChartCard({required this.title, required this.child});
+
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      backgroundColor: ArenaColors.carbon,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: GoogleFonts.spaceGrotesk(
+              color: ArenaColors.silver,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(height: 160, child: child),
+        ],
+      ),
+    );
+  }
+}
+
+TextStyle get _axisStyle =>
+    GoogleFonts.spaceGrotesk(color: ArenaColors.silver, fontSize: 9);
+
+Widget _chartCenter(Widget child) => Center(child: child);
+
+FlTitlesData _monthAxis(int count, DateTime Function(int) monthAt) {
+  return FlTitlesData(
+    leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+    bottomTitles: AxisTitles(
+      sideTitles: SideTitles(
+        showTitles: true,
+        interval: (count / 4).clamp(1, 6).toDouble(),
+        reservedSize: 20,
+        getTitlesWidget: (v, _) {
+          final i = v.toInt();
+          if (i < 0 || i >= count) return const SizedBox.shrink();
+          return Text(
+            DateFormat('MMM', 'fr').format(monthAt(i)).toUpperCase(),
+            style: _axisStyle,
+          );
+        },
+      ),
+    ),
+  );
+}
+
+class _SignupsLineChart extends StatelessWidget {
+  const _SignupsLineChart({required this.async});
+
+  final AsyncValue<List<MonthlyCount>> async;
+
+  @override
+  Widget build(BuildContext context) {
+    return async.when(
+      loading: () => _chartCenter(const ProgressRing()),
+      error: (e, _) => _chartCenter(
+        Text('Erreur : $e', style: _axisStyle),
+      ),
+      data: (rows) {
+        if (rows.isEmpty) {
+          return _chartCenter(
+            Text('Aucune inscription sur la période.', style: _axisStyle),
+          );
+        }
+        final maxY = rows.fold<double>(
+          1,
+          (acc, r) => r.count.toDouble() > acc ? r.count.toDouble() : acc,
+        );
+        return LineChart(
+          LineChartData(
+            minY: 0,
+            maxY: maxY * 1.15,
+            gridData: const FlGridData(show: false),
+            borderData: FlBorderData(show: false),
+            titlesData: _monthAxis(rows.length, (i) => rows[i].month),
+            lineBarsData: [
+              LineChartBarData(
+                spots: [
+                  for (var i = 0; i < rows.length; i++)
+                    FlSpot(i.toDouble(), rows[i].count.toDouble()),
+                ],
+                isCurved: true,
+                color: ArenaColors.signalBlue,
+                barWidth: 2,
+                dotData: const FlDotData(show: false),
+                belowBarData: BarAreaData(
+                  show: true,
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      ArenaColors.signalBlue.withValues(alpha: 0.4),
+                      ArenaColors.signalBlue.withValues(alpha: 0),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _RevenueBarChart extends StatelessWidget {
+  const _RevenueBarChart({required this.async});
+
+  final AsyncValue<List<MonthlyRevenue>> async;
+
+  @override
+  Widget build(BuildContext context) {
+    return async.when(
+      loading: () => _chartCenter(const ProgressRing()),
+      error: (e, _) => _chartCenter(
+        Text('Erreur : $e', style: _axisStyle),
+      ),
+      data: (rows) {
+        if (rows.isEmpty) {
+          return _chartCenter(
+            Text('Aucun revenu sur la période.', style: _axisStyle),
+          );
+        }
+        final maxY = rows.fold<double>(
+          1,
+          (acc, r) => r.revenueXaf > acc ? r.revenueXaf : acc,
+        );
+        return BarChart(
+          BarChartData(
+            minY: 0,
+            maxY: maxY * 1.15,
+            gridData: const FlGridData(show: false),
+            borderData: FlBorderData(show: false),
+            titlesData: _monthAxis(rows.length, (i) => rows[i].month),
+            barGroups: [
+              for (var i = 0; i < rows.length; i++)
+                BarChartGroupData(
+                  x: i,
+                  barRods: [
+                    BarChartRodData(
+                      toY: rows[i].revenueXaf,
+                      color: ArenaColors.statusOk,
+                      width: 10,
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(2),
+                      ),
+                    ),
+                  ],
                 ),
             ],
           ),

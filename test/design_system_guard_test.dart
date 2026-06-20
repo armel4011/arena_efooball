@@ -52,7 +52,9 @@ void main() {
   // danger du bottom sheet). check_colors.sh --strict = 0 (aucun vrai Colors.*).
   // 2220 → 2231 le 2026-06-20 : +11 `ArenaColors.*` du flux finance desktop
   // (page Versements génération/markPaid + volet Remboursements). 0 vrai Colors.*.
-  const colorsDotBaseline = 2231; // occurrences de `Colors.`
+  // 2231 → 2238 le 2026-06-20 : +7 `ArenaColors.*` des graphes mensuels du
+  // super-dashboard desktop (fl_chart inscriptions/revenus). 0 vrai Colors.*.
+  const colorsDotBaseline = 2238; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
 
   final colorsDotRe = RegExp(r'Colors\.');
