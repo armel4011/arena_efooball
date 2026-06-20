@@ -194,7 +194,8 @@ final paymentByIdProvider =
 /// admin met ~minutes, l'utilisateur reload la page volontairement.
 /// Poll 60s couvre largement la perception et libère le Realtime
 /// channel pour les usages critiques.
-final myPaymentsProvider = StreamProvider<List<PaymentRecord>>((ref) {
+final myPaymentsProvider =
+    StreamProvider.autoDispose<List<PaymentRecord>>((ref) {
   final session = ref.watch(currentSessionProvider);
   if (session == null) {
     return Stream.value(const <PaymentRecord>[]);

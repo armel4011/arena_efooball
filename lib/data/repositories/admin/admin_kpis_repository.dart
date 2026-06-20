@@ -76,6 +76,6 @@ final adminKpisRepositoryProvider = Provider<AdminKpisRepository>((ref) {
   return AdminKpisRepository(ref.watch(supabaseClientProvider));
 });
 
-final adminKpisProvider = FutureProvider<AdminKpis>((ref) {
+final adminKpisProvider = FutureProvider.autoDispose<AdminKpis>((ref) {
   return ref.watch(adminKpisRepositoryProvider).fetch();
 });

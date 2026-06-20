@@ -257,17 +257,18 @@ final superAdminDashboardRepositoryProvider =
   return SuperAdminDashboardRepository(ref.watch(supabaseClientProvider));
 });
 
-final superAdminKpisProvider = FutureProvider<SuperAdminKpis>((ref) {
+final superAdminKpisProvider =
+    FutureProvider.autoDispose<SuperAdminKpis>((ref) {
   return ref.watch(superAdminDashboardRepositoryProvider).fetchKpis();
 });
 
 final superAdminTopPlayersProvider =
-    FutureProvider<List<TopPlayerEntry>>((ref) {
+    FutureProvider.autoDispose<List<TopPlayerEntry>>((ref) {
   return ref.watch(superAdminDashboardRepositoryProvider).fetchTopPlayers();
 });
 
 final superAdminCountryBreakdownProvider =
-    FutureProvider<List<CountryShare>>((ref) {
+    FutureProvider.autoDispose<List<CountryShare>>((ref) {
   return ref
       .watch(superAdminDashboardRepositoryProvider)
       .fetchCountryBreakdown();
@@ -314,7 +315,7 @@ final selectedRevenuePeriodProvider = StateProvider<RevenuePeriod>(
 );
 
 final superAdminRevenueBreakdownProvider =
-    FutureProvider<RevenueBreakdown>((ref) {
+    FutureProvider.autoDispose<RevenueBreakdown>((ref) {
   final period = ref.watch(selectedRevenuePeriodProvider);
   return ref.watch(superAdminDashboardRepositoryProvider).fetchRevenueBreakdown(
         start: period.start,
@@ -323,18 +324,18 @@ final superAdminRevenueBreakdownProvider =
 });
 
 final superAdminRevenuePerCompetitionProvider =
-    FutureProvider<List<CompetitionRevenue>>((ref) {
+    FutureProvider.autoDispose<List<CompetitionRevenue>>((ref) {
   return ref
       .watch(superAdminDashboardRepositoryProvider)
       .fetchRevenuePerCompetition();
 });
 
 final superAdminMonthlySignupsProvider =
-    FutureProvider<List<MonthlyCount>>((ref) {
+    FutureProvider.autoDispose<List<MonthlyCount>>((ref) {
   return ref.watch(superAdminDashboardRepositoryProvider).fetchMonthlySignups();
 });
 
 final superAdminMonthlyRevenueProvider =
-    FutureProvider<List<MonthlyRevenue>>((ref) {
+    FutureProvider.autoDispose<List<MonthlyRevenue>>((ref) {
   return ref.watch(superAdminDashboardRepositoryProvider).fetchMonthlyRevenue();
 });
