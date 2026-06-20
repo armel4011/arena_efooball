@@ -78,6 +78,12 @@ const List<_NavEntry> _superEntries = [
     superAdminOnly: true,
   ),
   _NavEntry(
+    route: AdminDesktopRoutes.superPayouts,
+    icon: FluentIcons.send,
+    label: 'Versements',
+    superAdminOnly: true,
+  ),
+  _NavEntry(
     route: AdminDesktopRoutes.superInvitations,
     icon: FluentIcons.add_friend,
     label: 'Invitations admin',

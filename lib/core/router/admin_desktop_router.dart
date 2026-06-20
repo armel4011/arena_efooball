@@ -15,6 +15,7 @@ import 'package:arena/features_admin_desktop/dashboard/desktop_dashboard_page.da
 import 'package:arena/features_admin_desktop/finance/desktop_disputes_page.dart';
 import 'package:arena/features_admin_desktop/finance/desktop_payments_validation_page.dart';
 import 'package:arena/features_admin_desktop/finance/desktop_payouts_page.dart';
+import 'package:arena/features_admin_desktop/finance/desktop_super_payouts_page.dart';
 import 'package:arena/features_admin_desktop/matches/desktop_matches_list_page.dart';
 import 'package:arena/features_admin_desktop/profile/desktop_profile_page.dart';
 import 'package:arena/features_admin_desktop/shell/admin_desktop_shell.dart';
@@ -63,6 +64,7 @@ abstract final class AdminDesktopRoutes {
   static const superUsers = '/super/users';
   static const superRevenue = '/super/revenue';
   static const superPaymentsValidation = '/super/payments';
+  static const superPayouts = '/super/payouts';
   static const superBroadcast = '/super/broadcast';
   static const superPromoBanner = '/super/promo-banner';
   static const superReintegration = '/super/reintegration';
@@ -274,6 +276,11 @@ final adminDesktopRouterProvider = Provider<GoRouter>((ref) {
             name: 'desktop.superPaymentsValidation',
             builder: (context, state) =>
                 const DesktopPaymentsValidationPage(),
+          ),
+          GoRoute(
+            path: AdminDesktopRoutes.superPayouts,
+            name: 'desktop.superPayouts',
+            builder: (context, state) => const DesktopSuperPayoutsPage(),
           ),
           GoRoute(
             path: AdminDesktopRoutes.superBroadcast,
