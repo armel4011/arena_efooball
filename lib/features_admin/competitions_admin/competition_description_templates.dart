@@ -2,20 +2,16 @@ import 'package:arena/core/services/persistent_cache.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Modèles de description réutilisables pour la création de compétitions.
+/// Modèles de description pour la création de compétitions.
 ///
-/// Deux niveaux :
-///  1. [kDefaultDescriptionTemplates] — un pitch **standard** par type de
-///     jeu, proposé d'office et toujours modifiable. C'est le repli quand
-///     l'admin n'a rien personnalisé.
-///  2. Overrides persistés — quand l'admin clique « Enregistrer comme
-///     modèle », son texte remplace le standard pour ce jeu et sera
-///     pré-rempli aux prochaines créations. Stocké en local via
-///     [PersistentCache] (SharedPreferences).
-///
-/// La pré-saisie n'écrase jamais un texte que l'admin a tapé à la main :
-/// le wizard ne remplace la description que si elle est vide ou strictement
-/// égale au modèle précédemment appliqué (cf. `create_competition_page`).
+/// Deux mécanismes complémentaires :
+///  1. [kDefaultDescriptionTemplates] — un pitch **standard** par type de jeu,
+///     proposé d'office et toujours modifiable. C'est la pré-saisie quand le
+///     champ est vide (à l'ouverture du wizard ou au changement de jeu).
+///  2. Une **bibliothèque globale de modèles nommés** ([DescriptionTemplate]) —
+///     l'admin enregistre autant de modèles qu'il veut (avec un nom), puis les
+///     réinsère pour n'importe quel jeu. Persistée en local via [PersistentCache]
+///     (SharedPreferences, namespace `admin.competition_desc_templates_v2`).
 
 /// Descriptions standard par jeu, éditables à chaque création.
 const Map<GameType, String> kDefaultDescriptionTemplates = {
@@ -48,69 +44,75 @@ const Map<GameType, String> kDefaultDescriptionTemplates = {
       '⏱️ Sois connecté 5 minutes avant ton match. À toi de jouer !',
 };
 
-/// État chargé : les overrides admin par jeu. Le repli standard reste
-/// [kDefaultDescriptionTemplates].
-class CompetitionDescTemplates {
-  const CompetitionDescTemplates(this.overrides);
+/// Un modèle de description nommé, réutilisable pour n'importe quel jeu.
+class DescriptionTemplate {
+  const DescriptionTemplate({required this.name, required this.text});
 
-  /// Modèles personnalisés enregistrés par l'admin (game → texte).
-  final Map<GameType, String> overrides;
+  factory DescriptionTemplate.fromJson(Map<String, dynamic> json) =>
+      DescriptionTemplate(
+        name: (json['name'] ?? '').toString(),
+        text: (json['text'] ?? '').toString(),
+      );
 
-  /// Modèle à proposer pour [game] : l'override admin s'il existe, sinon
-  /// le standard, sinon chaîne vide.
-  String templateFor(GameType game) =>
-      overrides[game] ?? kDefaultDescriptionTemplates[game] ?? '';
+  final String name;
+  final String text;
 
-  /// `true` si l'admin a enregistré son propre modèle pour [game].
-  bool hasCustom(GameType game) => overrides.containsKey(game);
+  Map<String, dynamic> toJson() => {'name': name, 'text': text};
 }
 
-/// Charge / enregistre les modèles de description. Source de vérité locale,
-/// pas de table serveur (préférence purement admin, par appareil).
+/// État chargé : la bibliothèque de modèles nommés de l'admin.
+class CompetitionDescTemplates {
+  const CompetitionDescTemplates(this.saved);
+
+  /// Modèles nommés enregistrés par l'admin (ordre d'ajout).
+  final List<DescriptionTemplate> saved;
+
+  bool get hasSaved => saved.isNotEmpty;
+
+  /// Pitch standard du jeu (repli quand le champ est vide).
+  String standardFor(GameType game) => kDefaultDescriptionTemplates[game] ?? '';
+}
+
+/// Charge / enregistre la bibliothèque de modèles. Source de vérité locale
+/// (préférence purement admin, par appareil) — pas de table serveur.
 class CompetitionDescTemplatesNotifier
     extends AsyncNotifier<CompetitionDescTemplates> {
-  static const _ns = 'admin.competition_desc_templates';
+  static const _ns = 'admin.competition_desc_templates_v2';
 
   @override
   Future<CompetitionDescTemplates> build() async {
     final cache = await ref.watch(persistentCacheProvider.future);
-    final raw = cache.readObject<Map<String, String>>(
-      _ns,
-      (json) => json.map((k, v) => MapEntry(k, v.toString())),
-    );
-    final overrides = <GameType, String>{};
-    if (raw != null) {
-      for (final entry in raw.entries) {
-        for (final g in GameType.values) {
-          if (g.value == entry.key) {
-            overrides[g] = entry.value;
-            break;
-          }
-        }
-      }
-    }
-    return CompetitionDescTemplates(overrides);
+    final list =
+        cache.readList<DescriptionTemplate>(_ns, DescriptionTemplate.fromJson) ??
+            const <DescriptionTemplate>[];
+    return CompetitionDescTemplates(List.unmodifiable(list));
   }
 
-  Future<void> _persist(Map<GameType, String> overrides) async {
+  Future<void> _persist(List<DescriptionTemplate> list) async {
     final cache = await ref.read(persistentCacheProvider.future);
-    await cache.writeObject<Map<String, dynamic>>(
-      _ns,
-      {for (final e in overrides.entries) e.key.value: e.value},
-      (m) => m,
-    );
-    state = AsyncData(CompetitionDescTemplates(overrides));
+    await cache.writeList<DescriptionTemplate>(_ns, list, (t) => t.toJson());
+    state = AsyncData(CompetitionDescTemplates(List.unmodifiable(list)));
   }
 
-  /// Enregistre [text] comme modèle personnel pour [game].
-  Future<void> save(GameType game, String text) async {
-    final current = state.valueOrNull?.overrides ?? const {};
-    await _persist({...current, game: text});
+  /// Ajoute un modèle nommé [name] = [text]. Si un modèle du même nom
+  /// (insensible à la casse) existe déjà, son texte est remplacé.
+  Future<void> saveTemplate(String name, String text) async {
+    final current = [...?state.valueOrNull?.saved];
+    final tpl = DescriptionTemplate(name: name, text: text);
+    final idx =
+        current.indexWhere((t) => t.name.toLowerCase() == name.toLowerCase());
+    if (idx >= 0) {
+      current[idx] = tpl;
+    } else {
+      current.add(tpl);
+    }
+    await _persist(current);
   }
 
-  /// Supprime le modèle personnel de [game] (retour au standard).
-  Future<void> reset(GameType game) async {
-    final current = {...?state.valueOrNull?.overrides}..remove(game);
+  /// Supprime le modèle nommé [name].
+  Future<void> deleteTemplate(String name) async {
+    final current = [...?state.valueOrNull?.saved]
+      ..removeWhere((t) => t.name == name);
     await _persist(current);
   }
 }
