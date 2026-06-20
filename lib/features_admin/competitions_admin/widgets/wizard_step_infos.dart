@@ -1,6 +1,7 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/features_admin/competitions_admin/widgets/competition_form_widgets.dart';
+import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -19,6 +20,9 @@ class WizardStepInfos extends StatelessWidget {
     required this.onChanged,
     required this.onGameChanged,
     required this.onPickStartDate,
+    required this.onInsertTemplate,
+    required this.onSaveTemplate,
+    required this.hasSavedTemplate,
     super.key,
   });
 
@@ -32,6 +36,15 @@ class WizardStepInfos extends StatelessWidget {
   final VoidCallback onChanged;
   final ValueChanged<GameType> onGameChanged;
   final VoidCallback onPickStartDate;
+
+  /// Insère le modèle (perso ou standard) du jeu courant dans la description.
+  final VoidCallback onInsertTemplate;
+
+  /// Enregistre la description courante comme modèle réutilisable du jeu.
+  final VoidCallback onSaveTemplate;
+
+  /// `true` si un modèle personnalisé est déjà enregistré pour ce jeu.
+  final bool hasSavedTemplate;
 
   /// En mode édition, grise et désactive un champ verrouillé (ici le jeu).
   Widget _lockable(Widget child) {
@@ -69,7 +82,43 @@ class WizardStepInfos extends StatelessWidget {
           controller: descCtrl,
           hint: 'Petite phrase de pitch…',
           minLines: 2,
-          maxLines: 4,
+          maxLines: 6,
+          onChanged: (_) => onChanged(),
+        ),
+        const SizedBox(height: ArenaSpacing.xs),
+        Row(
+          children: [
+            Expanded(
+              child: ArenaButton(
+                label: hasSavedTemplate ? 'MON MODÈLE' : 'MODÈLE STANDARD',
+                variant: ArenaButtonVariant.ghost,
+                icon: Icons.auto_awesome,
+                fullWidth: true,
+                onPressed: onInsertTemplate,
+              ),
+            ),
+            const SizedBox(width: ArenaSpacing.xs),
+            Expanded(
+              child: ArenaButton(
+                label: 'ENREGISTRER',
+                variant: ArenaButtonVariant.secondary,
+                icon: Icons.bookmark_add_outlined,
+                fullWidth: true,
+                onPressed: onSaveTemplate,
+              ),
+            ),
+          ],
+        ),
+        Padding(
+          padding: const EdgeInsets.only(top: ArenaSpacing.xs),
+          child: Text(
+            hasSavedTemplate
+                ? 'Un modèle perso est enregistré pour ${game.label}. '
+                    '« ENREGISTRER » le met à jour avec le texte ci-dessus.'
+                : 'Insère le pitch standard de ${game.label} (modifiable), '
+                    'ou enregistre le tien pour le réutiliser à chaque fois.',
+            style: ArenaText.small,
+          ),
         ),
         const SizedBox(height: ArenaSpacing.md),
         Text('Date de début', style: ArenaText.inputLabel),

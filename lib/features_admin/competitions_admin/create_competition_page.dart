@@ -4,6 +4,7 @@ import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_competitions_repository.dart';
+import 'package:arena/features_admin/competitions_admin/competition_description_templates.dart';
 import 'package:arena/features_admin/competitions_admin/widgets/competition_form_widgets.dart';
 import 'package:arena/features_admin/competitions_admin/widgets/wizard_step_fees.dart';
 import 'package:arena/features_admin/competitions_admin/widgets/wizard_step_format.dart';
@@ -57,6 +58,11 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
   // Form state ──────────────────────────────────────────────────────
   final _nameCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
+  // Dernier modèle de description appliqué automatiquement. Sert à savoir
+  // si l'admin a personnalisé le texte : on ne ré-écrase la description au
+  // changement de jeu QUE si elle est encore strictement égale à ce modèle
+  // (ou vide). Tout texte tapé à la main est préservé.
+  String _appliedDescTemplate = '';
   GameType _game = GameType.efootball;
   TournamentFormat _format = TournamentFormat.singleElimination;
   int _maxPlayers = 16;
@@ -121,7 +127,24 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
   void initState() {
     super.initState();
     final c = widget.editing;
-    if (c == null) return;
+    if (c == null) {
+      // Mode création : pré-remplit la description avec le modèle (perso ou
+      // standard) du jeu par défaut, dès que les modèles sont chargés.
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        try {
+          final templates =
+              await ref.read(competitionDescTemplatesProvider.future);
+          if (!mounted || _descCtrl.text.trim().isNotEmpty) return;
+          setState(() {
+            _appliedDescTemplate = templates.templateFor(_game);
+            _descCtrl.text = _appliedDescTemplate;
+          });
+        } catch (_) {
+          // Cache local indisponible (ex. tests) → pas de pré-saisie.
+        }
+      });
+      return;
+    }
     // Mode édition : pré-remplit tous les champs depuis la compétition.
     _nameCtrl.text = c.name;
     _descCtrl.text = c.description ?? '';
@@ -275,9 +298,16 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
                         game: _game,
                         startDate: _startDate,
                         isEditing: _isEditing,
+                        hasSavedTemplate: ref
+                                .watch(competitionDescTemplatesProvider)
+                                .valueOrNull
+                                ?.hasCustom(_game) ??
+                            false,
                         onChanged: () => setState(() {}),
-                        onGameChanged: (g) => setState(() => _game = g),
+                        onGameChanged: _onGameChanged,
                         onPickStartDate: _pickStartDate,
+                        onInsertTemplate: _insertDescTemplate,
+                        onSaveTemplate: _saveDescTemplate,
                       ),
                     if (_step == 1)
                       WizardStepFormat(
@@ -544,6 +574,62 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
         SnackBar(content: Text('Échec : $e')),
       );
     }
+  }
+
+  /// Changement de jeu (mode création seulement). En plus de mettre à jour
+  /// `_game`, on bascule la description sur le modèle du nouveau jeu — mais
+  /// uniquement si l'admin n'a pas personnalisé le texte (champ vide ou
+  /// encore égal au modèle précédemment appliqué).
+  void _onGameChanged(GameType g) {
+    final templates = ref.read(competitionDescTemplatesProvider).valueOrNull;
+    setState(() {
+      _game = g;
+      if (templates == null) return;
+      final current = _descCtrl.text.trim();
+      if (current.isEmpty || _descCtrl.text == _appliedDescTemplate) {
+        _appliedDescTemplate = templates.templateFor(g);
+        _descCtrl.text = _appliedDescTemplate;
+      }
+    });
+  }
+
+  /// Insère le modèle (perso ou standard) du jeu courant dans la description.
+  void _insertDescTemplate() {
+    final templates = ref.read(competitionDescTemplatesProvider).valueOrNull;
+    if (templates == null) return;
+    setState(() {
+      _appliedDescTemplate = templates.templateFor(_game);
+      _descCtrl.text = _appliedDescTemplate;
+    });
+  }
+
+  /// Enregistre la description courante comme modèle réutilisable du jeu.
+  Future<void> _saveDescTemplate() async {
+    final text = _descCtrl.text.trim();
+    if (text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('La description est vide.')),
+      );
+      return;
+    }
+    try {
+      await ref
+          .read(competitionDescTemplatesProvider.notifier)
+          .save(_game, text);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Échec de l'enregistrement du modèle : $e")),
+      );
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _appliedDescTemplate = text);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Modèle de description enregistré pour ${_game.label}.'),
+      ),
+    );
   }
 
   /// Change le nombre de récompensés (1, 2, 4, 8, 16, 32, 64). Les
