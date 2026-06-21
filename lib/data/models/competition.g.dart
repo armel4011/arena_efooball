@@ -72,6 +72,12 @@ _$CompetitionImpl _$$CompetitionImplFromJson(Map<String, dynamic> json) =>
       pinnedAt: json['pinned_at'] == null
           ? null
           : DateTime.parse(json['pinned_at'] as String),
+      completedAt: json['completed_at'] == null
+          ? null
+          : DateTime.parse(json['completed_at'] as String),
+      archivedAt: json['archived_at'] == null
+          ? null
+          : DateTime.parse(json['archived_at'] as String),
     );
 
 Map<String, dynamic> _$$CompetitionImplToJson(_$CompetitionImpl instance) =>
@@ -131,4 +137,8 @@ Map<String, dynamic> _$$CompetitionImplToJson(_$CompetitionImpl instance) =>
       'is_pinned': instance.isPinned,
       if (instance.pinnedAt?.toIso8601String() case final value?)
         'pinned_at': value,
+      if (instance.completedAt?.toIso8601String() case final value?)
+        'completed_at': value,
+      if (instance.archivedAt?.toIso8601String() case final value?)
+        'archived_at': value,
     };

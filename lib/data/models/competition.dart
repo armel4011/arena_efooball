@@ -112,6 +112,15 @@ sealed class Competition with _$Competition {
     /// `is_pinned` / `pinned_at` via `fieldRename: snake`.
     @Default(false) bool isPinned,
     DateTime? pinnedAt,
+
+    /// Horodatage du passage en `completed` (posé par trigger DB
+    /// `set_competition_completed_at`). Base du délai d'archivage.
+    DateTime? completedAt,
+
+    /// Compétition archivée (masquée des listes joueur) — posée par le cron
+    /// `archive_old_completed_competitions` 7 jours après `completedAt`.
+    /// NULL = active/visible (migration 20260613160000).
+    DateTime? archivedAt,
   }) = _Competition;
 
   const Competition._();

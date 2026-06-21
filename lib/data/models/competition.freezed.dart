@@ -120,6 +120,15 @@ mixin _$Competition {
   bool get isPinned => throw _privateConstructorUsedError;
   DateTime? get pinnedAt => throw _privateConstructorUsedError;
 
+  /// Horodatage du passage en `completed` (posé par trigger DB
+  /// `set_competition_completed_at`). Base du délai d'archivage.
+  DateTime? get completedAt => throw _privateConstructorUsedError;
+
+  /// Compétition archivée (masquée des listes joueur) — posée par le cron
+  /// `archive_old_completed_competitions` 7 jours après `completedAt`.
+  /// NULL = active/visible (migration 20260613160000).
+  DateTime? get archivedAt => throw _privateConstructorUsedError;
+
   /// Serializes this Competition to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
 
@@ -175,7 +184,9 @@ abstract class $CompetitionCopyWith<$Res> {
       String? lastBracketError,
       DateTime? lastBracketErrorAt,
       bool isPinned,
-      DateTime? pinnedAt});
+      DateTime? pinnedAt,
+      DateTime? completedAt,
+      DateTime? archivedAt});
 }
 
 /// @nodoc
@@ -232,6 +243,8 @@ class _$CompetitionCopyWithImpl<$Res, $Val extends Competition>
     Object? lastBracketErrorAt = freezed,
     Object? isPinned = null,
     Object? pinnedAt = freezed,
+    Object? completedAt = freezed,
+    Object? archivedAt = freezed,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -390,6 +403,14 @@ class _$CompetitionCopyWithImpl<$Res, $Val extends Competition>
           ? _value.pinnedAt
           : pinnedAt // ignore: cast_nullable_to_non_nullable
               as DateTime?,
+      completedAt: freezed == completedAt
+          ? _value.completedAt
+          : completedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      archivedAt: freezed == archivedAt
+          ? _value.archivedAt
+          : archivedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
     ) as $Val);
   }
 }
@@ -441,7 +462,9 @@ abstract class _$$CompetitionImplCopyWith<$Res>
       String? lastBracketError,
       DateTime? lastBracketErrorAt,
       bool isPinned,
-      DateTime? pinnedAt});
+      DateTime? pinnedAt,
+      DateTime? completedAt,
+      DateTime? archivedAt});
 }
 
 /// @nodoc
@@ -496,6 +519,8 @@ class __$$CompetitionImplCopyWithImpl<$Res>
     Object? lastBracketErrorAt = freezed,
     Object? isPinned = null,
     Object? pinnedAt = freezed,
+    Object? completedAt = freezed,
+    Object? archivedAt = freezed,
   }) {
     return _then(_$CompetitionImpl(
       id: null == id
@@ -654,6 +679,14 @@ class __$$CompetitionImplCopyWithImpl<$Res>
           ? _value.pinnedAt
           : pinnedAt // ignore: cast_nullable_to_non_nullable
               as DateTime?,
+      completedAt: freezed == completedAt
+          ? _value.completedAt
+          : completedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      archivedAt: freezed == archivedAt
+          ? _value.archivedAt
+          : archivedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
     ));
   }
 }
@@ -700,7 +733,9 @@ class _$CompetitionImpl extends _Competition {
       this.lastBracketError,
       this.lastBracketErrorAt,
       this.isPinned = false,
-      this.pinnedAt})
+      this.pinnedAt,
+      this.completedAt,
+      this.archivedAt})
       : _prizeDistribution = prizeDistribution,
         _roundIntervals = roundIntervals,
         _formatConfig = formatConfig,
@@ -895,9 +930,20 @@ class _$CompetitionImpl extends _Competition {
   @override
   final DateTime? pinnedAt;
 
+  /// Horodatage du passage en `completed` (posé par trigger DB
+  /// `set_competition_completed_at`). Base du délai d'archivage.
+  @override
+  final DateTime? completedAt;
+
+  /// Compétition archivée (masquée des listes joueur) — posée par le cron
+  /// `archive_old_completed_competitions` 7 jours après `completedAt`.
+  /// NULL = active/visible (migration 20260613160000).
+  @override
+  final DateTime? archivedAt;
+
   @override
   String toString() {
-    return 'Competition(id: $id, name: $name, game: $game, format: $format, startDate: $startDate, status: $status, maxPlayers: $maxPlayers, currentPlayers: $currentPlayers, registrationFee: $registrationFee, registrationCurrency: $registrationCurrency, commissionPct: $commissionPct, prizePoolLocal: $prizePoolLocal, commissionXaf: $commissionXaf, sponsorBonusLocal: $sponsorBonusLocal, description: $description, bannerUrl: $bannerUrl, registrationOpensAt: $registrationOpensAt, registrationClosesAt: $registrationClosesAt, endDate: $endDate, prizePoolCurrency: $prizePoolCurrency, createdBy: $createdBy, createdAt: $createdAt, updatedAt: $updatedAt, orangeMoneyCode: $orangeMoneyCode, mtnMomoCode: $mtnMomoCode, prizeDistribution: $prizeDistribution, matchIntervalMinutes: $matchIntervalMinutes, autoGenerateBracket: $autoGenerateBracket, thirdPlaceMatch: $thirdPlaceMatch, referralQuota: $referralQuota, referralActivityMode: $referralActivityMode, roundIntervals: $roundIntervals, formatConfig: $formatConfig, androidStoreUrl: $androidStoreUrl, iosStoreUrl: $iosStoreUrl, lastBracketError: $lastBracketError, lastBracketErrorAt: $lastBracketErrorAt, isPinned: $isPinned, pinnedAt: $pinnedAt)';
+    return 'Competition(id: $id, name: $name, game: $game, format: $format, startDate: $startDate, status: $status, maxPlayers: $maxPlayers, currentPlayers: $currentPlayers, registrationFee: $registrationFee, registrationCurrency: $registrationCurrency, commissionPct: $commissionPct, prizePoolLocal: $prizePoolLocal, commissionXaf: $commissionXaf, sponsorBonusLocal: $sponsorBonusLocal, description: $description, bannerUrl: $bannerUrl, registrationOpensAt: $registrationOpensAt, registrationClosesAt: $registrationClosesAt, endDate: $endDate, prizePoolCurrency: $prizePoolCurrency, createdBy: $createdBy, createdAt: $createdAt, updatedAt: $updatedAt, orangeMoneyCode: $orangeMoneyCode, mtnMomoCode: $mtnMomoCode, prizeDistribution: $prizeDistribution, matchIntervalMinutes: $matchIntervalMinutes, autoGenerateBracket: $autoGenerateBracket, thirdPlaceMatch: $thirdPlaceMatch, referralQuota: $referralQuota, referralActivityMode: $referralActivityMode, roundIntervals: $roundIntervals, formatConfig: $formatConfig, androidStoreUrl: $androidStoreUrl, iosStoreUrl: $iosStoreUrl, lastBracketError: $lastBracketError, lastBracketErrorAt: $lastBracketErrorAt, isPinned: $isPinned, pinnedAt: $pinnedAt, completedAt: $completedAt, archivedAt: $archivedAt)';
   }
 
   @override
@@ -976,7 +1022,11 @@ class _$CompetitionImpl extends _Competition {
             (identical(other.isPinned, isPinned) ||
                 other.isPinned == isPinned) &&
             (identical(other.pinnedAt, pinnedAt) ||
-                other.pinnedAt == pinnedAt));
+                other.pinnedAt == pinnedAt) &&
+            (identical(other.completedAt, completedAt) ||
+                other.completedAt == completedAt) &&
+            (identical(other.archivedAt, archivedAt) ||
+                other.archivedAt == archivedAt));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1021,7 +1071,9 @@ class _$CompetitionImpl extends _Competition {
         lastBracketError,
         lastBracketErrorAt,
         isPinned,
-        pinnedAt
+        pinnedAt,
+        completedAt,
+        archivedAt
       ]);
 
   /// Create a copy of Competition
@@ -1080,7 +1132,9 @@ abstract class _Competition extends Competition {
       final String? lastBracketError,
       final DateTime? lastBracketErrorAt,
       final bool isPinned,
-      final DateTime? pinnedAt}) = _$CompetitionImpl;
+      final DateTime? pinnedAt,
+      final DateTime? completedAt,
+      final DateTime? archivedAt}) = _$CompetitionImpl;
   const _Competition._() : super._();
 
   factory _Competition.fromJson(Map<String, dynamic> json) =
@@ -1224,6 +1278,17 @@ abstract class _Competition extends Competition {
   bool get isPinned;
   @override
   DateTime? get pinnedAt;
+
+  /// Horodatage du passage en `completed` (posé par trigger DB
+  /// `set_competition_completed_at`). Base du délai d'archivage.
+  @override
+  DateTime? get completedAt;
+
+  /// Compétition archivée (masquée des listes joueur) — posée par le cron
+  /// `archive_old_completed_competitions` 7 jours après `completedAt`.
+  /// NULL = active/visible (migration 20260613160000).
+  @override
+  DateTime? get archivedAt;
 
   /// Create a copy of Competition
   /// with the given fields replaced by the non-null parameter values.
