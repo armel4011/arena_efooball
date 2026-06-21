@@ -5,6 +5,7 @@ import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/admin/admin_competitions_repository.dart';
 import 'package:arena/features_admin_desktop/competitions/desktop_competition_visuals.dart';
+import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -190,10 +191,25 @@ class _HeaderRow extends StatelessWidget {
   }
 }
 
-class _CompetitionRow extends StatelessWidget {
+class _CompetitionRow extends ConsumerStatefulWidget {
   const _CompetitionRow({required this.competition});
 
   final Competition competition;
+
+  @override
+  ConsumerState<_CompetitionRow> createState() => _CompetitionRowState();
+}
+
+class _CompetitionRowState extends ConsumerState<_CompetitionRow> {
+  final _flyoutController = FlyoutController();
+
+  Competition get competition => widget.competition;
+
+  @override
+  void dispose() {
+    _flyoutController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -224,10 +240,24 @@ class _CompetitionRow extends StatelessWidget {
             children: [
               Expanded(
                 flex: 3,
-                child: Text(
-                  competition.name,
-                  style: bodyStyle.copyWith(fontWeight: FontWeight.w600),
-                  overflow: TextOverflow.ellipsis,
+                child: Row(
+                  children: [
+                    if (competition.isPinned) ...[
+                      const Icon(
+                        FluentIcons.pinned,
+                        size: 12,
+                        color: ArenaColors.neonRed,
+                      ),
+                      const SizedBox(width: 6),
+                    ],
+                    Flexible(
+                      child: Text(
+                        competition.name,
+                        style: bodyStyle.copyWith(fontWeight: FontWeight.w600),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               Expanded(
@@ -266,18 +296,233 @@ class _CompetitionRow extends StatelessWidget {
                   style: mutedStyle,
                 ),
               ),
-              const SizedBox(
+              SizedBox(
                 width: 40,
-                child: Icon(
-                  FluentIcons.chevron_right,
-                  size: 12,
-                  color: ArenaColors.silver,
+                child: FlyoutTarget(
+                  controller: _flyoutController,
+                  child: IconButton(
+                    icon: const Icon(FluentIcons.more, size: 14),
+                    onPressed: _openActions,
+                  ),
                 ),
               ),
             ],
           ),
         );
       },
+    );
+  }
+
+  void _openActions() {
+    final c = competition;
+    final canOpenRegistration = c.status == CompetitionStatus.draft ||
+        c.status == CompetitionStatus.registrationOpen;
+    _flyoutController.showFlyout<void>(
+      autoModeConfiguration: FlyoutAutoConfiguration(
+        preferredMode: FlyoutPlacementMode.bottomLeft,
+      ),
+      barrierDismissible: true,
+      builder: (context) => MenuFlyout(
+        items: [
+          MenuFlyoutItem(
+            leading: const Icon(FluentIcons.view),
+            text: const Text('Voir le détail'),
+            onPressed: () {
+              Flyout.of(context).close();
+              this.context.go(
+                    AdminDesktopRoutes.competitionDetailPath(c.id),
+                  );
+            },
+          ),
+          MenuFlyoutItem(
+            leading: const Icon(FluentIcons.pinned),
+            text: Text(c.isPinned ? 'Désépingler' : 'Épingler à la une'),
+            onPressed: () {
+              Flyout.of(context).close();
+              _togglePinned();
+            },
+          ),
+          MenuFlyoutItem(
+            leading: const Icon(FluentIcons.org),
+            text: const Text('Gérer le bracket'),
+            onPressed: () {
+              Flyout.of(context).close();
+              this.context.go(AdminDesktopRoutes.bracketPath(c.id));
+            },
+          ),
+          MenuFlyoutItem(
+            leading: const Icon(FluentIcons.edit),
+            text: const Text('Modifier'),
+            onPressed: () {
+              Flyout.of(context).close();
+              this.context.go(
+                    AdminDesktopRoutes.competitionsCreate,
+                    extra: c,
+                  );
+            },
+          ),
+          if (canOpenRegistration)
+            MenuFlyoutItem(
+              leading: const Icon(FluentIcons.play),
+              text: const Text('Ouvrir les inscriptions'),
+              onPressed: () {
+                Flyout.of(context).close();
+                _setStatus(CompetitionStatus.registrationOpen);
+              },
+            ),
+          if (c.status == CompetitionStatus.registrationOpen)
+            MenuFlyoutItem(
+              leading: const Icon(FluentIcons.pause),
+              text: const Text('Fermer les inscriptions'),
+              onPressed: () {
+                Flyout.of(context).close();
+                _setStatus(CompetitionStatus.registrationClosed);
+              },
+            ),
+          const MenuFlyoutSeparator(),
+          MenuFlyoutItem(
+            leading: const Icon(FluentIcons.cancel, color: ArenaColors.neonRed),
+            text: const Text(
+              'Annuler',
+              style: TextStyle(color: ArenaColors.neonRed),
+            ),
+            onPressed: () {
+              Flyout.of(context).close();
+              _cancel();
+            },
+          ),
+          MenuFlyoutItem(
+            leading: const Icon(FluentIcons.delete, color: ArenaColors.neonRed),
+            text: const Text(
+              'Supprimer',
+              style: TextStyle(color: ArenaColors.neonRed),
+            ),
+            onPressed: () {
+              Flyout.of(context).close();
+              _delete();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _togglePinned() async {
+    final adminId = ref.read(currentSessionProvider)?.user.id;
+    if (adminId == null) {
+      await _showError('Session admin introuvable.');
+      return;
+    }
+    final willPin = !competition.isPinned;
+    try {
+      await ref.read(adminCompetitionsRepositoryProvider).setPinned(
+            competitionId: competition.id,
+            pinned: willPin,
+            adminId: adminId,
+          );
+      if (!mounted) return;
+      await displayInfoBar(
+        context,
+        builder: (ctx, close) => InfoBar(
+          title: Text(willPin ? 'Épinglée' : 'Désépinglée'),
+          content: Text(
+            willPin
+                ? '« ${competition.name} » est désormais à la une.'
+                : '« ${competition.name} » a été retirée de la une.',
+          ),
+          severity: InfoBarSeverity.success,
+          onClose: close,
+        ),
+      );
+    } catch (e) {
+      await _showError(e);
+    }
+  }
+
+  Future<void> _setStatus(CompetitionStatus status) async {
+    try {
+      await ref.read(adminCompetitionsRepositoryProvider).update(
+        competition.id,
+        {'status': status.value},
+      );
+    } catch (e) {
+      await _showError(e);
+    }
+  }
+
+  Future<void> _cancel() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => ContentDialog(
+        title: const Text('Annuler la compétition ?'),
+        content: Text(
+          "L'opération est irréversible côté joueurs. Les remboursements "
+          'seront déclenchés ultérieurement.\n\n« ${competition.name} »',
+        ),
+        actions: [
+          Button(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Non'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Oui, annuler'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ref
+          .read(adminCompetitionsRepositoryProvider)
+          .cancel(competition.id);
+    } catch (e) {
+      await _showError(e);
+    }
+  }
+
+  Future<void> _delete() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => ContentDialog(
+        title: const Text('Supprimer définitivement ?'),
+        content: Text(
+          'Cette compétition et tous ses paiements liés seront effacés de la '
+          'base. Inscriptions, matches et brackets cascadent automatiquement. '
+          'Cette action est IRRÉVERSIBLE.\n\n« ${competition.name} »',
+        ),
+        actions: [
+          Button(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Non'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Oui, supprimer'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ref
+          .read(adminCompetitionsRepositoryProvider)
+          .delete(competition.id);
+    } catch (e) {
+      await _showError(e);
+    }
+  }
+
+  Future<void> _showError(Object error) async {
+    if (!mounted) return;
+    await displayInfoBar(
+      context,
+      builder: (ctx, close) => InfoBar(
+        title: const Text('Échec'),
+        content: Text('$error'),
+        severity: InfoBarSeverity.error,
+        onClose: close,
+      ),
     );
   }
 }

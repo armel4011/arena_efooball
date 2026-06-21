@@ -6,6 +6,7 @@ import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_users_repository.dart';
 import 'package:arena/data/repositories/admin_chat_repository.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
+import 'package:arena/features_admin_desktop/shared/desktop_audience_filters.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 // Dépendance transitive (umbrella `file_selector` absent du pubspec) : on
 // cible l'interface plateforme, l'implémentation Windows s'enregistre via
@@ -67,28 +68,6 @@ class _DesktopBroadcastPageState extends ConsumerState<DesktopBroadcastPage> {
     'competition_starting',
     'payout_received',
     'dispute_opened',
-  ];
-
-  static const _statusOptions = <(String?, String)>[
-    (null, 'Tous'),
-    ('active', 'Actifs'),
-    ('banned', 'Bannis'),
-    ('kyc_pending', 'KYC en attente'),
-  ];
-
-  static const _countryOptions = <(String?, String)>[
-    (null, 'Tous'),
-    ('CM', 'Cameroun'),
-    ('SN', 'Sénégal'),
-    ('CI', "Côte d'Ivoire"),
-    ('BF', 'Burkina Faso'),
-  ];
-
-  static const _guiltyOptions = <(int?, String)>[
-    (null, 'Indifférent'),
-    (1, '≥ 1 verdict'),
-    (2, '≥ 2 verdicts'),
-    (3, '≥ 3 (banni à vie)'),
   ];
 
   @override
@@ -312,12 +291,9 @@ class _DesktopBroadcastPageState extends ConsumerState<DesktopBroadcastPage> {
 
           const _SectionTitle('CIBLE'),
           const SizedBox(height: 8),
-          _AudienceFilters(
+          DesktopAudienceFilters(
             filter: _filter,
             searchCtrl: _searchCtrl,
-            statusOptions: _statusOptions,
-            countryOptions: _countryOptions,
-            guiltyOptions: _guiltyOptions,
             competitions: compsAsync.valueOrNull ?? const [],
             onFilterChanged: (f) => setState(() => _filter = f),
           ),
