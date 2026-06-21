@@ -54,7 +54,11 @@ void main() {
   // (page Versements génération/markPaid + volet Remboursements). 0 vrai Colors.*.
   // 2231 → 2238 le 2026-06-20 : +7 `ArenaColors.*` des graphes mensuels du
   // super-dashboard desktop (fl_chart inscriptions/revenus). 0 vrai Colors.*.
-  const colorsDotBaseline = 2238; // occurrences de `Colors.`
+  // 2238 → 2246 le 2026-06-21 : +8 `ArenaColors.*` de la parité desktop restante
+  // (filtres audience partagés users/broadcast, icône épinglage + flyout actions
+  // rapides compétitions, carte sécurité profil + reset 2FA, liens login↔
+  // inscription par code). 0 vrai Colors.* ajouté (tous des tokens).
+  const colorsDotBaseline = 2246; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
 
   final colorsDotRe = RegExp(r'Colors\.');

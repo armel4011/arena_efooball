@@ -2,6 +2,7 @@ import 'package:arena/core/router/router_refresh.dart';
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/features_admin/auth_admin/admin_auth_providers.dart';
 import 'package:arena/features_admin_desktop/audit/desktop_audit_log_page.dart';
+import 'package:arena/features_admin_desktop/auth/desktop_invitation_redeem_screen.dart';
 import 'package:arena/features_admin_desktop/auth/desktop_login_screen.dart';
 import 'package:arena/features_admin_desktop/auth/desktop_totp_setup_screen.dart';
 import 'package:arena/features_admin_desktop/auth/desktop_totp_verify_screen.dart';
@@ -40,6 +41,7 @@ import 'package:go_router/go_router.dart';
 /// Fluent ([AdminDesktopShell]).
 abstract final class AdminDesktopRoutes {
   static const login = '/login';
+  static const invitation = '/invitation';
   static const totpSetup = '/totp/setup';
   static const totpVerify = '/totp/verify';
 
@@ -72,7 +74,12 @@ abstract final class AdminDesktopRoutes {
   static const superChatThread = '/super/messages/:userId';
 
   /// Routes accessibles sans authentification complète.
-  static const unauthenticated = <String>{login, totpSetup, totpVerify};
+  static const unauthenticated = <String>{
+    login,
+    invitation,
+    totpSetup,
+    totpVerify,
+  };
 
   /// URL concrète `/competitions/<id>`.
   static String competitionDetailPath(String id) => '/competitions/$id';
@@ -145,6 +152,11 @@ final adminDesktopRouterProvider = Provider<GoRouter>((ref) {
         path: AdminDesktopRoutes.login,
         name: 'desktop.login',
         builder: (context, state) => const DesktopLoginScreen(),
+      ),
+      GoRoute(
+        path: AdminDesktopRoutes.invitation,
+        name: 'desktop.invitation',
+        builder: (context, state) => const DesktopInvitationRedeemScreen(),
       ),
       GoRoute(
         path: AdminDesktopRoutes.totpSetup,

@@ -242,6 +242,23 @@ class AdminAuthRepository {
     });
   }
 
+  /// Réinitialise la 2FA de l'admin connecté (pour la réenrôler). Exige un
+  /// code COURANT valide (6 chiffres TOTP ou backup code). Sur succès, le
+  /// serveur efface `totp_secret`/`totp_enabled`/`backup_codes` ; l'appelant
+  /// doit ensuite relancer le flux d'enrôlement (`/totp/setup`).
+  Future<void> resetTotp(String code) async {
+    return _runEdge<void>(() async {
+      final res = await _client.functions.invoke(
+        'reset-totp',
+        body: {'code': code},
+      );
+      final data = res.data;
+      if (data is! Map || data['ok'] != true) {
+        throw const UnknownAuthFailure('reset-totp:malformed_response');
+      }
+    });
+  }
+
   /// Wrap an Edge-Function call in our typed-failure mapping.
   Future<T> _runEdge<T>(Future<T> Function() body) async {
     try {

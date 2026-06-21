@@ -4,6 +4,7 @@ import 'package:arena/core/utils/arena_error_message.dart';
 import 'package:arena/data/models/profile.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_users_repository.dart';
+import 'package:arena/features_admin_desktop/shared/desktop_audience_filters.dart';
 import 'package:arena/features_admin_desktop/shared/desktop_totp_gate.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/whatsapp_export.dart';
@@ -32,35 +33,10 @@ class _DesktopUsersPageState extends ConsumerState<DesktopUsersPage> {
   AdminUsersFilter _filter = const AdminUsersFilter();
   bool _exporting = false;
 
-  static const _statusOptions = <(String?, String)>[
-    (null, 'Tous'),
-    ('active', 'Actifs'),
-    ('banned', 'Bannis'),
-    ('kyc_pending', 'KYC en attente'),
-  ];
-
-  static const _countryOptions = <(String?, String)>[
-    (null, 'Tous pays'),
-    ('CM', '🇨🇲 Cameroun'),
-    ('SN', '🇸🇳 Sénégal'),
-    ('CI', "🇨🇮 Côte d'Ivoire"),
-    ('BF', '🇧🇫 Burkina Faso'),
-  ];
-
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
-  }
-
-  void _onSearch(String value) {
-    final q = value.trim();
-    setState(() {
-      _filter = _filter.copyWith(
-        searchQuery: q.isEmpty ? null : q,
-        resetSearch: q.isEmpty,
-      );
-    });
   }
 
   /// Exporte en CSV les numéros WhatsApp de TOUS les utilisateurs (avec
@@ -114,6 +90,7 @@ class _DesktopUsersPageState extends ConsumerState<DesktopUsersPage> {
   @override
   Widget build(BuildContext context) {
     final usersAsync = ref.watch(adminUsersProvider(_filter));
+    final compsAsync = ref.watch(filterableCompetitionsProvider);
 
     return ScaffoldPage(
       header: PageHeader(
@@ -139,56 +116,12 @@ class _DesktopUsersPageState extends ConsumerState<DesktopUsersPage> {
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextBox(
-                    controller: _searchController,
-                    placeholder: 'Rechercher username, email…',
-                    prefix: const Padding(
-                      padding: EdgeInsets.only(left: 8),
-                      child: Icon(FluentIcons.search, size: 14),
-                    ),
-                    onChanged: _onSearch,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                ComboBox<String?>(
-                  placeholder: const Text('Statut'),
-                  value: _filter.filter,
-                  items: [
-                    for (final opt in _statusOptions)
-                      ComboBoxItem<String?>(
-                        value: opt.$1,
-                        child: Text(opt.$2),
-                      ),
-                  ],
-                  onChanged: (v) => setState(() {
-                    _filter = _filter.copyWith(
-                      filter: v,
-                      resetFilter: v == null,
-                    );
-                  }),
-                ),
-                const SizedBox(width: 12),
-                ComboBox<String?>(
-                  placeholder: const Text('Pays'),
-                  value: _filter.countryCode,
-                  items: [
-                    for (final opt in _countryOptions)
-                      ComboBoxItem<String?>(
-                        value: opt.$1,
-                        child: Text(opt.$2),
-                      ),
-                  ],
-                  onChanged: (v) => setState(() {
-                    _filter = _filter.copyWith(
-                      countryCode: v,
-                      resetCountryCode: v == null,
-                    );
-                  }),
-                ),
-              ],
+            child: DesktopAudienceFilters(
+              filter: _filter,
+              searchCtrl: _searchController,
+              competitions: compsAsync.valueOrNull ?? const [],
+              searchPlaceholder: 'Rechercher username, email…',
+              onFilterChanged: (f) => setState(() => _filter = f),
             ),
           ),
           const SizedBox(height: 16),

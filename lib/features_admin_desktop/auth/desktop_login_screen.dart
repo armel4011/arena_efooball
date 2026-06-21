@@ -1,8 +1,11 @@
+import 'package:arena/core/router/admin_desktop_router.dart';
+import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/core/utils/arena_error_message.dart';
 import 'package:arena/features_admin/auth_admin/admin_auth_providers.dart';
 import 'package:arena/features_admin_desktop/auth/desktop_auth_scaffold.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 /// Connexion admin desktop — email + mot de passe.
 ///
@@ -88,6 +91,19 @@ class _DesktopLoginScreenState extends ConsumerState<DesktopLoginScreen> {
                       child: ProgressRing(strokeWidth: 2.5),
                     )
                   : const Text('SE CONNECTER'),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.center,
+            child: HyperlinkButton(
+              onPressed: isLoading
+                  ? null
+                  : () => context.go(AdminDesktopRoutes.invitation),
+              child: const Text(
+                "J'ai un code d'invitation",
+                style: TextStyle(color: ArenaColors.neonRed),
+              ),
             ),
           ),
         ],
