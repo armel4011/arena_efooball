@@ -129,6 +129,9 @@ class MatchRoomPage extends ConsumerWidget {
         ),
         body: ArenaScreenBackground(
           child: async.when(
+            // Garde la dernière donnée pendant un reload (re-souscription du
+            // stream realtime) au lieu de flasher un spinner plein écran.
+            skipLoadingOnReload: true,
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => ErrorState(
               description: e.toString(),
@@ -207,6 +210,9 @@ class _MatchRoomBody extends ConsumerWidget {
           // un défaut « non-dames » afficherait le formulaire de preuve sur une
           // room de dames pendant le chargement (flash de demande de preuve).
           gameTypeAsync.when(
+            // Idem : pas de spinner si le provider se recalcule alors qu'on a
+            // déjà le type de jeu (évite le clignotement du bas de la room).
+            skipLoadingOnReload: true,
             loading: () => const Padding(
               padding: EdgeInsets.symmetric(vertical: ArenaSpacing.xxl),
               child: Center(child: CircularProgressIndicator()),
