@@ -1,0 +1,5 @@
+# Gros binaires régénérables — pas dans git (l'APK vient du build Flutter).
+downloads/*.apk
+# Artefacts de packaging.
+arena-site.zip
+*.bak
