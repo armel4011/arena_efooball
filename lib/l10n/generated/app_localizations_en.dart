@@ -3139,6 +3139,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get filterCompleted => 'Completed';
 
   @override
+  String get statusToReprogram => 'To reprogram';
+
+  @override
   String get compFormatSingleElim => 'Single elimination';
 
   @override

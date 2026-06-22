@@ -954,6 +954,7 @@
   "filterUpcoming": "Upcoming",
   "filterOngoing": "Ongoing",
   "filterCompleted": "Completed",
+  "statusToReprogram": "To reprogram",
   "compFormatSingleElim": "Single elimination",
   "compFormatGroupsKnockout": "Groups + knockout",
   "compFormatRoundRobin": "Round robin",

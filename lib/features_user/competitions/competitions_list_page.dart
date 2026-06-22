@@ -265,6 +265,7 @@ class _StatusChips extends StatelessWidget {
   static const _options = <(StatusBucket, Color)>[
     (StatusBucket.upcoming, ArenaColors.signalBlue),
     (StatusBucket.ongoing, ArenaColors.statusWarn),
+    (StatusBucket.toReprogram, ArenaColors.statusWarn),
     (StatusBucket.completed, ArenaColors.silver),
   ];
 

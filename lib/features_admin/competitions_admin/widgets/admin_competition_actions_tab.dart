@@ -11,6 +11,7 @@ import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 /// Onglet ACTIONS — boutons admin : éditer, gérer le bracket, ouvrir /
 /// fermer les inscriptions, annuler la compétition.
@@ -80,6 +81,28 @@ class AdminCompetitionActionsTab extends ConsumerWidget {
               CompetitionStatus.registrationClosed,
             ),
           ),
+        if (competition.status == CompetitionStatus.toReprogram) ...[
+          const SizedBox(height: ArenaSpacing.sm),
+          Text(
+            '⏳ À REPROGRAMMER — la date de début est passée sans faire le '
+            'plein. Choisis la suite (les inscrits seront notifiés '
+            'automatiquement) :',
+            style: ArenaText.bodyMuted.copyWith(color: ArenaColors.statusWarn),
+          ),
+          const SizedBox(height: ArenaSpacing.xs),
+          ArenaButton(
+            label: '📅 REPROGRAMMER (NOUVELLE DATE)',
+            fullWidth: true,
+            onPressed: () => _reprogram(context, ref),
+          ),
+          const SizedBox(height: ArenaSpacing.xs),
+          ArenaButton(
+            label: '🚀 DÉMARRER AVEC LES INSCRITS',
+            variant: ArenaButtonVariant.secondary,
+            fullWidth: true,
+            onPressed: () => _startNow(context, ref),
+          ),
+        ],
         if (competition.status == CompetitionStatus.completed) ...[
           if (isSuperAdmin) ...[
             const SizedBox(height: ArenaSpacing.xs),
@@ -247,6 +270,107 @@ class AdminCompetitionActionsTab extends ConsumerWidget {
             n == 0
                 ? 'Aucun versement généré (déjà fait, ou pas de gagnant/prix).'
                 : '$n versement(s) généré(s) — gagnants notifiés.',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Échec : $e')),
+      );
+    }
+  }
+
+  /// Reprogramme la compétition à une nouvelle date/heure (sélecteur) puis
+  /// rouvre les inscriptions. Les inscrits sont notifiés côté serveur.
+  Future<void> _reprogram(BuildContext context, WidgetRef ref) async {
+    final now = DateTime.now();
+    final date = await showDatePicker(
+      context: context,
+      initialDate: now.add(const Duration(days: 1)),
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 365)),
+      helpText: 'Nouvelle date de début',
+    );
+    if (date == null || !context.mounted) return;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: const TimeOfDay(hour: 18, minute: 0),
+      helpText: 'Heure de début',
+    );
+    if (time == null || !context.mounted) return;
+    final newStart = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      time.hour,
+      time.minute,
+    );
+    if (!newStart.isAfter(now)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('La date doit être dans le futur.')),
+      );
+      return;
+    }
+    try {
+      final notified = await ref
+          .read(adminCompetitionsRepositoryProvider)
+          .reprogram(competition.id, newStart);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '« ${competition.name} » reprogrammée au '
+            '${DateFormat("dd/MM/yyyy 'à' HH'h'mm", 'fr_FR').format(newStart)} '
+            '— inscriptions rouvertes, $notified joueur(s) notifié(s).',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Échec : $e')),
+      );
+    }
+  }
+
+  /// Démarre la compétition avec les joueurs déjà inscrits (≥ 2). Confirme
+  /// d'abord car l'action génère le bracket / verrouille la suite.
+  Future<void> _startNow(BuildContext context, WidgetRef ref) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        backgroundColor: ArenaColors.carbon,
+        title: Text('Démarrer avec les inscrits ?', style: ArenaText.h3),
+        content: Text(
+          'La compétition démarre avec les joueurs actuellement inscrits '
+          '(${competition.currentPlayers}/${competition.maxPlayers}). Le bracket '
+          'est généré et les inscriptions sont définitivement closes. Les '
+          'inscrits seront notifiés du démarrage.',
+          style: ArenaText.bodyMuted,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(c).pop(false),
+            child: const Text('NON'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(c).pop(true),
+            child: const Text('DÉMARRER'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      final notified = await ref
+          .read(adminCompetitionsRepositoryProvider)
+          .startNow(competition.id);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '« ${competition.name} » démarrée — $notified joueur(s) notifié(s).',
           ),
         ),
       );

@@ -26,6 +26,11 @@ enum CompetitionStatus {
   draft('draft'),
   registrationOpen('registration_open'),
   registrationClosed('registration_closed'),
+
+  /// Échéance atteinte sans quota complet : en attente d'une décision admin
+  /// (reprogrammer / démarrer avec les inscrits / annuler). Remplace
+  /// l'auto-annulation des compétitions sous-remplies.
+  toReprogram('to_reprogram'),
   ongoing('ongoing'),
   completed('completed'),
   cancelled('cancelled');
@@ -45,17 +50,23 @@ enum CompetitionStatus {
   bool get isOngoing => this == CompetitionStatus.ongoing;
   bool get isCompleted => this == CompetitionStatus.completed;
   bool get isCancelled => this == CompetitionStatus.cancelled;
+  bool get isToReprogram => this == CompetitionStatus.toReprogram;
 
-  /// Regroupe les 6 statuts DB en 3 phases claires pour l'affichage :
+  /// Regroupe les 7 statuts DB en 3 phases claires pour l'affichage :
   /// À VENIR / EN COURS / TERMINÉ. **Source unique** pour les listes, filtres
   /// et badges (évite les vocabulaires divergents entre écrans).
-  ///  * draft / registration_open / registration_closed → [CompetitionPhase.upcoming]
+  ///  * draft / registration_open / registration_closed / to_reprogram → [CompetitionPhase.upcoming]
   ///  * ongoing                                          → [CompetitionPhase.ongoing]
   ///  * completed / cancelled                            → [CompetitionPhase.finished]
+  ///
+  /// `to_reprogram` est rangé dans « à venir » (le tournoi n'a pas démarré) ;
+  /// son libellé/couleur propres sont rendus par `competitionStatusLabel` /
+  /// `competitionStatusColor` (cf. competition_phase_ui.dart).
   CompetitionPhase get phase => switch (this) {
         CompetitionStatus.draft ||
         CompetitionStatus.registrationOpen ||
-        CompetitionStatus.registrationClosed =>
+        CompetitionStatus.registrationClosed ||
+        CompetitionStatus.toReprogram =>
           CompetitionPhase.upcoming,
         CompetitionStatus.ongoing => CompetitionPhase.ongoing,
         CompetitionStatus.completed ||

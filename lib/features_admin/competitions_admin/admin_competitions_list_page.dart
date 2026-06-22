@@ -122,7 +122,10 @@ class _StatusChipsRow extends StatelessWidget {
   static const _items = <(CompetitionStatus, String)>[
     (CompetitionStatus.ongoing, 'Live'),
     (CompetitionStatus.registrationOpen, 'À venir'),
+    (CompetitionStatus.toReprogram, 'À reprogrammer'),
     (CompetitionStatus.draft, 'Draft'),
+    (CompetitionStatus.completed, 'Terminées'),
+    (CompetitionStatus.cancelled, 'Annulées'),
   ];
 
   @override
@@ -460,6 +463,12 @@ _StatusVisual _visualFor(CompetitionStatus status) {
     case CompetitionStatus.registrationClosed:
       return const _StatusVisual(
         label: 'INSCRIPTIONS CLOSES',
+        color: ArenaColors.statusWarn,
+        variant: ArenaBadgeVariant.warn,
+      );
+    case CompetitionStatus.toReprogram:
+      return const _StatusVisual(
+        label: 'À REPROGRAMMER',
         color: ArenaColors.statusWarn,
         variant: ArenaBadgeVariant.warn,
       );

@@ -5794,6 +5794,12 @@ abstract class AppLocalizations {
   /// **'Terminés'**
   String get filterCompleted;
 
+  /// No description provided for @statusToReprogram.
+  ///
+  /// In fr, this message translates to:
+  /// **'À reprogrammer'**
+  String get statusToReprogram;
+
   /// No description provided for @compFormatSingleElim.
   ///
   /// In fr, this message translates to:
