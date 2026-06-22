@@ -111,7 +111,7 @@ begin
     '📅 Tournoi reprogrammé',
     'La compétition « ' || v_name || ' » est reprogrammée au '
       || to_char(p_new_start_date at time zone 'Africa/Douala',
-                 'DD/MM/YYYY à HH24''h''MI')
+                 'DD/MM/YYYY "à" HH24"h"MI')
       || '. Les inscriptions sont rouvertes — invite tes amis pour compléter '
       || 'le tableau !',
     jsonb_build_object('competition_id', p_competition_id,

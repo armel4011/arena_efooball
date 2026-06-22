@@ -61,7 +61,9 @@ void main() {
   // 2246 → 2253 le 2026-06-22 : +7 `ArenaColors.*` du statut « à reprogrammer »
   // (helpers status-aware label/couleur user, badges admin mobile/desktop/header,
   // glow card, bloc 3 actions admin). 0 vrai Colors.* ajouté (tous des tokens).
-  const colorsDotBaseline = 2253; // occurrences de `Colors.`
+  // 2253 → 2254 le 2026-06-22 : +1 `ArenaColors.statusWarn` de la puce de filtre
+  // « à reprogrammer » de la liste user. 0 vrai Colors.* ajouté (token).
+  const colorsDotBaseline = 2254; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
 
   final colorsDotRe = RegExp(r'Colors\.');

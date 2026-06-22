@@ -122,6 +122,7 @@ class _StatusChipsRow extends StatelessWidget {
   static const _items = <(CompetitionStatus, String)>[
     (CompetitionStatus.ongoing, 'Live'),
     (CompetitionStatus.registrationOpen, 'À venir'),
+    (CompetitionStatus.toReprogram, 'À reprogrammer'),
     (CompetitionStatus.draft, 'Draft'),
   ];
 
