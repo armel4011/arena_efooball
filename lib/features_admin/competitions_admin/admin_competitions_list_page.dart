@@ -124,6 +124,8 @@ class _StatusChipsRow extends StatelessWidget {
     (CompetitionStatus.registrationOpen, 'À venir'),
     (CompetitionStatus.toReprogram, 'À reprogrammer'),
     (CompetitionStatus.draft, 'Draft'),
+    (CompetitionStatus.completed, 'Terminées'),
+    (CompetitionStatus.cancelled, 'Annulées'),
   ];
 
   @override
