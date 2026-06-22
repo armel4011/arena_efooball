@@ -64,6 +64,8 @@ class AdminCompetitionHeader extends StatelessWidget {
         return 'INSCRIPTIONS';
       case CompetitionStatus.registrationClosed:
         return 'INSCRIPTIONS CLOSES';
+      case CompetitionStatus.toReprogram:
+        return 'À REPROGRAMMER';
       case CompetitionStatus.draft:
         return 'DRAFT';
       case CompetitionStatus.completed:
@@ -85,6 +87,7 @@ class AdminCompetitionHeader extends StatelessWidget {
         return ArenaBadgeVariant.danger;
       case CompetitionStatus.draft:
       case CompetitionStatus.registrationClosed:
+      case CompetitionStatus.toReprogram:
         return ArenaBadgeVariant.warn;
     }
   }

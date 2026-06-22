@@ -58,7 +58,10 @@ void main() {
   // (filtres audience partagés users/broadcast, icône épinglage + flyout actions
   // rapides compétitions, carte sécurité profil + reset 2FA, liens login↔
   // inscription par code). 0 vrai Colors.* ajouté (tous des tokens).
-  const colorsDotBaseline = 2246; // occurrences de `Colors.`
+  // 2246 → 2253 le 2026-06-22 : +7 `ArenaColors.*` du statut « à reprogrammer »
+  // (helpers status-aware label/couleur user, badges admin mobile/desktop/header,
+  // glow card, bloc 3 actions admin). 0 vrai Colors.* ajouté (tous des tokens).
+  const colorsDotBaseline = 2253; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
 
   final colorsDotRe = RegExp(r'Colors\.');

@@ -3160,6 +3160,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get filterCompleted => 'Terminés';
 
   @override
+  String get statusToReprogram => 'À reprogrammer';
+
+  @override
   String get compFormatSingleElim => 'Élimination directe';
 
   @override

@@ -71,7 +71,7 @@ class CompetitionListCard extends StatelessWidget {
     final c = competition;
     final accent = _accent;
     final currency = c.prizePoolCurrency ?? c.registrationCurrency;
-    final phaseLabel = competitionPhaseLabel(c.status.phase, l10n).toUpperCase();
+    final phaseLabel = competitionStatusLabel(c.status, l10n).toUpperCase();
 
     final card = InkWell(
       onTap: onTap,

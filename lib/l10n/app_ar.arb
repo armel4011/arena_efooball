@@ -954,6 +954,7 @@
   "filterUpcoming": "قادمة",
   "filterOngoing": "جارية",
   "filterCompleted": "منتهية",
+  "statusToReprogram": "إعادة الجدولة",
   "compFormatSingleElim": "إقصاء مباشر",
   "compFormatGroupsKnockout": "مجموعات + إقصاء",
   "compFormatRoundRobin": "دوري",

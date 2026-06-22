@@ -213,6 +213,35 @@ class AdminCompetitionsRepository {
     return (res as num?)?.toInt() ?? 0;
   }
 
+  /// Reprogramme une compétition (typiquement `to_reprogram`) à une nouvelle
+  /// date via la RPC `reprogram_competition` (SECURITY DEFINER, gate
+  /// `is_admin()`) : `status=registration_open` + `start_date=newStartDate` ET
+  /// rouvre les inscriptions, PUIS notifie tous les inscrits confirmés de la
+  /// nouvelle date. Retourne le nombre de joueurs notifiés.
+  Future<int> reprogram(String id, DateTime newStartDate) async {
+    final res = await _client.rpc<dynamic>(
+      'reprogram_competition',
+      params: {
+        'p_competition_id': id,
+        'p_new_start_date': newStartDate.toUtc().toIso8601String(),
+      },
+    );
+    return (res as num?)?.toInt() ?? 0;
+  }
+
+  /// Démarre une compétition avec les joueurs disponibles via la RPC
+  /// `start_competition_now` (SECURITY DEFINER, gate `is_admin()`) : notifie
+  /// les inscrits confirmés (≥ 2 requis), puis génère le bracket
+  /// (single_elimination → `ongoing`) ou ferme les inscriptions (autres
+  /// formats, bracket manuel ensuite). Retourne le nombre de joueurs notifiés.
+  Future<int> startNow(String id) async {
+    final res = await _client.rpc<dynamic>(
+      'start_competition_now',
+      params: {'p_competition_id': id},
+    );
+    return (res as num?)?.toInt() ?? 0;
+  }
+
   /// Suppression définitive (super-admin only). Appelle la RPC SQL
   /// `delete_competition_cascade` (SECURITY DEFINER) qui supprime
   /// atomiquement payouts → platform_revenue → payments → competition.

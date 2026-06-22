@@ -152,6 +152,7 @@ class CompetitionCard extends StatelessWidget {
         Theme.of(context).colorScheme.primary,
       CompetitionStatus.ongoing => ArenaColors.success,
       CompetitionStatus.registrationClosed => ArenaColors.warning,
+      CompetitionStatus.toReprogram => ArenaColors.statusWarn,
       CompetitionStatus.draft ||
       CompetitionStatus.completed ||
       CompetitionStatus.cancelled =>
@@ -236,6 +237,8 @@ class _StatusBadge extends StatelessWidget {
           ('INSCRIPTIONS', ArenaColors.success),
         CompetitionStatus.registrationClosed =>
           ('INSCRIPTIONS CLOSES', ArenaColors.warning),
+        CompetitionStatus.toReprogram =>
+          ('À REPROGRAMMER', ArenaColors.warning),
         CompetitionStatus.ongoing => ('EN COURS', ArenaColors.success),
         CompetitionStatus.completed => ('TERMINÉ', ArenaColors.textMuted),
         CompetitionStatus.cancelled => ('ANNULÉ', ArenaColors.danger),

@@ -252,6 +252,18 @@ class _ActionsTab extends ConsumerWidget {
               CompetitionStatus.registrationClosed,
             ),
           ),
+        if (c.status == CompetitionStatus.toReprogram) ...[
+          _ActionButton(
+            icon: FluentIcons.calendar,
+            label: 'Reprogrammer (nouvelle date)',
+            onPressed: () => _reprogram(context, ref),
+          ),
+          _ActionButton(
+            icon: FluentIcons.play,
+            label: 'Démarrer avec les inscrits',
+            onPressed: () => _startNow(context, ref),
+          ),
+        ],
         if (c.status == CompetitionStatus.completed)
           _ActionButton(
             icon: FluentIcons.refresh,
@@ -352,6 +364,86 @@ class _ActionsTab extends ConsumerWidget {
           .regenerate(competition.id);
       if (!context.mounted) return;
       context.go(AdminDesktopRoutes.competitionDetailPath(fresh.id));
+    } catch (e) {
+      if (!context.mounted) return;
+      await _showError(context, e);
+    }
+  }
+
+  Future<void> _reprogram(BuildContext context, WidgetRef ref) async {
+    final newStart = await showDialog<DateTime>(
+      context: context,
+      builder: (ctx) => const _ReprogramDialog(),
+    );
+    if (newStart == null || !context.mounted) return;
+    if (!newStart.isAfter(DateTime.now())) {
+      await _showError(context, 'La date doit être dans le futur.');
+      return;
+    }
+    try {
+      final notified = await ref
+          .read(adminCompetitionsRepositoryProvider)
+          .reprogram(competition.id, newStart);
+      if (!context.mounted) return;
+      await displayInfoBar(
+        context,
+        builder: (ctx, close) => InfoBar(
+          title: const Text('Reprogrammée'),
+          content: Text(
+            '« ${competition.name} » reprogrammée au '
+            '${DateFormat("dd/MM/yyyy 'à' HH'h'mm", 'fr_FR').format(newStart)} '
+            '— inscriptions rouvertes, $notified joueur(s) notifié(s).',
+          ),
+          severity: InfoBarSeverity.success,
+          onClose: close,
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      await _showError(context, e);
+    }
+  }
+
+  Future<void> _startNow(BuildContext context, WidgetRef ref) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => ContentDialog(
+        title: const Text('Démarrer avec les inscrits ?'),
+        content: Text(
+          'La compétition démarre avec les joueurs actuellement inscrits '
+          '(${competition.currentPlayers}/${competition.maxPlayers}). Le bracket '
+          'est généré et les inscriptions sont définitivement closes. Les '
+          'inscrits seront notifiés du démarrage.',
+        ),
+        actions: [
+          Button(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Non'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Oui, démarrer'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      final notified = await ref
+          .read(adminCompetitionsRepositoryProvider)
+          .startNow(competition.id);
+      if (!context.mounted) return;
+      await displayInfoBar(
+        context,
+        builder: (ctx, close) => InfoBar(
+          title: const Text('Démarrée'),
+          content: Text(
+            '« ${competition.name} » démarrée — $notified joueur(s) notifié(s).',
+          ),
+          severity: InfoBarSeverity.success,
+          onClose: close,
+        ),
+      );
     } catch (e) {
       if (!context.mounted) return;
       await _showError(context, e);
@@ -467,6 +559,83 @@ class _ActionButton extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Dialog de reprogrammation (date + heure)
+// ─────────────────────────────────────────────────────────────────────
+
+/// Petit dialog Fluent qui retourne via `Navigator.pop` la nouvelle date/heure
+/// de début choisie (ou `null` si annulé). Date initiale = J+1 à 18h00.
+class _ReprogramDialog extends StatefulWidget {
+  const _ReprogramDialog();
+
+  @override
+  State<_ReprogramDialog> createState() => _ReprogramDialogState();
+}
+
+class _ReprogramDialogState extends State<_ReprogramDialog> {
+  late DateTime _selected = DateTime(
+    DateTime.now().year,
+    DateTime.now().month,
+    DateTime.now().day,
+    18,
+  ).add(const Duration(days: 1));
+
+  @override
+  Widget build(BuildContext context) {
+    return ContentDialog(
+      title: const Text('Reprogrammer la compétition'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Choisis la nouvelle date de début. Les inscriptions seront '
+            'rouvertes et tous les inscrits seront notifiés.',
+          ),
+          const SizedBox(height: 16),
+          DatePicker(
+            header: 'Date',
+            selected: _selected,
+            onChanged: (d) => setState(
+              () => _selected = DateTime(
+                d.year,
+                d.month,
+                d.day,
+                _selected.hour,
+                _selected.minute,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TimePicker(
+            header: 'Heure',
+            selected: _selected,
+            onChanged: (t) => setState(
+              () => _selected = DateTime(
+                _selected.year,
+                _selected.month,
+                _selected.day,
+                t.hour,
+                t.minute,
+              ),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        Button(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Annuler'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(_selected),
+          child: const Text('Reprogrammer'),
+        ),
+      ],
     );
   }
 }

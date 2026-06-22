@@ -24,3 +24,22 @@ Color competitionPhaseColor(CompetitionPhase phase) => switch (phase) {
       CompetitionPhase.ongoing => ArenaColors.statusOk,
       CompetitionPhase.finished => ArenaColors.silver,
     };
+
+/// Libellé d'affichage d'un [CompetitionStatus] en tenant compte du cas
+/// spécial `to_reprogram` (échéance atteinte, quota incomplet — en attente de
+/// décision admin), qui n'a pas de phase propre mais mérite un libellé
+/// distinct. Sinon, délègue au libellé de phase (source unique).
+String competitionStatusLabel(
+  CompetitionStatus status,
+  AppLocalizations l10n,
+) =>
+    status == CompetitionStatus.toReprogram
+        ? l10n.statusToReprogram
+        : competitionPhaseLabel(status.phase, l10n);
+
+/// Couleur d'accent d'un [CompetitionStatus] : `to_reprogram` = orange
+/// (attention/action requise), sinon couleur de phase.
+Color competitionStatusColor(CompetitionStatus status) =>
+    status == CompetitionStatus.toReprogram
+        ? ArenaColors.statusWarn
+        : competitionPhaseColor(status.phase);

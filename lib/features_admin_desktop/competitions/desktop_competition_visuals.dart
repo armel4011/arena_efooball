@@ -32,6 +32,11 @@ DesktopStatusVisual competitionStatusVisual(CompetitionStatus status) {
         label: 'INSCRIPTIONS CLOSES',
         color: ArenaColors.statusWarn,
       );
+    case CompetitionStatus.toReprogram:
+      return const DesktopStatusVisual(
+        label: 'À REPROGRAMMER',
+        color: ArenaColors.statusWarn,
+      );
     case CompetitionStatus.draft:
       return const DesktopStatusVisual(
         label: 'BROUILLON',

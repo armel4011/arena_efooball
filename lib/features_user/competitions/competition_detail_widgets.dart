@@ -101,15 +101,15 @@ class _BannerBadges extends StatelessWidget {
     );
   }
 
-  // Statut unifié en 3 phases (À VENIR / EN COURS / TERMINÉ) — même source que
-  // la liste et le badge de card, pour un vocabulaire cohérent partout.
+  // Statut unifié (À VENIR / EN COURS / TERMINÉ + À REPROGRAMMER) — même source
+  // que la liste et le badge de card, pour un vocabulaire cohérent partout.
   static (String, Color) _statusFor(
     CompetitionStatus s,
     AppLocalizations l10n,
   ) =>
       (
-        competitionPhaseLabel(s.phase, l10n),
-        competitionPhaseColor(s.phase),
+        competitionStatusLabel(s, l10n),
+        competitionStatusColor(s),
       );
 }
 

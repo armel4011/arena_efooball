@@ -463,6 +463,12 @@ _StatusVisual _visualFor(CompetitionStatus status) {
         color: ArenaColors.statusWarn,
         variant: ArenaBadgeVariant.warn,
       );
+    case CompetitionStatus.toReprogram:
+      return const _StatusVisual(
+        label: 'À REPROGRAMMER',
+        color: ArenaColors.statusWarn,
+        variant: ArenaBadgeVariant.warn,
+      );
     case CompetitionStatus.draft:
       return const _StatusVisual(
         label: 'DRAFT',

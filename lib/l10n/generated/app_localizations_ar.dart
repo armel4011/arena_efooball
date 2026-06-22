@@ -3127,6 +3127,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get filterCompleted => 'منتهية';
 
   @override
+  String get statusToReprogram => 'إعادة الجدولة';
+
+  @override
   String get compFormatSingleElim => 'إقصاء مباشر';
 
   @override
