@@ -427,9 +427,10 @@ class PublishToggleCard extends StatelessWidget {
 }
 
 /// Picker d'intervalle entre rounds (Lot A — auto-management). Valeurs
-/// en minutes : 30 / 60 / 120 / 240 / 1440. Stocké tel quel dans la
-/// colonne `competitions.match_interval_minutes`.
-class MatchIntervalPicker extends StatelessWidget {
+/// rapides en minutes : 30 / 60 / 120 / 240 / 1440, plus une option
+/// « Perso. » qui révèle un champ libre (n'importe quel nombre de minutes
+/// > 0, ex. 45). Stocké tel quel dans `competitions.match_interval_minutes`.
+class MatchIntervalPicker extends StatefulWidget {
   const MatchIntervalPicker({
     required this.current,
     required this.onChanged,
@@ -439,7 +440,7 @@ class MatchIntervalPicker extends StatelessWidget {
   final int current;
   final ValueChanged<int> onChanged;
 
-  static const _options = <({int minutes, String label})>[
+  static const _presets = <({int minutes, String label})>[
     (minutes: 30, label: '30 min'),
     (minutes: 60, label: '1 h'),
     (minutes: 120, label: '2 h'),
@@ -447,18 +448,77 @@ class MatchIntervalPicker extends StatelessWidget {
     (minutes: 1440, label: '1 jour'),
   ];
 
+  static bool _isPreset(int minutes) =>
+      _presets.any((o) => o.minutes == minutes);
+
+  @override
+  State<MatchIntervalPicker> createState() => _MatchIntervalPickerState();
+}
+
+class _MatchIntervalPickerState extends State<MatchIntervalPicker> {
+  late final TextEditingController _customCtrl;
+  late bool _customMode;
+
+  @override
+  void initState() {
+    super.initState();
+    // Mode perso pré-activé si la valeur courante n'est pas un preset (cas
+    // édition d'une compétition créée avec un intervalle custom).
+    _customMode = !MatchIntervalPicker._isPreset(widget.current);
+    _customCtrl = TextEditingController(
+      text: _customMode ? widget.current.toString() : '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _customCtrl.dispose();
+    super.dispose();
+  }
+
+  void _applyCustom(String raw) {
+    final n = int.tryParse(raw.trim());
+    if (n != null && n > 0) widget.onChanged(n);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: ArenaSpacing.xs,
-      runSpacing: ArenaSpacing.xs,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (final opt in _options)
-          IntervalChip(
-            label: opt.label,
-            active: opt.minutes == current,
-            onTap: () => onChanged(opt.minutes),
+        Wrap(
+          spacing: ArenaSpacing.xs,
+          runSpacing: ArenaSpacing.xs,
+          children: [
+            for (final opt in MatchIntervalPicker._presets)
+              IntervalChip(
+                label: opt.label,
+                active: !_customMode && opt.minutes == widget.current,
+                onTap: () {
+                  setState(() => _customMode = false);
+                  widget.onChanged(opt.minutes);
+                },
+              ),
+            IntervalChip(
+              label: 'Perso.',
+              active: _customMode,
+              onTap: () {
+                setState(() => _customMode = true);
+                _applyCustom(_customCtrl.text);
+              },
+            ),
+          ],
+        ),
+        if (_customMode) ...[
+          const SizedBox(height: ArenaSpacing.xs),
+          ArenaTextField(
+            controller: _customCtrl,
+            hint: 'Minutes (ex. 45)',
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            onChanged: _applyCustom,
           ),
+        ],
       ],
     );
   }

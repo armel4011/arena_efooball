@@ -16,10 +16,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Vue Score validé — affichée quand `MatchStatus == completed`.
 class CompletedView extends StatelessWidget {
-  const CompletedView({required this.match, required this.selfId, super.key});
+  const CompletedView({
+    required this.match,
+    required this.selfId,
+    this.isDraughts = false,
+    super.key,
+  });
 
   final ArenaMatch match;
   final String? selfId;
+
+  /// Jeu de dames : partie jouée in-app (historique serveur), donc pas de
+  /// vidéo de preuve à envoyer → on masque le bouton d'upload manuel.
+  final bool isDraughts;
 
   bool get _isPlayer =>
       selfId != null &&
@@ -54,7 +63,7 @@ class CompletedView extends StatelessWidget {
                 : l10n.outcomeWinner(match.winnerId!.substring(0, 6)),
             style: ArenaText.bodyMuted,
           ),
-          if (_isPlayer) ...[
+          if (_isPlayer && !isDraughts) ...[
             const SizedBox(height: ArenaSpacing.lg),
             ManualUploadButton(matchId: match.id, playerId: selfId!),
           ],
@@ -68,10 +77,19 @@ class CompletedView extends StatelessWidget {
 /// joueurs : permet de re-soumettre un score corrigé ; pour les
 /// observateurs : juste un bandeau d'info.
 class DisputedView extends ConsumerStatefulWidget {
-  const DisputedView({required this.match, required this.selfId, super.key});
+  const DisputedView({
+    required this.match,
+    required this.selfId,
+    this.isDraughts = false,
+    super.key,
+  });
 
   final ArenaMatch match;
   final String? selfId;
+
+  /// Jeu de dames : pas de vidéo de preuve (partie jouée in-app) → bouton
+  /// d'upload manuel masqué.
+  final bool isDraughts;
 
   @override
   ConsumerState<DisputedView> createState() => _DisputedViewState();
@@ -140,11 +158,13 @@ class _DisputedViewState extends ConsumerState<DisputedView> {
                 _isPlayer1 ? p1Sub : p2Sub,
               ),
             ),
-            const SizedBox(height: ArenaSpacing.sm),
-            ManualUploadButton(
-              matchId: widget.match.id,
-              playerId: widget.selfId!,
-            ),
+            if (!widget.isDraughts) ...[
+              const SizedBox(height: ArenaSpacing.sm),
+              ManualUploadButton(
+                matchId: widget.match.id,
+                playerId: widget.selfId!,
+              ),
+            ],
           ],
         );
       },

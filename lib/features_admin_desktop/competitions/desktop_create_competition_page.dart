@@ -110,6 +110,10 @@ class _DesktopCreateCompetitionPageState
   @override
   int _matchIntervalMinutes = 60;
   @override
+  bool _customIntervalMode = false;
+  @override
+  final _customIntervalCtrl = TextEditingController();
+  @override
   bool _thirdPlaceMatch = false;
   @override
   final _referralQuotaCtrl = TextEditingController(text: '0');
@@ -155,6 +159,10 @@ class _DesktopCreateCompetitionPageState
         : commissionXaf.toString();
     _autoGenerateBracket = c.autoGenerateBracket;
     _matchIntervalMinutes = c.matchIntervalMinutes;
+    _customIntervalMode = !_intervalOptions.contains(c.matchIntervalMinutes);
+    if (_customIntervalMode) {
+      _customIntervalCtrl.text = c.matchIntervalMinutes.toString();
+    }
     _thirdPlaceMatch = c.thirdPlaceMatch;
     _referralQuotaCtrl.text = c.referralQuota.toString();
     if (c.roundIntervals != null && c.roundIntervals!.isNotEmpty) {
@@ -200,6 +208,7 @@ class _DesktopCreateCompetitionPageState
     _mtnMomoCtrl.dispose();
     _commissionXafCtrl.dispose();
     _referralQuotaCtrl.dispose();
+    _customIntervalCtrl.dispose();
     _roundIntervalsCtrl.dispose();
     _groupCountCtrl.dispose();
     _qualifiersPerGroupCtrl.dispose();

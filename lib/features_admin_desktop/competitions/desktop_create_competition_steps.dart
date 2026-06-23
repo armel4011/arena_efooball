@@ -30,6 +30,8 @@ mixin _StepBuilders on ConsumerState<DesktopCreateCompetitionPage> {
   set _autoGenerateBracket(bool value);
   int get _matchIntervalMinutes;
   set _matchIntervalMinutes(int value);
+  bool get _customIntervalMode;
+  set _customIntervalMode(bool value);
   bool get _thirdPlaceMatch;
   set _thirdPlaceMatch(bool value);
 
@@ -42,6 +44,7 @@ mixin _StepBuilders on ConsumerState<DesktopCreateCompetitionPage> {
   List<TextEditingController> get _topShareCtrls;
   List<TextEditingController> get _blockShareCtrls;
   TextEditingController get _referralQuotaCtrl;
+  TextEditingController get _customIntervalCtrl;
   TextEditingController get _roundIntervalsCtrl;
   TextEditingController get _groupCountCtrl;
   TextEditingController get _qualifiersPerGroupCtrl;
@@ -402,16 +405,44 @@ mixin _StepBuilders on ConsumerState<DesktopCreateCompetitionPage> {
         InfoLabel(
           label: 'Intervalle entre rounds (défaut)',
           child: ComboBox<int>(
-            value: _matchIntervalMinutes,
+            value: _customIntervalMode ? -1 : _matchIntervalMinutes,
             isExpanded: true,
             items: [
               for (final m in _intervalOptions)
                 ComboBoxItem<int>(value: m, child: Text(_intervalLabel(m))),
+              const ComboBoxItem<int>(value: -1, child: Text('Personnalisé…')),
             ],
-            onChanged: (v) =>
-                setState(() => _matchIntervalMinutes = v ?? _matchIntervalMinutes),
+            onChanged: (v) {
+              if (v == null) return;
+              setState(() {
+                if (v == -1) {
+                  _customIntervalMode = true;
+                  final parsed = int.tryParse(_customIntervalCtrl.text.trim());
+                  if (parsed != null && parsed > 0) {
+                    _matchIntervalMinutes = parsed;
+                  }
+                } else {
+                  _customIntervalMode = false;
+                  _matchIntervalMinutes = v;
+                }
+              });
+            },
           ),
         ),
+        if (_customIntervalMode) ...[
+          const SizedBox(height: 8),
+          TextBox(
+            controller: _customIntervalCtrl,
+            placeholder: 'Minutes personnalisées (ex. 45)',
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            onChanged: (raw) {
+              final n = int.tryParse(raw.trim());
+              if (n != null && n > 0) {
+                setState(() => _matchIntervalMinutes = n);
+              }
+            },
+          ),
+        ],
         const SizedBox(height: 16),
         InfoLabel(
           label: 'Intervalles personnalisés par round (optionnel)',
