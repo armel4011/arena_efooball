@@ -21,6 +21,7 @@ import 'package:arena/data/repositories/match_repository.dart';
 import 'package:arena/features_user/draughts/engine/draughts_engine.dart';
 import 'package:arena/features_user/draughts/ui/draughts_board_view.dart';
 import 'package:arena/features_user/draughts/ui/draughts_clock.dart';
+import 'package:arena/features_user/match_room/match_player_presence.dart';
 import 'package:arena/features_user/match_room/match_room_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,9 +29,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// Salle d'attente draughts : démarrage DIRECT (pas de code de room). Le
 /// premier joueur qui lance bascule le match en `in_progress`.
 class DraughtsLobbyView extends ConsumerStatefulWidget {
-  const DraughtsLobbyView({required this.match, super.key});
+  const DraughtsLobbyView({
+    required this.match,
+    required this.selfId,
+    super.key,
+  });
 
   final ArenaMatch match;
+  final String? selfId;
 
   @override
   ConsumerState<DraughtsLobbyView> createState() => _DraughtsLobbyViewState();
@@ -55,6 +61,20 @@ class _DraughtsLobbyViewState extends ConsumerState<DraughtsLobbyView> {
 
   @override
   Widget build(BuildContext context) {
+    final selfId = widget.selfId;
+    // Présence Realtime : la partie ne peut démarrer (plateau + horloges) que
+    // lorsque les DEUX joueurs sont dans la salle — sinon un absent serait
+    // flaggé au temps sans avoir jamais rejoint.
+    final Set<String> present;
+    if (selfId == null) {
+      present = const <String>{};
+    } else {
+      final key = (matchId: widget.match.id, selfId: selfId);
+      present =
+          ref.watch(matchPresentUserIdsProvider(key)).value ?? const <String>{};
+    }
+    final bothHere = selfId != null && bothPlayersPresent(present, widget.match);
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: ArenaSpacing.xl),
       child: Column(
@@ -65,13 +85,26 @@ class _DraughtsLobbyViewState extends ConsumerState<DraughtsLobbyView> {
           const SizedBox(height: ArenaSpacing.sm),
           Text(
             'Plateau 10×10 · 20 pions · cadence rapide.\n'
-            'Lancez quand vous êtes prêts — pas de code à partager.',
+            'La partie démarre quand les deux joueurs ont rejoint la salle.',
             textAlign: TextAlign.center,
             style: ArenaText.bodyMuted,
           ),
           const SizedBox(height: ArenaSpacing.lg),
+          if (!bothHere) ...[
+            const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            const SizedBox(height: ArenaSpacing.sm),
+            Text(
+              "En attente de l'adversaire…",
+              style: ArenaText.small,
+            ),
+          ],
+          const SizedBox(height: ArenaSpacing.sm),
           FilledButton.icon(
-            onPressed: _starting ? null : _start,
+            onPressed: (_starting || !bothHere) ? null : _start,
             icon: const Icon(Icons.play_arrow_rounded),
             label: Text(_starting ? 'Démarrage…' : 'Démarrer la partie'),
           ),
@@ -120,8 +153,12 @@ class _DraughtsMatchViewState extends ConsumerState<DraughtsMatchView> {
     super.dispose();
   }
 
-  void _ensureStarted(DraughtsGameRow? game) {
-    if (widget.spectator || game != null || _startRequested) return;
+  void _ensureStarted(DraughtsGameRow? game, {required bool bothHere}) {
+    // On ne crée la partie (et donc on ne lance les horloges) QUE lorsque les
+    // deux joueurs sont présents dans la salle.
+    if (widget.spectator || game != null || _startRequested || !bothHere) {
+      return;
+    }
     _startRequested = true;
     Future<void>.microtask(() async {
       try {
@@ -185,10 +222,36 @@ class _DraughtsMatchViewState extends ConsumerState<DraughtsMatchView> {
 
   String _name(Profile? p) => p?.username ?? 'Joueur';
 
+  Widget _waiting(String message) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: ArenaSpacing.xxl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: ArenaSpacing.md),
+            Text(message, style: ArenaText.bodyMuted),
+          ],
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
     final gameAsync = ref.watch(draughtsActiveGameProvider(widget.match.id));
     final players = ref.watch(matchPlayersProvider(widget.match.id));
+
+    // Présence : la partie ne démarre (plateau + horloges) que lorsque les
+    // deux joueurs ont rejoint la salle.
+    final Set<String> present;
+    if (widget.spectator || widget.selfId == null) {
+      present = const <String>{};
+    } else {
+      final key = (matchId: widget.match.id, selfId: widget.selfId!);
+      present =
+          ref.watch(matchPresentUserIdsProvider(key)).value ?? const <String>{};
+    }
+    final bothHere = !widget.spectator &&
+        widget.selfId != null &&
+        bothPlayersPresent(present, widget.match);
 
     return gameAsync.when(
       loading: () => const Padding(
@@ -200,19 +263,27 @@ class _DraughtsMatchViewState extends ConsumerState<DraughtsMatchView> {
         child: Center(child: Text('Partie indisponible')),
       ),
       data: (game) {
-        _ensureStarted(game);
+        _ensureStarted(game, bothHere: bothHere);
         if (game == null) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: ArenaSpacing.xxl),
-            child: Center(child: CircularProgressIndicator()),
-          );
+          // Aucune partie encore créée : si on attend l'adversaire, message
+          // dédié ; sinon spinner (démarrage en cours côté serveur).
+          if (!widget.spectator && !bothHere) {
+            return _waiting("En attente de l'adversaire…");
+          }
+          return _waiting('Démarrage de la partie…');
         }
         _maybeClaimTimeout(game);
 
         final state = game.toState();
         final myColor = game.colorOf(widget.selfId);
-        final interactive =
-            game.isActive && myColor != null && myColor == game.turn;
+        // On gèle l'interactivité dès que l'horloge du joueur atteint 0 : le
+        // plateau s'arrête immédiatement (le timeout est réclamé en parallèle,
+        // l'écran de score s'affiche dès la finalisation serveur).
+        final myClockMs = myColor == null ? null : _displayMs(game, myColor);
+        final interactive = game.isActive &&
+            myColor != null &&
+            myColor == game.turn &&
+            (myClockMs == null || myClockMs > 0);
 
         final p1 = players.value?.p1;
         final p2 = players.value?.p2;

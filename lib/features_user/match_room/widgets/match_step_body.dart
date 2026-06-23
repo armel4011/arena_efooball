@@ -39,12 +39,12 @@ class StepBody extends StatelessWidget {
       MatchStatus.pending || MatchStatus.scheduled => isDraughts
           ? (role == MatchRole.observer
               ? _observerWaiting(context)
-              : DraughtsLobbyView(match: match))
+              : DraughtsLobbyView(match: match, selfId: selfId))
           : _stepShareCode(context),
       MatchStatus.ready => isDraughts
           ? (role == MatchRole.observer
               ? _observerWaiting(context)
-              : DraughtsLobbyView(match: match))
+              : DraughtsLobbyView(match: match, selfId: selfId))
           : RoomReadyView(match: match, role: role),
       MatchStatus.inProgress ||
       MatchStatus.scorePending ||
@@ -66,8 +66,10 @@ class StepBody extends StatelessWidget {
             : isDraughts
                 ? DraughtsMatchView(match: match, selfId: selfId)
                 : ScoreFlowView(match: match, role: role),
-      MatchStatus.disputed => DisputedView(match: match, selfId: selfId),
-      MatchStatus.completed => CompletedView(match: match, selfId: selfId),
+      MatchStatus.disputed =>
+        DisputedView(match: match, selfId: selfId, isDraughts: isDraughts),
+      MatchStatus.completed =>
+        CompletedView(match: match, selfId: selfId, isDraughts: isDraughts),
       MatchStatus.cancelled => TerminalCard(
           icon: Icons.block,
           color: ArenaColors.silverDim,
