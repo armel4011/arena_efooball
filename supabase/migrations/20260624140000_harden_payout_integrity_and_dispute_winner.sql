@@ -189,7 +189,10 @@ begin
         -- P1.1 : cap dur d'intégrité — ne jamais verser plus que le budget
         -- déclaré (prize_pool_local). Backstop contre une prize_distribution
         -- désynchronisée du pool (ex. édition directe hors wizard).
-        if v_pool is not null and v_paid_total > v_pool then
+        -- Ne s'applique QUE si une cagnotte est réellement déclarée (> 0) :
+        -- prize_pool_local a un défaut 0 ; pool non déclaré ⇒ pas de cap, mais
+        -- l'alerte de subvention (P1.2) reste le filet.
+        if v_pool is not null and v_pool > 0 and v_paid_total > v_pool then
           raise exception 'Versements (%) superieurs a la cagnotte declaree (% %). Verifie la repartition des gains.',
             v_paid_total, v_pool, v_currency
             using errcode = '23514';
