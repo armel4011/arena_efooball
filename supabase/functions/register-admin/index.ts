@@ -26,6 +26,7 @@ import {
   normalizeCode,
   validateRegisterFields,
 } from "./logic.ts";
+import { safeDetail } from "../_shared/errors.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -59,7 +60,10 @@ type ServiceClient = any;
 // Enregistre un échec de redeem (code refusé) pour l'IP. Fail-open : si le
 // backend rate-limit est indisponible, on n'empêche pas un admin légitime —
 // on log seulement.
-async function recordFailure(service: ServiceClient, ip: string): Promise<void> {
+async function recordFailure(
+  service: ServiceClient,
+  ip: string,
+): Promise<void> {
   try {
     await service.rpc("register_admin_record_failure", { p_ip: ip });
   } catch (e) {
@@ -158,7 +162,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
     .maybeSingle();
   if (inviteErr) {
     return jsonResponse(
-      { error: "invitation_lookup_failed", detail: inviteErr.message },
+      {
+        error: "invitation_lookup_failed",
+        detail: safeDetail(inviteErr.message, "register-admin"),
+      },
       500,
     );
   }
@@ -202,7 +209,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
     .maybeSingle();
   if (claimErr) {
     return jsonResponse(
-      { error: "invitation_claim_failed", detail: claimErr.message },
+      {
+        error: "invitation_claim_failed",
+        detail: safeDetail(claimErr.message, "register-admin"),
+      },
       500,
     );
   }
@@ -249,7 +259,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
       return jsonResponse({ error: "password_rejected", detail: msg }, 400);
     }
     return jsonResponse(
-      { error: "auth_create_failed", detail: msg },
+      {
+        error: "auth_create_failed",
+        detail: safeDetail(msg, "register-admin"),
+      },
       500,
     );
   }

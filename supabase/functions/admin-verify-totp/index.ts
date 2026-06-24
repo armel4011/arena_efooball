@@ -35,6 +35,7 @@ import {
   isBackupCodeFormat,
   isSixDigitCode,
 } from "../_shared/auth_guards.ts";
+import { safeDetail } from "../_shared/errors.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -162,7 +163,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
       .eq("id", user.id);
     if (updateErr) {
       return jsonResponse(
-        { error: "backup_consume_failed", detail: updateErr.message },
+        {
+          error: "backup_consume_failed",
+          detail: safeDetail(updateErr.message, "admin-verify-totp"),
+        },
         500,
       );
     }

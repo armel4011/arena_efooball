@@ -27,7 +27,12 @@ import {
   recordTotpFailure,
   recordTotpSuccess,
 } from "../_shared/totp_rate_limit.ts";
-import { hasBearer, isAdminRole, isSixDigitCode } from "../_shared/auth_guards.ts";
+import {
+  hasBearer,
+  isAdminRole,
+  isSixDigitCode,
+} from "../_shared/auth_guards.ts";
+import { safeDetail } from "../_shared/errors.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -143,7 +148,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
     .eq("id", user.id);
   if (updateErr) {
     return jsonResponse(
-      { error: "enable_failed", detail: updateErr.message },
+      {
+        error: "enable_failed",
+        detail: safeDetail(updateErr.message, "verify-totp-setup"),
+      },
       500,
     );
   }

@@ -67,8 +67,14 @@ export async function recordTotpFailure(
     p_user_id: userId,
   });
   if (error) {
+    // Fail-CLOSED (audit 2026-06-24) : si l'enregistrement de l'échec est
+    // indisponible, on NE PEUT PAS prouver que le compteur anti-bruteforce
+    // s'incrémente. Renvoyer un verrou plutôt que `locked:false` évite qu'un
+    // attaquant neutralise le rate-limit en saturant `totp_attempts` pour
+    // tenter les codes sans limite. Un faux verrou transitoire (30 min) sur un
+    // admin légitime est préférable à un bruteforce illimité.
     console.error("[totp-rate-limit] record_failure failed:", error.message);
-    return { locked: false, retryAfterSeconds: 0, attemptsRemaining: 0 };
+    return { locked: true, retryAfterSeconds: 30 * 60, attemptsRemaining: 0 };
   }
   const lockedUntil = data?.locked_until;
   const locked = typeof lockedUntil === "string" && lockedUntil.length > 0;

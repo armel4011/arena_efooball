@@ -1,7 +1,8 @@
 // Tests du rate-limit TOTP (_shared/totp_rate_limit.ts). Le module enrobe des
 // RPC SQL atomiques ; on injecte un faux client `service` pour valider le
-// mapping des réponses ET le comportement fail-open (un rate-limit en panne ne
-// doit pas bloquer un admin légitime).
+// mapping des réponses ET la posture en panne : checkTotpLock = fail-open (ne
+// bloque pas un admin légitime à la lecture du verrou), recordTotpFailure =
+// fail-closed (verrouille si l'incrément d'échec est indisponible, anti-bruteforce).
 //
 // Lancer : deno test --allow-all  (depuis supabase/functions/)
 
@@ -87,10 +88,14 @@ Deno.test("recordTotpFailure → pas encore verrouillé, attempts_remaining mapp
   assertEquals(state.attemptsRemaining, 2);
 });
 
-Deno.test("recordTotpFailure → fail-open si la RPC échoue", async () => {
+Deno.test("recordTotpFailure → fail-CLOSED si la RPC échoue", async () => {
+  // Audit 2026-06-24 : si l'enregistrement de l'échec est indisponible, on
+  // verrouille (fail-closed) pour empêcher un bruteforce illimité par déni du
+  // backend rate-limit. Un faux verrou transitoire est préférable.
   const svc = fakeService(() => ({ error: { message: "db down" } }));
   const state = await recordTotpFailure(svc, "user-1");
-  assertFalse(state.locked);
+  assert(state.locked);
+  assertEquals(state.retryAfterSeconds, 30 * 60);
   assertEquals(state.attemptsRemaining, 0);
 });
 
