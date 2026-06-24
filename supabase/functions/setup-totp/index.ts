@@ -16,6 +16,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.108.2";
 import { generateSecretBase32, otpauthUri } from "../_shared/totp.ts";
 import { hasBearer, isAdminRole } from "../_shared/auth_guards.ts";
+import { safeDetail } from "../_shared/errors.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -103,7 +104,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
     .eq("id", user.id);
   if (updateErr) {
     return jsonResponse(
-      { error: "secret_persist_failed", detail: updateErr.message },
+      {
+        error: "secret_persist_failed",
+        detail: safeDetail(updateErr.message, "setup-totp"),
+      },
       500,
     );
   }
