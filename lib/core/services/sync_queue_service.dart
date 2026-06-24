@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:arena/core/services/network_status_service.dart';
+import 'package:arena/core/utils/error_reporter.dart';
 import 'package:arena/data/repositories/chat_repository.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
 import 'package:arena/data/repositories/notification_repository.dart';
@@ -160,13 +161,15 @@ class MarkNotificationReadAction extends SyncAction {
           // serveur — un read_at plus ancien que celui-ci gagne pas.
           .filter('read_at', 'is', null);
       return true;
-    } catch (e) {
-      if (kDebugMode) debugPrint('[sync] notif.read failed: $e');
-      // RLS denied / row absente = definitif → drop
+    } catch (e, st) {
+      // RLS denied / row absente = definitif → drop (attendu, pas de report).
       if (e is PostgrestException &&
           (e.code == '42501' || e.code == 'PGRST116')) {
         return true;
       }
+      // Échec non-terminal (réseau/serveur) : on remonte pour observabilité,
+      // l'action sera rejouée.
+      unawaited(reportError(e, st, context: 'SyncQueue.markNotificationRead'));
       return false;
     }
   }
@@ -238,8 +241,7 @@ class SendChatMessageAction extends SyncAction {
         'created_at': createdAt.toIso8601String(),
       });
       return true;
-    } catch (e) {
-      if (kDebugMode) debugPrint('[sync] chat.send failed: $e');
+    } catch (e, st) {
       if (e is PostgrestException) {
         // 23505 = unique_violation (deja insere par un flush precedent)
         // → idempotent OK, drop.
@@ -247,6 +249,8 @@ class SendChatMessageAction extends SyncAction {
         // RLS denied = definitif
         if (e.code == '42501') return true;
       }
+      // Échec non-terminal : remonté pour observabilité, action rejouée.
+      unawaited(reportError(e, st, context: 'SyncQueue.sendChatMessage'));
       return false;
     }
   }
@@ -308,13 +312,15 @@ class RegisterFreeCompetitionAction extends SyncAction {
         'status': 'confirmed',
       });
       return true;
-    } catch (e) {
-      if (kDebugMode) debugPrint('[sync] competition.register_free failed: $e');
+    } catch (e, st) {
       if (e is PostgrestException) {
         // 23505 = unique(competition_id, player_id) → deja inscrit, OK.
         // 42501 = RLS denied (devenue payante / pleine) = definitif.
         if (e.code == '23505' || e.code == '42501') return true;
       }
+      // Échec non-terminal : remonté pour observabilité, action rejouée.
+      unawaited(
+          reportError(e, st, context: 'SyncQueue.registerFreeCompetition'));
       return false;
     }
   }
@@ -414,8 +420,10 @@ class SyncQueueService {
         for (final j in list)
           if (SyncAction.fromJson(j as Map<String, dynamic>) case final a?) a,
       ];
-    } catch (e) {
-      if (kDebugMode) debugPrint('[sync] decode queue failed: $e — wiping');
+    } catch (e, st) {
+      // Queue corrompue (JSON illisible) → on purge pour repartir propre.
+      unawaited(reportError(e, st,
+          context: 'SyncQueue.pending', hint: 'queue corrompue — purge'));
       _prefs.remove(_key);
       return const [];
     }
@@ -480,8 +488,7 @@ class SyncQueueService {
 }
 
 /// Provider singleton — attach au boot, dispose en fin de session.
-final syncQueueServiceProvider =
-    FutureProvider<SyncQueueService>((ref) async {
+final syncQueueServiceProvider = FutureProvider<SyncQueueService>((ref) async {
   final prefs = await SharedPreferences.getInstance();
   final svc = SyncQueueService(
     prefs: prefs,
@@ -513,8 +520,7 @@ class OfflineAwareActions {
   final Ref _ref;
 
   bool get _offline =>
-      _ref.read(networkStatusServiceProvider).current ==
-      NetworkStatus.offline;
+      _ref.read(networkStatusServiceProvider).current == NetworkStatus.offline;
 
   Future<void> _enqueue(SyncAction action) async {
     final queue = _ref.read(syncQueueServiceProvider).valueOrNull;
@@ -539,9 +545,7 @@ class OfflineAwareActions {
         ),
       );
     } else {
-      await _ref
-          .read(notificationRepositoryProvider)
-          .markRead(notificationId);
+      await _ref.read(notificationRepositoryProvider).markRead(notificationId);
     }
   }
 
@@ -559,8 +563,7 @@ class OfflineAwareActions {
   }) async {
     final trimmed = content.trim();
     if (trimmed.isEmpty) return false;
-    final capped =
-        trimmed.length > 2000 ? trimmed.substring(0, 2000) : trimmed;
+    final capped = trimmed.length > 2000 ? trimmed.substring(0, 2000) : trimmed;
     if (_offline) {
       await _enqueue(
         SendChatMessageAction(
