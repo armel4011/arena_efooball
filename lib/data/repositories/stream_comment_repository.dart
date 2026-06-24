@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:arena/core/utils/error_reporter.dart';
 import 'package:arena/data/models/stream_comment.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -92,9 +93,18 @@ final streamCommentsProvider = StreamProvider.family
               ...buffer,
               StreamComment.fromJson(row),
             ]);
-          } catch (_) {
-            // payload mal formé — on ignore plutôt que crasher
-            // le stream listener et perdre les messages suivants.
+          } catch (e, st) {
+            // payload mal formé — on ignore plutôt que crasher le stream
+            // listener et perdre les messages suivants ; mais on remonte
+            // l'erreur (drift de schéma = commentaires perdus en silence).
+            unawaited(
+              reportError(
+                e,
+                st,
+                context: 'StreamCommentRepository.onInsert',
+                hint: 'payload mal formé',
+              ),
+            );
           }
         },
       )

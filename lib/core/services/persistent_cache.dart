@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:arena/core/utils/error_reporter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -73,9 +74,8 @@ class PersistentCache {
     try {
       return fromJson(jsonDecode(raw) as Map<String, dynamic>);
     } catch (e, st) {
-      if (kDebugMode) {
-        debugPrint('[cache] readObject($namespace) failed: $e\n$st');
-      }
+      unawaited(reportError(e, st,
+          context: 'PersistentCache.readObject', hint: 'namespace=$namespace'));
       _prefs.remove(_key(namespace));
       return null;
     }
@@ -90,9 +90,9 @@ class PersistentCache {
     try {
       await _prefs.setString(_key(namespace), jsonEncode(toJson(value)));
     } catch (e, st) {
-      if (kDebugMode) {
-        debugPrint('[cache] writeObject($namespace) failed: $e\n$st');
-      }
+      unawaited(reportError(e, st,
+          context: 'PersistentCache.writeObject',
+          hint: 'namespace=$namespace'));
     }
   }
 
@@ -111,9 +111,8 @@ class PersistentCache {
         for (final r in arr) fromJson(r as Map<String, dynamic>),
       ];
     } catch (e, st) {
-      if (kDebugMode) {
-        debugPrint('[cache] readList($namespace) failed: $e\n$st');
-      }
+      unawaited(reportError(e, st,
+          context: 'PersistentCache.readList', hint: 'namespace=$namespace'));
       // Cache corrompu (probable changement de modele non gere par
       // ensureSchema). On supprime pour qu'il se reconstruise propre.
       _prefs.remove(_key(namespace));
@@ -133,9 +132,8 @@ class PersistentCache {
       final arr = [for (final v in values) toJson(v)];
       await _prefs.setString(_key(namespace), jsonEncode(arr));
     } catch (e, st) {
-      if (kDebugMode) {
-        debugPrint('[cache] writeList($namespace) failed: $e\n$st');
-      }
+      unawaited(reportError(e, st,
+          context: 'PersistentCache.writeList', hint: 'namespace=$namespace'));
     }
   }
 
@@ -279,7 +277,8 @@ class PersistentCache {
       // Swallow — l'UI reste figee sur le dernier yield (cache ou
       // derniere donnee live recue avant la coupure).
       if (kDebugMode) {
-        debugPrint('[cache] hydrate($namespace) source error swallowed: $e\n$st');
+        debugPrint(
+            '[cache] hydrate($namespace) source error swallowed: $e\n$st');
       }
     }
   }
@@ -303,7 +302,8 @@ class PersistentCache {
       }
     } catch (e, st) {
       if (kDebugMode) {
-        debugPrint('[cache] hydrateSingle($namespace) source error swallowed: $e\n$st');
+        debugPrint(
+            '[cache] hydrateSingle($namespace) source error swallowed: $e\n$st');
       }
     }
   }
@@ -327,18 +327,18 @@ class PersistentCache {
     try {
       raw = await _secure.read(key: _secureKey(namespace));
     } catch (e, st) {
-      if (kDebugMode) {
-        debugPrint('[cache] readObjectSecure($namespace) read failed: $e\n$st');
-      }
+      unawaited(reportError(e, st,
+          context: 'PersistentCache.readObjectSecure.read',
+          hint: 'namespace=$namespace'));
       return null;
     }
     if (raw == null) return null;
     try {
       return fromJson(jsonDecode(raw) as Map<String, dynamic>);
     } catch (e, st) {
-      if (kDebugMode) {
-        debugPrint('[cache] readObjectSecure($namespace) decode failed: $e\n$st');
-      }
+      unawaited(reportError(e, st,
+          context: 'PersistentCache.readObjectSecure.decode',
+          hint: 'namespace=$namespace'));
       unawaited(_secure.delete(key: _secureKey(namespace)));
       return null;
     }
@@ -356,9 +356,9 @@ class PersistentCache {
         value: jsonEncode(toJson(value)),
       );
     } catch (e, st) {
-      if (kDebugMode) {
-        debugPrint('[cache] writeObjectSecure($namespace) failed: $e\n$st');
-      }
+      unawaited(reportError(e, st,
+          context: 'PersistentCache.writeObjectSecure',
+          hint: 'namespace=$namespace'));
     }
   }
 
@@ -421,7 +421,8 @@ class PersistentCache {
       }
     } catch (e, st) {
       if (kDebugMode) {
-        debugPrint('[cache] hydratePairs($namespace) source error swallowed: $e\n$st');
+        debugPrint(
+            '[cache] hydratePairs($namespace) source error swallowed: $e\n$st');
       }
     }
   }

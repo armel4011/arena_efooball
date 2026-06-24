@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:arena/core/services/persistent_cache.dart';
+import 'package:arena/core/utils/error_reporter.dart';
 import 'package:arena/core/utils/poll_stream.dart';
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
@@ -92,8 +93,7 @@ class CompetitionRepository {
   }
 
   Future<Competition?> getById(String id) async {
-    final row =
-        await _client.from(_table).select().eq('id', id).maybeSingle();
+    final row = await _client.from(_table).select().eq('id', id).maybeSingle();
     if (row == null) return null;
     return Competition.fromJson(row);
   }
@@ -184,7 +184,9 @@ class CompetitionRepository {
         .from('competition_registrations')
         .select('player_id, final_rank')
         .eq('competition_id', competitionId);
-    final regs = [for (final r in rows as List<dynamic>) r as Map<String, dynamic>];
+    final regs = [
+      for (final r in rows as List<dynamic>) r as Map<String, dynamic>
+    ];
 
     // Les profils joueurs sont résolus via la vue publique `public_profiles`
     // (la table `profiles` est restreinte à self+admin — fix C-1 résiduel).
@@ -203,7 +205,8 @@ class CompetitionRepository {
     }
 
     final list = [
-      for (final row in regs) _mapRankingEntry(row, profilesById[row['player_id']]),
+      for (final row in regs)
+        _mapRankingEntry(row, profilesById[row['player_id']]),
     ]..sort((a, b) {
         // Les non-classés tombent en fin de liste.
         final ra = a.finalRank ?? 1 << 30;
@@ -295,11 +298,12 @@ class CompetitionRepository {
         .from('competition_registrations')
         .stream(primaryKey: ['competition_id', 'player_id'])
         .eq('player_id', userId)
-        .map((rows) => {
-              for (final r in rows)
-                if (r['status'] == 'confirmed')
-                  r['competition_id'] as String,
-            },);
+        .map(
+          (rows) => {
+            for (final r in rows)
+              if (r['status'] == 'confirmed') r['competition_id'] as String,
+          },
+        );
   }
 }
 
@@ -319,9 +323,8 @@ final competitionRepositoryProvider = Provider<CompetitionRepository>((ref) {
 /// (PersistentCache) et réémise instantanément au prochain démarrage —
 /// la page Compétitions s'affiche immediatement avec la liste connue,
 /// le poll/stream remplace dans la seconde si du nouveau est arrivé.
-final competitionsListProvider =
-    StreamProvider.family.autoDispose<List<Competition>, GameType?>(
-        (ref, game) async* {
+final competitionsListProvider = StreamProvider.family
+    .autoDispose<List<Competition>, GameType?>((ref, game) async* {
   final repo = ref.watch(competitionRepositoryProvider);
   final source = pollStream(
     const Duration(seconds: 60),
@@ -354,18 +357,16 @@ final competitionByIdProvider =
 /// Classement général final d'une compétition (lecture seule côté
 /// joueur). `FutureProvider` — pas de Realtime en V1.0, on invalide au
 /// pull-to-refresh, comme les standings de poule.
-final competitionRankingProvider =
-    FutureProvider.family.autoDispose<List<CompetitionRankingEntry>, String>(
-        (ref, competitionId) {
+final competitionRankingProvider = FutureProvider.family
+    .autoDispose<List<CompetitionRankingEntry>, String>((ref, competitionId) {
   return ref.watch(competitionRepositoryProvider).getRanking(competitionId);
 });
 
 /// Participants inscrits à une compétition (onglet PARTICIPANTS). Même
 /// posture que le classement : `FutureProvider`, invalidation au
 /// pull-to-refresh, pas de Realtime en V1.0.
-final competitionParticipantsProvider =
-    FutureProvider.family.autoDispose<List<CompetitionParticipant>, String>(
-        (ref, competitionId) {
+final competitionParticipantsProvider = FutureProvider.family
+    .autoDispose<List<CompetitionParticipant>, String>((ref, competitionId) {
   return ref
       .watch(competitionRepositoryProvider)
       .getParticipants(competitionId);
@@ -402,9 +403,18 @@ final myRegisteredCompetitionIdsProvider =
       yield ids;
       unawaited(cache.writeList<String>(ns, ids.toList(), (s) => {'id': s}));
     }
-  } catch (e) {
-    if (kDebugMode) {
-      debugPrint('[cache] my_registered_comps stream error swallowed: $e');
+  } catch (e, st) {
+    // Offline-safe : on avale les coupures réseau (la liste reste figée).
+    // Mais une erreur NON-offline (RLS, parsing) est un vrai bug → on la
+    // remonte pour observabilité au lieu de la perdre silencieusement.
+    if (!PersistentCache.isOfflineError(e)) {
+      unawaited(
+        reportError(
+          e,
+          st,
+          context: 'CompetitionRepository.myRegisteredIds_stream',
+        ),
+      );
     }
   }
 });
