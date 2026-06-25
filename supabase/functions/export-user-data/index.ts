@@ -20,6 +20,14 @@
 // =============================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.108.2";
+import {
+  buildExportBundle,
+  disputesOrFilter,
+  exportFilename,
+  hasBearerToken,
+  matchesOrFilter,
+  stripSensitiveProfileFields,
+} from "./logic.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -51,7 +59,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
 
   const authHeader = req.headers.get("Authorization") ?? "";
-  if (!authHeader.startsWith("Bearer ")) {
+  if (!hasBearerToken(authHeader)) {
     return jsonResponse({ error: "unauthenticated" }, 401);
   }
 
@@ -84,22 +92,19 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (profileErr || !profile) {
     return jsonResponse({ error: "profile_not_found" }, 404);
   }
-  delete (profile as Record<string, unknown>).totp_secret;
-  delete (profile as Record<string, unknown>).backup_codes;
+  stripSensitiveProfileFields(profile as Record<string, unknown>);
 
   // Pour les matchs, le user peut être player1, player2, home, ou winner.
   // On utilise `or` Supabase pour récupérer en une requête.
   const matchesQ = service
     .from("matches")
     .select("*")
-    .or(
-      `player1_id.eq.${userId},player2_id.eq.${userId},home_player_id.eq.${userId},winner_id.eq.${userId}`,
-    );
+    .or(matchesOrFilter(userId));
 
   const disputesQ = service
     .from("disputes")
     .select("*")
-    .or(`opened_by.eq.${userId},guilty_party_id.eq.${userId}`);
+    .or(disputesOrFilter(userId));
 
   // Requêtes parallèles (latence cumulée vs séquentielle).
   const [
@@ -126,26 +131,21 @@ Deno.serve(async (req: Request): Promise<Response> => {
     service.from("reintegration_requests").select("*").eq("user_id", userId),
   ]);
 
-  const bundle = {
-    format: "1.0",
-    exportedAt: new Date().toISOString(),
-    userId,
-    profile,
-    competitionRegistrations: registrations.data ?? [],
-    matches: matches.data ?? [],
-    payments: payments.data ?? [],
-    payouts: payouts.data ?? [],
-    notifications: notifications.data ?? [],
-    disputes: disputes.data ?? [],
-    streams: streams.data ?? [],
-    chatMessages: chatMessages.data ?? [],
-    antiCheatEvents: antiCheatEvents.data ?? [],
-    reintegrationRequests: reintegrationRequests.data ?? [],
-  };
+  const nowIso = new Date().toISOString();
+  const bundle = buildExportBundle(userId, nowIso, profile, {
+    registrations: registrations.data,
+    matches: matches.data,
+    payments: payments.data,
+    payouts: payouts.data,
+    notifications: notifications.data,
+    disputes: disputes.data,
+    streams: streams.data,
+    chatMessages: chatMessages.data,
+    antiCheatEvents: antiCheatEvents.data,
+    reintegrationRequests: reintegrationRequests.data,
+  });
 
-  const filename = `arena-data-${userId}-${
-    new Date().toISOString().slice(0, 10)
-  }.json`;
+  const filename = exportFilename(userId, nowIso);
   return new Response(JSON.stringify(bundle, null, 2), {
     status: 200,
     headers: {
