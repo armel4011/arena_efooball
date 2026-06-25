@@ -32,13 +32,15 @@ insert into profiles(id,username,email,country_code,referral_code,role,is_active
   ('5a5a5a5a-0000-0000-0000-0000000000a3','pay_c','pc@ci.invalid','CI','PA3','player',true),
   ('5a5a5a5a-0000-0000-0000-0000000000a4','pay_d','pd@ci.invalid','CI','PA4','player',true);
 
+-- Cagnotte déclarée (prize_pool_local = somme des prix) — exigée par
+-- generate_payouts dès qu'il y a des prix (durcissement 2026-06-25).
 -- c1 : terminée, prix [50000, 20000, 0, 0], classement publié (rangs 1-4)
-insert into competitions(id,name,game,format,status,start_date,max_players,registration_fee,registration_currency,prize_distribution) values
-  ('5b5b5b5b-0000-0000-0000-000000000001','PAY','efootball','single_elimination','completed',now()-interval '1 day',4,1000,'XAF','[50000, 20000, 0, 0]'::jsonb),
+insert into competitions(id,name,game,format,status,start_date,max_players,registration_fee,registration_currency,prize_pool_local,prize_distribution) values
+  ('5b5b5b5b-0000-0000-0000-000000000001','PAY','efootball','single_elimination','completed',now()-interval '1 day',4,1000,'XAF',70000,'[50000, 20000, 0, 0]'::jsonb),
   -- c2 : encore en cours
-  ('5b5b5b5b-0000-0000-0000-000000000002','PAYONG','efootball','single_elimination','ongoing',now()-interval '1 hour',4,1000,'XAF','[50000, 0, 0, 0]'::jsonb),
+  ('5b5b5b5b-0000-0000-0000-000000000002','PAYONG','efootball','single_elimination','ongoing',now()-interval '1 hour',4,1000,'XAF',50000,'[50000, 0, 0, 0]'::jsonb),
   -- c3 : terminée, prix prévus, MAIS classement non publié (final_rank null)
-  ('5b5b5b5b-0000-0000-0000-000000000003','PAYNORANK','efootball','single_elimination','completed',now()-interval '1 hour',4,1000,'XAF','[50000, 0, 0, 0]'::jsonb);
+  ('5b5b5b5b-0000-0000-0000-000000000003','PAYNORANK','efootball','single_elimination','completed',now()-interval '1 hour',4,1000,'XAF',50000,'[50000, 0, 0, 0]'::jsonb);
 insert into competition_registrations(competition_id,player_id,status,final_rank) values
   ('5b5b5b5b-0000-0000-0000-000000000001','5a5a5a5a-0000-0000-0000-0000000000a1','confirmed',1),
   ('5b5b5b5b-0000-0000-0000-000000000001','5a5a5a5a-0000-0000-0000-0000000000a2','confirmed',2),
