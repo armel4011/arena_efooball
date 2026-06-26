@@ -2571,6 +2571,18 @@ class AppLocalizationsAr extends AppLocalizations {
       'يردّ فريق ARENA هنا. صف مشكلتك وسنعود إليك في أقرب وقت.';
 
   @override
+  String get supportOptionsTitle => 'التواصل مع الدعم';
+
+  @override
+  String get supportOptionChat => 'الدردشة مع الفريق';
+
+  @override
+  String get supportOptionChatSubtitle => 'الرد داخل التطبيق، نعود إليك بسرعة';
+
+  @override
+  String get supportOptionEmail => 'إرسال بريد إلكتروني';
+
+  @override
   String get settingsAboutTitle => 'حول';
 
   @override

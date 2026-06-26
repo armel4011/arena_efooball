@@ -4996,6 +4996,30 @@ abstract class AppLocalizations {
   /// **'L\'équipe ARENA vous répond ici. Décrivez votre souci, nous revenons vers vous au plus vite.'**
   String get supportChatEmptyDescription;
 
+  /// No description provided for @supportOptionsTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Contacter le support'**
+  String get supportOptionsTitle;
+
+  /// No description provided for @supportOptionChat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Discuter avec l\'équipe'**
+  String get supportOptionChat;
+
+  /// No description provided for @supportOptionChatSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réponse dans l\'app, on revient vite'**
+  String get supportOptionChatSubtitle;
+
+  /// No description provided for @supportOptionEmail.
+  ///
+  /// In fr, this message translates to:
+  /// **'Écrire un e-mail'**
+  String get supportOptionEmail;
+
   /// No description provided for @settingsAboutTitle.
   ///
   /// In fr, this message translates to:

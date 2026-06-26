@@ -1,30 +1,57 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
+import 'package:arena/features_user/profile/support_options_sheet.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-/// PHASE 9.5 — static "About" screen with version + legal links.
+/// PHASE 9.5 — "About" screen with version + legal links.
 ///
 /// Mirrors `arena_v2.html` #28 — branded ARENA wordmark, mission card,
-/// 5-row link list. The actual page handlers (CGU, Privacy, Cookies,
-/// Support, marketing site) ship in PHASE 12.5 alongside the legal copy
-/// hosted on `arena.app`. This screen is reachable from `SettingsPage`.
+/// link list. Les pages légales/site sont hébergées sur `arena237.com`
+/// (ouvertes via `url_launcher`) ; le lien Support ouvre le fil de support
+/// in-app (« Contact / Aide »). Reachable from `SettingsPage`.
 ///
 /// Maps to screen #28 of `arena_v2.html`.
 class AboutPage extends StatelessWidget {
   const AboutPage({super.key});
 
-  static const _version = '1.0.0';
-  static const _build = '4287';
+  // Tenu à jour avec `pubspec.yaml` (version: x.y.z+build) à chaque release.
+  static const _version = '1.0.8';
+  static const _build = '9';
+
+  /// Base du site vitrine déployé (cf. landing/upload-site.ps1).
+  static const _siteBase = 'https://arena237.com';
 
   static const _links = <_AboutLink>[
-    _AboutLink(emoji: '📜', id: _AboutLinkId.cgu),
-    _AboutLink(emoji: '🔒', id: _AboutLinkId.privacy),
-    _AboutLink(emoji: '🍪', id: _AboutLinkId.cookies),
+    _AboutLink(
+      emoji: '📜',
+      id: _AboutLinkId.cgu,
+      url: '$_siteBase/conditions/',
+      external: true,
+    ),
+    _AboutLink(
+      emoji: '🔒',
+      id: _AboutLinkId.privacy,
+      url: '$_siteBase/confidentialite/',
+      external: true,
+    ),
+    // Pas de page Cookies dédiée → repli sur la Politique de confidentialité.
+    _AboutLink(
+      emoji: '🍪',
+      id: _AboutLinkId.cookies,
+      url: '$_siteBase/confidentialite/',
+      external: true,
+    ),
     _AboutLink(emoji: '📞', id: _AboutLinkId.support),
-    _AboutLink(emoji: '📱', id: _AboutLinkId.site, external: true),
+    _AboutLink(
+      emoji: '📱',
+      id: _AboutLinkId.site,
+      url: _siteBase,
+      external: true,
+    ),
   ];
 
   @override
@@ -128,11 +155,15 @@ class _AboutLink {
   const _AboutLink({
     required this.emoji,
     required this.id,
+    this.url,
     this.external = false,
   });
 
   final String emoji;
   final _AboutLinkId id;
+
+  /// URL externe à ouvrir (null pour le Support → navigation in-app).
+  final String? url;
   final bool external;
 
   /// Localized label for the link row.
@@ -240,13 +271,25 @@ class _LinksCard extends StatelessWidget {
     );
   }
 
-  void _onLinkTap(BuildContext context, _AboutLink link) {
-    // Real handlers (url_launcher / in-app webview) ship in PHASE 12.5.
+  Future<void> _onLinkTap(BuildContext context, _AboutLink link) async {
+    // Support → sélecteur de canaux (chat in-app + e-mail).
+    if (link.id == _AboutLinkId.support) {
+      await showSupportOptionsSheet(context);
+      return;
+    }
+    // Liens légaux / site → ouverture externe (arena237.com).
+    final url = link.url;
+    if (url == null) return;
     final l10n = AppLocalizations.of(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(l10n.aboutLinkComingSoon(link.labelOf(l10n))),
-      ),
+    final messenger = ScaffoldMessenger.of(context);
+    final ok = await launchUrl(
+      Uri.parse(url),
+      mode: LaunchMode.externalApplication,
     );
+    if (!ok) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.aboutLinkComingSoon(link.labelOf(l10n)))),
+      );
+    }
   }
 }

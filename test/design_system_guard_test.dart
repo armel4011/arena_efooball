@@ -70,7 +70,10 @@ void main() {
   // Aide » (écran user support_chat_page + entrée settings, boîte+fil admin
   // mobile super_admin_support_inbox/thread + action users, page desktop
   // desktop_support_page maître-détail). 0 vrai Colors.* ajouté (tous des tokens).
-  const colorsDotBaseline = 2306; // occurrences de `Colors.`
+  // 2306 → 2310 le 2026-06-27 : +4 `ArenaColors.*` nets du sélecteur de support
+  // partagé (support_options_sheet : chat + e-mail) réutilisé par À propos et
+  // Réglages. 0 vrai Colors.* ajouté (tous des tokens).
+  const colorsDotBaseline = 2310; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.

@@ -2601,6 +2601,19 @@ class AppLocalizationsFr extends AppLocalizations {
       'L\'équipe ARENA vous répond ici. Décrivez votre souci, nous revenons vers vous au plus vite.';
 
   @override
+  String get supportOptionsTitle => 'Contacter le support';
+
+  @override
+  String get supportOptionChat => 'Discuter avec l\'équipe';
+
+  @override
+  String get supportOptionChatSubtitle =>
+      'Réponse dans l\'app, on revient vite';
+
+  @override
+  String get supportOptionEmail => 'Écrire un e-mail';
+
+  @override
   String get settingsAboutTitle => 'À propos';
 
   @override
