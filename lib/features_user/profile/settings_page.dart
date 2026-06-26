@@ -8,6 +8,7 @@ import 'package:arena/features_shared/widgets/arena_card.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/language_switcher.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
+import 'package:arena/features_user/profile/support_options_sheet.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -506,7 +507,7 @@ class _HelpSection extends ConsumerWidget {
               Icons.support_agent_outlined,
               color: ArenaColors.textMuted,
             ),
-            title: Text(l10n.supportChatTitle),
+            title: Text(l10n.settingsSupportTitle),
             subtitle: Text(
               l10n.settingsContactSupportSubtitle,
               style: ArenaTypography.bodySmall.copyWith(
@@ -514,25 +515,7 @@ class _HelpSection extends ConsumerWidget {
               ),
             ),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push(UserRoutes.supportChat),
-          ),
-          const _Divider(),
-          ListTile(
-            leading:
-                const Icon(Icons.help_outline, color: ArenaColors.textMuted),
-            title: Text(l10n.settingsSupportTitle),
-            subtitle: Text(
-              'support@arena.gg',
-              style: ArenaTypography.bodySmall.copyWith(
-                color: ArenaColors.textMuted,
-              ),
-            ),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('support@arena.gg')),
-              );
-            },
+            onTap: () => showSupportOptionsSheet(context),
           ),
           const _Divider(),
           ListTile(
