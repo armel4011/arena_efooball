@@ -55,10 +55,10 @@ select throws_ok(
   $$ select public.reprogram_competition('dd000000-0000-0000-0000-00000000c0a3', now()+interval '3 days') $$,
   '42501', NULL, 'reprogrammation refusée sur une compétition completed');
 
--- ─── Refus : date dans le passé ─────────────────────────────────────
+-- ─── Refus : date dans le passé (RAISE sans errcode → P0001) ────────
 select throws_ok(
   $$ select public.reprogram_competition('dd000000-0000-0000-0000-00000000c0a1', now()-interval '1 hour') $$,
-  'reprogrammation refusée avec une date passée');
+  'P0001', NULL, 'reprogrammation refusée avec une date passée');
 
 select * from finish();
 rollback;
