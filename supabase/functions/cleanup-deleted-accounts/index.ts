@@ -26,6 +26,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.108.2";
 import type { ServiceClient } from "../_shared/db.ts";
 import { timingSafeEqual } from "../_shared/timing.ts";
+import { safeDetail } from "../_shared/errors.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -113,7 +114,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     .limit(100);
   if (queryErr) {
     return jsonResponse(
-      { error: "candidates_lookup_failed", detail: queryErr.message },
+      { error: "candidates_lookup_failed", detail: safeDetail(queryErr.message, "cleanup-deleted-accounts") },
       500,
     );
   }

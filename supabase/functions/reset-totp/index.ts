@@ -20,6 +20,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.108.2";
 import { consumeBackupCodeHashed, verifyTotp } from "../_shared/totp.ts";
+import { safeDetail } from "../_shared/errors.ts";
 import {
   checkTotpLock,
   lockedBody,
@@ -160,7 +161,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     .eq("id", user.id);
   if (clearErr) {
     return jsonResponse(
-      { error: "reset_failed", detail: clearErr.message },
+      { error: "reset_failed", detail: safeDetail(clearErr.message, "reset-totp") },
       500,
     );
   }
