@@ -70,11 +70,97 @@ class UpcomingMatchesScroller extends ConsumerWidget {
   }
 }
 
+/// Liste VERTICALE pleine largeur des matchs actifs du joueur — utilisée par
+/// l'onglet « Prochain match » de la page compétitions. Même source que
+/// [UpcomingMatchesScroller] (`myActiveMatchesProvider` + profils opponents),
+/// triée par `scheduled_at` côté repository (le prochain match en tête).
+class UpcomingMatchesList extends ConsumerWidget {
+  const UpcomingMatchesList({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final me = ref.watch(currentSessionProvider)?.user.id;
+    final matchesAsync = ref.watch(myActiveMatchesProvider);
+
+    return matchesAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(ArenaSpacing.lg),
+          child: HomeErrorRow(message: l10n.upcomingMatchesError(e)),
+        ),
+      ),
+      data: (matches) {
+        if (matches.isEmpty || me == null) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(ArenaSpacing.xl),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.event_available_outlined,
+                    color: ArenaColors.silver,
+                    size: 40,
+                  ),
+                  const SizedBox(height: ArenaSpacing.sm),
+                  Text(
+                    l10n.upcomingMatchesEmpty,
+                    style: ArenaText.bodyMuted,
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        final opponentIds = <String>{
+          for (final m in matches)
+            if (m.player1Id == me && m.player2Id != null) m.player2Id!
+            else if (m.player2Id == me && m.player1Id != null) m.player1Id!
+            else if (m.player1Id != null && m.player1Id != me) m.player1Id!
+            else if (m.player2Id != null && m.player2Id != me) m.player2Id!,
+        };
+        final key = (opponentIds.toList()..sort()).join(',');
+        final peersAsync = ref.watch(profilesByIdsProvider(key));
+        final peers = peersAsync.maybeWhen(
+          data: (m) => m,
+          orElse: () => const <String, Profile>{},
+        );
+        return ListView.separated(
+          padding: const EdgeInsets.all(ArenaSpacing.lg),
+          itemCount: matches.length,
+          separatorBuilder: (_, __) => const SizedBox(height: ArenaSpacing.sm),
+          itemBuilder: (ctx, i) {
+            final m = matches[i];
+            final opponentId = m.player1Id == me ? m.player2Id : m.player1Id;
+            final opponent = opponentId == null ? null : peers[opponentId];
+            return _UpcomingMatchCard(
+              match: m,
+              opponent: opponent,
+              fullWidth: true,
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
 class _UpcomingMatchCard extends StatelessWidget {
-  const _UpcomingMatchCard({required this.match, required this.opponent});
+  const _UpcomingMatchCard({
+    required this.match,
+    required this.opponent,
+    this.fullWidth = false,
+  });
 
   final ArenaMatch match;
   final Profile? opponent;
+
+  /// Carte pleine largeur (liste verticale de l'onglet « Prochain match »)
+  /// vs largeur fixe 200 (scroller horizontal de la home).
+  final bool fullWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -92,7 +178,7 @@ class _UpcomingMatchCard extends StatelessWidget {
       onTap: () => context.push(UserRoutes.matchPath(match.id)),
       borderRadius: BorderRadius.circular(ArenaRadius.lg),
       child: Container(
-        width: 200,
+        width: fullWidth ? double.infinity : 200,
         padding: const EdgeInsets.all(ArenaSpacing.sm),
         decoration: glow
             ? arenaGlowCardDecoration()

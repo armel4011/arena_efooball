@@ -11,6 +11,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -34,6 +35,12 @@ Future<void> bootstrap({
       appName: appName,
       bundleId: bundleId,
     );
+
+    // Charge les symboles de date FR (noms de jours/mois) pour `DateFormat`
+    // avec locale 'fr' — sinon les formats EEEE/MMM tombent en fallback en_US.
+    // Auparavant initialisé seulement dans les tests ; requis au runtime pour
+    // l'affichage relatif des dates (« Aujourd'hui », « Mardi 30 juin »).
+    await initializeDateFormatting('fr', null);
 
     // ─── Critical path : on attend SharedPreferences (flag `has_seen_
     // splash_v1`) + .env + Supabase + Firebase avant `runApp`. Tous sont
