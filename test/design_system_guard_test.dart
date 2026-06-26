@@ -65,9 +65,15 @@ void main() {
   // « à reprogrammer » de la liste user. 0 vrai Colors.* ajouté (token).
   const colorsDotBaseline = 2254; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
+  // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
+  // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.
+  // Le design system fournit ArenaText — toute NOUVELLE occurrence doit le
+  // remplacer. NE JAMAIS AUGMENTER ; faire décroître via migration vers ArenaText.
+  const googleFontsBaseline = 185; // occurrences de `GoogleFonts.`
 
   final colorsDotRe = RegExp(r'Colors\.');
   final colorHexRe = RegExp(r'Color\(0x');
+  final googleFontsRe = RegExp(r'GoogleFonts\.');
 
   bool isExcluded(String path) {
     final p = path.replaceAll(r'\', '/');
@@ -77,9 +83,10 @@ void main() {
         p.endsWith('.freezed.dart');
   }
 
-  ({int colorsDot, int colorHex, int files}) scan() {
+  ({int colorsDot, int colorHex, int googleFonts, int files}) scan() {
     var colorsDot = 0;
     var colorHex = 0;
+    var googleFonts = 0;
     var files = 0;
     final libDir = Directory('lib');
     for (final entity in libDir.listSync(recursive: true)) {
@@ -89,8 +96,14 @@ void main() {
       final content = entity.readAsStringSync();
       colorsDot += colorsDotRe.allMatches(content).length;
       colorHex += colorHexRe.allMatches(content).length;
+      googleFonts += googleFontsRe.allMatches(content).length;
     }
-    return (colorsDot: colorsDot, colorHex: colorHex, files: files);
+    return (
+      colorsDot: colorsDot,
+      colorHex: colorHex,
+      googleFonts: googleFonts,
+      files: files,
+    );
   }
 
   test('design system : pas de nouveaux usages directs de Colors.* (ratchet)', () {
@@ -114,6 +127,19 @@ void main() {
           'Couleurs hexadécimales en dur `Color(0x...)` hors lib/core/theme : '
           '${r.colorHex} > baseline $colorHexBaseline. Déclare la couleur dans '
           '`ArenaColors` et référence-la. Si tu as réduit la dette, baisse la baseline.',
+    );
+  });
+
+  test('design system : pas de nouveaux GoogleFonts.* inline (ratchet)', () {
+    final r = scan();
+    expect(
+      r.googleFonts,
+      lessThanOrEqualTo(googleFontsBaseline),
+      reason:
+          'Usages directs de `GoogleFonts.*` hors lib/core/theme : '
+          '${r.googleFonts} > baseline $googleFontsBaseline. Utilise `ArenaText` '
+          '(centralisé dans lib/core/theme/) plutôt que GoogleFonts inline. '
+          'Si tu as VRAIMENT réduit la dette, baisse la baseline.',
     );
   });
 }
