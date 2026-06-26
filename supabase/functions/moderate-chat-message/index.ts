@@ -19,6 +19,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.108.2";
 import { timingSafeEqual } from "../_shared/timing.ts";
+import { safeDetail } from "../_shared/errors.ts";
 import { type BannedWord, scanMessage } from "./logic.ts";
 
 const corsHeaders = {
@@ -108,7 +109,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     .select("word, language, severity, category");
   if (bannedErr) {
     return jsonResponse(
-      { error: "banned_words_lookup_failed", detail: bannedErr.message },
+      { error: "banned_words_lookup_failed", detail: safeDetail(bannedErr.message, "moderate-chat-message") },
       500,
     );
   }
@@ -137,7 +138,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     .eq("id", msg.id);
   if (updateErr) {
     return jsonResponse(
-      { error: "moderation_update_failed", detail: updateErr.message },
+      { error: "moderation_update_failed", detail: safeDetail(updateErr.message, "moderate-chat-message") },
       500,
     );
   }

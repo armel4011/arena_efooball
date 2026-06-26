@@ -29,6 +29,7 @@
 // =============================================================================
 
 import { timingSafeEqual } from "../_shared/timing.ts";
+import { safeDetail } from "../_shared/errors.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -242,7 +243,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   });
   if (!result.ok) {
     return jsonResponse(
-      { error: "resend_send_failed", status: result.status, detail: result.body },
+      { error: "resend_send_failed", status: result.status, detail: safeDetail(result.body, "send-transactional-email") },
       502,
     );
   }

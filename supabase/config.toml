@@ -450,6 +450,9 @@ verify_jwt = true
 [functions."admin-verify-totp"]
 verify_jwt = true
 
+[functions."reset-totp"]
+verify_jwt = true
+
 # ─── Webhooks / crons / flux pré-auth (pas de JWT user) ─────────────────────
 
 [functions.dispatch_notification]

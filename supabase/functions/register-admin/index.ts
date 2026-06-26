@@ -299,7 +299,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       return jsonResponse({ error: "username_already_taken" }, 409);
     }
     return jsonResponse(
-      { error: "profile_insert_failed", detail },
+      { error: "profile_insert_failed", detail: safeDetail(detail, "register-admin") },
       500,
     );
   }

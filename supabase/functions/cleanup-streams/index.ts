@@ -22,6 +22,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.108.2";
 import type { ServiceClient } from "../_shared/db.ts";
 import { timingSafeEqual } from "../_shared/timing.ts";
+import { safeDetail } from "../_shared/errors.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -151,7 +152,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       .in("id", staleIds);
     if (updErr) {
       return jsonResponse(
-        { error: "stale_stream_close_failed", detail: updErr.message },
+        { error: "stale_stream_close_failed", detail: safeDetail(updErr.message, "cleanup-streams") },
         500,
       );
     }
@@ -175,7 +176,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     .limit(50); // batch ; cron tourne chaque heure → catch-up rapide
   if (omErr) {
     return jsonResponse(
-      { error: "old_matches_lookup_failed", detail: omErr.message },
+      { error: "old_matches_lookup_failed", detail: safeDetail(omErr.message, "cleanup-streams") },
       500,
     );
   }

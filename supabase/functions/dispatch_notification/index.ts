@@ -34,6 +34,7 @@ import {
   sendApnsVoipPush,
 } from '../_shared/apns.ts';
 import { timingSafeEqual } from '../_shared/timing.ts';
+import { safeDetail } from '../_shared/errors.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -151,7 +152,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   if (profileErr) {
     return jsonResponse(
-      { error: 'profile_lookup_failed', detail: profileErr.message },
+      { error: 'profile_lookup_failed', detail: safeDetail(profileErr.message, 'dispatch_notification') },
       500,
     );
   }
@@ -201,7 +202,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
           // sinon → fall through vers la branche FCM ci-dessous
         } else {
           return jsonResponse(
-            { error: 'apns_send_failed', detail: String(e) },
+            { error: 'apns_send_failed', detail: safeDetail(String(e), 'dispatch_notification') },
             500,
           );
         }
@@ -270,7 +271,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       });
     }
     return jsonResponse(
-      { error: 'fcm_send_failed', detail: String(e) },
+      { error: 'fcm_send_failed', detail: safeDetail(String(e), 'dispatch_notification') },
       500,
     );
   }
