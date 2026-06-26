@@ -66,13 +66,20 @@ void main() {
   // 2254 → 2257 le 2026-06-26 : +3 `ArenaColors.*` de l'onglet « Prochain match »
   // (accent signalBlue + textMuted du Tab, silver de l'empty state de la liste).
   // 0 vrai Colors.* ajouté (tous des tokens).
-  const colorsDotBaseline = 2257; // occurrences de `Colors.`
+  // 2257 → 2306 le 2026-06-26 : +49 `ArenaColors.*` du fil de support « Contact /
+  // Aide » (écran user support_chat_page + entrée settings, boîte+fil admin
+  // mobile super_admin_support_inbox/thread + action users, page desktop
+  // desktop_support_page maître-détail). 0 vrai Colors.* ajouté (tous des tokens).
+  const colorsDotBaseline = 2306; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.
   // Le design system fournit ArenaText — toute NOUVELLE occurrence doit le
   // remplacer. NE JAMAIS AUGMENTER ; faire décroître via migration vers ArenaText.
-  const googleFontsBaseline = 185; // occurrences de `GoogleFonts.`
+  // 185 → 192 le 2026-06-26 : +7 `GoogleFonts.spaceGrotesk` de la page desktop
+  // du support (desktop_support_page) — même convention Fluent que les autres
+  // pages desktop (desktop_chat_thread_page). À migrer vers ArenaText à terme.
+  const googleFontsBaseline = 192; // occurrences de `GoogleFonts.`
 
   final colorsDotRe = RegExp(r'Colors\.');
   final colorHexRe = RegExp(r'Color\(0x');

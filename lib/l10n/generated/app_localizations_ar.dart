@@ -2555,6 +2555,22 @@ class AppLocalizationsAr extends AppLocalizations {
   String get settingsSupportTitle => 'الدعم';
 
   @override
+  String get settingsContactSupportSubtitle => 'تحدّث مع فريق ARENA';
+
+  @override
+  String get supportChatTitle => 'التواصل / المساعدة';
+
+  @override
+  String get supportChatHeaderSubtitle => 'فريق ARENA';
+
+  @override
+  String get supportChatEmptyTitle => 'لديك سؤال؟ راسلنا';
+
+  @override
+  String get supportChatEmptyDescription =>
+      'يردّ فريق ARENA هنا. صف مشكلتك وسنعود إليك في أقرب وقت.';
+
+  @override
   String get settingsAboutTitle => 'حول';
 
   @override

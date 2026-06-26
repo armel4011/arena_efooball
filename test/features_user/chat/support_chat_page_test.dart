@@ -1,10 +1,9 @@
 import 'dart:io';
 
-import 'package:arena/data/models/chat_channel.dart';
 import 'package:arena/data/models/chat_message.dart';
 import 'package:arena/data/repositories/chat_repository.dart';
-import 'package:arena/features_user/auth/auth_providers.dart';
-import 'package:arena/features_user/chat/chat_page.dart';
+import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
+import 'package:arena/features_user/chat/support_chat_page.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,9 +11,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 
 const _selfId = 'self-id';
-const _opponentId = 'opponent-id';
-const _channelId = 'channel-1';
-const _matchId = 'match-1';
+const _adminId = 'admin-id';
+const _channelId = 'support-channel-1';
 
 sb.Session _fakeSession(String userId) {
   return sb.Session.fromJson({
@@ -27,7 +25,7 @@ sb.Session _fakeSession(String userId) {
       'aud': 'authenticated',
       'app_metadata': <String, dynamic>{},
       'user_metadata': <String, dynamic>{},
-      'created_at': DateTime.now().toIso8601String(),
+      'created_at': '2026-06-26T00:00:00.000Z',
     },
   })!;
 }
@@ -36,31 +34,20 @@ ChatMessage _msg({
   required String id,
   required String senderId,
   required String content,
-  DateTime? createdAt,
 }) =>
     ChatMessage(
       id: id,
       channelId: _channelId,
       senderId: senderId,
       content: content,
-      createdAt: createdAt ?? DateTime.utc(2026, 5, 6, 12),
+      createdAt: DateTime.utc(2026, 6, 26, 12),
     );
 
 class _FakeChatRepository implements ChatRepository {
   final List<({String channelId, String senderId, String content})> sent = [];
 
   @override
-  Future<Set<String>> openedMatchChannelIds(List<String> matchIds) async =>
-      const <String>{};
-
-  @override
-  Future<ChatChannel> ensureMatchChannel(String matchId) async {
-    return ChatChannel(id: _channelId, type: 'match', matchId: matchId);
-  }
-
-  @override
-  Stream<List<ChatMessage>> watchMessages(String channelId, {int limit = 200}) =>
-      Stream<List<ChatMessage>>.value(const []);
+  Future<String> ensureSupportChannel() async => _channelId;
 
   @override
   Future<void> sendMessage({
@@ -70,6 +57,12 @@ class _FakeChatRepository implements ChatRepository {
   }) async {
     sent.add((channelId: channelId, senderId: senderId, content: content));
   }
+
+  @override
+  Future<void> unhideChannelForMe(String channelId) async {}
+
+  @override
+  Future<void> markChannelAsRead(String channelId) async {}
 
   @override
   Future<void> sendMediaMessage({
@@ -84,51 +77,13 @@ class _FakeChatRepository implements ChatRepository {
   Future<String> signedMediaUrl(
     String path, {
     Duration expiresIn = const Duration(hours: 1),
-  }) async => 'https://example.test/$path';
+  }) async =>
+      'https://example.test/$path';
 
+  // --- Reste de l'interface : non sollicité par SupportChatPage ---
   @override
-  Future<void> softDeleteMessage(String messageId) async {}
-
-  @override
-  Future<void> hideChannelForMe(String channelId) async {}
-
-  @override
-  Future<void> unhideChannelForMe(String channelId) async {}
-
-  @override
-  Future<DateTime?> myChatClearedAt(String channelId) async => null;
-
-  @override
-  Future<void> markChannelAsRead(String channelId) async {}
-
-  @override
-  Future<Map<String, int>> getUnreadCounts(List<String> channelIds) async =>
-      const {};
-
-  @override
-  Future<Map<String, String>> matchChannelIdsFor(
-    List<String> matchIds,
-  ) async =>
-      const {};
-
-  @override
-  Future<ChatChannel> ensureFriendChannel(String friendshipId) async {
-    return ChatChannel(
-      id: _channelId,
-      type: 'friend',
-      friendshipId: friendshipId,
-    );
-  }
-
-  @override
-  Future<List<({String channelId, String friendshipId, String peerId})>>
-      listMyFriendChannels(String me) async => const [];
-
-  @override
-  Future<String> ensureSupportChannel() async => _channelId;
-
-  @override
-  Future<List<SupportThreadSummary>> listSupportThreads() async => const [];
+  dynamic noSuchMethod(Invocation invocation) =>
+      super.noSuchMethod(invocation);
 }
 
 Widget _scoped({
@@ -138,10 +93,7 @@ Widget _scoped({
   return ProviderScope(
     overrides: [
       currentSessionProvider.overrideWith((ref) => _fakeSession(_selfId)),
-      matchChannelProvider.overrideWith(
-        (ref, matchId) async =>
-            ChatChannel(id: _channelId, type: 'match', matchId: matchId),
-      ),
+      supportChannelProvider.overrideWith((ref) async => _channelId),
       channelMessagesProvider.overrideWith(
         (ref, _) => Stream<List<ChatMessage>>.value(messages),
       ),
@@ -151,7 +103,7 @@ Widget _scoped({
       locale: Locale('fr'),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      home: ChatPage(matchId: _matchId),
+      home: SupportChatPage(),
     ),
   );
 }
@@ -164,65 +116,58 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
   }
 
-  testWidgets('shows the empty state when the channel has no message',
+  testWidgets("affiche le titre et l'état vide quand il n'y a aucun message",
       (tester) async {
     await bumpViewport(tester);
-    await tester.pumpWidget(_scoped());
+    await tester.pumpWidget(_scoped(repo: _FakeChatRepository()));
     await tester.pumpAndSettle();
 
-    expect(find.text('Pas encore de message'), findsOneWidget);
-    expect(find.text('Sois le premier à écrire ici.'), findsOneWidget);
+    expect(find.text('Contact / Aide'), findsOneWidget);
+    expect(find.text('Une question ? Écrivez-nous'), findsOneWidget);
   });
 
-  testWidgets('renders self bubbles aligned right and other bubbles left',
+  testWidgets("aligne mes bulles à droite et celles de l'admin à gauche",
       (tester) async {
     await bumpViewport(tester);
     await tester.pumpWidget(
       _scoped(
+        repo: _FakeChatRepository(),
         messages: [
-          _msg(id: 'm1', senderId: _opponentId, content: 'hello'),
-          _msg(id: 'm2', senderId: _selfId, content: 'hi back'),
+          _msg(id: 'm1', senderId: _adminId, content: 'bonjour'),
+          _msg(id: 'm2', senderId: _selfId, content: 'merci'),
         ],
       ),
     );
     await tester.pumpAndSettle();
 
-    final helloAlign = tester.widget<Align>(
-      find.ancestor(
-        of: find.text('hello'),
-        matching: find.byType(Align),
-      ),
+    final adminAlign = tester.widget<Align>(
+      find.ancestor(of: find.text('bonjour'), matching: find.byType(Align)),
     );
-    final hiBackAlign = tester.widget<Align>(
-      find.ancestor(
-        of: find.text('hi back'),
-        matching: find.byType(Align),
-      ),
+    final selfAlign = tester.widget<Align>(
+      find.ancestor(of: find.text('merci'), matching: find.byType(Align)),
     );
-
-    expect(helloAlign.alignment, Alignment.centerLeft);
-    expect(hiBackAlign.alignment, Alignment.centerRight);
+    expect(adminAlign.alignment, Alignment.centerLeft);
+    expect(selfAlign.alignment, Alignment.centerRight);
   });
 
-  testWidgets('tapping send forwards the trimmed text to sendMessage',
+  testWidgets('le bouton envoyer transmet le texte nettoyé à sendMessage',
       (tester) async {
     await bumpViewport(tester);
     final repo = _FakeChatRepository();
     await tester.pumpWidget(_scoped(repo: repo));
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField), '  hello world  ');
+    await tester.enterText(find.byType(TextField), "  besoin d'aide  ");
     await tester.tap(find.byIcon(Icons.send));
     await tester.pumpAndSettle();
 
     expect(repo.sent, hasLength(1));
     expect(repo.sent.first.channelId, _channelId);
     expect(repo.sent.first.senderId, _selfId);
-    expect(repo.sent.first.content, 'hello world');
+    expect(repo.sent.first.content, "besoin d'aide");
   });
 
-  testWidgets('tapping send with an empty input does nothing',
-      (tester) async {
+  testWidgets('envoyer avec un champ vide ne fait rien', (tester) async {
     await bumpViewport(tester);
     final repo = _FakeChatRepository();
     await tester.pumpWidget(_scoped(repo: repo));
@@ -234,3 +179,7 @@ void main() {
     expect(repo.sent, isEmpty);
   });
 }
+
+// Pour que `_FakeChatRepository` puisse étendre noSuchMethod sans warning,
+// on ignore le besoin d'overrides exhaustifs : SupportChatPage n'appelle que
+// les méthodes explicitement implémentées ci-dessus.

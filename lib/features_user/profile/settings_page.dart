@@ -502,6 +502,22 @@ class _HelpSection extends ConsumerWidget {
           ),
           const _Divider(),
           ListTile(
+            leading: const Icon(
+              Icons.support_agent_outlined,
+              color: ArenaColors.textMuted,
+            ),
+            title: Text(l10n.supportChatTitle),
+            subtitle: Text(
+              l10n.settingsContactSupportSubtitle,
+              style: ArenaTypography.bodySmall.copyWith(
+                color: ArenaColors.textMuted,
+              ),
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(UserRoutes.supportChat),
+          ),
+          const _Divider(),
+          ListTile(
             leading:
                 const Icon(Icons.help_outline, color: ArenaColors.textMuted),
             title: Text(l10n.settingsSupportTitle),

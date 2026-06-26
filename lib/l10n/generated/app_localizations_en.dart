@@ -2567,6 +2567,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsSupportTitle => 'Support';
 
   @override
+  String get settingsContactSupportSubtitle => 'Chat with the ARENA team';
+
+  @override
+  String get supportChatTitle => 'Contact / Help';
+
+  @override
+  String get supportChatHeaderSubtitle => 'ARENA team';
+
+  @override
+  String get supportChatEmptyTitle => 'A question? Message us';
+
+  @override
+  String get supportChatEmptyDescription =>
+      'The ARENA team replies right here. Describe your issue and we\'ll get back to you shortly.';
+
+  @override
   String get settingsAboutTitle => 'About';
 
   @override

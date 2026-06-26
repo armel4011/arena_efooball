@@ -9,6 +9,27 @@ import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+/// Résumé d'un fil de support (canal `type='admin_user'`) côté admin :
+/// le user propriétaire + le dernier message. Alimente la boîte de
+/// support des apps admin (mobile + desktop).
+class SupportThreadSummary {
+  const SupportThreadSummary({
+    required this.channelId,
+    required this.userId,
+    required this.username,
+    required this.lastMessage,
+    this.avatarUrl,
+    this.lastSentAt,
+  });
+
+  final String channelId;
+  final String userId;
+  final String username;
+  final String? avatarUrl;
+  final String lastMessage;
+  final DateTime? lastSentAt;
+}
+
 /// Reads + writes over `chat_channels` / `chat_messages`. Persistent
 /// messages only — Agora RTM (presence, typing) lands in PHASE 12.5.
 class ChatRepository {
@@ -392,6 +413,87 @@ class ChatRepository {
         .single();
     return ChatChannel.fromJson(row);
   }
+
+  /// Get-or-create le canal de support (type='admin_user') du user
+  /// courant via la RPC `ensure_support_channel` (security definer). Un
+  /// user ne peut pas créer de canal 'admin_user' via la RLS d'INSERT de
+  /// chat_channels — la RPC le fait à sa place et garantit l'unicité
+  /// (1 canal de support par user). Renvoie l'id du canal.
+  Future<String> ensureSupportChannel() async {
+    return _client.rpc<String>('ensure_support_channel');
+  }
+
+  /// **Admin** : liste tous les fils de support (canaux 'admin_user') avec
+  /// le profil du user et le dernier message. La RLS `is_admin()` autorise
+  /// la lecture de l'ensemble des chat_messages → réservé aux apps admin.
+  /// Trié : activité la plus récente d'abord.
+  Future<List<SupportThreadSummary>> listSupportThreads() async {
+    final channels = await _client
+        .from(_channelsTable)
+        .select(
+          'id, support_user_id, created_at, '
+          'profiles!chat_channels_support_user_id_fkey(username, avatar_url)',
+        )
+        .eq('type', 'admin_user');
+    final list = channels as List<dynamic>;
+    if (list.isEmpty) return const [];
+
+    final byChannel = <String, Map<String, dynamic>>{
+      for (final c in list)
+        (c as Map<String, dynamic>)['id'] as String: c,
+    };
+    final ids = byChannel.keys.toList();
+
+    // Derniers messages (cap large) → preview + date par canal.
+    final msgs = await _client
+        .from(_messagesTable)
+        .select('channel_id, content, type, media_url, deleted_at, created_at')
+        .inFilter('channel_id', ids)
+        .order('created_at', ascending: false)
+        .limit(1000);
+    final lastByChannel = <String, Map<String, dynamic>>{};
+    for (final m in msgs as List<dynamic>) {
+      final map = m as Map<String, dynamic>;
+      // Ordre desc → la 1re row vue pour un canal est la plus récente.
+      lastByChannel.putIfAbsent(map['channel_id'] as String, () => map);
+    }
+
+    final result = <SupportThreadSummary>[];
+    for (final entry in byChannel.entries) {
+      final c = entry.value;
+      final profile = c['profiles'] as Map<String, dynamic>?;
+      final last = lastByChannel[entry.key];
+      result.add(
+        SupportThreadSummary(
+          channelId: entry.key,
+          userId: c['support_user_id'] as String,
+          username: (profile?['username'] as String?) ?? 'Utilisateur',
+          avatarUrl: profile?['avatar_url'] as String?,
+          lastMessage: last == null ? '' : _previewOfMessage(last),
+          lastSentAt: last == null
+              ? null
+              : DateTime.parse(last['created_at'] as String),
+        ),
+      );
+    }
+    result.sort((a, b) {
+      final ad = a.lastSentAt;
+      final bd = b.lastSentAt;
+      if (ad == null && bd == null) return 0;
+      if (ad == null) return 1;
+      if (bd == null) return -1;
+      return bd.compareTo(ad);
+    });
+    return result;
+  }
+
+  static String _previewOfMessage(Map<String, dynamic> m) {
+    if (m['deleted_at'] != null) return 'Message supprimé';
+    final content = m['content'] as String?;
+    if (content != null && content.isNotEmpty) return content;
+    if (m['media_url'] != null) return '📷 Pièce jointe';
+    return '';
+  }
 }
 
 final chatRepositoryProvider = Provider<ChatRepository>((ref) {
@@ -429,6 +531,40 @@ final matchChannelProvider =
     }
   }
   return channel;
+});
+
+/// Get-or-create le canal de support (type='admin_user') du user courant
+/// puis side-effects best-effort (un-hide + mark as read). Alimente
+/// l'écran « Contact / Aide » (SupportChatPage). Le canal est ensuite
+/// streamé via [channelMessagesProvider].
+final supportChannelProvider = FutureProvider.autoDispose<String>((ref) async {
+  final repo = ref.watch(chatRepositoryProvider);
+  final channelId = await repo.ensureSupportChannel();
+  // Side-effects réseau best-effort — ne doivent pas faire échouer
+  // l'ouverture du fil de support.
+  try {
+    await repo.unhideChannelForMe(channelId);
+    await repo.markChannelAsRead(channelId);
+  } catch (_) {/* hors-ligne ou état non initialisé — non bloquant */}
+  return channelId;
+});
+
+/// **Admin** — liste des fils de support (canaux 'admin_user'). Rafraîchi
+/// par invalidation après envoi / ouverture d'un fil.
+final adminSupportThreadsProvider =
+    FutureProvider.autoDispose<List<SupportThreadSummary>>((ref) {
+  return ref.watch(chatRepositoryProvider).listSupportThreads();
+});
+
+/// **Admin** — compteurs de messages non-lus par fil de support (messages
+/// du user après le dernier `markChannelAsRead` de l'admin courant).
+final adminSupportUnreadProvider =
+    FutureProvider.autoDispose<Map<String, int>>((ref) async {
+  final threads = await ref.watch(adminSupportThreadsProvider.future);
+  if (threads.isEmpty) return const {};
+  return ref
+      .watch(chatRepositoryProvider)
+      .getUnreadCounts([for (final t in threads) t.channelId]);
 });
 
 /// Cleared_at de ma chat_channel_user_state pour ce channel — utilisé

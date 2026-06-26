@@ -17,6 +17,7 @@ import 'package:arena/features_user/auth/splash_user_screen.dart';
 import 'package:arena/features_user/chat/chat_page.dart';
 import 'package:arena/features_user/chat/friend_chat_page.dart';
 import 'package:arena/features_user/chat/messages_inbox_page.dart';
+import 'package:arena/features_user/chat/support_chat_page.dart';
 import 'package:arena/features_user/competitions/competition_detail_page.dart';
 import 'package:arena/features_user/competitions/registration_confirm_page.dart';
 import 'package:arena/features_user/draughts/ui/draughts_game_screen.dart';
@@ -82,6 +83,7 @@ abstract final class UserRoutes {
   static const messagesInbox = '/messages';
   static const notifications = '/notifications';
   static const adminMessages = '/admin-messages';
+  static const supportChat = '/support-chat';
   static const about = '/about';
   static const recordingError = '/recording/error';
   static const matchInProgressPreview = '/recording/preview';
@@ -429,6 +431,11 @@ final userRouterProvider = Provider<GoRouter>((ref) {
         path: UserRoutes.adminMessages,
         name: 'user.adminMessages',
         builder: (context, state) => const AdminMessagesPage(),
+      ),
+      GoRoute(
+        path: UserRoutes.supportChat,
+        name: 'user.supportChat',
+        builder: (context, state) => const SupportChatPage(),
       ),
       GoRoute(
         path: UserRoutes.about,

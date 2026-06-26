@@ -28,6 +28,8 @@ import 'package:arena/features_admin/super_admin/super_admin_payouts_page.dart';
 import 'package:arena/features_admin/super_admin/super_admin_promo_banner.dart';
 import 'package:arena/features_admin/super_admin/super_admin_reintegration_requests.dart';
 import 'package:arena/features_admin/super_admin/super_admin_revenue.dart';
+import 'package:arena/features_admin/super_admin/super_admin_support_inbox.dart';
+import 'package:arena/features_admin/super_admin/super_admin_support_thread.dart';
 import 'package:arena/features_admin/super_admin/super_admin_tutorial_video.dart';
 import 'package:arena/features_admin/super_admin/super_admin_users.dart';
 import 'package:arena/features_shared/presentation/dev_preview_page.dart';
@@ -79,6 +81,8 @@ abstract final class AdminRoutes {
   static const superTutorialVideo = '/super/tutorial-video';
   static const superReintegration = '/super/reintegration';
   static const superChatThread = '/super/messages/:userId';
+  static const superSupport = '/super/support';
+  static const superSupportThread = '/super/support/:channelId';
 
   static const devPreview = '/_dev/widgets';
   static const intro = '/intro';
@@ -110,6 +114,10 @@ abstract final class AdminRoutes {
 
   /// Builds the concrete `/super/messages/<userId>` URL.
   static String superChatThreadPath(String userId) => '/super/messages/$userId';
+
+  /// Builds the concrete `/super/support/<channelId>` URL.
+  static String superSupportThreadPath(String channelId) =>
+      '/super/support/$channelId';
 }
 
 final adminRouterProvider = Provider<GoRouter>((ref) {
@@ -343,6 +351,19 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
         name: 'admin.superChatThread',
         builder: (context, state) => AdminChatThreadPage(
           userId: state.pathParameters['userId'] ?? '',
+        ),
+      ),
+      GoRoute(
+        path: AdminRoutes.superSupport,
+        name: 'admin.superSupport',
+        builder: (context, state) => const SuperAdminSupportInbox(),
+      ),
+      GoRoute(
+        path: AdminRoutes.superSupportThread,
+        name: 'admin.superSupportThread',
+        builder: (context, state) => SuperAdminSupportThread(
+          channelId: state.pathParameters['channelId'] ?? '',
+          username: state.extra is String ? state.extra! as String : 'Support',
         ),
       ),
       // Route outillage dev — réservée aux builds debug. Cf. audit quick-wins.
