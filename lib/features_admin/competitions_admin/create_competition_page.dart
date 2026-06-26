@@ -12,7 +12,9 @@ import 'package:arena/features_admin/competitions_admin/widgets/wizard_step_priz
 import 'package:arena/features_admin/competitions_admin/widgets/wizard_step_review.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/competition_description_templates.dart';
+import 'package:arena/features_shared/payment_code_templates.dart';
 import 'package:arena/features_shared/prize_ranks.dart';
+import 'package:arena/features_shared/reward_config_templates.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
@@ -340,6 +342,14 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
                         shareTotal: _shareTotal(),
                         onRewardedCountChanged: _setRewardedCount,
                         onChanged: () => setState(() {}),
+                        savedConfigCount: ref
+                                .watch(rewardConfigTemplatesProvider)
+                                .valueOrNull
+                                ?.saved
+                                .length ??
+                            0,
+                        onSaveConfig: _saveRewardConfig,
+                        onOpenConfigLibrary: _openRewardLibrary,
                       ),
                     if (_step == 3)
                       WizardStepFees(
@@ -352,6 +362,14 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
                         isEditing: _isEditing,
                         onChanged: () => setState(() {}),
                         onCurrencyChanged: (c) => setState(() => _currency = c),
+                        savedCodeCount: ref
+                                .watch(paymentCodeTemplatesProvider)
+                                .valueOrNull
+                                ?.saved
+                                .length ??
+                            0,
+                        onSaveCodes: _savePaymentCodes,
+                        onOpenCodeLibrary: _openPaymentCodeLibrary,
                       ),
                     if (_step == 4)
                       WizardStepReview(
@@ -506,6 +524,121 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
         },
         onDelete: (tpl) => ref
             .read(competitionDescTemplatesProvider.notifier)
+            .deleteTemplate(tpl.name),
+      ),
+    );
+  }
+
+  /// Enregistre la répartition de prix courante comme config nommée réutilisable.
+  Future<void> _saveRewardConfig() async {
+    final name = await _promptTemplateName();
+    if (name == null || name.trim().isEmpty) return;
+    final tpl = RewardConfigTemplate(
+      name: name.trim(),
+      rewardedCount: _rewardedCount,
+      topShares: [for (final c in _topShareCtrls) int.tryParse(c.text) ?? 0],
+      blockShares: [for (final c in _blockShareCtrls) int.tryParse(c.text) ?? 0],
+    );
+    try {
+      await ref.read(rewardConfigTemplatesProvider.notifier).saveTemplate(tpl);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Échec de l'enregistrement : $e")),
+      );
+      return;
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Config « ${name.trim()} » enregistrée.')),
+    );
+  }
+
+  /// Ouvre la bibliothèque de configs de récompense : appliquer ou supprimer.
+  Future<void> _openRewardLibrary() async {
+    final templates = ref.read(rewardConfigTemplatesProvider).valueOrNull;
+    if (templates == null || templates.saved.isEmpty) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: ArenaColors.surface,
+      isScrollControlled: true,
+      builder: (ctx) => _RewardLibrarySheet(
+        initial: templates.saved,
+        currency: _currency,
+        onApply: (tpl) {
+          Navigator.of(ctx).pop();
+          setState(() {
+            _rewardedCount = tpl.rewardedCount.clamp(1, kMaxRewardedRanks);
+            for (var i = 0; i < _topShareCtrls.length; i++) {
+              _topShareCtrls[i].text =
+                  (i < tpl.topShares.length ? tpl.topShares[i] : 0).toString();
+            }
+            for (var b = 0; b < _blockShareCtrls.length; b++) {
+              _blockShareCtrls[b].text =
+                  (b < tpl.blockShares.length ? tpl.blockShares[b] : 0)
+                      .toString();
+            }
+          });
+        },
+        onDelete: (tpl) => ref
+            .read(rewardConfigTemplatesProvider.notifier)
+            .deleteTemplate(tpl.name),
+      ),
+    );
+  }
+
+  /// Enregistre la paire de codes marchands courante comme jeu nommé.
+  Future<void> _savePaymentCodes() async {
+    final orange = _orangeMomoCtrl.text.trim();
+    final mtn = _mtnMomoCtrl.text.trim();
+    if (orange.isEmpty && mtn.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Saisis au moins un code à enregistrer.')),
+      );
+      return;
+    }
+    final name = await _promptTemplateName();
+    if (name == null || name.trim().isEmpty) return;
+    try {
+      await ref.read(paymentCodeTemplatesProvider.notifier).saveTemplate(
+            PaymentCodeTemplate(
+              name: name.trim(),
+              orangeCode: orange,
+              mtnCode: mtn,
+            ),
+          );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Échec de l'enregistrement : $e")),
+      );
+      return;
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Codes « ${name.trim()} » enregistrés.')),
+    );
+  }
+
+  /// Ouvre la bibliothèque de jeux de codes marchands : appliquer ou supprimer.
+  Future<void> _openPaymentCodeLibrary() async {
+    final templates = ref.read(paymentCodeTemplatesProvider).valueOrNull;
+    if (templates == null || templates.saved.isEmpty) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: ArenaColors.surface,
+      isScrollControlled: true,
+      builder: (ctx) => _PaymentCodeLibrarySheet(
+        initial: templates.saved,
+        onApply: (tpl) {
+          Navigator.of(ctx).pop();
+          setState(() {
+            _orangeMomoCtrl.text = tpl.orangeCode;
+            _mtnMomoCtrl.text = tpl.mtnCode;
+          });
+        },
+        onDelete: (tpl) => ref
+            .read(paymentCodeTemplatesProvider.notifier)
             .deleteTemplate(tpl.name),
       ),
     );

@@ -1,5 +1,6 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/features_admin/competitions_admin/widgets/competition_form_widgets.dart';
+import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:flutter/material.dart';
 
 /// Étape 3 du wizard — répartition des récompenses : nombre de récompensés,
@@ -16,6 +17,9 @@ class WizardStepPrizes extends StatelessWidget {
     required this.shareTotal,
     required this.onRewardedCountChanged,
     required this.onChanged,
+    this.savedConfigCount = 0,
+    this.onSaveConfig,
+    this.onOpenConfigLibrary,
     super.key,
   });
 
@@ -26,6 +30,12 @@ class WizardStepPrizes extends StatelessWidget {
   final int shareTotal;
   final ValueChanged<int> onRewardedCountChanged;
   final VoidCallback onChanged;
+
+  /// Bibliothèque de configs de récompense réutilisables (feature 2026-06-26).
+  /// Optionnel : si [onSaveConfig] est nul, les boutons ne s'affichent pas.
+  final int savedConfigCount;
+  final VoidCallback? onSaveConfig;
+  final VoidCallback? onOpenConfigLibrary;
 
   @override
   Widget build(BuildContext context) {
@@ -77,6 +87,32 @@ class WizardStepPrizes extends StatelessWidget {
           ],
         const SizedBox(height: ArenaSpacing.md),
         ShareTotalCard(total: shareTotal, currency: currency),
+        if (onSaveConfig != null) ...[
+          const SizedBox(height: ArenaSpacing.md),
+          ArenaButton(
+            label: 'ENREGISTRER CETTE CONFIG',
+            variant: ArenaButtonVariant.secondary,
+            icon: Icons.bookmark_add_outlined,
+            fullWidth: true,
+            onPressed: onSaveConfig,
+          ),
+          if (savedConfigCount > 0) ...[
+            const SizedBox(height: ArenaSpacing.xs),
+            ArenaButton(
+              label: 'MES CONFIGS ($savedConfigCount)',
+              variant: ArenaButtonVariant.secondary,
+              icon: Icons.bookmarks_outlined,
+              fullWidth: true,
+              onPressed: onOpenConfigLibrary,
+            ),
+          ],
+          const SizedBox(height: ArenaSpacing.xs),
+          Text(
+            'Enregistre cette répartition comme modèle nommé pour la '
+            'réutiliser dans tes prochaines compétitions.',
+            style: ArenaText.small,
+          ),
+        ],
       ],
     );
   }

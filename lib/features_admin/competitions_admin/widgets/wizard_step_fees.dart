@@ -1,5 +1,6 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/features_admin/competitions_admin/widgets/competition_form_widgets.dart';
+import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -21,6 +22,9 @@ class WizardStepFees extends StatelessWidget {
     required this.isEditing,
     required this.onChanged,
     required this.onCurrencyChanged,
+    this.savedCodeCount = 0,
+    this.onSaveCodes,
+    this.onOpenCodeLibrary,
     super.key,
   });
 
@@ -33,6 +37,12 @@ class WizardStepFees extends StatelessWidget {
   final bool isEditing;
   final VoidCallback onChanged;
   final ValueChanged<String> onCurrencyChanged;
+
+  /// Bibliothèque de jeux de codes marchands réutilisables (feature 2026-06-26).
+  /// Optionnel : si [onSaveCodes] est nul, les boutons ne s'affichent pas.
+  final int savedCodeCount;
+  final VoidCallback? onSaveCodes;
+  final VoidCallback? onOpenCodeLibrary;
 
   Widget _lockable(Widget child) {
     if (!isEditing) return child;
@@ -239,6 +249,32 @@ class WizardStepFees extends StatelessWidget {
             hint: 'ex. *126*7*009876#',
             onChanged: (_) => onChanged(),
           ),
+          if (onSaveCodes != null) ...[
+            const SizedBox(height: ArenaSpacing.md),
+            ArenaButton(
+              label: 'ENREGISTRER CES CODES',
+              variant: ArenaButtonVariant.secondary,
+              icon: Icons.bookmark_add_outlined,
+              fullWidth: true,
+              onPressed: onSaveCodes,
+            ),
+            if (savedCodeCount > 0) ...[
+              const SizedBox(height: ArenaSpacing.xs),
+              ArenaButton(
+                label: 'MES CODES ($savedCodeCount)',
+                variant: ArenaButtonVariant.secondary,
+                icon: Icons.bookmarks_outlined,
+                fullWidth: true,
+                onPressed: onOpenCodeLibrary,
+              ),
+            ],
+            const SizedBox(height: ArenaSpacing.xs),
+            Text(
+              'Enregistre cette paire de codes (Orange + MTN) pour la '
+              'réutiliser dans tes prochaines compétitions payantes.',
+              style: ArenaText.small,
+            ),
+          ],
         ],
       ],
     );
