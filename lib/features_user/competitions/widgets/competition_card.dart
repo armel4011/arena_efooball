@@ -1,4 +1,5 @@
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/core/utils/date_formatter.dart';
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/features_shared/widgets/arena_card.dart';
@@ -161,7 +162,7 @@ class CompetitionCard extends StatelessWidget {
   }
 
   static String _formatDate(DateTime d) {
-    return DateFormat('d MMM y', 'fr').format(d.toLocal());
+    return formatRelativeDate(d, withTime: false);
   }
 
   static String _formatMoney(double v) {

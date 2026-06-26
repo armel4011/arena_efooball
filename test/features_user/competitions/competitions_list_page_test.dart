@@ -63,7 +63,8 @@ void main() {
     // et expose les filtres en chips directs (statut + tarif) au lieu de
     // l'ancien menu groupé « FILTRES ».
     expect(find.byType(TabBar), findsOneWidget);
-    expect(find.byType(Tab), findsNWidgets(3));
+    // 3 onglets par jeu (Dames · eFootball · EA FC) + 1 onglet « Prochain match ».
+    expect(find.byType(Tab), findsNWidgets(4));
     expect(find.text('Aucune compétition sur Jeu de Dames'), findsOneWidget);
     // Chips de statut (À venir par défaut) + chip de tarif distinctif.
     expect(find.text('À venir'), findsOneWidget);

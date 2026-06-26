@@ -1,4 +1,5 @@
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/core/utils/date_formatter.dart';
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
@@ -242,7 +243,7 @@ class CompetitionListCard extends StatelessWidget {
       NumberFormat.decimalPattern('fr').format(v).replaceAll(',', ' ');
 
   static String _dateLabel(DateTime startUtc) =>
-      DateFormat('d MMM · HH:mm', 'fr').format(startUtc.toLocal());
+      formatRelativeDate(startUtc);
 }
 
 /// Bloc « récompense » : montant XL + nombre de récompensés (médailles).

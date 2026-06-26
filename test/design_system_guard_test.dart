@@ -63,7 +63,10 @@ void main() {
   // glow card, bloc 3 actions admin). 0 vrai Colors.* ajouté (tous des tokens).
   // 2253 → 2254 le 2026-06-22 : +1 `ArenaColors.statusWarn` de la puce de filtre
   // « à reprogrammer » de la liste user. 0 vrai Colors.* ajouté (token).
-  const colorsDotBaseline = 2254; // occurrences de `Colors.`
+  // 2254 → 2257 le 2026-06-26 : +3 `ArenaColors.*` de l'onglet « Prochain match »
+  // (accent signalBlue + textMuted du Tab, silver de l'empty state de la liste).
+  // 0 vrai Colors.* ajouté (tous des tokens).
+  const colorsDotBaseline = 2257; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.

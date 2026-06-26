@@ -1,5 +1,6 @@
 import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/core/utils/date_formatter.dart';
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/models/tutorial_video.dart';
@@ -11,12 +12,12 @@ import 'package:arena/features_shared/widgets/error_state.dart';
 import 'package:arena/features_user/competitions/widgets/competition_filter_chips.dart';
 import 'package:arena/features_user/competitions/widgets/competition_list_card.dart';
 import 'package:arena/features_user/home/widgets/tutorial_video_section.dart';
+import 'package:arena/features_user/home/widgets/upcoming_matches_section.dart';
 import 'package:arena/features_user/payments/payment_method.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 /// PHASE 4 — list of competitions, organised by game in a [TabBar].
 ///
@@ -55,8 +56,9 @@ Color _gameAccent(GameType g) => switch (g) {
 
 class _CompetitionsListPageState extends State<CompetitionsListPage>
     with SingleTickerProviderStateMixin {
+  // +1 onglet « Prochain match » (dernier index) en plus des onglets par jeu.
   late final TabController _tab =
-      TabController(length: _orderedGames.length, vsync: this);
+      TabController(length: _orderedGames.length + 1, vsync: this);
 
   @override
   void initState() {
@@ -80,8 +82,12 @@ class _CompetitionsListPageState extends State<CompetitionsListPage>
 
   @override
   Widget build(BuildContext context) {
-    final currentGame = _orderedGames[_tab.index];
-    final accent = _gameAccent(currentGame);
+    // L'onglet « Prochain match » est le dernier (index == _orderedGames.length)
+    // et n'est pas lié à un jeu → accent neutre.
+    final isMatchesTab = _tab.index >= _orderedGames.length;
+    final accent = isMatchesTab
+        ? ArenaColors.signalBlue
+        : _gameAccent(_orderedGames[_tab.index]);
     return ArenaScreenBackground(
       child: Column(
         children: [
@@ -108,6 +114,14 @@ class _CompetitionsListPageState extends State<CompetitionsListPage>
                     ),
                   ),
                 ),
+              Tab(
+                child: Text(
+                  'Prochain match',
+                  style: ArenaText.button.copyWith(
+                    color: isMatchesTab ? accent : ArenaColors.textMuted,
+                  ),
+                ),
+              ),
             ],
           ),
           Expanded(
@@ -116,6 +130,7 @@ class _CompetitionsListPageState extends State<CompetitionsListPage>
               children: [
                 for (final g in _orderedGames)
                   _CompetitionTab(key: ValueKey(g), game: g),
+                const UpcomingMatchesList(),
               ],
             ),
           ),
@@ -423,8 +438,7 @@ void _resumeProcessing(
 
 void _openInscriptionFlow(BuildContext context, Competition c) {
   final l10n = AppLocalizations.of(context);
-  final dateLabel =
-      DateFormat('dd MMM yyyy · HH:mm', 'fr').format(c.startDate.toLocal());
+  final dateLabel = formatRelativeDate(c.startDate);
   context.push(
     UserRoutes.registrationConfirmPath(c.id),
     extra: RegistrationConfirmArgs(

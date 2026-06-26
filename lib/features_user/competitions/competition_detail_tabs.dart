@@ -75,8 +75,7 @@ class _InfosTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final c = competition;
-    final dateLabel =
-        DateFormat('EEEE d MMM y · HH:mm', 'fr').format(c.startDate.toLocal());
+    final dateLabel = formatRelativeDate(c.startDate);
     final prizeLabel = c.prizePoolLocal > 0
         ? '${_money(c.prizePoolLocal)} '
             '${c.prizePoolCurrency ?? c.registrationCurrency}'
