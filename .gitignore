@@ -113,9 +113,19 @@ _restyle_ref/
 # Site web statique (landing / downloads) — gestion séparée.
 site web/
 
-# Landing Next.js : artefacts de build/déps jamais versionnés (source OK).
+# Landing Next.js : artefacts de build/déps/binaires jamais versionnés (source OK).
+# Sans ces règles, un `git add landing/` indexerait ~459 Mo (audit 2026-06-26) :
+# landing/.next (cache build) + landing/public/downloads (APK release).
 landing/node_modules/
 landing/out/
+landing/.next/
+landing/public/downloads/
+
+# Binaires d'app — jamais dans git (vivent dans le release GitHub / hébergement).
+*.apk
+*.aab
+*.ipa
+*.msix
 
 # Screenshots de test manuels à la racine (captures device ad-hoc).
 /_t*.png
