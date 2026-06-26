@@ -106,6 +106,14 @@ class _SuperAdminUsersState extends ConsumerState<SuperAdminUsers> {
           ),
           IconButton(
             icon: const Icon(
+              Icons.support_agent_outlined,
+              color: ArenaColors.bone,
+            ),
+            tooltip: 'Support',
+            onPressed: () => context.go(AdminRoutes.superSupport),
+          ),
+          IconButton(
+            icon: const Icon(
               Icons.campaign_outlined,
               color: ArenaColors.bone,
             ),

@@ -4966,6 +4966,36 @@ abstract class AppLocalizations {
   /// **'Support'**
   String get settingsSupportTitle;
 
+  /// No description provided for @settingsContactSupportSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Discuter avec l\'équipe ARENA'**
+  String get settingsContactSupportSubtitle;
+
+  /// No description provided for @supportChatTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Contact / Aide'**
+  String get supportChatTitle;
+
+  /// No description provided for @supportChatHeaderSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Équipe ARENA'**
+  String get supportChatHeaderSubtitle;
+
+  /// No description provided for @supportChatEmptyTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Une question ? Écrivez-nous'**
+  String get supportChatEmptyTitle;
+
+  /// No description provided for @supportChatEmptyDescription.
+  ///
+  /// In fr, this message translates to:
+  /// **'L\'équipe ARENA vous répond ici. Décrivez votre souci, nous revenons vers vous au plus vite.'**
+  String get supportChatEmptyDescription;
+
   /// No description provided for @settingsAboutTitle.
   ///
   /// In fr, this message translates to:

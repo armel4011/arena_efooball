@@ -114,6 +114,12 @@ const List<_NavEntry> _superEntries = [
     superAdminOnly: true,
   ),
   _NavEntry(
+    route: AdminDesktopRoutes.superSupport,
+    icon: FluentIcons.chat,
+    label: 'Support',
+    superAdminOnly: true,
+  ),
+  _NavEntry(
     route: AdminDesktopRoutes.superTutorialBanners,
     icon: FluentIcons.video,
     label: 'Bannières tuto',

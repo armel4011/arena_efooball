@@ -8,6 +8,7 @@ import 'package:arena/features_admin_desktop/auth/desktop_totp_setup_screen.dart
 import 'package:arena/features_admin_desktop/auth/desktop_totp_verify_screen.dart';
 import 'package:arena/features_admin_desktop/communication/desktop_broadcast_page.dart';
 import 'package:arena/features_admin_desktop/communication/desktop_chat_thread_page.dart';
+import 'package:arena/features_admin_desktop/communication/desktop_support_page.dart';
 import 'package:arena/features_admin_desktop/competitions/desktop_bracket_page.dart';
 import 'package:arena/features_admin_desktop/competitions/desktop_competition_detail_page.dart';
 import 'package:arena/features_admin_desktop/competitions/desktop_competitions_list_page.dart';
@@ -70,6 +71,7 @@ abstract final class AdminDesktopRoutes {
   static const superBroadcast = '/super/broadcast';
   static const superPromoBanner = '/super/promo-banner';
   static const superReintegration = '/super/reintegration';
+  static const superSupport = '/super/support';
   static const superTutorialBanners = '/super/tutorial-banners';
   static const superChatThread = '/super/messages/:userId';
 
@@ -308,6 +310,11 @@ final adminDesktopRouterProvider = Provider<GoRouter>((ref) {
             path: AdminDesktopRoutes.superReintegration,
             name: 'desktop.superReintegration',
             builder: (context, state) => const DesktopReintegrationPage(),
+          ),
+          GoRoute(
+            path: AdminDesktopRoutes.superSupport,
+            name: 'desktop.superSupport',
+            builder: (context, state) => const DesktopSupportPage(),
           ),
           GoRoute(
             path: AdminDesktopRoutes.superTutorialBanners,
