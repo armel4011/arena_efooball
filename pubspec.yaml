@@ -1,7 +1,7 @@
 name: arena
 description: "ARENA - Plateforme panafricaine de tournois e-sport mobile (eFootball, Jeu de Dames, EA SPORTS FC Mobile)."
 publish_to: 'none'
-version: 1.0.7+8
+version: 1.0.8+9
 
 environment:
   sdk: ^3.5.0
