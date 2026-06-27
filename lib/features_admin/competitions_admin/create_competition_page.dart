@@ -97,6 +97,9 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
   // Nombre de récompensés : 1 / 2 / 4 (places individuelles seules) puis
   // 8 / 16 / 32 / 64 qui activent les blocs successifs.
   int _rewardedCount = 4;
+  // Compétition sans aucune récompense (amicale) : prize_distribution vide,
+  // cagnotte 0. Masque le barème dans le wizard.
+  bool _noReward = false;
   bool _publishNow = true;
 
   // Lot A — auto-management.
@@ -180,6 +183,8 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
     // Reconstruit places individuelles + blocs depuis la liste plate
     // stockée (best-effort : un bloc relit le % de sa 1ère place).
     final dist = c.prizeDistribution;
+    // Distribution vide → compétition sans récompense (amicale).
+    _noReward = dist.isEmpty;
     _rewardedCount = _snapRewardedCount(dist.length);
     final topCount = _rewardedCount < 4 ? _rewardedCount : 4;
     for (var i = 0; i < topCount && i < dist.length; i++) {
@@ -340,6 +345,9 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
                         topShareCtrls: _topShareCtrls,
                         blockShareCtrls: _blockShareCtrls,
                         shareTotal: _shareTotal(),
+                        noReward: _noReward,
+                        onNoRewardChanged: (v) =>
+                            setState(() => _noReward = v),
                         savedTemplateCount: ref
                                 .watch(prizeTemplatesProvider)
                                 .valueOrNull
@@ -657,6 +665,7 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
   /// individuelles 1-4 puis chaque bloc actif déplié (même montant
   /// répété sur toutes ses places).
   List<int> _prizeDistribution() {
+    if (_noReward) return const [];
     final raw = <int>[];
     final topCount = _rewardedCount < 4 ? _rewardedCount : 4;
     for (var i = 0; i < topCount; i++) {
@@ -676,6 +685,7 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
   /// Somme des montants : places individuelles + (montant de bloc × sa
   /// taille). C'est la cagnotte totale distribuée.
   int _shareTotal() {
+    if (_noReward) return 0;
     var total = 0;
     final topCount = _rewardedCount < 4 ? _rewardedCount : 4;
     for (var i = 0; i < topCount; i++) {

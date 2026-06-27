@@ -14,8 +14,10 @@ class WizardStepPrizes extends StatelessWidget {
     required this.topShareCtrls,
     required this.blockShareCtrls,
     required this.shareTotal,
+    required this.noReward,
     required this.savedTemplateCount,
     required this.onRewardedCountChanged,
+    required this.onNoRewardChanged,
     required this.onChanged,
     required this.onSaveTemplate,
     required this.onOpenLibrary,
@@ -27,6 +29,10 @@ class WizardStepPrizes extends StatelessWidget {
   final List<TextEditingController> topShareCtrls;
   final List<TextEditingController> blockShareCtrls;
   final int shareTotal;
+
+  /// Compétition sans aucune récompense (amicale) → masque le barème.
+  final bool noReward;
+  final ValueChanged<bool> onNoRewardChanged;
 
   /// Nombre de barèmes enregistrés (affiché sur le bouton « Modèles »).
   final int savedTemplateCount;
@@ -51,59 +57,75 @@ class WizardStepPrizes extends StatelessWidget {
             ),
           ),
           child: Text(
-            'ℹ Saisis le montant attribué à chaque place — en $currency. '
-            'La cagnotte de la compétition est la somme de ces montants.',
+            noReward
+                ? 'ℹ Compétition amicale : aucune récompense. La cagnotte '
+                    'reste à 0.'
+                : 'ℹ Saisis le montant attribué à chaque place — en $currency. '
+                    'La cagnotte de la compétition est la somme de ces montants.',
             style: ArenaText.body,
           ),
         ),
         const SizedBox(height: ArenaSpacing.sm),
-        Row(
-          children: [
-            Expanded(
-              child: TextButton.icon(
-                onPressed: onSaveTemplate,
-                icon: const Icon(Icons.bookmark_add_outlined, size: 18),
-                label: const Text('Enregistrer le barème'),
-              ),
-            ),
-            Expanded(
-              child: TextButton.icon(
-                onPressed: savedTemplateCount > 0 ? onOpenLibrary : null,
-                icon: const Icon(Icons.folder_open_outlined, size: 18),
-                label: Text('Modèles ($savedTemplateCount)'),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: ArenaSpacing.md),
-        Text('Nombre de récompensés', style: ArenaText.inputLabel),
-        const SizedBox(height: ArenaSpacing.xs),
-        RewardedCountPicker(
-          current: rewardedCount,
-          onChanged: onRewardedCountChanged,
-        ),
-        const SizedBox(height: ArenaSpacing.lg),
-        // Places 1 à 4 : une ligne individuelle modifiable chacune.
-        for (var i = 0; i < topCount; i++) ...[
-          ShareRow(
-            position: i,
-            controller: topShareCtrls[i],
-            onChanged: onChanged,
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          value: noReward,
+          onChanged: onNoRewardChanged,
+          title: Text('Aucune récompense', style: ArenaText.body),
+          subtitle: Text(
+            'Compétition amicale, sans gain (cagnotte 0).',
+            style: ArenaText.small.copyWith(color: ArenaColors.silver),
           ),
+        ),
+        if (!noReward) ...[
           const SizedBox(height: ArenaSpacing.sm),
-        ],
-        // Blocs 5-8 / 9-16 / 17-32 / 33-64 : un montant par place, saisi une fois.
-        for (var b = 0; b < prizeBlocks.length; b++)
-          if (rewardedCount >= prizeBlocks[b].lastRank) ...[
-            BlockShareRow(
-              block: prizeBlocks[b],
-              controller: blockShareCtrls[b],
+          Row(
+            children: [
+              Expanded(
+                child: TextButton.icon(
+                  onPressed: onSaveTemplate,
+                  icon: const Icon(Icons.bookmark_add_outlined, size: 18),
+                  label: const Text('Enregistrer le barème'),
+                ),
+              ),
+              Expanded(
+                child: TextButton.icon(
+                  onPressed: savedTemplateCount > 0 ? onOpenLibrary : null,
+                  icon: const Icon(Icons.folder_open_outlined, size: 18),
+                  label: Text('Modèles ($savedTemplateCount)'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: ArenaSpacing.md),
+          Text('Nombre de récompensés', style: ArenaText.inputLabel),
+          const SizedBox(height: ArenaSpacing.xs),
+          RewardedCountPicker(
+            current: rewardedCount,
+            onChanged: onRewardedCountChanged,
+          ),
+          const SizedBox(height: ArenaSpacing.lg),
+          // Places 1 à 4 : une ligne individuelle modifiable chacune.
+          for (var i = 0; i < topCount; i++) ...[
+            ShareRow(
+              position: i,
+              controller: topShareCtrls[i],
               onChanged: onChanged,
             ),
             const SizedBox(height: ArenaSpacing.sm),
           ],
-        const SizedBox(height: ArenaSpacing.md),
-        ShareTotalCard(total: shareTotal, currency: currency),
+          // Blocs 5-8 / 9-16 / 17-32 / 33-64 : un montant par place, saisi 1×.
+          for (var b = 0; b < prizeBlocks.length; b++)
+            if (rewardedCount >= prizeBlocks[b].lastRank) ...[
+              BlockShareRow(
+                block: prizeBlocks[b],
+                controller: blockShareCtrls[b],
+                onChanged: onChanged,
+              ),
+              const SizedBox(height: ArenaSpacing.sm),
+            ],
+          const SizedBox(height: ArenaSpacing.md),
+          ShareTotalCard(total: shareTotal, currency: currency),
+        ],
       ],
     );
   }
