@@ -50,6 +50,13 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- WebRTC LiveKit (capture anti-triche dual). CAMERA / RECORD_AUDIO /
+         INTERNET sont déjà déclarés ci-dessus ; flutter_webrtc (transitif de
+         livekit_client) requiert en plus le routage audio et le réseau. -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
     <!-- MAJ in-app hors Play Store : installer un APK téléchargé depuis l'app
          (déclenche l'installateur système). -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
