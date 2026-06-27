@@ -873,6 +873,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get compDetailTabParticipants => 'المشاركون';
 
   @override
+  String get compDetailTabNextMatch => 'المباراة التالية';
+
+  @override
   String get compDetailTabRanking => 'الترتيب';
 
   @override

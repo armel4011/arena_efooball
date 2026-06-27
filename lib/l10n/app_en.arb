@@ -275,6 +275,7 @@
   "compDetailPrizeToWinLabel": "TO WIN",
   "compDetailTabInfos": "INFO",
   "compDetailTabParticipants": "PLAYERS",
+  "compDetailTabNextMatch": "NEXT MATCH",
   "compDetailTabRanking": "RANKING",
   "compDetailParticipantsTitle": "Participants list",
   "compDetailParticipantsDesc": "The list of registered players with avatars and stats will appear here. Source: `registrations` table.",

@@ -12,7 +12,6 @@ import 'package:arena/features_shared/widgets/error_state.dart';
 import 'package:arena/features_user/competitions/widgets/competition_filter_chips.dart';
 import 'package:arena/features_user/competitions/widgets/competition_list_card.dart';
 import 'package:arena/features_user/home/widgets/tutorial_video_section.dart';
-import 'package:arena/features_user/home/widgets/upcoming_matches_section.dart';
 import 'package:arena/features_user/payments/payment_method.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -56,9 +55,10 @@ Color _gameAccent(GameType g) => switch (g) {
 
 class _CompetitionsListPageState extends State<CompetitionsListPage>
     with SingleTickerProviderStateMixin {
-  // +1 onglet « Prochain match » (dernier index) en plus des onglets par jeu.
+  // Un onglet par jeu. (Le « Prochain match » vit désormais sur chaque page
+  // de compétition, pas ici.)
   late final TabController _tab =
-      TabController(length: _orderedGames.length + 1, vsync: this);
+      TabController(length: _orderedGames.length, vsync: this);
 
   @override
   void initState() {
@@ -82,23 +82,13 @@ class _CompetitionsListPageState extends State<CompetitionsListPage>
 
   @override
   Widget build(BuildContext context) {
-    // L'onglet « Prochain match » est le dernier (index == _orderedGames.length)
-    // et n'est pas lié à un jeu → accent neutre.
-    final isMatchesTab = _tab.index >= _orderedGames.length;
-    final accent = isMatchesTab
-        ? ArenaColors.signalBlue
-        : _gameAccent(_orderedGames[_tab.index]);
+    final accent = _gameAccent(_orderedGames[_tab.index]);
     return ArenaScreenBackground(
       child: Column(
         children: [
           const TutorialBannerSection(page: TutorialPage.competitions),
           TabBar(
             controller: _tab,
-            // Scrollable : avec 3 jeux + « Prochain match », une barre fixe
-            // tronquait le dernier onglet (peu/pas visible). Scrollable =
-            // chaque libellé s'affiche en entier.
-            isScrollable: true,
-            tabAlignment: TabAlignment.start,
             indicatorColor: accent,
             indicatorWeight: 2.5,
             indicatorSize: TabBarIndicatorSize.tab,
@@ -119,14 +109,6 @@ class _CompetitionsListPageState extends State<CompetitionsListPage>
                     ),
                   ),
                 ),
-              Tab(
-                child: Text(
-                  'Prochain match',
-                  style: ArenaText.button.copyWith(
-                    color: isMatchesTab ? accent : ArenaColors.textMuted,
-                  ),
-                ),
-              ),
             ],
           ),
           Expanded(
@@ -135,7 +117,6 @@ class _CompetitionsListPageState extends State<CompetitionsListPage>
               children: [
                 for (final g in _orderedGames)
                   _CompetitionTab(key: ValueKey(g), game: g),
-                const UpcomingMatchesList(),
               ],
             ),
           ),

@@ -75,7 +75,12 @@ class UpcomingMatchesScroller extends ConsumerWidget {
 /// [UpcomingMatchesScroller] (`myActiveMatchesProvider` + profils opponents),
 /// triée par `scheduled_at` côté repository (le prochain match en tête).
 class UpcomingMatchesList extends ConsumerWidget {
-  const UpcomingMatchesList({super.key});
+  const UpcomingMatchesList({this.competitionId, super.key});
+
+  /// Si non-null, ne montre que les matchs actifs du joueur DANS cette
+  /// compétition (onglet « Prochain match » de la page détail compétition).
+  /// Null = tous les matchs actifs (usage générique).
+  final String? competitionId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -91,7 +96,13 @@ class UpcomingMatchesList extends ConsumerWidget {
           child: HomeErrorRow(message: l10n.upcomingMatchesError(e)),
         ),
       ),
-      data: (matches) {
+      data: (allMatches) {
+        final matches = competitionId == null
+            ? allMatches
+            : [
+                for (final m in allMatches)
+                  if (m.competitionId == competitionId) m,
+              ];
         if (matches.isEmpty || me == null) {
           return Center(
             child: Padding(

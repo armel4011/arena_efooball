@@ -882,6 +882,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get compDetailTabParticipants => 'PARTICIP.';
 
   @override
+  String get compDetailTabNextMatch => 'PROCHAIN MATCH';
+
+  @override
   String get compDetailTabRanking => 'CLASSEMENT';
 
   @override

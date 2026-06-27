@@ -275,6 +275,7 @@
   "compDetailPrizeToWinLabel": "للفوز",
   "compDetailTabInfos": "معلومات",
   "compDetailTabParticipants": "المشاركون",
+  "compDetailTabNextMatch": "المباراة التالية",
   "compDetailTabRanking": "الترتيب",
   "compDetailParticipantsTitle": "قائمة المشاركين",
   "compDetailParticipantsDesc": "ستظهر هنا قائمة المسجّلين مع الصور والإحصائيات. المصدر: جدول `registrations`.",

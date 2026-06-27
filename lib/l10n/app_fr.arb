@@ -295,6 +295,7 @@
   "compDetailPrizeToWinLabel": "À GAGNER",
   "compDetailTabInfos": "INFOS",
   "compDetailTabParticipants": "PARTICIP.",
+  "compDetailTabNextMatch": "PROCHAIN MATCH",
   "compDetailTabRanking": "CLASSEMENT",
   "compDetailParticipantsTitle": "Liste des participants",
   "compDetailParticipantsDesc": "La liste des inscrits avec avatars et stats arrivera ici. Source : table `registrations`.",
