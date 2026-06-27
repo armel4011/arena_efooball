@@ -14,8 +14,11 @@ class WizardStepPrizes extends StatelessWidget {
     required this.topShareCtrls,
     required this.blockShareCtrls,
     required this.shareTotal,
+    required this.savedTemplateCount,
     required this.onRewardedCountChanged,
     required this.onChanged,
+    required this.onSaveTemplate,
+    required this.onOpenLibrary,
     super.key,
   });
 
@@ -24,8 +27,13 @@ class WizardStepPrizes extends StatelessWidget {
   final List<TextEditingController> topShareCtrls;
   final List<TextEditingController> blockShareCtrls;
   final int shareTotal;
+
+  /// Nombre de barèmes enregistrés (affiché sur le bouton « Modèles »).
+  final int savedTemplateCount;
   final ValueChanged<int> onRewardedCountChanged;
   final VoidCallback onChanged;
+  final VoidCallback onSaveTemplate;
+  final VoidCallback onOpenLibrary;
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +56,26 @@ class WizardStepPrizes extends StatelessWidget {
             style: ArenaText.body,
           ),
         ),
-        const SizedBox(height: ArenaSpacing.lg),
+        const SizedBox(height: ArenaSpacing.sm),
+        Row(
+          children: [
+            Expanded(
+              child: TextButton.icon(
+                onPressed: onSaveTemplate,
+                icon: const Icon(Icons.bookmark_add_outlined, size: 18),
+                label: const Text('Enregistrer le barème'),
+              ),
+            ),
+            Expanded(
+              child: TextButton.icon(
+                onPressed: savedTemplateCount > 0 ? onOpenLibrary : null,
+                icon: const Icon(Icons.folder_open_outlined, size: 18),
+                label: Text('Modèles ($savedTemplateCount)'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: ArenaSpacing.md),
         Text('Nombre de récompensés', style: ArenaText.inputLabel),
         const SizedBox(height: ArenaSpacing.xs),
         RewardedCountPicker(

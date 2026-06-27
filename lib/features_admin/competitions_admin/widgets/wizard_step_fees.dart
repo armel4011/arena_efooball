@@ -19,8 +19,11 @@ class WizardStepFees extends StatelessWidget {
     required this.mtnMomoCtrl,
     required this.referralQuotaCtrl,
     required this.isEditing,
+    required this.savedTemplateCount,
     required this.onChanged,
     required this.onCurrencyChanged,
+    required this.onSaveTemplate,
+    required this.onOpenLibrary,
     super.key,
   });
 
@@ -31,8 +34,13 @@ class WizardStepFees extends StatelessWidget {
   final TextEditingController mtnMomoCtrl;
   final TextEditingController referralQuotaCtrl;
   final bool isEditing;
+
+  /// Nombre de jeux de codes enregistrés (affiché sur le bouton « Modèles »).
+  final int savedTemplateCount;
   final VoidCallback onChanged;
   final ValueChanged<String> onCurrencyChanged;
+  final VoidCallback onSaveTemplate;
+  final VoidCallback onOpenLibrary;
 
   Widget _lockable(Widget child) {
     if (!isEditing) return child;
@@ -238,6 +246,25 @@ class WizardStepFees extends StatelessWidget {
             controller: mtnMomoCtrl,
             hint: 'ex. *126*7*009876#',
             onChanged: (_) => onChanged(),
+          ),
+          const SizedBox(height: ArenaSpacing.sm),
+          Row(
+            children: [
+              Expanded(
+                child: TextButton.icon(
+                  onPressed: onSaveTemplate,
+                  icon: const Icon(Icons.bookmark_add_outlined, size: 18),
+                  label: const Text('Enregistrer ces codes'),
+                ),
+              ),
+              Expanded(
+                child: TextButton.icon(
+                  onPressed: savedTemplateCount > 0 ? onOpenLibrary : null,
+                  icon: const Icon(Icons.folder_open_outlined, size: 18),
+                  label: Text('Modèles ($savedTemplateCount)'),
+                ),
+              ),
+            ],
           ),
         ],
       ],

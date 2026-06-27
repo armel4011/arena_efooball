@@ -71,6 +71,111 @@ class _TemplateLibrarySheet extends StatefulWidget {
   State<_TemplateLibrarySheet> createState() => _TemplateLibrarySheetState();
 }
 
+/// Bibliothèque GÉNÉRIQUE (nom + aperçu) — utilisée pour les modèles de
+/// codes de paiement et de barème de récompenses. Mêmes ergonomie/visuel que
+/// [_TemplateLibrarySheet] mais sans dépendre d'un type concret.
+class _NamedTemplateSheet extends StatefulWidget {
+  const _NamedTemplateSheet({
+    required this.title,
+    required this.subtitle,
+    required this.items,
+    required this.onInsert,
+    required this.onDelete,
+  });
+
+  final String title;
+  final String subtitle;
+
+  /// Couples (nom, aperçu) dans l'ordre d'affichage.
+  final List<({String name, String preview})> items;
+  final ValueChanged<int> onInsert;
+  final ValueChanged<int> onDelete;
+
+  @override
+  State<_NamedTemplateSheet> createState() => _NamedTemplateSheetState();
+}
+
+class _NamedTemplateSheetState extends State<_NamedTemplateSheet> {
+  late final List<({String name, String preview})> _items = [...widget.items];
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(ArenaSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(widget.title, style: ArenaText.h2),
+            const SizedBox(height: ArenaSpacing.xs),
+            Text(widget.subtitle, style: ArenaText.small),
+            const SizedBox(height: ArenaSpacing.md),
+            if (_items.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: ArenaSpacing.lg),
+                child: Text('Aucun modèle enregistré.', style: ArenaText.body),
+              )
+            else
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: _items.length,
+                  separatorBuilder: (_, __) =>
+                      const SizedBox(height: ArenaSpacing.xs),
+                  itemBuilder: (_, i) {
+                    final item = _items[i];
+                    return Material(
+                      color: ArenaColors.carbon,
+                      borderRadius: BorderRadius.circular(ArenaRadius.md),
+                      child: InkWell(
+                        onTap: () => widget.onInsert(i),
+                        borderRadius: BorderRadius.circular(ArenaRadius.md),
+                        child: Padding(
+                          padding: const EdgeInsets.all(ArenaSpacing.md),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(item.name, style: ArenaText.h3),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      item.preview,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: ArenaText.small,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  color: ArenaColors.danger,
+                                ),
+                                tooltip: 'Supprimer',
+                                onPressed: () {
+                                  widget.onDelete(i);
+                                  setState(() => _items.removeAt(i));
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _TemplateLibrarySheetState extends State<_TemplateLibrarySheet> {
   late final List<DescriptionTemplate> _saved = [...widget.initial];
 
