@@ -45,7 +45,13 @@ class ActiveCompetitionsSection extends ConsumerWidget {
         ),
         data: (all) {
           final mine = all
-              .where((c) => registeredIds.contains(c.id))
+              .where(
+                (c) =>
+                    registeredIds.contains(c.id) &&
+                    // « Mes tournois » ne liste que l'actif : on retire les
+                    // compétitions terminées (completed / cancelled).
+                    c.status.phase != CompetitionPhase.finished,
+              )
               .toList(growable: false)
             ..sort(
               (a, b) => _priority(a.status).compareTo(_priority(b.status)),
