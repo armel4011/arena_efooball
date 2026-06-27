@@ -168,7 +168,7 @@ class CompetitionListCard extends StatelessWidget {
                         accent: accent,
                       ),
                       const SizedBox(height: ArenaSpacing.sm),
-                      // Ligne bas : frais + date de début
+                      // Frais (discret).
                       Row(
                         children: [
                           const Icon(
@@ -185,19 +185,43 @@ class CompetitionListCard extends StatelessWidget {
                             style: ArenaText.monoSmall
                                 .copyWith(color: ArenaColors.silver),
                           ),
-                          const SizedBox(width: ArenaSpacing.md),
-                          const Icon(
-                            Icons.schedule,
-                            size: 13,
-                            color: ArenaColors.silver,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            _dateLabel(c.startDate),
-                            style: ArenaText.monoSmall
-                                .copyWith(color: ArenaColors.silver),
-                          ),
                         ],
+                      ),
+                      const SizedBox(height: 6),
+                      // Jour / date / heure — mis en avant (pastille accentuée).
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: ArenaSpacing.sm,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: ArenaColors.signalBlue.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(ArenaRadius.sm),
+                          border: Border.all(
+                            color: ArenaColors.signalBlue.withValues(alpha: 0.4),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.event,
+                              size: 16,
+                              color: ArenaColors.signalBlue,
+                            ),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                _dateLabel(c.startDate),
+                                style: ArenaText.body.copyWith(
+                                  color: ArenaColors.bone,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
