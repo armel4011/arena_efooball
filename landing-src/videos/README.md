@@ -11,5 +11,5 @@ Posters optionnels (affichés avant lecture) :
 - `poster-2.jpg`
 
 Si une vidéo est absente, la carte affiche juste le bouton lecture sur fond
-sombre — le site ne casse pas. Les noms de fichiers sont référencés en dur
-dans `../index.html` (section `id="tutos"`, balises `<video><source src="…">`).
+sombre — le site ne casse pas. Les noms sont configurés dans
+`components/TutorialVideos.tsx` (tableau `TUTOS`).
