@@ -128,6 +128,12 @@ dependencies:
   # ─── PHASE 12.5 — RGPD export (écrit le JSON dans Documents) ──
   path_provider: ^2.1.5
 
+  # ─── MAJ in-app hors Play Store (APK direct arena237.com) ────
+  # package_info_plus : lit la version installée (compare au config distant)
+  # open_filex : ouvre l'APK téléchargé → installateur système Android
+  package_info_plus: ^9.0.0
+  open_filex: ^4.5.0
+
   # ─── PHASE 2.3 — Social SSO (native config required) ──────
   # Google: native Sign-In → idToken → supabase.auth.signInWithIdToken().
   # Apple: deferred until Apple Developer account is active (PHASE 8b).

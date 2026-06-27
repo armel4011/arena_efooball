@@ -23,6 +23,7 @@ import 'package:arena/features_admin_desktop/profile/desktop_profile_page.dart';
 import 'package:arena/features_admin_desktop/shell/admin_desktop_shell.dart';
 import 'package:arena/features_admin_desktop/streams/desktop_stream_moderation_page.dart';
 import 'package:arena/features_admin_desktop/streams/desktop_watch_stream_page.dart';
+import 'package:arena/features_admin_desktop/super_admin/desktop_app_update_page.dart';
 import 'package:arena/features_admin_desktop/super_admin/desktop_invitations_page.dart';
 import 'package:arena/features_admin_desktop/super_admin/desktop_promo_banner_page.dart';
 import 'package:arena/features_admin_desktop/super_admin/desktop_reintegration_page.dart';
@@ -72,6 +73,7 @@ abstract final class AdminDesktopRoutes {
   static const superPromoBanner = '/super/promo-banner';
   static const superReintegration = '/super/reintegration';
   static const superSupport = '/super/support';
+  static const superAppUpdate = '/super/app-update';
   static const superTutorialBanners = '/super/tutorial-banners';
   static const superChatThread = '/super/messages/:userId';
 
@@ -315,6 +317,11 @@ final adminDesktopRouterProvider = Provider<GoRouter>((ref) {
             path: AdminDesktopRoutes.superSupport,
             name: 'desktop.superSupport',
             builder: (context, state) => const DesktopSupportPage(),
+          ),
+          GoRoute(
+            path: AdminDesktopRoutes.superAppUpdate,
+            name: 'desktop.superAppUpdate',
+            builder: (context, state) => const DesktopAppUpdatePage(),
           ),
           GoRoute(
             path: AdminDesktopRoutes.superTutorialBanners,

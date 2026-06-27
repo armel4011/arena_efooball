@@ -2583,6 +2583,29 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supportOptionEmail => 'إرسال بريد إلكتروني';
 
   @override
+  String get updateTitle => 'تحديث متوفّر';
+
+  @override
+  String updateMessage(Object version) {
+    return 'الإصدار $version متوفّر.';
+  }
+
+  @override
+  String get updateChangelogLabel => 'ما الجديد';
+
+  @override
+  String get updateDownloading => 'جارٍ التنزيل…';
+
+  @override
+  String get updateLater => 'لاحقًا';
+
+  @override
+  String get updateNow => 'تحديث';
+
+  @override
+  String get updateFailed => 'فشل التحديث. حاول لاحقًا.';
+
+  @override
   String get settingsAboutTitle => 'حول';
 
   @override

@@ -5020,6 +5020,48 @@ abstract class AppLocalizations {
   /// **'Écrire un e-mail'**
   String get supportOptionEmail;
 
+  /// No description provided for @updateTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mise à jour disponible'**
+  String get updateTitle;
+
+  /// No description provided for @updateMessage.
+  ///
+  /// In fr, this message translates to:
+  /// **'La version {version} est disponible.'**
+  String updateMessage(Object version);
+
+  /// No description provided for @updateChangelogLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouveautés'**
+  String get updateChangelogLabel;
+
+  /// No description provided for @updateDownloading.
+  ///
+  /// In fr, this message translates to:
+  /// **'Téléchargement…'**
+  String get updateDownloading;
+
+  /// No description provided for @updateLater.
+  ///
+  /// In fr, this message translates to:
+  /// **'Plus tard'**
+  String get updateLater;
+
+  /// No description provided for @updateNow.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mettre à jour'**
+  String get updateNow;
+
+  /// No description provided for @updateFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Échec de la mise à jour. Réessaie plus tard.'**
+  String get updateFailed;
+
   /// No description provided for @settingsAboutTitle.
   ///
   /// In fr, this message translates to:

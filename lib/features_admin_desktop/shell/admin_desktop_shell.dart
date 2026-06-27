@@ -120,6 +120,12 @@ const List<_NavEntry> _superEntries = [
     superAdminOnly: true,
   ),
   _NavEntry(
+    route: AdminDesktopRoutes.superAppUpdate,
+    icon: FluentIcons.cloud_download,
+    label: 'Mise à jour app',
+    superAdminOnly: true,
+  ),
+  _NavEntry(
     route: AdminDesktopRoutes.superTutorialBanners,
     icon: FluentIcons.video,
     label: 'Bannières tuto',

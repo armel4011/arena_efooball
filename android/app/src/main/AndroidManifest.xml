@@ -50,6 +50,10 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- MAJ in-app hors Play Store : installer un APK téléchargé depuis l'app
+         (déclenche l'installateur système). -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
     <application
         android:label="@string/app_name"
         android:name="${applicationName}"
