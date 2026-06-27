@@ -12,7 +12,9 @@ import 'package:arena/features_admin/competitions_admin/widgets/wizard_step_priz
 import 'package:arena/features_admin/competitions_admin/widgets/wizard_step_review.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/competition_description_templates.dart';
+import 'package:arena/features_shared/payment_codes_templates.dart';
 import 'package:arena/features_shared/prize_ranks.dart';
+import 'package:arena/features_shared/prize_templates.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
@@ -338,8 +340,16 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
                         topShareCtrls: _topShareCtrls,
                         blockShareCtrls: _blockShareCtrls,
                         shareTotal: _shareTotal(),
+                        savedTemplateCount: ref
+                                .watch(prizeTemplatesProvider)
+                                .valueOrNull
+                                ?.saved
+                                .length ??
+                            0,
                         onRewardedCountChanged: _setRewardedCount,
                         onChanged: () => setState(() {}),
+                        onSaveTemplate: _savePrizeTemplate,
+                        onOpenLibrary: _openPrizeLibrary,
                       ),
                     if (_step == 3)
                       WizardStepFees(
@@ -350,8 +360,16 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
                         mtnMomoCtrl: _mtnMomoCtrl,
                         referralQuotaCtrl: _referralQuotaCtrl,
                         isEditing: _isEditing,
+                        savedTemplateCount: ref
+                                .watch(paymentCodesTemplatesProvider)
+                                .valueOrNull
+                                ?.saved
+                                .length ??
+                            0,
                         onChanged: () => setState(() {}),
                         onCurrencyChanged: (c) => setState(() => _currency = c),
+                        onSaveTemplate: _savePaymentTemplate,
+                        onOpenLibrary: _openPaymentLibrary,
                       ),
                     if (_step == 4)
                       WizardStepReview(
@@ -509,6 +527,123 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
             .deleteTemplate(tpl.name),
       ),
     );
+  }
+
+  // ─── Modèles de codes de paiement (Orange / MTN) ──────────────────
+  Future<void> _savePaymentTemplate() async {
+    final orange = _orangeMomoCtrl.text.trim();
+    final mtn = _mtnMomoCtrl.text.trim();
+    if (orange.isEmpty && mtn.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Aucun code de paiement à enregistrer.')),
+      );
+      return;
+    }
+    final name = await _promptTemplateName();
+    if (name == null || name.trim().isEmpty) return;
+    try {
+      await ref
+          .read(paymentCodesTemplatesProvider.notifier)
+          .saveTemplate(name.trim(), orange, mtn);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Échec de l'enregistrement : $e")),
+      );
+      return;
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Codes « ${name.trim()} » enregistrés.')),
+    );
+  }
+
+  Future<void> _openPaymentLibrary() async {
+    final saved =
+        ref.read(paymentCodesTemplatesProvider).valueOrNull?.saved ?? const [];
+    if (saved.isEmpty) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: ArenaColors.surface,
+      isScrollControlled: true,
+      builder: (ctx) => _NamedTemplateSheet(
+        title: 'Mes codes de paiement',
+        subtitle: 'Touche un modèle pour pré-remplir Orange Money & MTN MoMo.',
+        items: [for (final t in saved) (name: t.name, preview: t.preview)],
+        onInsert: (i) {
+          Navigator.of(ctx).pop();
+          setState(() {
+            _orangeMomoCtrl.text = saved[i].orangeCode;
+            _mtnMomoCtrl.text = saved[i].mtnCode;
+          });
+        },
+        onDelete: (i) => ref
+            .read(paymentCodesTemplatesProvider.notifier)
+            .deleteTemplate(saved[i].name),
+      ),
+    );
+  }
+
+  // ─── Modèles de barème de récompenses ─────────────────────────────
+  Future<void> _savePrizeTemplate() async {
+    final name = await _promptTemplateName();
+    if (name == null || name.trim().isEmpty) return;
+    try {
+      await ref.read(prizeTemplatesProvider.notifier).saveTemplate(
+            name.trim(),
+            _rewardedCount,
+            [for (final c in _topShareCtrls) c.text.trim()],
+            [for (final c in _blockShareCtrls) c.text.trim()],
+          );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Échec de l'enregistrement : $e")),
+      );
+      return;
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Barème « ${name.trim()} » enregistré.')),
+    );
+  }
+
+  Future<void> _openPrizeLibrary() async {
+    final saved =
+        ref.read(prizeTemplatesProvider).valueOrNull?.saved ?? const [];
+    if (saved.isEmpty) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: ArenaColors.surface,
+      isScrollControlled: true,
+      builder: (ctx) => _NamedTemplateSheet(
+        title: 'Mes barèmes de récompenses',
+        subtitle: 'Touche un barème pour réappliquer le nombre de récompensés '
+            'et les parts.',
+        items: [for (final t in saved) (name: t.name, preview: t.preview)],
+        onInsert: (i) {
+          Navigator.of(ctx).pop();
+          _applyPrizeTemplate(saved[i]);
+        },
+        onDelete: (i) => ref
+            .read(prizeTemplatesProvider.notifier)
+            .deleteTemplate(saved[i].name),
+      ),
+    );
+  }
+
+  void _applyPrizeTemplate(PrizeTemplate tpl) {
+    setState(() {
+      _rewardedCount = tpl.rewardedCount.clamp(1, kMaxRewardedRanks);
+      for (var i = 0; i < _topShareCtrls.length; i++) {
+        _topShareCtrls[i].text =
+            i < tpl.topShares.length ? tpl.topShares[i] : '0';
+      }
+      for (var i = 0; i < _blockShareCtrls.length; i++) {
+        _blockShareCtrls[i].text =
+            i < tpl.blockShares.length ? tpl.blockShares[i] : '0';
+      }
+    });
   }
 
   /// Change le nombre de récompensés (1, 2, 4, 8, 16, 32, 64). Les

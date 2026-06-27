@@ -76,7 +76,10 @@ void main() {
   // 2310 → 2323 le 2026-06-27 : +13 `ArenaColors.*` de la MAJ in-app (dialog
   // update_available_dialog + écran super-admin mobile super_admin_app_update).
   // 0 vrai Colors.* ajouté (tous des tokens).
-  const colorsDotBaseline = 2323; // occurrences de `Colors.`
+  // 2323 → 2327 le 2026-06-27 : +4 `ArenaColors.*` des modèles réutilisables
+  // codes de paiement + barème de récompense (sheet générique _NamedTemplateSheet
+  // + backgroundColor des bottom-sheets). 0 vrai Colors.* ajouté (tous tokens).
+  const colorsDotBaseline = 2327; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.
