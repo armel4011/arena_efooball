@@ -11,7 +11,8 @@ class _DetailBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return DefaultTabController(
-      length: 4,
+      length: 5,
+      // L'onglet par défaut reste Infos ; ScrollableTab car 5 onglets.
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -19,6 +20,8 @@ class _DetailBody extends StatelessWidget {
           _BannerBadges(competition: competition),
           const SizedBox(height: ArenaSpacing.sm),
           TabBar(
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
             labelStyle: ArenaText.button,
             unselectedLabelStyle: ArenaText.button,
             labelColor: ArenaColors.bone,
@@ -37,6 +40,9 @@ class _DetailBody extends StatelessWidget {
                         ? l10n.compDetailTabBracket
                         : l10n.compDetailTabGroups,
               ),
+              // « Prochain match » — juste à côté de Bracket : les matchs
+              // actifs du joueur DANS cette compétition.
+              Tab(text: l10n.compDetailTabNextMatch),
               Tab(text: l10n.compDetailTabRanking),
             ],
           ),
@@ -53,6 +59,7 @@ class _DetailBody extends StatelessWidget {
                   BracketView(competitionId: competition.id)
                 else
                   GroupStandingsPage(competitionId: competition.id),
+                UpcomingMatchesList(competitionId: competition.id),
                 _RankingTab(competition: competition),
               ],
             ),

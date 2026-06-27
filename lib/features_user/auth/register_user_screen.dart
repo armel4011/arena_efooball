@@ -39,7 +39,9 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
   ArenaAvatarColor _avatarColor = ArenaAvatarColor.blue;
   bool _cguAccepted = false;
   bool _privacyAccepted = false;
-  bool _marketingAccepted = false;
+  // Consentement marketing activé par défaut (l'utilisateur peut décocher
+  // au signup ou désactiver plus tard dans Réglages).
+  bool _marketingAccepted = true;
   int _step = 0;
 
   // Lot D.1 — Code de parrainage optionnel (ARN-XXXX) saisi au signup.

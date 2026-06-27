@@ -88,7 +88,7 @@ class SignUpController extends AsyncNotifier<Profile?> {
     required DateTime cguAcceptedAt,
     required String cguVersionAccepted,
     required DateTime privacyPolicyAcceptedAt,
-    bool marketingConsent = false,
+    bool marketingConsent = true,
     String? referredBy,
   }) async {
     state = const AsyncLoading();

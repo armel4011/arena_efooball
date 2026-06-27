@@ -1750,6 +1750,12 @@ abstract class AppLocalizations {
   /// **'PARTICIP.'**
   String get compDetailTabParticipants;
 
+  /// No description provided for @compDetailTabNextMatch.
+  ///
+  /// In fr, this message translates to:
+  /// **'PROCHAIN MATCH'**
+  String get compDetailTabNextMatch;
+
   /// No description provided for @compDetailTabRanking.
   ///
   /// In fr, this message translates to:

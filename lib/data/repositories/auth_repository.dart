@@ -59,7 +59,7 @@ class AuthRepository {
     required DateTime cguAcceptedAt,
     required String cguVersionAccepted,
     required DateTime privacyPolicyAcceptedAt,
-    bool marketingConsent = false,
+    bool marketingConsent = true,
     String? referredBy,
   }) async {
     // Pre-validate username uniqueness BEFORE auth.signUp so a clash

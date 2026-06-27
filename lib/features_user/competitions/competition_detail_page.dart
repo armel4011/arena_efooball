@@ -15,6 +15,7 @@ import 'package:arena/features_user/bracket/bracket_view_page.dart';
 import 'package:arena/features_user/bracket/group_standings_page.dart';
 import 'package:arena/features_user/competitions/widgets/competition_phase_ui.dart';
 import 'package:arena/features_user/competitions/widgets/referral_progress_card.dart';
+import 'package:arena/features_user/home/widgets/upcoming_matches_section.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
