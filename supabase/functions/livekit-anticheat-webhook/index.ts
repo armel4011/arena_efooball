@@ -32,6 +32,7 @@ import {
   WebhookReceiver,
 } from "npm:livekit-server-sdk@2.9.0";
 import { safeDetail } from "../_shared/errors.ts";
+import type { ServiceClient } from "../_shared/db.ts";
 
 const LIVEKIT_URL = Deno.env.get("LIVEKIT_URL");
 const LIVEKIT_API_KEY = Deno.env.get("LIVEKIT_API_KEY");
@@ -118,7 +119,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 });
 
 async function onTrackPublished(
-  sb: ReturnType<typeof createClient>,
+  sb: ServiceClient,
   // deno-lint-ignore no-explicit-any
   event: any,
 ): Promise<Response> {
@@ -197,7 +198,7 @@ async function onTrackPublished(
 }
 
 async function onEgressEnded(
-  sb: ReturnType<typeof createClient>,
+  sb: ServiceClient,
   // deno-lint-ignore no-explicit-any
   event: any,
 ): Promise<Response> {
