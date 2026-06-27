@@ -79,7 +79,9 @@ void main() {
   // 2323 → 2327 le 2026-06-27 : +4 `ArenaColors.*` des modèles réutilisables
   // codes de paiement + barème de récompense (sheet générique _NamedTemplateSheet
   // + backgroundColor des bottom-sheets). 0 vrai Colors.* ajouté (tous tokens).
-  const colorsDotBaseline = 2327; // occurrences de `Colors.`
+  // 2327 → 2328 le 2026-06-27 : +1 `ArenaColors.*` net de la pastille date/heure
+  // mise en avant sur la card de compétition (signalBlue/bone). 0 vrai Colors.*.
+  const colorsDotBaseline = 2328; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.
