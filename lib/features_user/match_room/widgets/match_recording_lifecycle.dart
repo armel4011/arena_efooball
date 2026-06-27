@@ -1,7 +1,10 @@
 import 'dart:async';
 
 import 'package:arena/core/services/agora_streaming_service.dart';
+import 'package:arena/core/services/anticheat/anticheat_config_service.dart';
+import 'package:arena/core/services/anticheat/anticheat_provider.dart';
 import 'package:arena/core/services/gallery_exporter.dart';
+import 'package:arena/core/services/livekit_capture_service.dart';
 import 'package:arena/core/services/match_recording_coordinator.dart';
 import 'package:arena/core/services/native_lifecycle_events.dart';
 import 'package:arena/core/services/permissions_service.dart';
@@ -89,7 +92,6 @@ class _MatchRecordingLifecycleState
   Future<void> _maybeReact() async {
     if (!_isAndroidNative) return;
     if (!_isPlayer) return;
-    final coord = ref.read(matchRecordingCoordinatorProvider);
 
     final status = widget.match.status;
     final isLive = status == MatchStatus.inProgress ||
@@ -117,61 +119,130 @@ class _MatchRecordingLifecycleState
       }
 
       _startAttempted = true;
-      var opp = _opponentId;
-      // Debug-only fallback for solo BYE testing on the emulator: without
-      // a real opponent the coordinator bails before MediaProjection. A
-      // synthetic UUID lets the native recorder + overlay come up; the
-      // forfeit auto-flow will FK-fail at markForfeit() if the pause grace
-      // ever expires — fine, debug data only.
-      if (opp == null && kDebugMode) {
-        opp = '00000000-0000-0000-0000-000000000000';
-      }
-      if (opp == null) return;
 
-      // Request runtime permissions BEFORE handing off to the native
-      // recorder. Without RECORD_AUDIO the audio track is silently
-      // dropped; without POST_NOTIFICATIONS (Android 13+) the foreground
-      // service notification can't show and the OS kills the FGS in ~5s.
-      final permissions = ref.read(permissionsServiceProvider);
-      final bundle = await permissions.requestRecordingBundle();
-      if (!bundle.allGranted) {
-        if (mounted) {
-          setState(() => _startError = _bundleErrorMessage(bundle));
-        }
-        return;
-      }
-
-      // SYSTEM_ALERT_WINDOW for the floating anti-cheat button. Sends the
-      // user to a full-screen settings page on Android 6+, so handle it
-      // explicitly here — RecordingOverlayController.start() also checks
-      // but bails silently on denial, which hides the failure.
-      final overlay = await permissions.requestOverlay();
-      if (!overlay.isGranted) {
-        if (mounted) {
-          setState(() => _startError = _overlayErrorMessage(overlay));
-        }
-        return;
-      }
-
+      // Provider anti-triche actif — lecture réelle de app_config (pas le
+      // best-effort sync : on est déjà dans un contexte async one-shot).
+      AntiCheatProviderKind kind;
       try {
-        await coord.startForMatch(
-          matchId: widget.match.id,
-          playerId: widget.selfId!,
-          opponentId: opp,
-        );
-      } catch (e) {
-        if (mounted) {
-          setState(() => _startError = e.toString());
-        }
+        kind = await ref.read(activeAntiCheatProviderProvider.future);
+      } catch (_) {
+        kind = AntiCheatProviderKind.fallback;
+      }
+      if (!mounted) return;
+
+      // Exclusivité MediaProjection (Android 14+) : un seul provider démarre
+      // une capture d'écran à la fois.
+      if (kind == AntiCheatProviderKind.livekitTrackEgress) {
+        await _startLiveKit();
+      } else {
+        await _startNative();
       }
       return;
     }
 
-    if (isTerminal && coord.state is! CoordinatorIdle) {
+    if (isTerminal) {
+      await _stopOnTerminal();
+    }
+  }
+
+  /// Démarre la capture anti-triche via le recorder natif (filet de
+  /// sécurité). Comportement historique INCHANGÉ.
+  Future<void> _startNative() async {
+    final coord = ref.read(matchRecordingCoordinatorProvider);
+    var opp = _opponentId;
+    // Debug-only fallback for solo BYE testing on the emulator: without
+    // a real opponent the coordinator bails before MediaProjection. A
+    // synthetic UUID lets the native recorder + overlay come up; the
+    // forfeit auto-flow will FK-fail at markForfeit() if the pause grace
+    // ever expires — fine, debug data only.
+    if (opp == null && kDebugMode) {
+      opp = '00000000-0000-0000-0000-000000000000';
+    }
+    if (opp == null) return;
+
+    // Request runtime permissions BEFORE handing off to the native
+    // recorder. Without RECORD_AUDIO the audio track is silently
+    // dropped; without POST_NOTIFICATIONS (Android 13+) the foreground
+    // service notification can't show and the OS kills the FGS in ~5s.
+    final permissions = ref.read(permissionsServiceProvider);
+    final bundle = await permissions.requestRecordingBundle();
+    if (!bundle.allGranted) {
+      if (mounted) {
+        setState(() => _startError = _bundleErrorMessage(bundle));
+      }
+      return;
+    }
+
+    // SYSTEM_ALERT_WINDOW for the floating anti-cheat button. Sends the
+    // user to a full-screen settings page on Android 6+, so handle it
+    // explicitly here — RecordingOverlayController.start() also checks
+    // but bails silently on denial, which hides the failure.
+    final overlay = await permissions.requestOverlay();
+    if (!overlay.isGranted) {
+      if (mounted) {
+        setState(() => _startError = _overlayErrorMessage(overlay));
+      }
+      return;
+    }
+
+    try {
+      await coord.startForMatch(
+        matchId: widget.match.id,
+        playerId: widget.selfId!,
+        opponentId: opp,
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(() => _startError = e.toString());
+      }
+    }
+  }
+
+  /// Démarre la capture anti-triche via LiveKit (publish-only). Pas
+  /// d'overlay ni de micro : capture vidéo seule, enregistrée côté serveur
+  /// par Track Egress. Seule POST_NOTIFICATIONS est requise (foreground
+  /// service de capture d'écran) ; la consent MediaProjection est gérée par
+  /// le plugin flutter_webrtc lui-même.
+  Future<void> _startLiveKit() async {
+    final permissions = ref.read(permissionsServiceProvider);
+    final notif = await permissions.requestNotifications();
+    if (!notif.isGranted) {
+      if (mounted) {
+        setState(() => _startError = _notifErrorMessage(notif));
+      }
+      return;
+    }
+
+    try {
+      await ref
+          .read(liveKitCaptureServiceProvider)
+          .start(matchId: widget.match.id);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _startError = e.toString());
+      }
+    }
+  }
+
+  /// Stoppe le provider actif aux états terminaux du match. `disputed` reste
+  /// volontairement en cours (l'admin veut la vidéo live). Les deux providers
+  /// sont vérifiés : un changement de réglage en cours de match ne doit pas
+  /// laisser une capture orpheline.
+  Future<void> _stopOnTerminal() async {
+    final coord = ref.read(matchRecordingCoordinatorProvider);
+    if (coord.state is! CoordinatorIdle) {
       try {
         await coord.stopCleanly();
       } catch (e) {
         debugPrint('[recording] terminal stopCleanly failed: $e');
+      }
+    }
+    final livekit = ref.read(liveKitCaptureServiceProvider);
+    if (livekit.state is! LiveKitCaptureIdle) {
+      try {
+        await livekit.stop();
+      } catch (e) {
+        debugPrint('[recording] terminal livekit stop failed: $e');
       }
     }
   }
@@ -289,6 +360,17 @@ class _MatchRecordingLifecycleState
     return l10n.recordingPermOverlayDenied;
   }
 
+  /// Message d'erreur quand POST_NOTIFICATIONS est refusée pour la capture
+  /// LiveKit (foreground service). Réutilise les clés du bundle natif.
+  String _notifErrorMessage(PermissionOutcome outcome) {
+    final l10n = AppLocalizations.of(context);
+    final label = l10n.recordingPermMissingNotifications;
+    if (outcome.needsSettings) {
+      return l10n.recordingPermBundleNeedsSettings(label);
+    }
+    return l10n.recordingPermBundleDenied(label);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -383,7 +465,7 @@ class _MatchRecordingLifecycleState
       MatchRecordingActionsSheet.show(context);
     }
 
-    return switch (coordState) {
+    final nativeBanner = switch (coordState) {
       CoordinatorRecording() => _LifecycleBanner(
           icon: Icons.fiber_manual_record,
           color: ArenaColors.danger,
@@ -403,8 +485,24 @@ class _MatchRecordingLifecycleState
               ? l10n.recordingBannerForfeitPauseExpired
               : l10n.recordingBannerForfeitDeclared,
         ),
-      _ => const SizedBox.shrink(),
+      _ => null,
     };
+    if (nativeBanner != null) return nativeBanner;
+
+    // Provider LiveKit actif : bannière simple « enregistrement en cours »
+    // (pas d'overlay/pause/forfait — capture publish-only enregistrée serveur).
+    final livekitState =
+        ref.watch(liveKitCaptureStateProvider).value ??
+            const LiveKitCaptureIdle();
+    if (livekitState is LiveKitCapturePublishing) {
+      return _LifecycleBanner(
+        icon: Icons.fiber_manual_record,
+        color: ArenaColors.danger,
+        text: l10n.recordingBannerRecording,
+      );
+    }
+
+    return const SizedBox.shrink();
   }
 }
 

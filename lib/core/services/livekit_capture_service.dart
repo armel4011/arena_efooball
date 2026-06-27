@@ -251,3 +251,10 @@ final liveKitCaptureServiceProvider = Provider<LiveKitCaptureService>((ref) {
   ref.onDispose(service.dispose);
   return service;
 });
+
+/// Flux d'état de la capture LiveKit (pour la bannière du cycle de vie).
+final liveKitCaptureStateProvider =
+    StreamProvider<LiveKitCaptureState>((ref) {
+  final service = ref.watch(liveKitCaptureServiceProvider);
+  return service.stateStream;
+});
