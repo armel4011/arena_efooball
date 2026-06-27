@@ -83,7 +83,11 @@ void main() {
   // mise en avant sur la card de compétition (signalBlue/bone). 0 vrai Colors.*.
   // 2328 → 2329 le 2026-06-27 : +1 `ArenaColors.*` net de la refonte mirror du
   // bracket (double arborescence + scores + trophée central). 0 vrai Colors.*.
-  const colorsDotBaseline = 2329; // occurrences de `Colors.`
+  // 2329 → 2345 le 2026-06-27 : +16 `ArenaColors.*` du système anti-triche DUAL
+  // (sélecteur super-admin mobile/desktop + section « Enregistrements auto » des
+  // litiges mobile/desktop + bannière LiveKit). 0 vrai Colors.* ajouté
+  // (`Colors.transparent` du wrapper _LifecycleBanner est préexistant).
+  const colorsDotBaseline = 2345; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.
@@ -94,7 +98,10 @@ void main() {
   // pages desktop (desktop_chat_thread_page). À migrer vers ArenaText à terme.
   // 192 → 194 le 2026-06-27 : +2 `GoogleFonts.spaceGrotesk` de la page desktop
   // « Mise à jour app » (desktop_app_update_page). Même convention Fluent.
-  const googleFontsBaseline = 194; // occurrences de `GoogleFonts.`
+  // 194 → 198 le 2026-06-27 : +4 `GoogleFonts.spaceGrotesk` des pages desktop
+  // anti-triche (sélecteur + section enregistrements des litiges). Convention
+  // Fluent. À migrer vers ArenaText à terme.
+  const googleFontsBaseline = 198; // occurrences de `GoogleFonts.`
 
   final colorsDotRe = RegExp(r'Colors\.');
   final colorHexRe = RegExp(r'Color\(0x');

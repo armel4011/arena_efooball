@@ -1,6 +1,7 @@
 import 'package:arena/core/utils/poll_stream.dart';
 import 'package:arena/data/models/dispute.dart';
 import 'package:arena/data/models/dispute_proof.dart';
+import 'package:arena/data/models/match_stream.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -18,6 +19,8 @@ class AdminDisputesRepository {
   static const _table = 'disputes';
   static const _eventsTable = 'match_events';
   static const _proofBucket = 'match-proofs';
+  static const _streamsTable = 'streams';
+  static const _recordingsBucket = 'match-recordings';
 
   final SupabaseClient _client;
 
@@ -101,6 +104,48 @@ class AdminDisputesRepository {
   }) {
     return _client.storage
         .from(_proofBucket)
+        .createSignedUrl(path, expiresIn.inSeconds);
+  }
+
+  /// Enregistrements anti-triche AUTO de [matchId] (système DUAL).
+  ///
+  /// Lit les lignes `streams` de preuve (anti-triche) : on exclut les flux
+  /// Agora LIVE (`is_public = true`, `url` = nom de canal, pas un objet) et on
+  /// ne garde que celles qui portent un chemin de fichier — `storage_path`
+  /// (LiveKit Track Egress) ou `url` (recorder natif, cf.
+  /// `RecordingUploader.attachUrl`). Plus récentes en tête.
+  Future<List<MatchStream>> fetchRecordings(String matchId) async {
+    final rows = await _client
+        .from(_streamsTable)
+        .select()
+        .eq('match_id', matchId)
+        .eq('is_public', false)
+        .order('started_at', ascending: false);
+    final out = <MatchStream>[];
+    for (final row in rows as List<dynamic>) {
+      final s = MatchStream.fromJson(row as Map<String, dynamic>);
+      if (recordingPathOf(s) != null) out.add(s);
+    }
+    return out;
+  }
+
+  /// Chemin objet à signer pour un enregistrement : `storage_path` (LiveKit)
+  /// en priorité, sinon `url` (natif). Null si la ligne ne porte aucun fichier.
+  String? recordingPathOf(MatchStream s) {
+    final sp = s.storagePath;
+    if (sp != null && sp.isNotEmpty) return sp;
+    final u = s.url;
+    if (u != null && u.isNotEmpty) return u;
+    return null;
+  }
+
+  /// Signe un objet privé du bucket `match-recordings` pour lecture (1h).
+  Future<String> signedRecordingUrl(
+    String path, {
+    Duration expiresIn = const Duration(hours: 1),
+  }) {
+    return _client.storage
+        .from(_recordingsBucket)
         .createSignedUrl(path, expiresIn.inSeconds);
   }
 
@@ -191,6 +236,37 @@ final adminDisputeProofsProvider = FutureProvider.family
   for (final proof in proofs) {
     final url = await repo.signedProofUrl(proof.path);
     signed.add(SignedDisputeProof(proof: proof, url: url));
+  }
+  return signed;
+});
+
+/// Un enregistrement anti-triche AUTO + son URL signée prête à l'affichage.
+class SignedMatchRecording {
+  const SignedMatchRecording({required this.stream, required this.url});
+
+  final MatchStream stream;
+  final String url;
+
+  /// Provider d'origine (`native_recorder` | `livekit_track_egress`).
+  String get provider => stream.provider;
+  String? get playerId => stream.playerId;
+  DateTime? get startedAt => stream.startedAt;
+  bool get isLiveKit => stream.provider == 'livekit_track_egress';
+}
+
+/// Récupère les enregistrements anti-triche AUTO de `matchId` et signe chacun
+/// (1h). Alimente la section « Enregistrements auto » des litiges. autoDispose
+/// pour ne pas garder d'URL signées périmées.
+final adminMatchRecordingsProvider = FutureProvider.family
+    .autoDispose<List<SignedMatchRecording>, String>((ref, matchId) async {
+  final repo = ref.watch(adminDisputesRepositoryProvider);
+  final recordings = await repo.fetchRecordings(matchId);
+  final signed = <SignedMatchRecording>[];
+  for (final rec in recordings) {
+    final path = repo.recordingPathOf(rec);
+    if (path == null) continue;
+    final url = await repo.signedRecordingUrl(path);
+    signed.add(SignedMatchRecording(stream: rec, url: url));
   }
   return signed;
 });

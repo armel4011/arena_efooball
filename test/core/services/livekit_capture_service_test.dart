@@ -62,8 +62,7 @@ void main() {
   }
 
   group('LiveKitCaptureService.start', () {
-    test('fetches token, connects and publishes (idle → publishing)',
-        () async {
+    test('fetches token, connects and publishes (idle → publishing)', () async {
       when(() => tokenClient.fetch(matchId: 'match-1'))
           .thenAnswer((_) async => _stubToken);
       final room = _FakeRoom();

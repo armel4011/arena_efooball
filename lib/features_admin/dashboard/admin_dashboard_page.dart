@@ -256,6 +256,13 @@ class AdminDashboardPage extends ConsumerWidget {
                     onPressed: () =>
                         context.push(AdminRoutes.superTutorialVideo),
                   ),
+                  const SizedBox(height: ArenaSpacing.xs),
+                  ArenaButton(
+                    label: '🛡 ANTI-TRICHE',
+                    fullWidth: true,
+                    variant: ArenaButtonVariant.secondary,
+                    onPressed: () => context.push(AdminRoutes.superAntiCheat),
+                  ),
                 ],
                 const SizedBox(height: ArenaSpacing.lg),
                 Text(
