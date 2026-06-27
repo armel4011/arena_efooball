@@ -2,32 +2,22 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/arena_match.dart';
 import 'package:flutter/material.dart';
 
-/// Arbre KO arborescent — reproduit l'écran #20 de
-/// `arena_premium_reference.html` (single-elim 16 players).
+/// Arbre KO en **double arborescence** (mirror) : la moitié gauche du
+/// bracket pousse de l'extérieur vers le centre (round 1 tout à gauche →
+/// demi-finale près du centre), la moitié droite est son miroir (round 1
+/// tout à droite → demi-finale près du centre), et la **finale + trophée
+/// 🏆** trône au milieu. Les scores des matchs joués sont affichés.
 ///
-/// Layout : N colonnes horizontales (1 par round, déterminé par
-/// `matches[i].round`), chaque colonne occupe une part équivalente de
-/// la hauteur disponible avec `MainAxisAlignment.spaceAround`. Les
-/// lignes connectrices entre rounds sont peintes via `_BracketConnectors`
-/// (CustomPainter) en arrière-plan : 2 segments horizontaux depuis le
-/// bord droit de chaque match du round N + 1 segment vertical joignant
-/// leurs centres + 1 segment horizontal entrant dans le successeur en
-/// round N+1.
+/// Layout : `2·(R-1) + 1` colonnes (R = nombre de rounds). Chaque colonne
+/// répartit ses matchs équitablement en hauteur (`spaceAround`). Les
+/// connecteurs (gauche → centre, droite → centre, demi-finales → finale)
+/// sont peints par [_BracketConnectors].
 ///
-/// Wrappé dans un `InteractiveViewer` (pinch-to-zoom 0.5→3.0×, pan
-/// permissif via `boundaryMargin: EdgeInsets.all(200)`) pour permettre
-/// de naviguer dans un bracket 16 ou 32 joueurs sur écran mobile.
+/// Wrappé dans un `InteractiveViewer` (pinch-to-zoom 0.5→3×) pour naviguer
+/// un grand bracket sur mobile.
 ///
-/// Styles par round (de l'extérieur vers la finale) :
-/// * Round 1 — fond `bone @ 4 %`, texte `silver`, accent neutre.
-/// * Rounds intermédiaires — fond `signalBlue @ 10 %`, border
-///   `signalBlue`, texte `signalBlue`.
-/// * Demi-finales — fond `gold @ 10 %`, border `gold`, texte `gold`.
-/// * Finale — gradient `tierGoldWarm → tierGoldDeep`, texte `void_` en
-///   Bebas Neue 14 px, glow `gold @ 40 %`.
-///
-/// Mode read-only par défaut. Pour activer l'interaction : passer
-/// `onTapMatch` (déclenché quand le joueur tape une card de match).
+/// Styles par round : R1 neutre, intermédiaires bleu, demi-finales or,
+/// finale gradient or + glow, match 3e place bronze.
 class ArenaBracketTree extends StatelessWidget {
   const ArenaBracketTree({
     required this.matches,
@@ -37,33 +27,25 @@ class ArenaBracketTree extends StatelessWidget {
     super.key,
   });
 
-  /// Liste plate des matches de la compétition (déjà filtrés sur le
-  /// format `singleElimination` côté caller). Le tri par round et par
-  /// `matchNumber` est fait à l'intérieur.
+  /// Liste plate des matches (déjà filtrés `singleElimination` côté caller).
   final List<ArenaMatch> matches;
 
-  /// Callback de tap sur une card. `null` pour mode read-only (pas
-  /// d'`InkWell`, pas de feedback ripple).
+  /// Tap sur une card. `null` = read-only.
   final ValueChanged<ArenaMatch>? onTapMatch;
 
-  /// Resolution `playerId -> username` pour afficher le vrai pseudo
-  /// dans les cards. Vide par défaut : fallback sur `P-XXXX` (id
-  /// tronqué). Pour résoudre les usernames, le caller doit watcher
-  /// `profilesByIdsProvider` et construire cette map.
+  /// Résolution `playerId -> username` (fallback `P-XXXX`).
   final Map<String, String> usernamesByPlayerId;
 
-  /// Plafond du zoom in (`InteractiveViewer.maxScale`). 3× couvre un
-  /// bracket 32 joueurs (5 rounds) sur un écran 5".
+  /// Plafond du zoom in.
   final double maxScale;
 
-  // Layout constants — la hauteur dispo est partagée équitablement par
-  // les matches du round 1 (qui contient le plus de matches), donc les
-  // cards sont compactes pour tenir un bracket 16 sans scroll vertical.
-  static const double _columnWidth = 78;
-  static const double _columnGap = 18;
-  static const double _matchHeight = 42;
-  static const double _matchGap = 6;
+  // Layout constants — légèrement agrandis pour une meilleure lisibilité.
+  static const double _columnWidth = 96;
+  static const double _columnGap = 24;
+  static const double _matchHeight = 54;
+  static const double _matchGap = 8;
   static const double _connectorPad = 4;
+  static const double _bottomMargin = 40;
 
   @override
   Widget build(BuildContext context) {
@@ -72,16 +54,12 @@ class ArenaBracketTree extends StatelessWidget {
     final byRound = <int, List<ArenaMatch>>{};
     for (final m in matches) {
       final r = m.round ?? 0;
-      if (r <= 0) continue; // matches "hors phase" ignorés dans l'arbre
+      if (r <= 0) continue;
       (byRound[r] ??= []).add(m);
     }
     if (byRound.isEmpty) return const SizedBox.shrink();
 
     final rounds = byRound.keys.toList()..sort();
-    // Tri stable des matches dans chaque round par `matchNumber` (puis
-    // par id en fallback) — garantit que les 2 prédécesseurs en round N
-    // (indices 2i / 2i+1) tombent face à leur successeur (index i) en
-    // round N+1.
     for (final r in rounds) {
       byRound[r]!.sort((a, b) {
         final an = a.matchNumber ?? 1 << 30;
@@ -91,12 +69,46 @@ class ArenaBracketTree extends StatelessWidget {
       });
     }
 
-    final firstRoundCount = byRound[rounds.first]!.length;
-    final treeHeight = firstRoundCount * (_matchHeight + _matchGap) +
-        _matchGap * 2 +
-        40; // marge basse pour caption "pince pour zoomer"
+    // Finale (dernier round) + éventuel match 3e place (même round).
+    final finalRound = rounds.last;
+    final finalList = byRound[finalRound]!;
+    final finalMatch =
+        finalList.where((m) => !m.isThirdPlace).cast<ArenaMatch?>().firstWhere(
+              (m) => true,
+              orElse: () => finalList.isNotEmpty ? finalList.first : null,
+            );
+    ArenaMatch? thirdPlace;
+    for (final m in finalList) {
+      if (m.isThirdPlace) thirdPlace = m;
+    }
+
+    final nonFinal = rounds.sublist(0, rounds.length - 1);
+
+    // Cas dégénéré : pas de rounds avant la finale → finale seule, centrée.
+    if (nonFinal.isEmpty) {
+      return _soloFinale(context, finalMatch, thirdPlace);
+    }
+
+    // Scinde chaque round non-final en moitié gauche / droite.
+    final leftByRound = <int, List<ArenaMatch>>{};
+    final rightByRound = <int, List<ArenaMatch>>{};
+    for (final r in nonFinal) {
+      final list = byRound[r]!;
+      final leftCount = list.length - list.length ~/ 2; // gauche = ceil
+      leftByRound[r] = list.sublist(0, leftCount);
+      rightByRound[r] = list.sublist(leftCount);
+    }
+
+    final k = nonFinal.length;
+    final totalCols = 2 * k + 1;
+    final leftR1Count = leftByRound[nonFinal.first]!.length;
+    final treeHeight =
+        leftR1Count * (_matchHeight + _matchGap) + _matchGap * 2;
+    final fullHeight = treeHeight + _bottomMargin;
     final treeWidth =
-        rounds.length * _columnWidth + (rounds.length - 1) * _columnGap;
+        totalCols * _columnWidth + (totalCols - 1) * _columnGap;
+
+    double colX(int col) => col * (_columnWidth + _columnGap);
 
     return InteractiveViewer(
       minScale: 0.5,
@@ -104,39 +116,87 @@ class ArenaBracketTree extends StatelessWidget {
       boundaryMargin: const EdgeInsets.all(200),
       child: SizedBox(
         width: treeWidth,
-        height: treeHeight,
+        height: fullHeight,
         child: Stack(
           children: [
-            // Connecteurs entre colonnes — peints en background.
             Positioned.fill(
               child: CustomPaint(
                 painter: _BracketConnectors(
-                  rounds: rounds,
-                  byRound: byRound,
+                  nonFinal: nonFinal,
+                  leftByRound: leftByRound,
+                  rightByRound: rightByRound,
+                  k: k,
                   columnWidth: _columnWidth,
                   columnGap: _columnGap,
-                  matchHeight: _matchHeight,
-                  treeHeight: treeHeight - 40, // moins caption
+                  treeHeight: treeHeight,
                   pad: _connectorPad,
                 ),
               ),
             ),
-            // Colonnes de cards par round.
-            for (var i = 0; i < rounds.length; i++)
+            // ── Colonnes GAUCHE : R1 (col 0) → demi (col k-1) ──
+            for (var i = 0; i < k; i++)
               Positioned(
-                left: i * (_columnWidth + _columnGap),
+                left: colX(i),
                 top: 0,
                 width: _columnWidth,
-                height: treeHeight - 40,
+                height: treeHeight,
                 child: _RoundColumn(
-                  matches: byRound[rounds[i]]!,
-                  style: _styleForRound(rounds[i], rounds.last),
+                  matches: leftByRound[nonFinal[i]]!,
+                  style: _styleForRound(nonFinal[i], finalRound),
                   matchHeight: _matchHeight,
+                  mirrored: false,
+                  onTapMatch: onTapMatch,
+                  usernamesByPlayerId: usernamesByPlayerId,
+                ),
+              ),
+            // ── Colonne CENTRE : finale (+ 3e place) ──
+            Positioned(
+              left: colX(k),
+              top: 0,
+              width: _columnWidth,
+              height: treeHeight,
+              child: _CenterColumn(
+                finalMatch: finalMatch,
+                thirdPlace: thirdPlace,
+                onTapMatch: onTapMatch,
+                usernamesByPlayerId: usernamesByPlayerId,
+              ),
+            ),
+            // ── Colonnes DROITE (miroir) : demi (col k+1) → R1 (col 2k) ──
+            for (var i = 0; i < k; i++)
+              Positioned(
+                left: colX(2 * k - i),
+                top: 0,
+                width: _columnWidth,
+                height: treeHeight,
+                child: _RoundColumn(
+                  matches: rightByRound[nonFinal[i]]!,
+                  style: _styleForRound(nonFinal[i], finalRound),
+                  matchHeight: _matchHeight,
+                  mirrored: true,
                   onTapMatch: onTapMatch,
                   usernamesByPlayerId: usernamesByPlayerId,
                 ),
               ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _soloFinale(
+    BuildContext context,
+    ArenaMatch? finalMatch,
+    ArenaMatch? thirdPlace,
+  ) {
+    return Center(
+      child: SizedBox(
+        width: _columnWidth + 40,
+        child: _CenterColumn(
+          finalMatch: finalMatch,
+          thirdPlace: thirdPlace,
+          onTapMatch: onTapMatch,
+          usernamesByPlayerId: usernamesByPlayerId,
         ),
       ),
     );
@@ -157,6 +217,7 @@ class _RoundColumn extends StatelessWidget {
     required this.matches,
     required this.style,
     required this.matchHeight,
+    required this.mirrored,
     required this.onTapMatch,
     required this.usernamesByPlayerId,
   });
@@ -164,6 +225,7 @@ class _RoundColumn extends StatelessWidget {
   final List<ArenaMatch> matches;
   final _RoundStyle style;
   final double matchHeight;
+  final bool mirrored;
   final ValueChanged<ArenaMatch>? onTapMatch;
   final Map<String, String> usernamesByPlayerId;
 
@@ -177,9 +239,8 @@ class _RoundColumn extends StatelessWidget {
             height: matchHeight,
             child: _MatchCard(
               match: m,
-              // Le match de classement arrive dans le même round que la
-              // finale ; on le distingue par un style bronze dédié.
               style: m.isThirdPlace ? _RoundStyle.thirdPlace : style,
+              mirrored: mirrored,
               onTap: onTapMatch == null ? null : () => onTapMatch!(m),
               usernamesByPlayerId: usernamesByPlayerId,
             ),
@@ -189,16 +250,69 @@ class _RoundColumn extends StatelessWidget {
   }
 }
 
+/// Colonne centrale : la finale (avec trophée) et, si présent, le match de
+/// la 3e place, empilés et centrés verticalement.
+class _CenterColumn extends StatelessWidget {
+  const _CenterColumn({
+    required this.finalMatch,
+    required this.thirdPlace,
+    required this.onTapMatch,
+    required this.usernamesByPlayerId,
+  });
+
+  final ArenaMatch? finalMatch;
+  final ArenaMatch? thirdPlace;
+  final ValueChanged<ArenaMatch>? onTapMatch;
+  final Map<String, String> usernamesByPlayerId;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        if (finalMatch != null)
+          SizedBox(
+            height: 64,
+            child: _MatchCard(
+              match: finalMatch!,
+              style: _RoundStyle.finale,
+              mirrored: false,
+              onTap:
+                  onTapMatch == null ? null : () => onTapMatch!(finalMatch!),
+              usernamesByPlayerId: usernamesByPlayerId,
+            ),
+          ),
+        if (thirdPlace != null) ...[
+          const SizedBox(height: ArenaSpacing.md),
+          SizedBox(
+            height: 50,
+            child: _MatchCard(
+              match: thirdPlace!,
+              style: _RoundStyle.thirdPlace,
+              mirrored: false,
+              onTap:
+                  onTapMatch == null ? null : () => onTapMatch!(thirdPlace!),
+              usernamesByPlayerId: usernamesByPlayerId,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
 class _MatchCard extends StatelessWidget {
   const _MatchCard({
     required this.match,
     required this.style,
+    required this.mirrored,
     required this.onTap,
     required this.usernamesByPlayerId,
   });
 
   final ArenaMatch match;
   final _RoundStyle style;
+  final bool mirrored;
   final VoidCallback? onTap;
   final Map<String, String> usernamesByPlayerId;
 
@@ -210,6 +324,7 @@ class _MatchCard extends StatelessWidget {
     final winner = match.winnerId;
     final p1Win = winner != null && winner == match.player1Id;
     final p2Win = winner != null && winner == match.player2Id;
+    final hasScore = match.score1 != null && match.score2 != null;
 
     final card = Container(
       decoration: BoxDecoration(
@@ -217,39 +332,48 @@ class _MatchCard extends StatelessWidget {
             ? const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  ArenaColors.tierGoldWarm,
-                  ArenaColors.tierGoldDeep,
-                ],
+                colors: [ArenaColors.tierGoldWarm, ArenaColors.tierGoldDeep],
               )
             : null,
         color: isGradient ? null : bg,
         border: border == null ? null : Border.all(color: border, width: 1),
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(6),
         boxShadow: style == _RoundStyle.finale
             ? const [
                 BoxShadow(
                   color: ArenaColors.goldGlow,
-                  blurRadius: 14,
+                  blurRadius: 16,
                   spreadRadius: -1,
                 ),
               ]
             : null,
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
       child: style == _RoundStyle.finale
           ? _FinaleContent(score1: match.score1, score2: match.score2)
           : style == _RoundStyle.thirdPlace
               ? _ThirdPlaceContent(score1: match.score1, score2: match.score2)
               : Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _PlayerLine(label: p1, win: p1Win, fg: fg),
-                const SizedBox(height: 1),
-                _PlayerLine(label: p2, win: p2Win, fg: fg),
-              ],
-            ),
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _PlayerLine(
+                      label: p1,
+                      score: hasScore ? match.score1 : null,
+                      win: p1Win,
+                      fg: fg,
+                      mirrored: mirrored,
+                    ),
+                    const SizedBox(height: 2),
+                    _PlayerLine(
+                      label: p2,
+                      score: hasScore ? match.score2 : null,
+                      win: p2Win,
+                      fg: fg,
+                      mirrored: mirrored,
+                    ),
+                  ],
+                ),
     );
 
     if (onTap == null) return card;
@@ -257,17 +381,12 @@ class _MatchCard extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(6),
         child: card,
       ),
     );
   }
 
-  /// Label affiché dans la card du match : prioritise le username réel
-  /// (résolu via `usernamesByPlayerId`, alimenté par `profilesByIdsProvider`
-  /// côté caller), retombe sur `P-XXXX` (id tronqué) tant que le profil
-  /// n'est pas chargé, et `—` quand le slot n'a pas de joueur (le
-  /// vainqueur du round précédent n'a pas encore cascadé).
   static String _label(
     String? playerId,
     Map<String, String> usernamesByPlayerId,
@@ -314,24 +433,55 @@ class _MatchCard extends StatelessWidget {
 }
 
 class _PlayerLine extends StatelessWidget {
-  const _PlayerLine({required this.label, required this.win, required this.fg});
+  const _PlayerLine({
+    required this.label,
+    required this.score,
+    required this.win,
+    required this.fg,
+    required this.mirrored,
+  });
 
   final String label;
+  final int? score;
   final bool win;
   final Color fg;
+  final bool mirrored;
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      label,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: ArenaText.monoSmall.copyWith(
-        fontSize: 9,
-        color: win ? ArenaColors.bone : fg,
-        fontWeight: win ? FontWeight.w800 : FontWeight.w500,
+    final name = Expanded(
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        textAlign: mirrored ? TextAlign.right : TextAlign.left,
+        style: ArenaText.monoSmall.copyWith(
+          fontSize: 11,
+          color: win ? ArenaColors.bone : fg,
+          fontWeight: win ? FontWeight.w800 : FontWeight.w500,
+        ),
       ),
     );
+    final scoreWidget = score == null
+        ? const SizedBox.shrink()
+        : Padding(
+            padding: EdgeInsets.only(
+              left: mirrored ? 0 : 6,
+              right: mirrored ? 6 : 0,
+            ),
+            child: Text(
+              '$score',
+              style: ArenaText.monoSmall.copyWith(
+                fontSize: 11,
+                color: win ? ArenaColors.bone : fg,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          );
+    // Miroir : score à gauche, nom à droite.
+    final children =
+        mirrored ? [scoreWidget, name] : [name, scoreWidget];
+    return Row(children: children);
   }
 }
 
@@ -347,13 +497,13 @@ class _FinaleContent extends StatelessWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Text('🏆', style: TextStyle(fontSize: 12, height: 1)),
-        const SizedBox(height: 1),
+        const Text('🏆', style: TextStyle(fontSize: 18, height: 1)),
+        const SizedBox(height: 2),
         Text(
           hasScore ? '$score1 — $score2' : 'FINALE',
           style: ArenaText.h2.copyWith(
             color: ArenaColors.void_,
-            fontSize: 11,
+            fontSize: 14,
             letterSpacing: 1,
             height: 1,
           ),
@@ -363,8 +513,6 @@ class _FinaleContent extends StatelessWidget {
   }
 }
 
-/// Contenu de la card du match de classement (3e place). Style bronze,
-/// libellé « 🥉 3e PLACE » tant qu'aucun score n'est saisi.
 class _ThirdPlaceContent extends StatelessWidget {
   const _ThirdPlaceContent({required this.score1, required this.score2});
 
@@ -377,13 +525,13 @@ class _ThirdPlaceContent extends StatelessWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Text('🥉', style: TextStyle(fontSize: 12, height: 1)),
+        const Text('🥉', style: TextStyle(fontSize: 14, height: 1)),
         const SizedBox(height: 1),
         Text(
           hasScore ? '$score1 — $score2' : '3e PLACE',
           style: ArenaText.h2.copyWith(
             color: ArenaColors.tierBronze,
-            fontSize: 10,
+            fontSize: 12,
             letterSpacing: 0.5,
             height: 1,
           ),
@@ -393,37 +541,36 @@ class _ThirdPlaceContent extends StatelessWidget {
   }
 }
 
-/// CustomPainter qui dessine les lignes connectrices entre rounds.
-/// Pour chaque round N (sauf le dernier), trace pour chaque paire
-/// `(match[2i], match[2i+1])` :
+/// Peint les connecteurs de la double arborescence :
+///  * Gauche : R1 (extérieur) → demi-finale (centre), flux vers la droite.
+///  * Droite : miroir, flux vers la gauche.
+///  * Centre : les deux demi-finales rejoignent la finale.
 ///
-/// 1. Un segment horizontal depuis le bord droit de chaque match (les
-///    deux à la même longueur, dans la `gap` inter-colonnes).
-/// 2. Un segment vertical reliant ces deux extrémités.
-/// 3. Un segment horizontal du milieu vertical jusqu'au bord gauche du
-///    match successeur en round N+1.
-///
-/// Trait : `silver @ 35 %` à 1 px (lisible sans surcharger).
+/// Trait `silver @ 35 %`.
 class _BracketConnectors extends CustomPainter {
   _BracketConnectors({
-    required this.rounds,
-    required this.byRound,
+    required this.nonFinal,
+    required this.leftByRound,
+    required this.rightByRound,
+    required this.k,
     required this.columnWidth,
     required this.columnGap,
-    required this.matchHeight,
     required this.treeHeight,
     required this.pad,
   });
 
-  final List<int> rounds;
-  final Map<int, List<ArenaMatch>> byRound;
+  final List<int> nonFinal;
+  final Map<int, List<ArenaMatch>> leftByRound;
+  final Map<int, List<ArenaMatch>> rightByRound;
+  final int k;
   final double columnWidth;
   final double columnGap;
-  final double matchHeight;
   final double treeHeight;
   final double pad;
 
   static const _stroke = 1.2;
+
+  double _colX(int col) => col * (columnWidth + columnGap);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -432,46 +579,83 @@ class _BracketConnectors extends CustomPainter {
       ..strokeWidth = _stroke
       ..style = PaintingStyle.stroke;
 
-    for (var i = 0; i < rounds.length - 1; i++) {
-      final fromCount = byRound[rounds[i]]!.length;
-      final toCount = byRound[rounds[i + 1]]!.length;
-      // Si la cardinalité n'est pas exactement le double, on ne dessine
-      // rien sur ce gap — évite des connecteurs incohérents (cas de
-      // matches manquants / bracket partiel).
-      if (toCount * 2 != fromCount) continue;
-
+    // ── GAUCHE : colonnes 0..k-1, flux vers la droite ──
+    for (var i = 0; i < k - 1; i++) {
+      final fromCount = leftByRound[nonFinal[i]]!.length;
+      final toCount = leftByRound[nonFinal[i + 1]]!.length;
+      if (toCount == 0 || toCount * 2 != fromCount) continue;
       final fromSlot = treeHeight / fromCount;
       final toSlot = treeHeight / toCount;
-      final colLeftFrom = i * (columnWidth + columnGap);
-      final fromRightX = colLeftFrom + columnWidth + pad;
-      final colLeftTo = (i + 1) * (columnWidth + columnGap);
-      final toLeftX = colLeftTo - pad;
+      final fromRightX = _colX(i) + columnWidth + pad;
+      final toLeftX = _colX(i + 1) - pad;
       final midX = (fromRightX + toLeftX) / 2;
-
       for (var j = 0; j < toCount; j++) {
         final yTop = fromSlot * (2 * j) + fromSlot / 2;
         final yBot = fromSlot * (2 * j + 1) + fromSlot / 2;
         final yMid = toSlot * j + toSlot / 2;
-
-        // Segment 1 : depuis le bord droit des 2 matches du round N
-        // jusqu'au mid-X.
         canvas
           ..drawLine(Offset(fromRightX, yTop), Offset(midX, yTop), paint)
           ..drawLine(Offset(fromRightX, yBot), Offset(midX, yBot), paint)
-          // Segment 2 : vertical entre les 2 sorties.
           ..drawLine(Offset(midX, yTop), Offset(midX, yBot), paint)
-          // Segment 3 : horizontal jusqu'à l'entrée du successeur.
           ..drawLine(Offset(midX, yMid), Offset(toLeftX, yMid), paint);
       }
+    }
+
+    // ── DROITE : R1 en col 2k → demi en col k+1, flux vers la gauche ──
+    for (var i = 0; i < k - 1; i++) {
+      final fromCount = rightByRound[nonFinal[i]]!.length;
+      final toCount = rightByRound[nonFinal[i + 1]]!.length;
+      if (toCount == 0 || toCount * 2 != fromCount) continue;
+      final fromSlot = treeHeight / fromCount;
+      final toSlot = treeHeight / toCount;
+      final cFrom = 2 * k - i;
+      final cTo = 2 * k - i - 1;
+      final fromLeftX = _colX(cFrom) - pad;
+      final toRightX = _colX(cTo) + columnWidth + pad;
+      final midX = (fromLeftX + toRightX) / 2;
+      for (var j = 0; j < toCount; j++) {
+        final yTop = fromSlot * (2 * j) + fromSlot / 2;
+        final yBot = fromSlot * (2 * j + 1) + fromSlot / 2;
+        final yMid = toSlot * j + toSlot / 2;
+        canvas
+          ..drawLine(Offset(fromLeftX, yTop), Offset(midX, yTop), paint)
+          ..drawLine(Offset(fromLeftX, yBot), Offset(midX, yBot), paint)
+          ..drawLine(Offset(midX, yTop), Offset(midX, yBot), paint)
+          ..drawLine(Offset(midX, yMid), Offset(toRightX, yMid), paint);
+      }
+    }
+
+    // ── CENTRE : demi-finales (col k-1 gauche, col k+1 droite) → finale ──
+    final finalY = treeHeight / 2;
+    final leftSemi = leftByRound[nonFinal.last]!;
+    final rightSemi = rightByRound[nonFinal.last]!;
+    final finalLeftX = _colX(k) - pad;
+    final finalRightX = _colX(k) + columnWidth + pad;
+    if (leftSemi.isNotEmpty) {
+      final rightEdge = _colX(k - 1) + columnWidth + pad;
+      canvas.drawLine(
+        Offset(rightEdge, finalY),
+        Offset(finalLeftX, finalY),
+        paint,
+      );
+    }
+    if (rightSemi.isNotEmpty) {
+      final leftEdge = _colX(k + 1) - pad;
+      canvas.drawLine(
+        Offset(leftEdge, finalY),
+        Offset(finalRightX, finalY),
+        paint,
+      );
     }
   }
 
   @override
   bool shouldRepaint(covariant _BracketConnectors old) =>
-      old.rounds != rounds ||
-      old.byRound != byRound ||
+      old.nonFinal != nonFinal ||
+      old.leftByRound != leftByRound ||
+      old.rightByRound != rightByRound ||
+      old.k != k ||
       old.columnWidth != columnWidth ||
       old.columnGap != columnGap ||
-      old.matchHeight != matchHeight ||
       old.treeHeight != treeHeight;
 }
