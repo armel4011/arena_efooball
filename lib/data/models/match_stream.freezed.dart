@@ -27,7 +27,16 @@ mixin _$MatchStream {
   bool get isActive => throw _privateConstructorUsedError;
   String? get url => throw _privateConstructorUsedError;
   DateTime? get startedAt => throw _privateConstructorUsedError;
-  DateTime? get endedAt => throw _privateConstructorUsedError;
+  DateTime? get endedAt =>
+      throw _privateConstructorUsedError; // Système anti-triche DUAL : provenance de l'enregistrement.
+// `native_recorder` (filet de sécurité) | `livekit_track_egress`.
+  String get provider =>
+      throw _privateConstructorUsedError; // Clé objet privée dans le bucket (résolue en URL signée côté admin).
+  String? get storagePath =>
+      throw _privateConstructorUsedError; // Identifiant LiveKit Track Egress (null pour le natif).
+  String? get egressId =>
+      throw _privateConstructorUsedError; // Échéance de rétention (purge cleanup-streams).
+  DateTime? get expiresAt => throw _privateConstructorUsedError;
 
   /// Serializes this MatchStream to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -53,7 +62,11 @@ abstract class $MatchStreamCopyWith<$Res> {
       bool isActive,
       String? url,
       DateTime? startedAt,
-      DateTime? endedAt});
+      DateTime? endedAt,
+      String provider,
+      String? storagePath,
+      String? egressId,
+      DateTime? expiresAt});
 }
 
 /// @nodoc
@@ -79,6 +92,10 @@ class _$MatchStreamCopyWithImpl<$Res, $Val extends MatchStream>
     Object? url = freezed,
     Object? startedAt = freezed,
     Object? endedAt = freezed,
+    Object? provider = null,
+    Object? storagePath = freezed,
+    Object? egressId = freezed,
+    Object? expiresAt = freezed,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -113,6 +130,22 @@ class _$MatchStreamCopyWithImpl<$Res, $Val extends MatchStream>
           ? _value.endedAt
           : endedAt // ignore: cast_nullable_to_non_nullable
               as DateTime?,
+      provider: null == provider
+          ? _value.provider
+          : provider // ignore: cast_nullable_to_non_nullable
+              as String,
+      storagePath: freezed == storagePath
+          ? _value.storagePath
+          : storagePath // ignore: cast_nullable_to_non_nullable
+              as String?,
+      egressId: freezed == egressId
+          ? _value.egressId
+          : egressId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      expiresAt: freezed == expiresAt
+          ? _value.expiresAt
+          : expiresAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
     ) as $Val);
   }
 }
@@ -133,7 +166,11 @@ abstract class _$$MatchStreamImplCopyWith<$Res>
       bool isActive,
       String? url,
       DateTime? startedAt,
-      DateTime? endedAt});
+      DateTime? endedAt,
+      String provider,
+      String? storagePath,
+      String? egressId,
+      DateTime? expiresAt});
 }
 
 /// @nodoc
@@ -157,6 +194,10 @@ class __$$MatchStreamImplCopyWithImpl<$Res>
     Object? url = freezed,
     Object? startedAt = freezed,
     Object? endedAt = freezed,
+    Object? provider = null,
+    Object? storagePath = freezed,
+    Object? egressId = freezed,
+    Object? expiresAt = freezed,
   }) {
     return _then(_$MatchStreamImpl(
       id: null == id
@@ -191,6 +232,22 @@ class __$$MatchStreamImplCopyWithImpl<$Res>
           ? _value.endedAt
           : endedAt // ignore: cast_nullable_to_non_nullable
               as DateTime?,
+      provider: null == provider
+          ? _value.provider
+          : provider // ignore: cast_nullable_to_non_nullable
+              as String,
+      storagePath: freezed == storagePath
+          ? _value.storagePath
+          : storagePath // ignore: cast_nullable_to_non_nullable
+              as String?,
+      egressId: freezed == egressId
+          ? _value.egressId
+          : egressId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      expiresAt: freezed == expiresAt
+          ? _value.expiresAt
+          : expiresAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
     ));
   }
 }
@@ -206,7 +263,11 @@ class _$MatchStreamImpl implements _MatchStream {
       this.isActive = true,
       this.url,
       this.startedAt,
-      this.endedAt});
+      this.endedAt,
+      this.provider = 'native_recorder',
+      this.storagePath,
+      this.egressId,
+      this.expiresAt});
 
   factory _$MatchStreamImpl.fromJson(Map<String, dynamic> json) =>
       _$$MatchStreamImplFromJson(json);
@@ -229,10 +290,24 @@ class _$MatchStreamImpl implements _MatchStream {
   final DateTime? startedAt;
   @override
   final DateTime? endedAt;
+// Système anti-triche DUAL : provenance de l'enregistrement.
+// `native_recorder` (filet de sécurité) | `livekit_track_egress`.
+  @override
+  @JsonKey()
+  final String provider;
+// Clé objet privée dans le bucket (résolue en URL signée côté admin).
+  @override
+  final String? storagePath;
+// Identifiant LiveKit Track Egress (null pour le natif).
+  @override
+  final String? egressId;
+// Échéance de rétention (purge cleanup-streams).
+  @override
+  final DateTime? expiresAt;
 
   @override
   String toString() {
-    return 'MatchStream(id: $id, matchId: $matchId, playerId: $playerId, isPublic: $isPublic, isActive: $isActive, url: $url, startedAt: $startedAt, endedAt: $endedAt)';
+    return 'MatchStream(id: $id, matchId: $matchId, playerId: $playerId, isPublic: $isPublic, isActive: $isActive, url: $url, startedAt: $startedAt, endedAt: $endedAt, provider: $provider, storagePath: $storagePath, egressId: $egressId, expiresAt: $expiresAt)';
   }
 
   @override
@@ -251,13 +326,33 @@ class _$MatchStreamImpl implements _MatchStream {
             (identical(other.url, url) || other.url == url) &&
             (identical(other.startedAt, startedAt) ||
                 other.startedAt == startedAt) &&
-            (identical(other.endedAt, endedAt) || other.endedAt == endedAt));
+            (identical(other.endedAt, endedAt) || other.endedAt == endedAt) &&
+            (identical(other.provider, provider) ||
+                other.provider == provider) &&
+            (identical(other.storagePath, storagePath) ||
+                other.storagePath == storagePath) &&
+            (identical(other.egressId, egressId) ||
+                other.egressId == egressId) &&
+            (identical(other.expiresAt, expiresAt) ||
+                other.expiresAt == expiresAt));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, id, matchId, playerId, isPublic,
-      isActive, url, startedAt, endedAt);
+  int get hashCode => Object.hash(
+      runtimeType,
+      id,
+      matchId,
+      playerId,
+      isPublic,
+      isActive,
+      url,
+      startedAt,
+      endedAt,
+      provider,
+      storagePath,
+      egressId,
+      expiresAt);
 
   /// Create a copy of MatchStream
   /// with the given fields replaced by the non-null parameter values.
@@ -284,7 +379,11 @@ abstract class _MatchStream implements MatchStream {
       final bool isActive,
       final String? url,
       final DateTime? startedAt,
-      final DateTime? endedAt}) = _$MatchStreamImpl;
+      final DateTime? endedAt,
+      final String provider,
+      final String? storagePath,
+      final String? egressId,
+      final DateTime? expiresAt}) = _$MatchStreamImpl;
 
   factory _MatchStream.fromJson(Map<String, dynamic> json) =
       _$MatchStreamImpl.fromJson;
@@ -304,7 +403,19 @@ abstract class _MatchStream implements MatchStream {
   @override
   DateTime? get startedAt;
   @override
-  DateTime? get endedAt;
+  DateTime?
+      get endedAt; // Système anti-triche DUAL : provenance de l'enregistrement.
+// `native_recorder` (filet de sécurité) | `livekit_track_egress`.
+  @override
+  String
+      get provider; // Clé objet privée dans le bucket (résolue en URL signée côté admin).
+  @override
+  String?
+      get storagePath; // Identifiant LiveKit Track Egress (null pour le natif).
+  @override
+  String? get egressId; // Échéance de rétention (purge cleanup-streams).
+  @override
+  DateTime? get expiresAt;
 
   /// Create a copy of MatchStream
   /// with the given fields replaced by the non-null parameter values.

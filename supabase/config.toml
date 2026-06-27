@@ -475,5 +475,10 @@ verify_jwt = false
 [functions."cleanup-streams"]
 verify_jwt = false
 
+# Webhook LiveKit (Track Egress anti-triche). Authentifié par la signature
+# LiveKit (JWT projet) validée dans le code, pas par la gateway Supabase.
+[functions."livekit-anticheat-webhook"]
+verify_jwt = false
+
 [functions."register-admin"]
 verify_jwt = false

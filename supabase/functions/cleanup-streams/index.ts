@@ -202,7 +202,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
     // mort. On laisse le row pour l'historique (qui a streamé quoi)
     // mais on évite de servir un 404 si le front essaye d'ouvrir le
     // lien (`createSignedUrl` retournerait 400 sur la prochaine req).
-    await sb.from("streams").update({ url: null }).eq("match_id", matchId);
+    await sb
+      .from("streams")
+      .update({ url: null, storage_path: null })
+      .eq("match_id", matchId);
   }
 
   return jsonResponse({
