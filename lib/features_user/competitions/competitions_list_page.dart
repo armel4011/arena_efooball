@@ -94,6 +94,11 @@ class _CompetitionsListPageState extends State<CompetitionsListPage>
           const TutorialBannerSection(page: TutorialPage.competitions),
           TabBar(
             controller: _tab,
+            // Scrollable : avec 3 jeux + « Prochain match », une barre fixe
+            // tronquait le dernier onglet (peu/pas visible). Scrollable =
+            // chaque libellé s'affiche en entier.
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
             indicatorColor: accent,
             indicatorWeight: 2.5,
             indicatorSize: TabBarIndicatorSize.tab,
