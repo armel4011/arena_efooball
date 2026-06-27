@@ -19,8 +19,8 @@ class AboutPage extends StatelessWidget {
   const AboutPage({super.key});
 
   // Tenu à jour avec `pubspec.yaml` (version: x.y.z+build) à chaque release.
-  static const _version = '1.0.9';
-  static const _build = '10';
+  static const _version = '1.0.10';
+  static const _build = '11';
 
   /// Base du site vitrine déployé (cf. landing/upload-site.ps1).
   static const _siteBase = 'https://arena237.com';
