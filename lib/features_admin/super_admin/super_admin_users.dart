@@ -114,6 +114,14 @@ class _SuperAdminUsersState extends ConsumerState<SuperAdminUsers> {
           ),
           IconButton(
             icon: const Icon(
+              Icons.system_update_alt,
+              color: ArenaColors.bone,
+            ),
+            tooltip: 'Mise à jour app',
+            onPressed: () => context.go(AdminRoutes.superAppUpdate),
+          ),
+          IconButton(
+            icon: const Icon(
               Icons.campaign_outlined,
               color: ArenaColors.bone,
             ),

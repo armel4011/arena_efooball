@@ -2614,6 +2614,29 @@ class AppLocalizationsFr extends AppLocalizations {
   String get supportOptionEmail => 'Écrire un e-mail';
 
   @override
+  String get updateTitle => 'Mise à jour disponible';
+
+  @override
+  String updateMessage(Object version) {
+    return 'La version $version est disponible.';
+  }
+
+  @override
+  String get updateChangelogLabel => 'Nouveautés';
+
+  @override
+  String get updateDownloading => 'Téléchargement…';
+
+  @override
+  String get updateLater => 'Plus tard';
+
+  @override
+  String get updateNow => 'Mettre à jour';
+
+  @override
+  String get updateFailed => 'Échec de la mise à jour. Réessaie plus tard.';
+
+  @override
   String get settingsAboutTitle => 'À propos';
 
   @override

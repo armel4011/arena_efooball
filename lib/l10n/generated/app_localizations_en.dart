@@ -2595,6 +2595,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get supportOptionEmail => 'Send an email';
 
   @override
+  String get updateTitle => 'Update available';
+
+  @override
+  String updateMessage(Object version) {
+    return 'Version $version is available.';
+  }
+
+  @override
+  String get updateChangelogLabel => 'What\'s new';
+
+  @override
+  String get updateDownloading => 'Downloading…';
+
+  @override
+  String get updateLater => 'Later';
+
+  @override
+  String get updateNow => 'Update';
+
+  @override
+  String get updateFailed => 'Update failed. Please try again later.';
+
+  @override
   String get settingsAboutTitle => 'About';
 
   @override

@@ -1,12 +1,16 @@
+import 'dart:io';
+
 import 'package:arena/core/services/network_status_service.dart';
 import 'package:arena/core/services/realtime_resume_service.dart';
 import 'package:arena/core/services/sync_queue_service.dart';
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/data/repositories/app_update_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/offline_banner.dart';
 import 'package:arena/features_user/chat/messages_inbox_page.dart';
 import 'package:arena/features_user/competitions/competitions_list_page.dart';
 import 'package:arena/features_user/home/home_page.dart';
+import 'package:arena/features_user/home/update_available_dialog.dart';
 import 'package:arena/features_user/profile/player_profile_page.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -35,6 +39,7 @@ class MainLayout extends ConsumerStatefulWidget {
 class _MainLayoutState extends ConsumerState<MainLayout> {
   int _currentIndex = 0;
   DateTime? _lastBackPressedAt;
+  bool _updateChecked = false;
 
   static const _pages = <Widget>[
     HomePage(),
@@ -42,6 +47,26 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
     MessagesInboxBody(),
     PlayerProfilePage(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    // Vérifie une MAJ in-app au démarrage (Android, distribution APK directe).
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybePromptUpdate());
+  }
+
+  /// Best-effort : propose une mise à jour si une version plus récente est
+  /// publiée. Toute erreur (réseau, plateforme non Android) est silencieuse.
+  Future<void> _maybePromptUpdate() async {
+    if (_updateChecked || !Platform.isAndroid) return;
+    _updateChecked = true;
+    try {
+      final status = await ref.read(updateStatusProvider.future);
+      if (status != null && mounted) {
+        await UpdateAvailableDialog.show(context, status);
+      }
+    } catch (_) {/* non bloquant */}
+  }
 
   @override
   Widget build(BuildContext context) {
