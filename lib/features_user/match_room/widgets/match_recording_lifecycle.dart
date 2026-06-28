@@ -421,13 +421,20 @@ class _MatchRecordingLifecycleState
       ..listen<AsyncValue<NativeLifecycleEvent>>(
         nativeLifecycleEventsStreamProvider,
         (_, next) {
-          if (next.valueOrNull != NativeLifecycleEvent.mediaProjectionDied) {
-            return;
-          }
-          final coord = ref.read(matchRecordingCoordinatorProvider);
-          final s = coord.state;
-          if (s is CoordinatorRecording || s is CoordinatorPaused) {
-            unawaited(coord.stopCleanly());
+          final evt = next.valueOrNull;
+          if (evt == NativeLifecycleEvent.mediaProjectionDied) {
+            final coord = ref.read(matchRecordingCoordinatorProvider);
+            final s = coord.state;
+            if (s is CoordinatorRecording || s is CoordinatorPaused) {
+              unawaited(coord.stopCleanly());
+            }
+          } else if (evt == NativeLifecycleEvent.liveKitStopRequested) {
+            // Tap "Arrêter" sur la notif (ou le bouton flottant) pendant une
+            // capture LiveKit → on coupe la room (→ egress_ended serveur).
+            final livekit = ref.read(liveKitCaptureServiceProvider);
+            if (livekit.state is! LiveKitCaptureIdle) {
+              unawaited(livekit.stop());
+            }
           }
         },
       )

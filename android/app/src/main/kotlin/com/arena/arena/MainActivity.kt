@@ -164,12 +164,25 @@ class MainActivity : FlutterActivity() {
                 }
             }
         }
+
+        // Tap "Arrêter" sur la notif de capture LiveKit → on prévient Dart pour
+        // qu'il coupe la room (liveKitCaptureService.stop()).
+        LivekitCaptureFgsService.onStopRequested = {
+            runOnUiThread {
+                try {
+                    nativeEventSink?.success(mapOf("event" to "livekit_stop_requested"))
+                } catch (e: Exception) {
+                    Log.w(TAG, "nativeEventSink.success (livekit stop) failed", e)
+                }
+            }
+        }
     }
 
     override fun onDestroy() {
         // Le service Kotlin peut survivre à l'activité — sans cleanup, son
         // callback retient une ref vers une activité morte et fuit.
         ArenaRecorderService.onProjectionDied = null
+        LivekitCaptureFgsService.onStopRequested = null
         nativeEventSink = null
         super.onDestroy()
     }

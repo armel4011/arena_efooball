@@ -14,6 +14,12 @@ enum NativeLifecycleEvent {
   /// les listeners doivent appeler `agoraStreamingService.leave()` pour
   /// libérer proprement.
   mediaProjectionDied,
+
+  /// L'utilisateur a tapé "Arrêter" sur la notification de capture
+  /// anti-triche LiveKit (LivekitCaptureFgsService) — ou sur le bouton
+  /// flottant. Le listener doit appeler `liveKitCaptureService.stop()`
+  /// (déconnexion room → egress_ended côté serveur + arrêt du FGS).
+  liveKitStopRequested,
 }
 
 /// Bridge l'EventChannel `arena/native/events` vers un broadcast Stream
@@ -39,6 +45,8 @@ class NativeLifecycleEvents {
     switch (name) {
       case 'media_projection_died':
         _controller.add(NativeLifecycleEvent.mediaProjectionDied);
+      case 'livekit_stop_requested':
+        _controller.add(NativeLifecycleEvent.liveKitStopRequested);
     }
   }
 
