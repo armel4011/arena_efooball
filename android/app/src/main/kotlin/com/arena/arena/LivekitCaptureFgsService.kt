@@ -2,12 +2,15 @@ package com.arena.arena
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.util.Log
 import androidx.core.app.NotificationCompat
 
@@ -44,10 +47,19 @@ class LivekitCaptureFgsService : Service() {
 
         const val ACTION_START = "com.arena.arena.livekitfgs.START"
         const val ACTION_STOP = "com.arena.arena.livekitfgs.STOP"
+        // Tap "Arrêter" sur la notif : ne stoppe PAS le FGS directement —
+        // remonte à Dart (onStopRequested) qui appelle liveKitCaptureService
+        // .stop() (déconnexion room → egress_ended + ACTION_STOP propre).
+        const val ACTION_STOP_REQUEST = "com.arena.arena.livekitfgs.STOP_REQUEST"
 
         @Volatile
         var isActive: Boolean = false
             private set
+
+        // Branché par MainActivity : pousse l'évènement "livekit_stop_requested"
+        // vers l'EventChannel Dart quand l'utilisateur tape "Arrêter".
+        @Volatile
+        var onStopRequested: (() -> Unit)? = null
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -56,6 +68,29 @@ class LivekitCaptureFgsService : Service() {
         when (intent?.action) {
             ACTION_STOP -> {
                 Log.d(TAG, "ACTION_STOP")
+                stopForegroundCompat()
+                isActive = false
+                stopSelf()
+                return START_NOT_STICKY
+            }
+            ACTION_STOP_REQUEST -> {
+                // L'utilisateur a tapé "Arrêter" sur la notif. On délègue à Dart
+                // (qui coupe la room LiveKit puis envoie ACTION_STOP) — sans ça,
+                // tuer le FGS ne déconnecterait pas proprement la capture.
+                Log.d(TAG, "ACTION_STOP_REQUEST → délégation Dart")
+                val cb = onStopRequested
+                if (cb != null) {
+                    Handler(Looper.getMainLooper()).post {
+                        try {
+                            cb()
+                        } catch (e: Exception) {
+                            Log.w(TAG, "onStopRequested failed", e)
+                        }
+                    }
+                    return START_STICKY
+                }
+                // Filet : pas de listener Dart (app en arrière-plan profond) →
+                // on coupe au moins le FGS.
                 stopForegroundCompat()
                 isActive = false
                 stopSelf()
@@ -102,11 +137,23 @@ class LivekitCaptureFgsService : Service() {
                 )
             }
         }
+        // Action "Arrêter" : re-cible le service avec ACTION_STOP_REQUEST, qui
+        // remonte à Dart pour couper proprement la capture LiveKit.
+        val stopIntent = Intent(this, LivekitCaptureFgsService::class.java).apply {
+            action = ACTION_STOP_REQUEST
+        }
+        val stopPending = PendingIntent.getService(
+            this,
+            0,
+            stopIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("ARENA")
             .setContentText("Enregistrement anti-triche en cours")
             .setSmallIcon(android.R.drawable.presence_video_online)
             .setOngoing(true)
+            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Arrêter", stopPending)
             .build()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(

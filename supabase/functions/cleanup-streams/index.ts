@@ -10,11 +10,16 @@
 //      `ended_at=now()` pour que la LiveStreamsPage ne montre plus le
 //      flux et que le frontend n'essaye plus de réémettre un token Agora.
 //
-//   2. **Purge le storage des matchs completed > 30j** — vidéos uploadées
-//      (`match-recordings/{matchId}/...`) + screenshots de preuve
-//      (`match-proofs/{matchId}/...`). À J+30 les disputes ont eu leur
-//      SLA + le client n'a plus besoin de visionner. On efface en bloc
-//      par préfixe `{matchId}` pour limiter les list-API calls.
+//   2. **Purge les ENREGISTREMENTS anti-triche à J+1** — vidéos
+//      `match-recordings/{matchId}/...` (recorder natif + LiveKit Track
+//      Egress). On ne les garde qu'UN JOUR après la fin de la capture,
+//      SAUF si un litige est ouvert sur le match (on conserve alors la
+//      preuve). On efface les blobs et on remet `streams.url`/`storage_path`
+//      à null (l'historique de la row reste).
+//
+//   3. **Purge les PREUVES utilisateur à J+30** — screenshots/vidéos de
+//      litige `match-proofs/{matchId}/...` (matchs completed > 30j). Pièces
+//      de litige, conservées plus longtemps que les captures anti-triche.
 //
 // Auth : webhook secret partagé (même que cleanup-deleted-accounts).
 // =============================================================================
@@ -159,11 +164,76 @@ Deno.serve(async (req: Request): Promise<Response> => {
     streamsClosed = count ?? staleIds.length;
   }
 
+  const purgeErrors: Array<{ matchId: string; bucket: string; msg: string }>
+    = [];
+
   // ─────────────────────────────────────────────────────────────────
-  // 2) Purge storage des matchs completed depuis > 30 jours.
-  //    On bat les matchs par batch — on ne supprime *pas* les rows
-  //    `matches` ou `streams` (on garde l'historique pour les stats
-  //    joueur), seulement les blobs.
+  // 2) Enregistrements anti-triche (match-recordings) — rétention J+1,
+  //    sauf si un litige est ouvert sur le match.
+  // ─────────────────────────────────────────────────────────────────
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  // Statuts de litige « actif » (non résolus) — cf. disputes_status_check.
+  const OPEN_DISPUTE_STATUS = ["open", "bot_review", "admin_review"];
+
+  // Candidats : captures anti-triche (is_public=false) terminées depuis plus
+  // d'un jour et dont un blob est encore référencé.
+  const { data: recRows, error: recErr } = await sb
+    .from("streams")
+    .select("match_id")
+    .eq("is_public", false)
+    .eq("is_active", false)
+    .lt("ended_at", oneDayAgo)
+    .or("storage_path.not.is.null,url.not.is.null")
+    .limit(500);
+  if (recErr) {
+    return jsonResponse(
+      { error: "recordings_lookup_failed", detail: safeDetail(recErr.message, "cleanup-streams") },
+      500,
+    );
+  }
+  const candidateMatchIds = [
+    ...new Set((recRows ?? []).map((r) => r.match_id as string)),
+  ];
+
+  // Exclure les matchs avec un litige ouvert (on garde la preuve).
+  let recordingMatchIds = candidateMatchIds;
+  if (candidateMatchIds.length > 0) {
+    const { data: openDisputes, error: dispErr } = await sb
+      .from("disputes")
+      .select("match_id")
+      .in("match_id", candidateMatchIds)
+      .in("status", OPEN_DISPUTE_STATUS);
+    if (dispErr) {
+      console.error("open_disputes query failed:", dispErr.message);
+    } else {
+      const blocked = new Set(
+        (openDisputes ?? []).map((d) => d.match_id as string),
+      );
+      recordingMatchIds = candidateMatchIds.filter((id) => !blocked.has(id));
+    }
+  }
+  recordingMatchIds = recordingMatchIds.slice(0, 50); // batch horaire
+
+  let recordingsDeleted = 0;
+  for (const matchId of recordingMatchIds) {
+    const r1 = await purgeMatchStorage(sb, "match-recordings", matchId);
+    recordingsDeleted += r1.deleted;
+    if (r1.error) {
+      purgeErrors.push({ matchId, bucket: "match-recordings", msg: r1.error });
+    }
+    // Reset url/storage_path des captures purgées (lien mort sinon). On ne
+    // touche qu'aux rows anti-triche déjà terminées depuis > 1j.
+    await sb
+      .from("streams")
+      .update({ url: null, storage_path: null })
+      .eq("match_id", matchId)
+      .eq("is_public", false)
+      .lt("ended_at", oneDayAgo);
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // 3) Preuves utilisateur (match-proofs) — rétention J+30 (matchs
+  //    completed). Pièces de litige, gardées plus longtemps.
   // ─────────────────────────────────────────────────────────────────
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
     .toISOString();
@@ -173,7 +243,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     .select("id")
     .eq("status", "completed")
     .lt("finished_at", thirtyDaysAgo)
-    .limit(50); // batch ; cron tourne chaque heure → catch-up rapide
+    .limit(50);
   if (omErr) {
     return jsonResponse(
       { error: "old_matches_lookup_failed", detail: safeDetail(omErr.message, "cleanup-streams") },
@@ -181,37 +251,21 @@ Deno.serve(async (req: Request): Promise<Response> => {
     );
   }
 
-  let recordingsDeleted = 0;
   let proofsDeleted = 0;
-  const purgeErrors: Array<{ matchId: string; bucket: string; msg: string }>
-    = [];
-
   for (const m of oldMatches ?? []) {
     const matchId = m.id as string;
-    const r1 = await purgeMatchStorage(sb, "match-recordings", matchId);
-    recordingsDeleted += r1.deleted;
-    if (r1.error) {
-      purgeErrors.push({ matchId, bucket: "match-recordings", msg: r1.error });
-    }
     const r2 = await purgeMatchStorage(sb, "match-proofs", matchId);
     proofsDeleted += r2.deleted;
     if (r2.error) {
       purgeErrors.push({ matchId, bucket: "match-proofs", msg: r2.error });
     }
-    // Reset `streams.url` pour ce match : sans le blob c'est un lien
-    // mort. On laisse le row pour l'historique (qui a streamé quoi)
-    // mais on évite de servir un 404 si le front essaye d'ouvrir le
-    // lien (`createSignedUrl` retournerait 400 sur la prochaine req).
-    await sb
-      .from("streams")
-      .update({ url: null, storage_path: null })
-      .eq("match_id", matchId);
   }
 
   return jsonResponse({
     streamsClosed,
-    purgedMatches: (oldMatches ?? []).length,
+    recordingMatchesPurged: recordingMatchIds.length,
     recordingsDeleted,
+    proofsPurgedMatches: (oldMatches ?? []).length,
     proofsDeleted,
     purgeErrors,
   });

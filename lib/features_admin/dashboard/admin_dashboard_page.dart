@@ -183,6 +183,13 @@ class AdminDashboardPage extends ConsumerWidget {
                 ),
                 const SizedBox(height: ArenaSpacing.xs),
                 ArenaButton(
+                  label: '🎥 ENREGISTREMENTS',
+                  fullWidth: true,
+                  variant: ArenaButtonVariant.secondary,
+                  onPressed: () => context.push(AdminRoutes.recordings),
+                ),
+                const SizedBox(height: ArenaSpacing.xs),
+                ArenaButton(
                   label: "📜 JOURNAL D'AUDIT",
                   fullWidth: true,
                   variant: ArenaButtonVariant.secondary,

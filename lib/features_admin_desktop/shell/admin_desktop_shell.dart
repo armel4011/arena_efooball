@@ -52,6 +52,11 @@ const List<_NavEntry> _mainEntries = [
     label: 'Paiements',
   ),
   _NavEntry(
+    route: AdminDesktopRoutes.recordings,
+    icon: FluentIcons.video,
+    label: 'Enregistrements',
+  ),
+  _NavEntry(
     route: AdminDesktopRoutes.auditLog,
     icon: FluentIcons.compliance_audit,
     label: "Journal d'audit",

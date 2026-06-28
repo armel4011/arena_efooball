@@ -17,6 +17,7 @@ import 'package:arena/features_admin/disputes_admin/admin_disputes_list_page.dar
 import 'package:arena/features_admin/disputes_admin/admin_disputes_page.dart';
 import 'package:arena/features_admin/matches_admin/admin_matches_list_page.dart';
 import 'package:arena/features_admin/profile_admin/admin_profile_page.dart';
+import 'package:arena/features_admin/recordings_admin/admin_recordings_page.dart';
 import 'package:arena/features_admin/streams_admin/admin_stream_moderation_page.dart';
 import 'package:arena/features_admin/streams_admin/admin_watch_stream_page.dart';
 import 'package:arena/features_admin/super_admin/admin_chat_thread_page.dart';
@@ -68,6 +69,7 @@ abstract final class AdminRoutes {
   static const payouts = '/payouts';
   static const disputes = '/disputes/:matchId';
   static const disputesList = '/disputes-list';
+  static const recordings = '/recordings';
   static const auditLog = '/audit';
   static const profile = '/profile';
 
@@ -280,6 +282,11 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
         path: AdminRoutes.disputesList,
         name: 'admin.disputesList',
         builder: (context, state) => const AdminDisputesListPage(),
+      ),
+      GoRoute(
+        path: AdminRoutes.recordings,
+        name: 'admin.recordings',
+        builder: (context, state) => const AdminRecordingsPage(),
       ),
       GoRoute(
         path: AdminRoutes.disputes,

@@ -48,8 +48,9 @@ const S3_BUCKET = Deno.env.get("LIVEKIT_S3_BUCKET") ?? "match-recordings";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-// Rétention alignée sur la purge cleanup-streams (blobs effacés à J+30).
-const RETENTION_DAYS = 30;
+// Rétention alignée sur la purge cleanup-streams : les captures anti-triche
+// ne sont gardées qu'UN JOUR (sauf litige ouvert — géré par cleanup-streams).
+const RETENTION_DAYS = 1;
 
 function jsonResponse(body: Record<string, unknown>, status = 200): Response {
   return new Response(JSON.stringify(body), {

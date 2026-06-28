@@ -87,7 +87,13 @@ void main() {
   // (sélecteur super-admin mobile/desktop + section « Enregistrements auto » des
   // litiges mobile/desktop + bannière LiveKit). 0 vrai Colors.* ajouté
   // (`Colors.transparent` du wrapper _LifecycleBanner est préexistant).
-  const colorsDotBaseline = 2345; // occurrences de `Colors.`
+  // 2345 → 2363 le 2026-06-28 : +18 `ArenaColors.*` nets de l'écran admin
+  // « Enregistrements anti-triche » (consultation hors litige) — page mobile
+  // admin_recordings_page + page desktop desktop_recordings_page (badges
+  // provider/litige migrés Colors.blue/orange → ArenaColors.signalBlue/warning)
+  // + bouton « Arrêter notif » du cycle de vie capture (match_recording_lifecycle).
+  // 0 vrai Colors.* ajouté (tous des tokens ; `Colors.transparent` préexistant).
+  const colorsDotBaseline = 2363; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.
