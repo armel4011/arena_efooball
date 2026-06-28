@@ -35,6 +35,16 @@ class _FakeFactory implements LiveKitRoomFactory {
   }
 }
 
+class _FakeFgs implements ScreenCaptureForegroundService {
+  int started = 0;
+  int stopped = 0;
+
+  @override
+  Future<void> start() async => started++;
+  @override
+  Future<void> stop() async => stopped++;
+}
+
 const _stubToken = LiveKitToken(
   token: 'jwt',
   url: 'wss://x.livekit.cloud',
@@ -45,9 +55,11 @@ const _stubToken = LiveKitToken(
 
 void main() {
   late _MockTokenClient tokenClient;
+  late _FakeFgs fgs;
 
   setUp(() {
     tokenClient = _MockTokenClient();
+    fgs = _FakeFgs();
   });
 
   LiveKitCaptureService build(
@@ -57,6 +69,7 @@ void main() {
     return LiveKitCaptureService(
       tokenClient: tokenClient,
       roomFactory: factory,
+      foregroundService: fgs,
       supportsCapture: supportsCapture,
     );
   }
@@ -72,6 +85,8 @@ void main() {
 
       expect(service.state, isA<LiveKitCapturePublishing>());
       expect(room.screenShareOn, isTrue);
+      // Le FGS mediaProjection est démarré avant la capture (requis Android 14+).
+      expect(fgs.started, 1);
       await service.dispose();
     });
 
@@ -129,6 +144,8 @@ void main() {
       expect(room.screenShareOn, isFalse);
       expect(room.disconnected, isTrue);
       expect(room.disposed, isTrue);
+      // Le FGS est coupé à la fin de la capture.
+      expect(fgs.stopped, greaterThanOrEqualTo(1));
       await service.dispose();
     });
 

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:arena/core/services/livekit_token_client.dart';
 import 'package:arena/core/utils/error_reporter.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
 
@@ -62,16 +63,20 @@ class LiveKitCaptureService {
   LiveKitCaptureService({
     required LiveKitTokenClient tokenClient,
     LiveKitRoomFactory? roomFactory,
+    ScreenCaptureForegroundService? foregroundService,
     this.maxDuration = const Duration(minutes: 25),
     bool? supportsCapture,
   })  : _tokenClient = tokenClient,
         _roomFactory = roomFactory ?? const _DefaultLiveKitRoomFactory(),
+        _foregroundService =
+            foregroundService ?? const _PlatformScreenCaptureForegroundService(),
         // Capture d'écran = Android uniquement (comme le recorder natif).
         // Injectable pour les tests sur l'hôte.
         _supportsCapture = supportsCapture ?? Platform.isAndroid;
 
   final LiveKitTokenClient _tokenClient;
   final LiveKitRoomFactory _roomFactory;
+  final ScreenCaptureForegroundService _foregroundService;
   final bool _supportsCapture;
 
   /// Plafond dur, aligné sur le recorder natif (25 min couvrent match +
@@ -113,10 +118,17 @@ class LiveKitCaptureService {
     LiveKitRoomHandle room;
     try {
       room = await _roomFactory.connect(url: token.url, token: token.token);
+      // On suit la room dès la connexion pour que le rollback ci-dessous la
+      // libère (et coupe le FGS) si `enableScreenShare` échoue.
+      _room = room;
+      // Android 14+ : un foreground service de type mediaProjection doit
+      // tourner AVANT de démarrer la capture d'écran, sinon l'OS tue l'app.
+      // flutter_webrtc n'en fournit pas — on lance notre coquille Kotlin.
+      await _foregroundService.start();
       await room.enableScreenShare();
     } catch (e, st) {
       await reportError(e, st, context: 'LiveKitCaptureService.connect');
-      // Rollback : on ferme une room éventuellement à moitié connectée.
+      // Rollback : on coupe le FGS + ferme une room à moitié connectée.
       try {
         await _releaseRoom();
       } catch (_) {}
@@ -124,7 +136,6 @@ class LiveKitCaptureService {
       rethrow;
     }
 
-    _room = room;
     final startedAt = DateTime.now();
     _emit(LiveKitCapturePublishing(room: token.room, startedAt: startedAt));
 
@@ -166,6 +177,11 @@ class LiveKitCaptureService {
     try {
       await room.dispose();
     } catch (_) {}
+    // Le FGS n'est démarré qu'après l'assignation de `_room` : on le coupe
+    // donc ici, une fois la capture terminée (idempotent côté natif).
+    try {
+      await _foregroundService.stop();
+    } catch (_) {}
   }
 
   Future<void> dispose() async {
@@ -196,6 +212,35 @@ abstract class LiveKitRoomHandle {
   Future<void> disableScreenShare();
   Future<void> disconnect();
   Future<void> dispose();
+}
+
+/// Pilote le foreground service de capture d'écran natif (Android).
+///
+/// flutter_webrtc lance la MediaProjection lui-même mais ne fournit aucun
+/// foreground service ; Android 14+ en exige un de type `mediaProjection`
+/// AVANT le démarrage de la projection. Ce seam déclenche notre coquille
+/// Kotlin [`LivekitCaptureFgsService`] via le canal `arena/native`. Injectable
+/// pour les tests (no-op).
+abstract class ScreenCaptureForegroundService {
+  Future<void> start();
+  Future<void> stop();
+}
+
+class _PlatformScreenCaptureForegroundService
+    implements ScreenCaptureForegroundService {
+  const _PlatformScreenCaptureForegroundService();
+
+  static const _channel = MethodChannel('arena/native');
+
+  @override
+  Future<void> start() async {
+    await _channel.invokeMethod<void>('startLivekitCaptureFgs');
+  }
+
+  @override
+  Future<void> stop() async {
+    await _channel.invokeMethod<void>('stopLivekitCaptureFgs');
+  }
 }
 
 class _DefaultLiveKitRoomFactory implements LiveKitRoomFactory {

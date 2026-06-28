@@ -153,6 +153,17 @@
             android:name=".ArenaRecorderService"
             android:exported="false"
             android:foregroundServiceType="mediaProjection" />
+
+        <!-- Capture anti-triche LiveKit (système DUAL). flutter_webrtc lance
+             lui-même la MediaProjection mais ne fournit AUCUN foreground
+             service ; Android 14+ en exige un de type mediaProjection avant
+             que la projection démarre, sinon l'app est tuée. Ce service
+             "coquille" (LivekitCaptureFgsService) ne crée aucune projection :
+             il tourne juste en foreground le temps de la capture. -->
+        <service
+            android:name=".LivekitCaptureFgsService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
