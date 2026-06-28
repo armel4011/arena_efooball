@@ -20,6 +20,7 @@ import 'package:arena/features_admin/profile_admin/admin_profile_page.dart';
 import 'package:arena/features_admin/streams_admin/admin_stream_moderation_page.dart';
 import 'package:arena/features_admin/streams_admin/admin_watch_stream_page.dart';
 import 'package:arena/features_admin/super_admin/admin_chat_thread_page.dart';
+import 'package:arena/features_admin/super_admin/super_admin_anticheat.dart';
 import 'package:arena/features_admin/super_admin/super_admin_app_update.dart';
 import 'package:arena/features_admin/super_admin/super_admin_broadcast.dart';
 import 'package:arena/features_admin/super_admin/super_admin_dashboard.dart';
@@ -85,6 +86,7 @@ abstract final class AdminRoutes {
   static const superSupport = '/super/support';
   static const superSupportThread = '/super/support/:channelId';
   static const superAppUpdate = '/super/app-update';
+  static const superAntiCheat = '/super/anticheat';
 
   static const devPreview = '/_dev/widgets';
   static const intro = '/intro';
@@ -364,6 +366,11 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
         path: AdminRoutes.superAppUpdate,
         name: 'admin.superAppUpdate',
         builder: (context, state) => const SuperAdminAppUpdate(),
+      ),
+      GoRoute(
+        path: AdminRoutes.superAntiCheat,
+        name: 'admin.superAntiCheat',
+        builder: (context, state) => const SuperAdminAntiCheat(),
       ),
       GoRoute(
         path: AdminRoutes.superSupportThread,

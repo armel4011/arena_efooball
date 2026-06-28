@@ -23,6 +23,7 @@ import 'package:arena/features_admin_desktop/profile/desktop_profile_page.dart';
 import 'package:arena/features_admin_desktop/shell/admin_desktop_shell.dart';
 import 'package:arena/features_admin_desktop/streams/desktop_stream_moderation_page.dart';
 import 'package:arena/features_admin_desktop/streams/desktop_watch_stream_page.dart';
+import 'package:arena/features_admin_desktop/super_admin/desktop_anticheat_page.dart';
 import 'package:arena/features_admin_desktop/super_admin/desktop_app_update_page.dart';
 import 'package:arena/features_admin_desktop/super_admin/desktop_invitations_page.dart';
 import 'package:arena/features_admin_desktop/super_admin/desktop_promo_banner_page.dart';
@@ -75,6 +76,7 @@ abstract final class AdminDesktopRoutes {
   static const superSupport = '/super/support';
   static const superAppUpdate = '/super/app-update';
   static const superTutorialBanners = '/super/tutorial-banners';
+  static const superAntiCheat = '/super/anticheat';
   static const superChatThread = '/super/messages/:userId';
 
   /// Routes accessibles sans authentification complète.
@@ -327,6 +329,11 @@ final adminDesktopRouterProvider = Provider<GoRouter>((ref) {
             path: AdminDesktopRoutes.superTutorialBanners,
             name: 'desktop.superTutorialBanners',
             builder: (context, state) => const DesktopTutorialBannersPage(),
+          ),
+          GoRoute(
+            path: AdminDesktopRoutes.superAntiCheat,
+            name: 'desktop.superAntiCheat',
+            builder: (context, state) => const DesktopAntiCheatPage(),
           ),
           GoRoute(
             path: AdminDesktopRoutes.superChatThread,

@@ -426,6 +426,11 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 [functions.get_agora_token]
 verify_jwt = true
 
+# Capture anti-triche LiveKit (publish-only). JWT user requis : le jeton
+# n'est émis qu'aux joueurs assis du match.
+[functions."livekit-token"]
+verify_jwt = true
+
 [functions."get-agora-rtm-token"]
 verify_jwt = true
 
@@ -468,6 +473,11 @@ verify_jwt = false
 verify_jwt = false
 
 [functions."cleanup-streams"]
+verify_jwt = false
+
+# Webhook LiveKit (Track Egress anti-triche). Authentifié par la signature
+# LiveKit (JWT projet) validée dans le code, pas par la gateway Supabase.
+[functions."livekit-anticheat-webhook"]
 verify_jwt = false
 
 [functions."register-admin"]

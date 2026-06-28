@@ -82,6 +82,13 @@ class _DesktopDisputesPageState extends ConsumerState<DesktopDisputesPage> {
           _ProofsSection(matchId: widget.matchId),
           const SizedBox(height: 24),
           Text(
+            'ENREGISTREMENTS AUTO',
+            style: _sectionStyle,
+          ),
+          const SizedBox(height: 12),
+          _RecordingsSection(matchId: widget.matchId),
+          const SizedBox(height: 24),
+          Text(
             'SCORES SAISIS',
             style: _sectionStyle,
           ),
@@ -385,6 +392,82 @@ class _ProofTile extends StatelessWidget {
 
   Future<void> _openVideo(BuildContext context) async {
     final uri = Uri.tryParse(proof.url);
+    if (uri == null) return;
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+}
+
+/// Section « Enregistrements auto » (desktop) : preuves anti-triche captées
+/// automatiquement (recorder natif ou LiveKit Track Egress), ouvertes dans le
+/// lecteur système via URL signée.
+class _RecordingsSection extends ConsumerWidget {
+  const _RecordingsSection({required this.matchId});
+
+  final String matchId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final recordings = ref.watch(adminMatchRecordingsProvider(matchId));
+    return recordings.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.all(16),
+        child: Center(child: ProgressRing()),
+      ),
+      error: (e, _) => InfoBar(
+        title: const Text('Enregistrements indisponibles'),
+        content: Text('$e'),
+        severity: InfoBarSeverity.error,
+      ),
+      data: (list) {
+        if (list.isEmpty) {
+          return Text(
+            'Aucun enregistrement automatique',
+            style: GoogleFonts.spaceGrotesk(
+              color: ArenaColors.silver,
+              fontSize: 13,
+            ),
+          );
+        }
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            for (final r in list) _RecordingTile(recording: r),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _RecordingTile extends StatelessWidget {
+  const _RecordingTile({required this.recording});
+
+  final SignedMatchRecording recording;
+
+  static const double _size = 110;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: _size,
+      height: _size,
+      child: Button(
+        onPressed: () => _openVideo(context),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(FluentIcons.play, size: 24),
+            const SizedBox(height: 6),
+            Text(recording.isLiveKit ? 'LiveKit' : 'Natif'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openVideo(BuildContext context) async {
+    final uri = Uri.tryParse(recording.url);
     if (uri == null) return;
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   }

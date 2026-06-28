@@ -20,6 +20,12 @@ _$MatchStreamImpl _$$MatchStreamImplFromJson(Map<String, dynamic> json) =>
       endedAt: json['ended_at'] == null
           ? null
           : DateTime.parse(json['ended_at'] as String),
+      provider: json['provider'] as String? ?? 'native_recorder',
+      storagePath: json['storage_path'] as String?,
+      egressId: json['egress_id'] as String?,
+      expiresAt: json['expires_at'] == null
+          ? null
+          : DateTime.parse(json['expires_at'] as String),
     );
 
 Map<String, dynamic> _$$MatchStreamImplToJson(_$MatchStreamImpl instance) =>
@@ -34,4 +40,9 @@ Map<String, dynamic> _$$MatchStreamImplToJson(_$MatchStreamImpl instance) =>
         'started_at': value,
       if (instance.endedAt?.toIso8601String() case final value?)
         'ended_at': value,
+      'provider': instance.provider,
+      if (instance.storagePath case final value?) 'storage_path': value,
+      if (instance.egressId case final value?) 'egress_id': value,
+      if (instance.expiresAt?.toIso8601String() case final value?)
+        'expires_at': value,
     };

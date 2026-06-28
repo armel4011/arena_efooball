@@ -74,6 +74,10 @@ class _AdminDisputesPageState extends ConsumerState<AdminDisputesPage> {
               const SizedBox(height: ArenaSpacing.sm),
               _ProofsSection(matchId: widget.matchId),
               const SizedBox(height: ArenaSpacing.lg),
+              Text('ENREGISTREMENTS AUTO', style: ArenaText.inputLabel),
+              const SizedBox(height: ArenaSpacing.sm),
+              _RecordingsSection(matchId: widget.matchId),
+              const SizedBox(height: ArenaSpacing.lg),
               Text('SCORES SAISIS', style: ArenaText.inputLabel),
               const SizedBox(height: ArenaSpacing.sm),
               match.when(
@@ -381,6 +385,100 @@ class _ProofTile extends StatelessWidget {
 
   Future<void> _openVideo(BuildContext context) async {
     final uri = Uri.tryParse(proof.url);
+    var ok = false;
+    if (uri != null) {
+      ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Impossible d’ouvrir la vidéo.')),
+      );
+    }
+  }
+}
+
+/// Section « Enregistrements auto » : preuves anti-triche captées
+/// automatiquement (recorder natif ou LiveKit Track Egress). Chaque tuile
+/// ouvre la vidéo dans le lecteur externe via une URL signée 1h.
+class _RecordingsSection extends ConsumerWidget {
+  const _RecordingsSection({required this.matchId});
+
+  final String matchId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final recordings = ref.watch(adminMatchRecordingsProvider(matchId));
+    return recordings.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.all(ArenaSpacing.md),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, _) => Text(
+        'Erreur de chargement des enregistrements : ${arenaErrorMessage(e)}',
+        style: ArenaText.bodyMuted,
+      ),
+      data: (list) {
+        if (list.isEmpty) {
+          return Text(
+            'Aucun enregistrement automatique',
+            style: ArenaText.bodyMuted,
+          );
+        }
+        return Wrap(
+          spacing: ArenaSpacing.sm,
+          runSpacing: ArenaSpacing.sm,
+          children: [
+            for (final r in list) _RecordingTile(recording: r),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _RecordingTile extends StatelessWidget {
+  const _RecordingTile({required this.recording});
+
+  final SignedMatchRecording recording;
+
+  static const double _size = 96;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => _openVideo(context),
+      borderRadius: BorderRadius.circular(ArenaRadius.md),
+      child: Container(
+        width: _size,
+        height: _size,
+        padding: const EdgeInsets.all(ArenaSpacing.xs),
+        decoration: BoxDecoration(
+          color: ArenaColors.carbon,
+          borderRadius: BorderRadius.circular(ArenaRadius.md),
+          border: Border.all(color: ArenaColors.border),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.play_circle_outline,
+              color: ArenaColors.neonRed,
+              size: 30,
+            ),
+            const SizedBox(height: ArenaSpacing.xs),
+            Text(
+              recording.isLiveKit ? 'LiveKit' : 'Natif',
+              style: ArenaText.bodyMuted,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openVideo(BuildContext context) async {
+    final uri = Uri.tryParse(recording.url);
     var ok = false;
     if (uri != null) {
       ok = await launchUrl(uri, mode: LaunchMode.externalApplication);

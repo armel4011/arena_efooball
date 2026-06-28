@@ -131,6 +131,12 @@ const List<_NavEntry> _superEntries = [
     label: 'Bannières tuto',
     superAdminOnly: true,
   ),
+  _NavEntry(
+    route: AdminDesktopRoutes.superAntiCheat,
+    icon: FluentIcons.shield,
+    label: 'Anti-triche',
+    superAdminOnly: true,
+  ),
 ];
 
 /// Coquille de navigation desktop — barre latérale Fluent (NavigationView)

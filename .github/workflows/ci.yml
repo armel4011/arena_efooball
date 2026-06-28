@@ -309,6 +309,45 @@ jobs:
           New-Item -ItemType File -Force -Path $marker | Out-Null
           Write-Host 'Pré-stage SDK Agora OK.'
 
+      - name: Pré-stage flutter_webrtc (libwebrtc — skip extract through symlink)
+        # flutter_webrtc (transitif de livekit_client, anti-triche LiveKit) a le
+        # MÊME souci que le SDK Agora ci-dessus : son third_party/CMakeLists.txt
+        # télécharge libwebrtc.zip puis l'extrait DANS le dossier du plugin
+        # atteint par un SYMLINK (.plugin_symlinks/flutter_webrtc) → libarchive
+        # refuse ("Cannot extract through symlink"). On dépose le .zip ET on
+        # extrait NOUS-MÊMES dans le PUB_CACHE réel (hors symlink) : CMake voit
+        # alors `downloads/libwebrtc.zip` + `libwebrtc/` existants et saute son
+        # ARCHIVE_EXTRACT (il LIT le dossier à travers le symlink, autorisé).
+        # Idempotent : si `libwebrtc/` est déjà là (cache restauré), on skip.
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pubCache = $env:PUB_CACHE
+          if (-not $pubCache) { $pubCache = Join-Path $env:LOCALAPPDATA 'Pub\Cache' }
+          $fw = Get-ChildItem -Path (Join-Path $pubCache 'hosted\pub.dev') `
+            -Filter 'flutter_webrtc-*' -Directory -ErrorAction SilentlyContinue |
+            Select-Object -First 1
+          if (-not $fw) { Write-Host 'flutter_webrtc absent — rien à pré-stager.'; exit 0 }
+          $tp = Join-Path $fw.FullName 'third_party'
+          $libdir = Join-Path $tp 'libwebrtc'
+          if (Test-Path $libdir) {
+            Write-Host 'libwebrtc déjà pré-stagé — skip.'
+            exit 0
+          }
+          $cml = Get-Content (Join-Path $tp 'CMakeLists.txt') -Raw
+          $url = [regex]::Match($cml, 'DOWNLOAD_URL\s+"([^"]+)"').Groups[1].Value
+          if (-not $url) { throw 'URL libwebrtc introuvable dans CMakeLists.txt' }
+          $dl = Join-Path $tp 'downloads'
+          New-Item -ItemType Directory -Force -Path $dl | Out-Null
+          $zip = Join-Path $dl 'libwebrtc.zip'
+          Write-Host "Téléchargement (curl --retry) $url"
+          curl.exe --fail --location --retry 6 --retry-all-errors --retry-delay 5 `
+            --connect-timeout 30 --max-time 900 -o $zip $url
+          if ($LASTEXITCODE -ne 0) { throw "Échec téléchargement $url" }
+          Write-Host "Extraction -> $tp"
+          Expand-Archive -Path $zip -DestinationPath $tp -Force
+          Write-Host 'Pré-stage flutter_webrtc OK.'
+
       - name: Build Windows (admin desktop)
         # Les fichiers générés (freezed / *.g.dart) sont committés, donc pas
         # de build_runner ici. Debug suffit pour valider la chaîne de build
