@@ -20,6 +20,7 @@ import 'package:arena/features_admin_desktop/finance/desktop_payouts_page.dart';
 import 'package:arena/features_admin_desktop/finance/desktop_super_payouts_page.dart';
 import 'package:arena/features_admin_desktop/matches/desktop_matches_list_page.dart';
 import 'package:arena/features_admin_desktop/profile/desktop_profile_page.dart';
+import 'package:arena/features_admin_desktop/recordings/desktop_recordings_page.dart';
 import 'package:arena/features_admin_desktop/shell/admin_desktop_shell.dart';
 import 'package:arena/features_admin_desktop/streams/desktop_stream_moderation_page.dart';
 import 'package:arena/features_admin_desktop/streams/desktop_watch_stream_page.dart';
@@ -61,6 +62,7 @@ abstract final class AdminDesktopRoutes {
   static const payouts = '/payouts';
   static const disputes = '/disputes/:matchId';
   static const auditLog = '/audit';
+  static const recordings = '/recordings';
   static const profile = '/profile';
 
   // Super-admin (dans le shell)
@@ -261,6 +263,11 @@ final adminDesktopRouterProvider = Provider<GoRouter>((ref) {
             path: AdminDesktopRoutes.auditLog,
             name: 'desktop.auditLog',
             builder: (context, state) => const DesktopAuditLogPage(),
+          ),
+          GoRoute(
+            path: AdminDesktopRoutes.recordings,
+            name: 'desktop.recordings',
+            builder: (context, state) => const DesktopRecordingsPage(),
           ),
           GoRoute(
             path: AdminDesktopRoutes.profile,
