@@ -1,3 +1,4 @@
+import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/core/utils/arena_error_message.dart';
 import 'package:arena/data/repositories/admin/admin_recordings_repository.dart';
 import 'package:fluent_ui/fluent_ui.dart';
@@ -168,10 +169,10 @@ class _RecordingCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    _tag(rec.isLiveKit ? 'LiveKit' : 'Natif', Colors.blue),
+                    _tag(rec.isLiveKit ? 'LiveKit' : 'Natif', ArenaColors.signalBlue),
                     if (rec.hasOpenDispute) ...[
                       const SizedBox(width: 6),
-                      _tag('LITIGE', Colors.orange),
+                      _tag('LITIGE', ArenaColors.warning),
                     ],
                   ],
                 ),
