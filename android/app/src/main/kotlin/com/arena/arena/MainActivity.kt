@@ -132,6 +132,12 @@ class MainActivity : FlutterActivity() {
                     "stopCustomRecording" -> {
                         stopCustomRecording(result)
                     }
+                    "startLivekitCaptureFgs" -> {
+                        startLivekitCaptureFgs(result)
+                    }
+                    "stopLivekitCaptureFgs" -> {
+                        stopLivekitCaptureFgs(result)
+                    }
                     else -> result.notImplemented()
                 }
             }
@@ -221,6 +227,44 @@ class MainActivity : FlutterActivity() {
         } catch (e: Exception) {
             Log.w(TAG, "stopService(start) failed", e)
         }
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // LiveKit anti-cheat capture — shell mediaProjection FGS
+    // ──────────────────────────────────────────────────────────────
+    // flutter_webrtc (capture LiveKit) ne fournit aucun foreground service ;
+    // Android 14+ en exige un de type mediaProjection AVANT de démarrer la
+    // projection, sinon l'app est tuée. On lance donc [LivekitCaptureFgsService]
+    // (coquille, sans projection propre) juste avant `enableScreenShare()`
+    // côté Dart, et on l'arrête à la fin de la capture.
+
+    private fun startLivekitCaptureFgs(result: MethodChannel.Result) {
+        val intent = Intent(applicationContext, LivekitCaptureFgsService::class.java).apply {
+            action = LivekitCaptureFgsService.ACTION_START
+        }
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(intent)
+            } else {
+                startService(intent)
+            }
+            result.success(true)
+        } catch (e: Exception) {
+            Log.w(TAG, "startLivekitCaptureFgs failed", e)
+            result.success(false)
+        }
+    }
+
+    private fun stopLivekitCaptureFgs(result: MethodChannel.Result) {
+        val intent = Intent(applicationContext, LivekitCaptureFgsService::class.java).apply {
+            action = LivekitCaptureFgsService.ACTION_STOP
+        }
+        try {
+            startService(intent)
+        } catch (e: Exception) {
+            Log.w(TAG, "stopLivekitCaptureFgs failed", e)
+        }
+        result.success(true)
     }
 
     // ──────────────────────────────────────────────────────────────

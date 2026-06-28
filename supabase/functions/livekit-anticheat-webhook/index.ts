@@ -13,8 +13,8 @@
 //     → 1 piste / joueur ⇒ 2 egress / match.
 //
 //   * `egress_ended` → clôture la ligne `streams` (ended_at, expires_at J+30,
-//     is_active=false). Le `storage_path` a été fixé au démarrage (chemin
-//     déterministe) : pas besoin de parser le résultat d'egress.
+//     is_active=false) et ré-aligne `storage_path` sur le nom de fichier
+//     réellement écrit (le conteneur dépend du codec : vidéo WebRTC → .webm).
 //
 // Auth : le webhook LiveKit est signé (JWT dans l'en-tête Authorization),
 // vérifié par WebhookReceiver(API_KEY, API_SECRET). verify_jwt=false côté
@@ -150,7 +150,12 @@ async function onTrackPublished(
 
   // Chemin déterministe dans le bucket : aligné sur la convention
   // {matchId}/{playerId}/… déjà purgée par cleanup-streams.
-  const filepath = `${matchId}/${playerId}/livekit_${Date.now()}.mp4`;
+  // Extension .webm : Track Egress d'une piste vidéo WebRTC (VP8/VP9) écrit un
+  // conteneur WebM. Demander .mp4 ne change rien au conteneur — LiveKit écrirait
+  // quand même un .webm et `storage_path` (.mp4) ne pointerait plus sur l'objet
+  // réel (URL signée admin → 404). On fixe donc .webm dès le départ, et on
+  // ré-aligne storage_path sur le vrai nom de fichier à `egress_ended`.
+  const filepath = `${matchId}/${playerId}/livekit_${Date.now()}.webm`;
 
   const egressClient = new EgressClient(
     toHttpUrl(LIVEKIT_URL!),
@@ -188,6 +193,17 @@ async function onTrackPublished(
     is_public: false,
   });
   if (insErr) {
+    // 23505 = unique_violation sur l'index partiel « une seule ligne LiveKit
+    // active par (match, joueur) ». Course : deux `track_published` quasi
+    // simultanés ont tous deux passé le garde `maybeSingle` ci-dessus puis
+    // lancé un egress. On annule celui qu'on vient de démarrer pour ne pas
+    // enregistrer (et facturer) en double.
+    if ((insErr as { code?: string }).code === "23505") {
+      try {
+        await egressClient.stopEgress(info.egressId);
+      } catch (_) { /* best-effort : l'egress orphelin s'arrêtera seul */ }
+      return jsonResponse({ ok: true, skipped: "already_recording_race" });
+    }
     return jsonResponse(
       { error: "stream_insert_failed", detail: safeDetail(insErr.message, "livekit-webhook") },
       500,
@@ -202,7 +218,8 @@ async function onEgressEnded(
   // deno-lint-ignore no-explicit-any
   event: any,
 ): Promise<Response> {
-  const egressId = event.egressInfo?.egressId as string | undefined;
+  const info = event.egressInfo;
+  const egressId = info?.egressId as string | undefined;
   if (!egressId) {
     return jsonResponse({ ok: true, skipped: "no_egress_id" });
   }
@@ -211,13 +228,29 @@ async function onEgressEnded(
     Date.now() + RETENTION_DAYS * 24 * 60 * 60 * 1000,
   ).toISOString();
 
+  // deno-lint-ignore no-explicit-any
+  const patch: Record<string, any> = {
+    is_active: false,
+    ended_at: new Date().toISOString(),
+    expires_at: expiresAt,
+  };
+
+  // Ré-aligner storage_path sur le NOM RÉEL écrit par LiveKit : le conteneur
+  // dépend du codec (vidéo WebRTC → .webm), donc l'extension peut différer de
+  // celle demandée au démarrage. `egressInfo.fileResults[].filename` (ou
+  // l'ancien `file.filename`) porte la clé d'objet réelle. Sans ça, l'URL
+  // signée admin pointerait sur un objet inexistant.
+  const fileResult = (Array.isArray(info?.fileResults) && info.fileResults[0]) ||
+    info?.file;
+  const actualPath = fileResult?.filename;
+  if (typeof actualPath === "string" && actualPath.length > 0 &&
+      !actualPath.includes("://")) {
+    patch.storage_path = actualPath;
+  }
+
   const { error: updErr } = await sb
     .from("streams")
-    .update({
-      is_active: false,
-      ended_at: new Date().toISOString(),
-      expires_at: expiresAt,
-    })
+    .update(patch)
     .eq("egress_id", egressId);
   if (updErr) {
     return jsonResponse(
