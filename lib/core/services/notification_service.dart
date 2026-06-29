@@ -38,10 +38,15 @@ class NotificationService {
     required GoRouter router,
     FirebaseMessaging? messaging,
     FlutterLocalNotificationsPlugin? localNotifications,
+    this.onProofClaimRequest,
   })  : _repository = repository,
         _router = router,
         _messaging = messaging ?? FirebaseMessaging.instance,
         _local = localNotifications ?? FlutterLocalNotificationsPlugin();
+
+  /// Anti-triche Phase 3 : appelé quand un push `proof_claim_request` arrive
+  /// (foreground ou tap) — déclenche l'upload du fichier engagé.
+  final void Function(String matchId, String streamId)? onProofClaimRequest;
 
   static const _androidChannel = AndroidNotificationChannel(
     'arena_default',
@@ -167,6 +172,9 @@ class NotificationService {
     // Appel entrant : l'écran de sonnerie est géré par l'écoute Realtime
     // globale (`incomingCallProvider`) — pas de notification ici.
     if (message.data['notification_type'] == 'call_invite') return;
+    // Réclamation de preuve (Phase 3) : déclenche l'upload en plus d'afficher
+    // la notif (on continue le rendu ci-dessous).
+    _maybeHandleProofClaim(message);
     final notif = message.notification;
     final title = notif?.title ?? message.data['title'] as String? ?? 'ARENA';
     final body = notif?.body ?? message.data['body'] as String? ?? '';
@@ -262,8 +270,21 @@ class NotificationService {
   }
 
   void _handleTap(RemoteMessage message) {
+    _maybeHandleProofClaim(message);
     final route = message.data['route'];
     if (route is String) _navigate(route);
+  }
+
+  /// Si le push est une réclamation de preuve (Phase 3), déclenche l'upload du
+  /// fichier engagé via le callback. Les `match_id` / `stream_id` sont posés
+  /// dans `data` par la RPC `admin_claim_proof`.
+  void _maybeHandleProofClaim(RemoteMessage message) {
+    if (message.data['notification_type'] != 'proof_claim_request') return;
+    final matchId = message.data['match_id'] as String?;
+    final streamId = message.data['stream_id'] as String?;
+    if (matchId != null && streamId != null) {
+      onProofClaimRequest?.call(matchId, streamId);
+    }
   }
 
   void _navigate(String route) {

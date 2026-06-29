@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:arena/core/services/proof_commitment_service.dart';
 import 'package:arena/core/services/sync_queue_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() {
   group('sha256OfFile', () {
@@ -99,4 +100,55 @@ void main() {
       expect(b.bytes, 1);
     });
   });
+
+  group('ProofUploadAction', () {
+    test('payload + roundtrip JSON conserve les champs', () {
+      final action = ProofUploadAction(
+        id: 'u1',
+        createdAt: DateTime.utc(2026, 6, 30),
+        matchId: 'm1',
+        streamId: 's1',
+        playerId: 'p1',
+        filePath: '/cache/m1.mp4',
+      );
+
+      expect(action.type, 'anticheat.upload');
+      expect(action.payload, {
+        'match_id': 'm1',
+        'stream_id': 's1',
+        'player_id': 'p1',
+        'file_path': '/cache/m1.mp4',
+      });
+
+      final back = SyncAction.fromJson(action.toJson());
+      expect(back, isA<ProofUploadAction>());
+      final p = back! as ProofUploadAction;
+      expect(p.matchId, 'm1');
+      expect(p.streamId, 's1');
+      expect(p.playerId, 'p1');
+      expect(p.filePath, '/cache/m1.mp4');
+    });
+
+    test('execute drop si le fichier local est absent', () async {
+      final action = ProofUploadAction(
+        id: 'u1',
+        createdAt: DateTime.utc(2026),
+        matchId: 'm1',
+        streamId: 's1',
+        playerId: 'p1',
+        filePath: '/does/not/exist_xyz.mp4',
+      );
+      // Fichier absent → drop (true) sans toucher au réseau (client jamais
+      // utilisé avant le check d'existence).
+      expect(await action.execute(_UnusedClient()), isTrue);
+    });
+  });
+}
+
+/// Client jamais réellement appelé — le test du fichier absent court-circuite
+/// avant tout accès réseau.
+class _UnusedClient implements SupabaseClient {
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw StateError('SupabaseClient ne doit pas être utilisé');
 }
