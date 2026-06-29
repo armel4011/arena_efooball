@@ -68,7 +68,7 @@ class LiveKitCaptureService {
     ScreenCaptureForegroundService? foregroundService,
     RecordingOverlayController? overlay,
     BringToFront? bringToFront,
-    this.maxDuration = const Duration(minutes: 25),
+    this.maxDuration = const Duration(minutes: 20),
     bool? supportsCapture,
   })  : _tokenClient = tokenClient,
         _roomFactory = roomFactory ?? const _DefaultLiveKitRoomFactory(),
@@ -90,8 +90,11 @@ class LiveKitCaptureService {
   StreamSubscription<OverlayAction>? _overlaySub;
   final bool _supportsCapture;
 
-  /// Plafond dur, aligné sur le recorder natif (25 min couvrent match +
-  /// prolongations + tirs au but eFootball / EA FC Mobile).
+  /// Plafond dur de la session d'egress. Volontairement plus serré que le
+  /// recorder natif (qui écrit un fichier local sans coût de minutes) : chaque
+  /// minute d'egress LiveKit est facturée (2 pistes/match), donc on borne au
+  /// plus juste. 20 min couvrent un match (~15 min) + prolongations + tirs au
+  /// but eFootball / EA FC Mobile, tout en plafonnant une session « oubliée ».
   final Duration maxDuration;
 
   final _stateController = StreamController<LiveKitCaptureState>.broadcast();
