@@ -116,6 +116,8 @@ dependencies:
   flutter_foreground_task: ^9.2.2
   permission_handler: ^11.3.1
   file_picker: ^8.1.2
+  # SHA-256 du proxy anti-triche (commitment hash, Phase 3) — hash en flux.
+  crypto: ^3.0.6
 
   # ─── PHASE 10 — Push notifications (FCM + in-app) ──────────
   firebase_core: ^3.6.0
