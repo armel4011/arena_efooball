@@ -149,6 +149,35 @@ class AdminDisputesRepository {
         .createSignedUrl(path, expiresIn.inSeconds);
   }
 
+  /// Preuves anti-triche « commitment hash » (Phase 3) de [matchId] : lignes
+  /// `streams` qui portent un commitment (`proof_sha256`), qu'elles aient déjà
+  /// été uploadées ou non. Sert la section « Preuves engagées » des litiges —
+  /// distincte des « Enregistrements auto » qui n'affiche que les fichiers déjà
+  /// présents. Plus récentes en tête.
+  Future<List<MatchStream>> fetchProofCommitments(String matchId) async {
+    final rows = await _client
+        .from(_streamsTable)
+        .select()
+        .eq('match_id', matchId)
+        .not('proof_sha256', 'is', null)
+        .order('proof_committed_at', ascending: false);
+    return [
+      for (final row in rows as List<dynamic>)
+        MatchStream.fromJson(row as Map<String, dynamic>),
+    ];
+  }
+
+  /// Admin « réclamer la vidéo » : appelle la RPC `admin_claim_proof` qui
+  /// estampille `streams.proof_claimed_at` et notifie le joueur (FCM). Le
+  /// joueur uploadera le proxy à sa prochaine connexion ; proof-verify
+  /// comparera alors le hash livré au commitment.
+  Future<void> claimProof(String streamId) async {
+    await _client.rpc<void>(
+      'admin_claim_proof',
+      params: {'p_stream_id': streamId},
+    );
+  }
+
   /// Resolves a dispute. The admin's written reasoning is required —
   /// surfaced in the audit log + future "see why" link from the
   /// player-facing notif.
@@ -269,4 +298,14 @@ final adminMatchRecordingsProvider = FutureProvider.family
     signed.add(SignedMatchRecording(stream: rec, url: url));
   }
   return signed;
+});
+
+/// Preuves « commitment hash » (Phase 3) d'un match : lignes `streams` portant
+/// un `proof_sha256`, qu'elles soient encore à réclamer, réclamées, ou déjà
+/// livrées (vérifiées / mismatch). Alimente la section « Preuves engagées »
+/// des litiges (badge de statut + bouton « Réclamer la vidéo »). autoDispose
+/// pour refléter les changements de statut après une réclamation.
+final adminMatchProofCommitmentsProvider = FutureProvider.family
+    .autoDispose<List<MatchStream>, String>((ref, matchId) {
+  return ref.watch(adminDisputesRepositoryProvider).fetchProofCommitments(matchId);
 });
