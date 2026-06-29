@@ -213,6 +213,12 @@ class _MatchRecordingLifecycleState
       return;
     }
 
+    // Bouton flottant overlay (best-effort) : on demande SYSTEM_ALERT_WINDOW
+    // en amont pour qu'il s'affiche pendant la capture egress. Si l'utilisateur
+    // refuse, la capture continue sans overlay (la notif système reste le
+    // moyen d'arrêter) — on ne bloque donc PAS sur ce résultat.
+    await permissions.requestOverlay();
+
     try {
       await ref
           .read(liveKitCaptureServiceProvider)

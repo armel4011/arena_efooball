@@ -111,8 +111,10 @@ class _RecordingOverlayButtonState extends State<RecordingOverlayButton> {
           // 4 cardinals — N pause / E focus / S save+stop / W forfeit.
           // IgnorePointer + opacity 0 while collapsed so they don't eat
           // touches around the main button.
+          // N pause/resume — natif uniquement (la capture LiveKit egress ne
+          // se met pas en pause). Masqué en mode simple.
           _MiniButton(
-            visible: _expanded,
+            visible: _expanded && !_tick.isSimple,
             offset: const Offset(0, -_miniRadius),
             icon: _tick.isPaused ? Icons.play_arrow : Icons.pause,
             color: _tick.isPaused ? ArenaColors.success : ArenaColors.warning,
@@ -122,6 +124,7 @@ class _RecordingOverlayButtonState extends State<RecordingOverlayButton> {
                   : RecordingOverlayMessages.askPauseType,
             ),
           ),
+          // E ouvrir ARENA — commun aux deux modes.
           _MiniButton(
             visible: _expanded,
             offset: const Offset(_miniRadius, 0),
@@ -129,15 +132,18 @@ class _RecordingOverlayButtonState extends State<RecordingOverlayButton> {
             color: ArenaColors.signalBlue,
             onTap: () => _onMiniTap(RecordingOverlayMessages.focusMainType),
           ),
+          // S stop — natif : « enregistrer & arrêter » (icône save) ; simple
+          // (LiveKit) : « arrêter » (icône stop). Même message askSaveStop.
           _MiniButton(
             visible: _expanded,
             offset: const Offset(0, _miniRadius),
-            icon: Icons.save_alt,
-            color: ArenaColors.success,
+            icon: _tick.isSimple ? Icons.stop : Icons.save_alt,
+            color: _tick.isSimple ? ArenaColors.danger : ArenaColors.success,
             onTap: () => _onMiniTap(RecordingOverlayMessages.askSaveStopType),
           ),
+          // W forfait — natif uniquement. Masqué en mode simple.
           _MiniButton(
-            visible: _expanded,
+            visible: _expanded && !_tick.isSimple,
             offset: const Offset(-_miniRadius, 0),
             icon: Icons.stop_circle_outlined,
             color: ArenaColors.danger,
@@ -150,7 +156,7 @@ class _RecordingOverlayButtonState extends State<RecordingOverlayButton> {
           // (Android 14+ refuse 2 MediaProjection simultanées, cf. mémoire
           // mediaprojection_constraints).
           _MiniButton(
-            visible: _expanded && _tick.isLiveAvailable,
+            visible: _expanded && _tick.isLiveAvailable && !_tick.isSimple,
             offset: const Offset(_miniRadius * 0.707, -_miniRadius * 0.707),
             icon: Icons.live_tv,
             color: ArenaColors.danger,

@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:arena/core/services/bring_to_front.dart';
 import 'package:arena/core/services/livekit_token_client.dart';
+import 'package:arena/core/services/recording_overlay_controller.dart';
 import 'package:arena/core/utils/error_reporter.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -64,12 +66,16 @@ class LiveKitCaptureService {
     required LiveKitTokenClient tokenClient,
     LiveKitRoomFactory? roomFactory,
     ScreenCaptureForegroundService? foregroundService,
+    RecordingOverlayController? overlay,
+    BringToFront? bringToFront,
     this.maxDuration = const Duration(minutes: 25),
     bool? supportsCapture,
   })  : _tokenClient = tokenClient,
         _roomFactory = roomFactory ?? const _DefaultLiveKitRoomFactory(),
         _foregroundService =
             foregroundService ?? const _PlatformScreenCaptureForegroundService(),
+        _overlay = overlay,
+        _bringToFront = bringToFront,
         // Capture d'écran = Android uniquement (comme le recorder natif).
         // Injectable pour les tests sur l'hôte.
         _supportsCapture = supportsCapture ?? Platform.isAndroid;
@@ -77,6 +83,11 @@ class LiveKitCaptureService {
   final LiveKitTokenClient _tokenClient;
   final LiveKitRoomFactory _roomFactory;
   final ScreenCaptureForegroundService _foregroundService;
+  // Bouton flottant overlay (mode « simple ») pour revenir à ARENA / arrêter
+  // pendant la capture egress. Null = pas d'overlay (tests / iOS).
+  final RecordingOverlayController? _overlay;
+  final BringToFront? _bringToFront;
+  StreamSubscription<OverlayAction>? _overlaySub;
   final bool _supportsCapture;
 
   /// Plafond dur, aligné sur le recorder natif (25 min couvrent match +
@@ -139,6 +150,23 @@ class LiveKitCaptureService {
     final startedAt = DateTime.now();
     _emit(LiveKitCapturePublishing(room: token.room, startedAt: startedAt));
 
+    // Bouton flottant overlay (mode simple : ouvrir ARENA + stop) — comme le
+    // recorder natif, il permet de revenir à ARENA et de couper la capture
+    // depuis l'app de jeu. Best-effort : si l'overlay/permission échoue, la
+    // capture continue (la notif système reste le filet). La permission
+    // SYSTEM_ALERT_WINDOW est demandée en amont par MatchRecordingLifecycle.
+    final overlay = _overlay;
+    if (overlay != null && _supportsCapture) {
+      try {
+        await overlay.start(matchId: matchId, simpleMode: true);
+        _overlaySub = overlay.actions.listen(_onOverlayAction);
+      } catch (e, st) {
+        unawaited(
+          reportError(e, st, context: 'LiveKitCaptureService.overlayStart'),
+        );
+      }
+    }
+
     _autoStop?.cancel();
     _autoStop = Timer(maxDuration, () {
       if (_state is LiveKitCapturePublishing) {
@@ -163,8 +191,35 @@ class LiveKitCaptureService {
     _emit(const LiveKitCaptureIdle());
   }
 
+  /// Réagit aux taps du bouton flottant overlay (mode simple) :
+  ///   * `focusMain` (ouvrir ARENA) → ramène l'activité au premier plan ;
+  ///   * `saveAndStop` (stop) → coupe la capture (room → egress_ended).
+  /// Les autres actions (pause/forfait/live) n'existent pas en mode simple.
+  void _onOverlayAction(OverlayAction action) {
+    switch (action) {
+      case OverlayAction.focusMain:
+        unawaited(_bringToFront?.bringArenaToFront() ?? Future.value());
+      case OverlayAction.saveAndStop:
+        unawaited(stop());
+      case OverlayAction.resume:
+      case OverlayAction.pause:
+      case OverlayAction.forfeit:
+      case OverlayAction.goLive:
+      case OverlayAction.unknown:
+        break;
+    }
+  }
+
   /// Libère la room courante sans changer d'état (helper interne).
   Future<void> _releaseRoom() async {
+    // Coupe l'overlay AVANT la room — idempotent, et évite que le bouton
+    // flottant reste affiché si la fermeture de room traîne.
+    await _overlaySub?.cancel();
+    _overlaySub = null;
+    try {
+      await _overlay?.stop();
+    } catch (_) {}
+
     final room = _room;
     _room = null;
     if (room == null) return;
@@ -292,6 +347,8 @@ class _LiveKitRoomHandle implements LiveKitRoomHandle {
 final liveKitCaptureServiceProvider = Provider<LiveKitCaptureService>((ref) {
   final service = LiveKitCaptureService(
     tokenClient: ref.watch(liveKitTokenClientProvider),
+    overlay: ref.watch(recordingOverlayControllerProvider),
+    bringToFront: ref.watch(bringToFrontProvider),
   );
   ref.onDispose(service.dispose);
   return service;

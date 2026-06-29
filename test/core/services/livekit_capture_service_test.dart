@@ -1,5 +1,9 @@
+import 'dart:async';
+
+import 'package:arena/core/services/bring_to_front.dart';
 import 'package:arena/core/services/livekit_capture_service.dart';
 import 'package:arena/core/services/livekit_token_client.dart';
+import 'package:arena/core/services/recording_overlay_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -45,6 +49,52 @@ class _FakeFgs implements ScreenCaptureForegroundService {
   Future<void> stop() async => stopped++;
 }
 
+class _FakeOverlay implements RecordingOverlayController {
+  final _actions = StreamController<OverlayAction>.broadcast();
+  int startCount = 0;
+  int stopCount = 0;
+  bool? lastSimpleMode;
+
+  void emit(OverlayAction action) => _actions.add(action);
+
+  @override
+  Stream<OverlayAction> get actions => _actions.stream;
+
+  @override
+  Future<void> start({String? matchId, bool simpleMode = false}) async {
+    startCount++;
+    lastSimpleMode = simpleMode;
+  }
+
+  @override
+  Future<void> stop() async => stopCount++;
+
+  @override
+  Future<void> pause() async {}
+
+  @override
+  Future<void> resume() async {}
+
+  @override
+  void setLiveAvailable(bool value) {}
+
+  @override
+  Duration totalDuration = const Duration(minutes: 25);
+
+  @override
+  Future<void> dispose() async => _actions.close();
+}
+
+class _FakeBringToFront implements BringToFront {
+  int calls = 0;
+
+  @override
+  Future<bool> bringArenaToFront() async {
+    calls++;
+    return true;
+  }
+}
+
 const _stubToken = LiveKitToken(
   token: 'jwt',
   url: 'wss://x.livekit.cloud',
@@ -65,11 +115,15 @@ void main() {
   LiveKitCaptureService build(
     LiveKitRoomFactory factory, {
     bool supportsCapture = true,
+    RecordingOverlayController? overlay,
+    BringToFront? bringToFront,
   }) {
     return LiveKitCaptureService(
       tokenClient: tokenClient,
       roomFactory: factory,
       foregroundService: fgs,
+      overlay: overlay,
+      bringToFront: bringToFront,
       supportsCapture: supportsCapture,
     );
   }
@@ -153,6 +207,65 @@ void main() {
       final service = build(_FakeFactory(_FakeRoom()));
       await service.stop();
       expect(service.state, isA<LiveKitCaptureIdle>());
+      await service.dispose();
+    });
+  });
+
+  group('LiveKitCaptureService overlay (bouton flottant)', () {
+    test('démarre l\'overlay en mode simple à la publication', () async {
+      when(() => tokenClient.fetch(matchId: 'match-1'))
+          .thenAnswer((_) async => _stubToken);
+      final overlay = _FakeOverlay();
+      final service = build(_FakeFactory(_FakeRoom()), overlay: overlay);
+
+      await service.start(matchId: 'match-1');
+
+      expect(overlay.startCount, 1);
+      expect(overlay.lastSimpleMode, isTrue);
+      await service.dispose();
+    });
+
+    test('action focusMain → ramène ARENA au premier plan', () async {
+      when(() => tokenClient.fetch(matchId: 'match-1'))
+          .thenAnswer((_) async => _stubToken);
+      final overlay = _FakeOverlay();
+      final btf = _FakeBringToFront();
+      final service =
+          build(_FakeFactory(_FakeRoom()), overlay: overlay, bringToFront: btf);
+
+      await service.start(matchId: 'match-1');
+      overlay.emit(OverlayAction.focusMain);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(btf.calls, 1);
+      await service.dispose();
+    });
+
+    test('action saveAndStop → coupe la capture (→ idle)', () async {
+      when(() => tokenClient.fetch(matchId: 'match-1'))
+          .thenAnswer((_) async => _stubToken);
+      final overlay = _FakeOverlay();
+      final service = build(_FakeFactory(_FakeRoom()), overlay: overlay);
+
+      await service.start(matchId: 'match-1');
+      overlay.emit(OverlayAction.saveAndStop);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(service.state, isA<LiveKitCaptureIdle>());
+      expect(overlay.stopCount, greaterThanOrEqualTo(1));
+      await service.dispose();
+    });
+
+    test('stop ferme l\'overlay', () async {
+      when(() => tokenClient.fetch(matchId: 'match-1'))
+          .thenAnswer((_) async => _stubToken);
+      final overlay = _FakeOverlay();
+      final service = build(_FakeFactory(_FakeRoom()), overlay: overlay);
+
+      await service.start(matchId: 'match-1');
+      await service.stop();
+
+      expect(overlay.stopCount, greaterThanOrEqualTo(1));
       await service.dispose();
     });
   });

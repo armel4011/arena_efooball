@@ -55,6 +55,9 @@ class RecordingOverlayController {
   // l'info via `setLiveAvailable`). Propagé dans chaque tick payload —
   // l'overlay isolate affiche son 5ᵉ mini button "Live" en fonction.
   bool _liveAvailable = false;
+  // Mode simplifié (capture LiveKit Track Egress) : l'overlay ne montre que
+  // « ouvrir ARENA » + « stop ». Propagé dans chaque tick payload.
+  bool _simpleMode = false;
 
   /// Total length of a recording — must match `RecordingService.maxDuration`.
   /// Used by the overlay to flash a warning in the last 30 s.
@@ -84,6 +87,7 @@ class RecordingOverlayController {
           warning: remaining <= const Duration(seconds: 30),
           paused: _pausedElapsed != null,
           liveAvailable: _liveAvailable,
+          simple: _simpleMode,
         ),
       ),
     );
@@ -94,7 +98,7 @@ class RecordingOverlayController {
   /// [matchId] is currently unused but accepted so the API stays
   /// stable when we wire deep-link "tap on overlay → open match-room"
   /// in PHASE 8.5.
-  Future<void> start({String? matchId}) async {
+  Future<void> start({String? matchId, bool simpleMode = false}) async {
     final granted = await _platform.isPermissionGranted();
     if (!granted) {
       final ok = await _platform.requestPermission();
@@ -106,6 +110,7 @@ class RecordingOverlayController {
       }
     }
 
+    _simpleMode = simpleMode;
     await _platform.showOverlay();
     _startedAt = DateTime.now();
     _bindListener();
@@ -120,6 +125,7 @@ class RecordingOverlayController {
     _startedAt = null;
     _pausedElapsed = null;
     _liveAvailable = false;
+    _simpleMode = false;
     await _listener?.cancel();
     _listener = null;
     await _portSub?.cancel();
@@ -144,6 +150,7 @@ class RecordingOverlayController {
         elapsedSeconds: _pausedElapsed!.inSeconds,
         warning: false,
         paused: true,
+        simple: _simpleMode,
       ),
     );
   }
@@ -163,6 +170,7 @@ class RecordingOverlayController {
       RecordingOverlayMessages.tick(
         elapsedSeconds: paused.inSeconds,
         warning: totalDuration - paused <= const Duration(seconds: 30),
+        simple: _simpleMode,
       ),
     );
   }
@@ -219,6 +227,7 @@ class RecordingOverlayController {
           elapsedSeconds: elapsed.inSeconds,
           warning: isWarning,
           liveAvailable: _liveAvailable,
+          simple: _simpleMode,
         ),
       );
     });
