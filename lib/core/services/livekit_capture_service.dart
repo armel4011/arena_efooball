@@ -329,7 +329,24 @@ class _LiveKitRoomHandle implements LiveKitRoomHandle {
     // Déclenche la demande MediaProjection système + le foreground service
     // de capture d'écran (flutter_webrtc). Mutuellement exclusif avec le
     // recorder natif (cf. AntiCheatProvider).
-    await _room.localParticipant?.setScreenShareEnabled(true);
+    //
+    // Plafond d'encodage explicite : sans options, LiveKit publie au défaut
+    // `screenShareH1080FPS15` = 1080p / 2,5 Mbps. Pour la REVUE anti-triche,
+    // 720p / 15 fps / 1,5 Mbps suffit largement à lire le HUD et le score, et
+    // ~divise par deux le coût Track Egress (bande passante facturée) ET le
+    // stockage Supabase (J+1). Aligné sur le preset screen-share 720p validé
+    // par LiveKit. Descendre à 540p/0,8 Mbps (= recorder natif) si besoin de
+    // serrer encore, au prix d'un texte plus mou.
+    await _room.localParticipant?.setScreenShareEnabled(
+      true,
+      screenShareCaptureOptions: const ScreenShareCaptureOptions(
+        maxFrameRate: 15,
+        params: VideoParameters(
+          dimensions: VideoDimensions(1280, 720),
+          encoding: VideoEncoding(maxFramerate: 15, maxBitrate: 1500 * 1000),
+        ),
+      ),
+    );
   }
 
   @override
