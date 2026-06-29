@@ -42,7 +42,19 @@ android {
     defaultConfig {
         applicationId = "com.arena.arena"
         minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        // targetSdk ÉPINGLÉ à 35 (au lieu de flutter.targetSdkVersion = 36).
+        // À targetSdk 36, Android exige l'appop `project_media` (consentement de
+        // capture) AVANT de pouvoir démarrer un foreground service de type
+        // `mediaProjection`. Or flutter_webrtc 1.2.1 démarre la MediaProjection
+        // À L'INTÉRIEUR de getDisplayMedia (juste après le consentement, même
+        // appel natif), donc le FGS mediaProjection DOIT tourner AVANT — ce qui,
+        // à targetSdk 36, lève une SecurityException et crashe l'app (capture
+        // anti-triche LiveKit). flutter_webrtc n'offre aucun hook entre
+        // consentement et démarrage de projection. Tant que ce conflit n'est pas
+        // résolu en amont, on cible 35 (comportement Android 15 : FGS autorisé
+        // avant consentement). Le recorder natif reste le filet de sécurité.
+        // Voir mémoire anticheat_livekit_fgs_targetsdk36_crash.
+        targetSdk = 35
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
