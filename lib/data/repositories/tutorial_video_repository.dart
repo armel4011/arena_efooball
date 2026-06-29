@@ -6,10 +6,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 /// CRUD sur la table `tutorial_video` (bannières de prise en main).
 ///
 /// La feature est passée d'UNE bannière active à PLUSIEURS, chacune ciblant
-/// une page (`home` / `competitions`) ou toutes (`all`). Côté user, chaque
-/// page observe [watchActiveForPage] ; côté super-admin, [watchAll] alimente
-/// la liste CRUD. La fenêtre d'affichage par nouvel utilisateur est gérée par
-/// bannière via [recordAndGetFirstView].
+/// une page (`home` / `competitions`) ou toutes (`all`). Côté user, toutes les
+/// pages partagent UNE souscription [watchAllRaw] (filtrée par page en Dart) ;
+/// côté super-admin, [watchAll] alimente la liste CRUD. La fenêtre d'affichage
+/// par nouvel utilisateur est gérée par bannière via [recordAndGetFirstView].
 class TutorialVideoRepository {
   const TutorialVideoRepository(this._client);
 
@@ -37,19 +37,16 @@ class TutorialVideoRepository {
   static DateTime _createdAtOf(TutorialVideo v) =>
       v.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
 
-  /// Realtime stream des bannières ACTIVES éligibles pour [page] (inclut les
-  /// bannières `all`). On stream toute la table — petite — puis on filtre en
-  /// Dart via [filterActiveForPage].
-  Stream<List<TutorialVideo>> watchActiveForPage(TutorialPage page) {
+  /// Realtime stream de TOUTES les bannières (brut, actives ou non). UNE seule
+  /// souscription partagée par les 4 pages user — le filtrage par page se fait
+  /// en Dart côté provider via [filterActiveForPage]. Avant, chaque page
+  /// ouvrait son propre canal Realtime sur la même (petite) table : 4 canaux
+  /// redondants → 1, ce qui allège chaque rafale de reconnexion/resume.
+  Stream<List<TutorialVideo>> watchAllRaw() {
     return _client
         .from(_table)
         .stream(primaryKey: ['id'])
-        .map(
-          (rows) => filterActiveForPage(
-            rows.map(TutorialVideo.fromJson).toList(),
-            page,
-          ),
-        );
+        .map((rows) => rows.map(TutorialVideo.fromJson).toList());
   }
 
   /// Realtime stream de TOUTES les bannières (actives ou non), triées par
@@ -140,10 +137,25 @@ final tutorialVideoRepositoryProvider = Provider<TutorialVideoRepository>((ref) 
   return TutorialVideoRepository(ref.watch(supabaseClientProvider));
 });
 
+/// Source unique : stream brut de toute la table `tutorial_video`. Une seule
+/// souscription Realtime partagée par les 4 pages (vs 1 canal/page avant), ce
+/// qui réduit le nombre de canaux ouverts et la pression sur la limite de taux
+/// de jointures Supabase (`ChannelRateLimitReached`). `autoDispose` : le canal
+/// se ferme dès que plus aucune page ne l'observe (logout, app fermée).
+final _allTutorialBannersStreamProvider =
+    StreamProvider.autoDispose<List<TutorialVideo>>((ref) {
+  return ref.watch(tutorialVideoRepositoryProvider).watchAllRaw();
+});
+
 /// Bannières tutoriel ACTIVES éligibles pour une page donnée (inclut `all`).
-final tutorialBannersForPageProvider =
-    StreamProvider.family<List<TutorialVideo>, TutorialPage>((ref, page) {
-  return ref.watch(tutorialVideoRepositoryProvider).watchActiveForPage(page);
+/// Dérivé en Dart de [_allTutorialBannersStreamProvider] : n'ouvre PAS de canal
+/// Realtime propre, il filtre la source partagée. Conserve un type
+/// `AsyncValue` pour ne rien changer côté consommateur (`.valueOrNull`).
+final tutorialBannersForPageProvider = Provider.autoDispose
+    .family<AsyncValue<List<TutorialVideo>>, TutorialPage>((ref, page) {
+  return ref.watch(_allTutorialBannersStreamProvider).whenData(
+        (all) => TutorialVideoRepository.filterActiveForPage(all, page),
+      );
 });
 
 /// Toutes les bannières (actives ou non) — pour l'écran super-admin.
