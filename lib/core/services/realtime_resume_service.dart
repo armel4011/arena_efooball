@@ -3,6 +3,7 @@ import 'package:arena/data/repositories/friends_repository.dart';
 import 'package:arena/data/repositories/notification_repository.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Service léger qui invalide les `StreamProvider` Supabase temps réel
 /// quand l'app revient au foreground.
@@ -48,9 +49,17 @@ class RealtimeResumeService extends WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state != AppLifecycleState.resumed) return;
-    // Resume → invalide les StreamProviders qui dependent du WebSocket
-    // Supabase. Les ecrans qui les consomment vont se re-render avec un
-    // loader court (~1-2s) puis afficher l'etat a jour.
+
+    // Garde anti-rafale : si le socket Realtime est TOUJOURS ouvert au retour
+    // au premier plan (court switch d'app, background bref), il n'a manqué
+    // aucun event INSERT/UPDATE → inutile d'invalider. Invalider quand même
+    // détruirait + rejoindrait 6 canaux d'un coup, ce qui empile des
+    // jointures sur la limite de taux Supabase (`ChannelRateLimitReached`).
+    // On ne force la re-souscription QUE lorsque le socket a réellement chuté
+    // (Doze/suspension longue) — là, le SDK reconnecte de toute façon et on
+    // veut en plus un fetch frais pour rattraper les events manqués.
+    if (Supabase.instance.client.realtime.isConnected) return;
+
     _ref
       ..invalidate(userNotificationsProvider)
       ..invalidate(userAdminMessagesProvider)
