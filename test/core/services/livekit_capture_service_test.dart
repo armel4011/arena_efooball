@@ -212,7 +212,7 @@ void main() {
   });
 
   group('LiveKitCaptureService overlay (bouton flottant)', () {
-    test('démarre l\'overlay en mode simple à la publication', () async {
+    test("démarre l'overlay en mode simple à la publication", () async {
       when(() => tokenClient.fetch(matchId: 'match-1'))
           .thenAnswer((_) async => _stubToken);
       final overlay = _FakeOverlay();
@@ -256,7 +256,7 @@ void main() {
       await service.dispose();
     });
 
-    test('stop ferme l\'overlay', () async {
+    test("stop ferme l'overlay", () async {
       when(() => tokenClient.fetch(matchId: 'match-1'))
           .thenAnswer((_) async => _stubToken);
       final overlay = _FakeOverlay();
