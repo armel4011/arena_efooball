@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:arena/core/services/proof_file_store.dart';
 import 'package:arena/core/services/sync_queue_service.dart';
 import 'package:arena/core/utils/error_reporter.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
@@ -38,9 +39,13 @@ class ProofCommitmentService {
   /// Hashe le fichier local [filePath] et engage le commitment pour [matchId].
   /// No-op silencieux si le fichier est absent/vide. Ne lève jamais : un échec
   /// d'anti-triche ne doit pas casser le flux de fin de match.
+  ///
+  /// [playerId] : le joueur (soi) — mémorisé avec le chemin du fichier pour
+  /// pouvoir le livrer plus tard sur réclamation admin (cf. ProofClaimService).
   Future<void> commitForMatch({
     required String matchId,
     required String filePath,
+    required String playerId,
   }) async {
     try {
       final file = File(filePath);
@@ -51,6 +56,14 @@ class ProofCommitmentService {
       if (size <= 0) return;
 
       final sha = await sha256OfFile(file);
+
+      // Mémorise OÙ se trouve le fichier hashé : la réclamation admin peut
+      // arriver bien après la fin du match (cf. ProofFileStore).
+      await _ref.read(proofFileStoreProvider).put(
+            matchId: matchId,
+            filePath: filePath,
+            playerId: playerId,
+          );
 
       final action = ProofCommitmentAction(
         id: generateUuidV4(),

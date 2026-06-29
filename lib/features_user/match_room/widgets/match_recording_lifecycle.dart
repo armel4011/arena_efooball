@@ -356,12 +356,15 @@ class _MatchRecordingLifecycleState
     if (next is! CoordinatorStopped) return;
     final path = next.localRecordingPath;
     if (path == null || path.isEmpty) return;
+    final self = widget.selfId;
+    if (self == null) return;
     if (_committedPath == path) return;
     _committedPath = path;
     unawaited(
       ref.read(proofCommitmentServiceProvider).commitForMatch(
             matchId: next.matchId,
             filePath: path,
+            playerId: self,
           ),
     );
   }

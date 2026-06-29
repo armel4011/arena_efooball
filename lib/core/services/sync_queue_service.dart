@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 
 import 'package:arena/core/services/network_status_service.dart';
@@ -102,6 +103,12 @@ sealed class SyncAction {
         );
       case ProofCommitmentAction._type:
         action = ProofCommitmentAction.fromPayload(
+          id: id,
+          createdAt: createdAt,
+          payload: payload,
+        );
+      case ProofUploadAction._type:
+        action = ProofUploadAction.fromPayload(
           id: id,
           createdAt: createdAt,
           payload: payload,
@@ -416,6 +423,108 @@ class ProofCommitmentAction extends SyncAction {
     } catch (e, st) {
       // Réseau / inattendu → retry.
       unawaited(reportError(e, st, context: 'SyncQueue.anticheatCommit'));
+      return false;
+    }
+  }
+}
+
+/// Upload-on-claim (Phase 3) : sur réclamation admin, le joueur livre le
+/// fichier de capture engagé, puis l'EF `proof-verify` re-hashe l'objet et le
+/// compare au commitment. Resumable via la sync queue (gros fichier + réseau
+/// instable) ; chemin d'objet DÉTERMINISTE (upsert) → un rejeu écrase au lieu
+/// de multiplier les objets, et `proof-verify` reste idempotent.
+class ProofUploadAction extends SyncAction {
+  const ProofUploadAction({
+    required super.id,
+    required super.createdAt,
+    required this.matchId,
+    required this.streamId,
+    required this.playerId,
+    required this.filePath,
+    super.attempts = 0,
+  });
+
+  factory ProofUploadAction.fromPayload({
+    required String id,
+    required DateTime createdAt,
+    required Map<String, dynamic> payload,
+  }) =>
+      ProofUploadAction(
+        id: id,
+        createdAt: createdAt,
+        matchId: payload['match_id'] as String,
+        streamId: payload['stream_id'] as String,
+        playerId: payload['player_id'] as String,
+        filePath: payload['file_path'] as String,
+      );
+
+  static const _type = 'anticheat.upload';
+  static const _bucket = 'match-recordings';
+  final String matchId;
+  final String streamId;
+  final String playerId;
+  final String filePath;
+
+  @override
+  String get type => _type;
+
+  @override
+  Map<String, dynamic> get payload => {
+        'match_id': matchId,
+        'stream_id': streamId,
+        'player_id': playerId,
+        'file_path': filePath,
+      };
+
+  @override
+  SyncAction copyWithAttempts(int attempts) => ProofUploadAction(
+        id: id,
+        createdAt: createdAt,
+        matchId: matchId,
+        streamId: streamId,
+        playerId: playerId,
+        filePath: filePath,
+        attempts: attempts,
+      );
+
+  @override
+  Future<bool> execute(SupabaseClient client) async {
+    final file = File(filePath);
+    if (!file.existsSync()) {
+      // Fichier purgé (cache OS) avant la réclamation : on ne peut plus livrer.
+      // Drop définitif — l'admin verra une preuve réclamée jamais livrée.
+      if (kDebugMode) {
+        debugPrint('[sync] proof upload: fichier absent $filePath — drop');
+      }
+      return true;
+    }
+
+    // Chemin déterministe dans le dossier du (match, joueur) : `proof-verify`
+    // exige cette appartenance, et l'upsert rend le rejeu idempotent.
+    final objectPath = '$matchId/$playerId/proof.mp4';
+    try {
+      await client.storage.from(_bucket).upload(
+            objectPath,
+            file,
+            fileOptions: const FileOptions(
+              upsert: true,
+              contentType: 'video/mp4',
+            ),
+          );
+      await client.functions.invoke(
+        'proof-verify',
+        body: {'streamId': streamId, 'objectPath': objectPath},
+      );
+      return true;
+    } on FunctionException catch (e, st) {
+      // proof-verify a répondu : 4xx (hors 401) = définitif (déjà vérifié,
+      // chemin refusé, pas propriétaire…) → drop.
+      if (isTerminalCommitStatus(e.status)) return true;
+      unawaited(reportError(e, st, context: 'SyncQueue.proofUpload.verify'));
+      return false;
+    } catch (e, st) {
+      // Storage / réseau → retry (le fichier local reste disponible).
+      unawaited(reportError(e, st, context: 'SyncQueue.proofUpload'));
       return false;
     }
   }

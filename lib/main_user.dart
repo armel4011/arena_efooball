@@ -8,6 +8,7 @@ import 'package:arena/core/services/bootstrap.dart';
 import 'package:arena/core/services/callkit_service.dart';
 import 'package:arena/core/services/deep_link_service.dart';
 import 'package:arena/core/services/notification_service.dart';
+import 'package:arena/core/services/proof_claim_service.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/call_record.dart';
 import 'package:arena/data/repositories/call_repository.dart';
@@ -89,6 +90,16 @@ class _ArenaUserAppState extends ConsumerState<ArenaUserApp> {
       _notifications = NotificationService(
         repository: ref.read(notificationRepositoryProvider),
         router: router,
+        // Anti-triche Phase 3 : push `proof_claim_request` → upload du fichier
+        // engagé (via la sync queue).
+        onProofClaimRequest: (matchId, streamId) {
+          unawaited(
+            ref.read(proofClaimServiceProvider).handleClaim(
+                  matchId: matchId,
+                  streamId: streamId,
+                ),
+          );
+        },
       );
     });
   }
@@ -116,6 +127,11 @@ class _ArenaUserAppState extends ConsumerState<ArenaUserApp> {
       // (alimente le MAU/DAU du dashboard super-admin).
       unawaited(_pingHeartbeat());
       unawaited(service.attach(userId));
+      // Anti-triche Phase 3 : rattrape les réclamations reçues app fermée
+      // (la notif FCM n'a pas été traitée) → enfile les uploads en attente.
+      unawaited(
+        ref.read(proofClaimServiceProvider).reconcilePendingClaims(userId),
+      );
       // Token VoIP reçu avant la connexion : on le persiste maintenant.
       if (_voipToken != null) {
         unawaited(_persistVoipToken(userId, _voipToken));
