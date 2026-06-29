@@ -8,6 +8,7 @@ import 'package:arena/core/services/livekit_capture_service.dart';
 import 'package:arena/core/services/match_recording_coordinator.dart';
 import 'package:arena/core/services/native_lifecycle_events.dart';
 import 'package:arena/core/services/permissions_service.dart';
+import 'package:arena/core/services/proof_commitment_service.dart';
 import 'package:arena/core/services/recording_overlay_controller.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/arena_match.dart';
@@ -345,6 +346,26 @@ class _MatchRecordingLifecycleState
     unawaited(_exportRecording(path));
   }
 
+  /// Anti-triche Phase 3 (OPTION B) — engage le commitment hash du fichier
+  /// local dès la transition `CoordinatorStopped`, sans gater le score. Garde
+  /// `_committedPath` : un seul commit par fichier (la transition peut être
+  /// re-notifiée). Couvre tous les chemins de stop (notif système, auto-stop,
+  /// match terminé) comme l'auto-export.
+  String? _committedPath;
+  void _maybeCommitProof(CoordinatorState? next) {
+    if (next is! CoordinatorStopped) return;
+    final path = next.localRecordingPath;
+    if (path == null || path.isEmpty) return;
+    if (_committedPath == path) return;
+    _committedPath = path;
+    unawaited(
+      ref.read(proofCommitmentServiceProvider).commitForMatch(
+            matchId: next.matchId,
+            filePath: path,
+          ),
+    );
+  }
+
   Future<void> _exportRecording(String path) async {
     final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.maybeOf(context);
@@ -441,6 +462,7 @@ class _MatchRecordingLifecycleState
         coordinatorStateProvider,
         (prev, next) {
           _maybeAutoExportRecording(prev?.valueOrNull, next.valueOrNull);
+          _maybeCommitProof(next.valueOrNull);
         },
       )
       // MediaProjection morte (user a tapé Stop sur la notif système, ou

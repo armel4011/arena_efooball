@@ -17,7 +17,9 @@
 //     pourrait, après coup, ré-engager le hash d'une vidéo trafiquée.
 //
 // Entrées (POST JSON) :
-//   { matchId, proofSha256, proofBytes, proofDurationSeconds }
+//   { matchId, proofSha256, proofBytes, proofDurationSeconds? }
+//   proofDurationSeconds est OPTIONNEL (métadonnée litige, coûteuse à calculer
+//   côté client sur un gros MP4) — si absent/null, la colonne reste null.
 //
 // Sorties :
 //   { ok: true, streamId, committedAt, idempotent? }
@@ -93,12 +95,16 @@ Deno.serve(async (req) => {
   const matchId = typeof body.matchId === "string" ? body.matchId : null;
   const sha256 = normalizeSha256(body.proofSha256);
   const bytes = body.proofBytes;
-  const duration = body.proofDurationSeconds;
+  // Durée optionnelle : null/absent accepté ; si fourni, doit être > 0.
+  const durationRaw = body.proofDurationSeconds;
+  const duration = durationRaw === undefined || durationRaw === null
+    ? null
+    : durationRaw;
 
   if (!matchId) return jsonResponse({ error: "matchId_required" }, 400);
   if (!sha256) return jsonResponse({ error: "invalid_sha256" }, 400);
   if (!isPositiveInt(bytes)) return jsonResponse({ error: "invalid_bytes" }, 400);
-  if (!isPositiveInt(duration)) {
+  if (duration !== null && !isPositiveInt(duration)) {
     return jsonResponse({ error: "invalid_duration" }, 400);
   }
 

@@ -100,6 +100,12 @@ sealed class SyncAction {
           createdAt: createdAt,
           payload: payload,
         );
+      case ProofCommitmentAction._type:
+        action = ProofCommitmentAction.fromPayload(
+          id: id,
+          createdAt: createdAt,
+          payload: payload,
+        );
       default:
         if (kDebugMode) {
           debugPrint('[sync] unknown action type "$type" — dropping');
@@ -321,6 +327,95 @@ class RegisterFreeCompetitionAction extends SyncAction {
       // Échec non-terminal : remonté pour observabilité, action rejouée.
       unawaited(
           reportError(e, st, context: 'SyncQueue.registerFreeCompetition'));
+      return false;
+    }
+  }
+}
+
+/// `true` si un statut HTTP d'Edge Function est DÉFINITIF (drop l'action) :
+/// 4xx hors 401 (déjà engagé 409, payload invalide 400, pas joueur 403,
+/// match introuvable 404…). 401 = token périmé (transitoire → retry), 5xx =
+/// serveur (retry).
+bool isTerminalCommitStatus(int? status) {
+  if (status == null) return false;
+  if (status == 401) return false;
+  return status >= 400 && status < 500;
+}
+
+/// Engage le commitment hash anti-triche (Phase 3) auprès de l'EF
+/// `anticheat-commit`. Le hash + la taille sont calculés UNE fois à la fin du
+/// match (cf. ProofCommitmentService) et transportés ici : le flush ne refait
+/// pas le hash (le fichier peut avoir disparu). L'EF est write-once idempotent
+/// → un rejeu (même hash) est sans danger.
+class ProofCommitmentAction extends SyncAction {
+  const ProofCommitmentAction({
+    required super.id,
+    required super.createdAt,
+    required this.matchId,
+    required this.sha256,
+    required this.bytes,
+    super.attempts = 0,
+  });
+
+  factory ProofCommitmentAction.fromPayload({
+    required String id,
+    required DateTime createdAt,
+    required Map<String, dynamic> payload,
+  }) =>
+      ProofCommitmentAction(
+        id: id,
+        createdAt: createdAt,
+        matchId: payload['match_id'] as String,
+        sha256: payload['sha256'] as String,
+        bytes: (payload['bytes'] as num).toInt(),
+      );
+
+  static const _type = 'anticheat.commit';
+  final String matchId;
+  final String sha256;
+  final int bytes;
+
+  @override
+  String get type => _type;
+
+  @override
+  Map<String, dynamic> get payload => {
+        'match_id': matchId,
+        'sha256': sha256,
+        'bytes': bytes,
+      };
+
+  @override
+  SyncAction copyWithAttempts(int attempts) => ProofCommitmentAction(
+        id: id,
+        createdAt: createdAt,
+        matchId: matchId,
+        sha256: sha256,
+        bytes: bytes,
+        attempts: attempts,
+      );
+
+  @override
+  Future<bool> execute(SupabaseClient client) async {
+    try {
+      await client.functions.invoke(
+        'anticheat-commit',
+        body: {
+          'matchId': matchId,
+          'proofSha256': sha256,
+          'proofBytes': bytes,
+        },
+      );
+      return true;
+    } on FunctionException catch (e, st) {
+      // 4xx (hors 401) = définitif → drop. Le 409 « already_committed » en
+      // particulier est un succès logique (write-once).
+      if (isTerminalCommitStatus(e.status)) return true;
+      unawaited(reportError(e, st, context: 'SyncQueue.anticheatCommit'));
+      return false;
+    } catch (e, st) {
+      // Réseau / inattendu → retry.
+      unawaited(reportError(e, st, context: 'SyncQueue.anticheatCommit'));
       return false;
     }
   }
