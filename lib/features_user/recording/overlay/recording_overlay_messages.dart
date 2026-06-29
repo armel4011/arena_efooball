@@ -70,6 +70,7 @@ abstract final class RecordingOverlayMessages {
     required bool warning,
     bool paused = false,
     bool liveAvailable = false,
+    bool simple = false,
   }) {
     final type = paused
         ? pausedType
@@ -80,6 +81,7 @@ abstract final class RecordingOverlayMessages {
       'type': type,
       'elapsed': elapsedSeconds,
       'liveAvailable': liveAvailable,
+      'simple': simple,
     };
   }
 }
@@ -92,6 +94,7 @@ class OverlayTick {
     required this.isWarning,
     this.isPaused = false,
     this.isLiveAvailable = false,
+    this.isSimple = false,
   });
 
   factory OverlayTick.fromMap(Object? raw) {
@@ -101,11 +104,13 @@ class OverlayTick {
     final type = raw['type'];
     final elapsed = raw['elapsed'];
     final liveAvailable = raw['liveAvailable'];
+    final simple = raw['simple'];
     return OverlayTick(
       elapsedSeconds: elapsed is int ? elapsed : 0,
       isWarning: type == RecordingOverlayMessages.warnType,
       isPaused: type == RecordingOverlayMessages.pausedType,
       isLiveAvailable: liveAvailable == true,
+      isSimple: simple == true,
     );
   }
 
@@ -113,6 +118,11 @@ class OverlayTick {
   final bool isWarning;
   final bool isPaused;
   final bool isLiveAvailable;
+
+  /// Mode « simplifié » (capture LiveKit Track Egress) : l'overlay ne
+  /// montre que « ouvrir ARENA » + « stop » — pause / forfait / Live sont
+  /// propres au recorder natif et masqués.
+  final bool isSimple;
 
   String get formatted {
     final m = (elapsedSeconds ~/ 60).toString().padLeft(2, '0');

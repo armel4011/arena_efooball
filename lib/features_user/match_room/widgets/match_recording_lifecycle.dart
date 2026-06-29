@@ -94,7 +94,8 @@ class _MatchRecordingLifecycleState
     if (!_isPlayer) return;
 
     final status = widget.match.status;
-    final isLive = status == MatchStatus.inProgress ||
+    final isInProgress = status == MatchStatus.inProgress;
+    final isLive = isInProgress ||
         status == MatchStatus.scorePending ||
         status == MatchStatus.awaitingValidation;
     final isTerminal = status == MatchStatus.completed ||
@@ -133,15 +134,43 @@ class _MatchRecordingLifecycleState
       // Exclusivité MediaProjection (Android 14+) : un seul provider démarre
       // une capture d'écran à la fois.
       if (kind == AntiCheatProviderKind.livekitTrackEgress) {
-        await _startLiveKit();
+        // LiveKit Track Egress est facturé à la minute (2 pistes/match) : on
+        // ne démarre l'egress que pendant le gameplay actif (in_progress).
+        // Entrer en cours de score_pending/awaiting_validation = gameplay
+        // déjà terminé → rien à filmer, on ne lance pas de capture facturée.
+        if (isInProgress) {
+          await _startLiveKit();
+        }
       } else {
         await _startNative();
       }
       return;
     }
 
+    // Couper l'egress LiveKit DÈS la fin du gameplay (sortie de in_progress
+    // vers score_pending / awaiting_validation / …), sans attendre l'état
+    // terminal : chaque minute post-gameplay serait facturée pour rien. Le
+    // recorder natif (fichier local, sans coût/minute) garde son comportement
+    // historique — il ne s'arrête qu'aux états terminaux (_stopOnTerminal).
+    if (!isInProgress) {
+      await _stopLiveKitIfRunning();
+    }
+
     if (isTerminal) {
       await _stopOnTerminal();
+    }
+  }
+
+  /// Coupe la capture LiveKit si elle tourne (idempotent). La room se ferme →
+  /// le serveur reçoit `egress_ended` et clôture la facturation des minutes.
+  Future<void> _stopLiveKitIfRunning() async {
+    final livekit = ref.read(liveKitCaptureServiceProvider);
+    if (livekit.state is! LiveKitCaptureIdle) {
+      try {
+        await livekit.stop();
+      } catch (e) {
+        debugPrint('[recording] livekit gameplay-end stop failed: $e');
+      }
     }
   }
 
@@ -213,6 +242,12 @@ class _MatchRecordingLifecycleState
       return;
     }
 
+    // Bouton flottant overlay (best-effort) : on demande SYSTEM_ALERT_WINDOW
+    // en amont pour qu'il s'affiche pendant la capture egress. Si l'utilisateur
+    // refuse, la capture continue sans overlay (la notif système reste le
+    // moyen d'arrêter) — on ne bloque donc PAS sur ce résultat.
+    await permissions.requestOverlay();
+
     try {
       await ref
           .read(liveKitCaptureServiceProvider)
@@ -237,14 +272,7 @@ class _MatchRecordingLifecycleState
         debugPrint('[recording] terminal stopCleanly failed: $e');
       }
     }
-    final livekit = ref.read(liveKitCaptureServiceProvider);
-    if (livekit.state is! LiveKitCaptureIdle) {
-      try {
-        await livekit.stop();
-      } catch (e) {
-        debugPrint('[recording] terminal livekit stop failed: $e');
-      }
-    }
+    await _stopLiveKitIfRunning();
   }
 
   /// Anti-double export — un seul export par session, sinon le user voit

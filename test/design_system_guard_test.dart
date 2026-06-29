@@ -93,7 +93,10 @@ void main() {
   // provider/litige migrés Colors.blue/orange → ArenaColors.signalBlue/warning)
   // + bouton « Arrêter notif » du cycle de vie capture (match_recording_lifecycle).
   // 0 vrai Colors.* ajouté (tous des tokens ; `Colors.transparent` préexistant).
-  const colorsDotBaseline = 2363; // occurrences de `Colors.`
+  // 2363 → 2364 le 2026-06-29 : +1 `ArenaColors.*` net du point de couleur de
+  // l'overlay flottant LiveKit (mode simple) — `ArenaColors.danger/success` selon
+  // l'état dans recording_overlay.dart. 0 vrai Colors.* ajouté.
+  const colorsDotBaseline = 2364; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.

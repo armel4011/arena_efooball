@@ -27,6 +27,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.108.2";
 import {
   DirectFileOutput,
   EgressClient,
+  RoomServiceClient,
   S3Upload,
   TrackType,
   WebhookReceiver,
@@ -126,15 +127,103 @@ async function onTrackPublished(
 ): Promise<Response> {
   const track = event.track;
   const participant = event.participant;
-  const matchId = matchIdFromRoom(event.room?.name);
+  const roomName = event.room?.name as string | undefined;
+  const matchId = matchIdFromRoom(roomName);
   const playerId = participant?.identity as string | undefined;
   const trackId = track?.sid as string | undefined;
 
   // On n'enregistre que la piste VIDÉO (le partage d'écran gameplay).
-  if (!matchId || !playerId || !trackId || track?.type !== TrackType.VIDEO) {
+  if (
+    !matchId || !roomName || !playerId || !trackId ||
+    track?.type !== TrackType.VIDEO
+  ) {
     return jsonResponse({ ok: true, skipped: "not_a_match_video_track" });
   }
 
+  const egressClient = new EgressClient(
+    toHttpUrl(LIVEKIT_URL!),
+    LIVEKIT_API_KEY!,
+    LIVEKIT_API_SECRET!,
+  );
+
+  // GATE PRÉSENCE (Option B) : Track Egress est facturé à la minute, donc on ne
+  // démarre l'enregistrement QUE lorsque les DEUX joueurs publient leur écran
+  // dans la room. Tant qu'un seul est là (adversaire en cours de connexion ou
+  // no-show), on n'allume aucun egress — on attend le second `track_published`.
+  // On s'appuie sur la présence NATIVE de LiveKit (participants de la room) :
+  // pas de canal Realtime Supabase, pas de dépendance à l'app adverse.
+  const videoTracks = await listVideoTracks(roomName);
+  // listParticipants peut accuser un léger retard de propagation : on garantit
+  // que la piste de l'événement courant est comptée.
+  if (!videoTracks.some((v) => v.playerId === playerId)) {
+    videoTracks.push({ playerId, trackId });
+  }
+
+  // Moins de 2 joueurs distincts qui publient → on attend l'adversaire.
+  if (videoTracks.length < 2) {
+    return jsonResponse({ ok: true, skipped: "waiting_for_opponent" });
+  }
+
+  // Les deux sont là : un egress par piste (idempotent par joueur).
+  let started = 0;
+  for (const v of videoTracks) {
+    const r = await startTrackEgressFor(
+      sb,
+      egressClient,
+      roomName,
+      matchId,
+      v.playerId,
+      v.trackId,
+    );
+    if (r.egressId) started++;
+  }
+
+  return jsonResponse({ ok: true, players: videoTracks.length, started });
+}
+
+/// Liste les pistes VIDÉO publiées dans la room (une par joueur), via la
+/// présence native LiveKit. Retourne [] si la room n'est pas listable —
+/// l'appelant retombe alors sur la seule piste de l'événement courant.
+async function listVideoTracks(
+  roomName: string,
+): Promise<{ playerId: string; trackId: string }[]> {
+  const roomClient = new RoomServiceClient(
+    toHttpUrl(LIVEKIT_URL!),
+    LIVEKIT_API_KEY!,
+    LIVEKIT_API_SECRET!,
+  );
+  const out: { playerId: string; trackId: string }[] = [];
+  try {
+    const participants = await roomClient.listParticipants(roomName);
+    const seen = new Set<string>();
+    for (const p of participants) {
+      const pid = p.identity as string | undefined;
+      if (!pid || seen.has(pid)) continue;
+      for (const t of p.tracks ?? []) {
+        if (t.type === TrackType.VIDEO && t.sid) {
+          out.push({ playerId: pid, trackId: t.sid });
+          seen.add(pid);
+          break; // une seule piste vidéo par joueur
+        }
+      }
+    }
+  } catch (_) {
+    // Room non listable (course / propagation) : on laisse l'appelant gérer
+    // avec la piste courante. Mieux vaut filmer que perdre la preuve.
+  }
+  return out;
+}
+
+/// Démarre un Track Egress pour une piste donnée et upsert la ligne `streams`.
+/// Idempotent par (match, joueur). Lève sur erreur dure d'insertion.
+async function startTrackEgressFor(
+  sb: ServiceClient,
+  egressClient: EgressClient,
+  roomName: string,
+  matchId: string,
+  playerId: string,
+  trackId: string,
+): Promise<{ egressId?: string; skipped?: string }> {
   // Idempotence : si un egress LiveKit actif existe déjà pour ce joueur sur
   // ce match (reconnexion, re-publication), ne pas en relancer un second.
   const { data: existing } = await sb
@@ -146,7 +235,7 @@ async function onTrackPublished(
     .eq("is_active", true)
     .maybeSingle();
   if (existing) {
-    return jsonResponse({ ok: true, skipped: "already_recording" });
+    return { skipped: "already_recording" };
   }
 
   // Chemin déterministe dans le bucket : aligné sur la convention
@@ -158,11 +247,6 @@ async function onTrackPublished(
   // ré-aligne storage_path sur le vrai nom de fichier à `egress_ended`.
   const filepath = `${matchId}/${playerId}/livekit_${Date.now()}.webm`;
 
-  const egressClient = new EgressClient(
-    toHttpUrl(LIVEKIT_URL!),
-    LIVEKIT_API_KEY!,
-    LIVEKIT_API_SECRET!,
-  );
   const output = new DirectFileOutput({
     filepath,
     output: {
@@ -178,11 +262,7 @@ async function onTrackPublished(
     },
   });
 
-  const info = await egressClient.startTrackEgress(
-    event.room.name,
-    output,
-    trackId,
-  );
+  const info = await egressClient.startTrackEgress(roomName, output, trackId);
 
   const { error: insErr } = await sb.from("streams").insert({
     match_id: matchId,
@@ -203,15 +283,12 @@ async function onTrackPublished(
       try {
         await egressClient.stopEgress(info.egressId);
       } catch (_) { /* best-effort : l'egress orphelin s'arrêtera seul */ }
-      return jsonResponse({ ok: true, skipped: "already_recording_race" });
+      return { skipped: "already_recording_race" };
     }
-    return jsonResponse(
-      { error: "stream_insert_failed", detail: safeDetail(insErr.message, "livekit-webhook") },
-      500,
-    );
+    throw new Error(insErr.message);
   }
 
-  return jsonResponse({ ok: true, egressId: info.egressId, filepath });
+  return { egressId: info.egressId };
 }
 
 async function onEgressEnded(
