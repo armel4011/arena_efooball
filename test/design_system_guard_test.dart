@@ -96,7 +96,11 @@ void main() {
   // 2363 → 2364 le 2026-06-29 : +1 `ArenaColors.*` net du point de couleur de
   // l'overlay flottant LiveKit (mode simple) — `ArenaColors.danger/success` selon
   // l'état dans recording_overlay.dart. 0 vrai Colors.* ajouté.
-  const colorsDotBaseline = 2364; // occurrences de `Colors.`
+  // 2364 → 2379 le 2026-06-29 : +15 `ArenaColors.*` nets de la section « Preuves
+  // engagées » (anti-triche Phase 3, commitment hash) ajoutée aux écrans litiges
+  // mobile (admin_disputes_page) + desktop (desktop_disputes_page) — badge de
+  // statut + bouton « Réclamer la vidéo ». 0 vrai Colors.* ajouté (tous des tokens).
+  const colorsDotBaseline = 2379; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.
@@ -110,7 +114,10 @@ void main() {
   // 194 → 198 le 2026-06-27 : +4 `GoogleFonts.spaceGrotesk` des pages desktop
   // anti-triche (sélecteur + section enregistrements des litiges). Convention
   // Fluent. À migrer vers ArenaText à terme.
-  const googleFontsBaseline = 198; // occurrences de `GoogleFonts.`
+  // 198 → 201 le 2026-06-29 : +3 `GoogleFonts.spaceGrotesk` de la section
+  // « Preuves engagées » du litige desktop (desktop_disputes_page). Même
+  // convention Fluent. À migrer vers ArenaText à terme.
+  const googleFontsBaseline = 201; // occurrences de `GoogleFonts.`
 
   final colorsDotRe = RegExp(r'Colors\.');
   final colorHexRe = RegExp(r'Color\(0x');

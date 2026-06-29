@@ -2,6 +2,8 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/core/utils/arena_error_message.dart';
 import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/models/dispute.dart';
+import 'package:arena/data/models/match_stream.dart';
+import 'package:arena/data/models/proof_status.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_disputes_repository.dart';
 import 'package:arena/data/repositories/admin/admin_matches_repository.dart';
@@ -87,6 +89,13 @@ class _DesktopDisputesPageState extends ConsumerState<DesktopDisputesPage> {
           ),
           const SizedBox(height: 12),
           _RecordingsSection(matchId: widget.matchId),
+          const SizedBox(height: 24),
+          Text(
+            'PREUVES ENGAGÉES',
+            style: _sectionStyle,
+          ),
+          const SizedBox(height: 12),
+          _ProofCommitmentsSection(matchId: widget.matchId),
           const SizedBox(height: 24),
           Text(
             'SCORES SAISIS',
@@ -470,6 +479,141 @@ class _RecordingTile extends StatelessWidget {
     final uri = Uri.tryParse(recording.url);
     if (uri == null) return;
     await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+}
+
+/// Section « Preuves engagées » (desktop, Fluent UI) : commitments hash
+/// anti-triche (Phase 3). Badge de statut + bouton « Réclamer la vidéo » tant
+/// que la vidéo n'a pas été livrée.
+class _ProofCommitmentsSection extends ConsumerWidget {
+  const _ProofCommitmentsSection({required this.matchId});
+
+  final String matchId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final proofs = ref.watch(adminMatchProofCommitmentsProvider(matchId));
+    return proofs.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.all(16),
+        child: Center(child: ProgressRing()),
+      ),
+      error: (e, _) => InfoBar(
+        title: const Text('Preuves indisponibles'),
+        content: Text('$e'),
+        severity: InfoBarSeverity.error,
+      ),
+      data: (list) {
+        if (list.isEmpty) {
+          return Text(
+            'Aucune preuve engagée pour ce match',
+            style: GoogleFonts.spaceGrotesk(
+              color: ArenaColors.silver,
+              fontSize: 13,
+            ),
+          );
+        }
+        return Column(
+          children: [
+            for (final s in list)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: _ProofCommitmentTile(matchId: matchId, stream: s),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ProofCommitmentTile extends ConsumerStatefulWidget {
+  const _ProofCommitmentTile({required this.matchId, required this.stream});
+
+  final String matchId;
+  final MatchStream stream;
+
+  @override
+  ConsumerState<_ProofCommitmentTile> createState() =>
+      _ProofCommitmentTileState();
+}
+
+class _ProofCommitmentTileState extends ConsumerState<_ProofCommitmentTile> {
+  bool _claiming = false;
+
+  static (Color, IconData) _decorFor(ProofStatus s) => switch (s) {
+        ProofStatus.verified => (ArenaColors.success, FluentIcons.completed),
+        ProofStatus.mismatch => (ArenaColors.danger, FluentIcons.blocked2),
+        ProofStatus.claimed => (ArenaColors.warning, FluentIcons.recent),
+        ProofStatus.uploaded => (ArenaColors.warning, FluentIcons.sync_status),
+        _ => (ArenaColors.silver, FluentIcons.fingerprint),
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final s = widget.stream;
+    final status = s.proofStatus;
+    final (color, icon) = _decorFor(status);
+    final pid = s.playerId;
+    final who = pid.isEmpty
+        ? '?'
+        : pid.substring(0, pid.length < 6 ? pid.length : 6).toUpperCase();
+
+    return Card(
+      backgroundColor: ArenaColors.carbon,
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Joueur $who',
+              style: GoogleFonts.spaceGrotesk(
+                color: ArenaColors.bone,
+                fontSize: 14,
+              ),
+            ),
+          ),
+          Text(
+            status.label,
+            style: GoogleFonts.spaceGrotesk(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          if (s.canClaimProof) ...[
+            const SizedBox(width: 12),
+            Button(
+              onPressed: _claiming ? null : _claim,
+              child: Text(
+                status == ProofStatus.claimed
+                    ? 'Relancer'
+                    : 'Réclamer la vidéo',
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _claim() async {
+    setState(() => _claiming = true);
+    try {
+      await ref
+          .read(adminDisputesRepositoryProvider)
+          .claimProof(widget.stream.id);
+      ref.invalidate(adminMatchProofCommitmentsProvider(widget.matchId));
+      if (!mounted) return;
+      await _showResult(context, 'Demande envoyée au joueur.', isError: false);
+    } catch (e) {
+      if (!mounted) return;
+      await _showResult(context, arenaErrorMessage(e), isError: true);
+    } finally {
+      if (mounted) setState(() => _claiming = false);
+    }
   }
 }
 

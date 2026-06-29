@@ -2,6 +2,8 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/core/utils/arena_error_message.dart';
 import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/models/dispute.dart';
+import 'package:arena/data/models/match_stream.dart';
+import 'package:arena/data/models/proof_status.dart';
 import 'package:arena/data/repositories/admin/admin_disputes_repository.dart';
 import 'package:arena/data/repositories/match_repository.dart';
 import 'package:arena/features_admin/auth_admin/widgets/totp_gate.dart';
@@ -77,6 +79,10 @@ class _AdminDisputesPageState extends ConsumerState<AdminDisputesPage> {
               Text('ENREGISTREMENTS AUTO', style: ArenaText.inputLabel),
               const SizedBox(height: ArenaSpacing.sm),
               _RecordingsSection(matchId: widget.matchId),
+              const SizedBox(height: ArenaSpacing.lg),
+              Text('PREUVES ENGAGÉES', style: ArenaText.inputLabel),
+              const SizedBox(height: ArenaSpacing.sm),
+              _ProofCommitmentsSection(matchId: widget.matchId),
               const SizedBox(height: ArenaSpacing.lg),
               Text('SCORES SAISIS', style: ArenaText.inputLabel),
               const SizedBox(height: ArenaSpacing.sm),
@@ -487,6 +493,144 @@ class _RecordingTile extends StatelessWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Impossible d’ouvrir la vidéo.')),
       );
+    }
+  }
+}
+
+/// Section « Preuves engagées » (anti-triche Phase 3) : lignes `streams`
+/// portant un commitment hash. Pour chacune, un badge de statut et — tant que
+/// la vidéo n'a pas été livrée — un bouton « Réclamer la vidéo » qui notifie le
+/// joueur de l'uploader. Une fois livrée, badge « hash vérifié / falsifié ».
+class _ProofCommitmentsSection extends ConsumerWidget {
+  const _ProofCommitmentsSection({required this.matchId});
+
+  final String matchId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final proofs = ref.watch(adminMatchProofCommitmentsProvider(matchId));
+    return proofs.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.all(ArenaSpacing.md),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, _) => Text(
+        'Erreur de chargement des preuves : ${arenaErrorMessage(e)}',
+        style: ArenaText.bodyMuted,
+      ),
+      data: (list) {
+        if (list.isEmpty) {
+          return Text(
+            'Aucune preuve engagée pour ce match',
+            style: ArenaText.bodyMuted,
+          );
+        }
+        return Column(
+          children: [
+            for (final s in list)
+              Padding(
+                padding: const EdgeInsets.only(bottom: ArenaSpacing.sm),
+                child: _ProofCommitmentTile(matchId: matchId, stream: s),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ProofCommitmentTile extends ConsumerStatefulWidget {
+  const _ProofCommitmentTile({required this.matchId, required this.stream});
+
+  final String matchId;
+  final MatchStream stream;
+
+  @override
+  ConsumerState<_ProofCommitmentTile> createState() =>
+      _ProofCommitmentTileState();
+}
+
+class _ProofCommitmentTileState extends ConsumerState<_ProofCommitmentTile> {
+  bool _claiming = false;
+
+  static (Color, IconData) _decorFor(ProofStatus s) => switch (s) {
+        ProofStatus.verified => (ArenaColors.success, Icons.verified_outlined),
+        ProofStatus.mismatch => (ArenaColors.danger, Icons.gpp_bad_outlined),
+        ProofStatus.claimed => (ArenaColors.warning, Icons.hourglass_top),
+        ProofStatus.uploaded => (ArenaColors.warning, Icons.cloud_sync_outlined),
+        _ => (ArenaColors.silver, Icons.fingerprint),
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final s = widget.stream;
+    final status = s.proofStatus;
+    final (color, icon) = _decorFor(status);
+    final pid = s.playerId;
+    final who = pid.isEmpty
+        ? '?'
+        : pid.substring(0, pid.length < 6 ? pid.length : 6).toUpperCase();
+
+    return Container(
+      padding: const EdgeInsets.all(ArenaSpacing.md),
+      decoration: BoxDecoration(
+        color: ArenaColors.carbon,
+        borderRadius: BorderRadius.circular(ArenaRadius.lg),
+        border: Border.all(color: ArenaColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 18),
+              const SizedBox(width: ArenaSpacing.sm),
+              Expanded(
+                child: Text('Joueur $who', style: ArenaText.body),
+              ),
+              Text(
+                status.label,
+                style: ArenaText.small.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          if (s.canClaimProof) ...[
+            const SizedBox(height: ArenaSpacing.sm),
+            ArenaButton(
+              label: status == ProofStatus.claimed
+                  ? 'Relancer la demande'
+                  : 'Réclamer la vidéo',
+              variant: ArenaButtonVariant.secondary,
+              fullWidth: true,
+              isLoading: _claiming,
+              onPressed: _claiming ? null : _claim,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _claim() async {
+    setState(() => _claiming = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref
+          .read(adminDisputesRepositoryProvider)
+          .claimProof(widget.stream.id);
+      ref.invalidate(adminMatchProofCommitmentsProvider(widget.matchId));
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Demande envoyée au joueur.')),
+      );
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Échec : ${arenaErrorMessage(e)}')),
+      );
+    } finally {
+      if (mounted) setState(() => _claiming = false);
     }
   }
 }

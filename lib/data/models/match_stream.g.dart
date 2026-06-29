@@ -26,6 +26,19 @@ _$MatchStreamImpl _$$MatchStreamImplFromJson(Map<String, dynamic> json) =>
       expiresAt: json['expires_at'] == null
           ? null
           : DateTime.parse(json['expires_at'] as String),
+      proofSha256: json['proof_sha256'] as String?,
+      proofBytes: (json['proof_bytes'] as num?)?.toInt(),
+      proofDurationSeconds: (json['proof_duration_seconds'] as num?)?.toInt(),
+      proofCommittedAt: json['proof_committed_at'] == null
+          ? null
+          : DateTime.parse(json['proof_committed_at'] as String),
+      proofClaimedAt: json['proof_claimed_at'] == null
+          ? null
+          : DateTime.parse(json['proof_claimed_at'] as String),
+      proofUploadedAt: json['proof_uploaded_at'] == null
+          ? null
+          : DateTime.parse(json['proof_uploaded_at'] as String),
+      proofHashVerified: json['proof_hash_verified'] as bool?,
     );
 
 Map<String, dynamic> _$$MatchStreamImplToJson(_$MatchStreamImpl instance) =>
@@ -45,4 +58,16 @@ Map<String, dynamic> _$$MatchStreamImplToJson(_$MatchStreamImpl instance) =>
       if (instance.egressId case final value?) 'egress_id': value,
       if (instance.expiresAt?.toIso8601String() case final value?)
         'expires_at': value,
+      if (instance.proofSha256 case final value?) 'proof_sha256': value,
+      if (instance.proofBytes case final value?) 'proof_bytes': value,
+      if (instance.proofDurationSeconds case final value?)
+        'proof_duration_seconds': value,
+      if (instance.proofCommittedAt?.toIso8601String() case final value?)
+        'proof_committed_at': value,
+      if (instance.proofClaimedAt?.toIso8601String() case final value?)
+        'proof_claimed_at': value,
+      if (instance.proofUploadedAt?.toIso8601String() case final value?)
+        'proof_uploaded_at': value,
+      if (instance.proofHashVerified case final value?)
+        'proof_hash_verified': value,
     };

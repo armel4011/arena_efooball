@@ -35,6 +35,21 @@ sealed class MatchStream with _$MatchStream {
     String? egressId,
     // Échéance de rétention (purge cleanup-streams).
     DateTime? expiresAt,
+    // ── Anti-triche Phase 3 : commitment hash (proxy 360p, upload on-demand) ──
+    // SHA-256 (hex) du proxy 360p engagé par le client à la fin du match.
+    String? proofSha256,
+    // Taille (octets) et durée (s) du proxy engagé.
+    int? proofBytes,
+    int? proofDurationSeconds,
+    // Instant de l'engagement du commitment (hash reçu côté serveur).
+    DateTime? proofCommittedAt,
+    // Instant où un admin a réclamé la vidéo (déclenche l'upload on-demand).
+    DateTime? proofClaimedAt,
+    // Instant de livraison effective du fichier par le client.
+    DateTime? proofUploadedAt,
+    // Le SHA-256 du fichier uploadé correspond-il au commitment ?
+    // null = pas encore uploadé/vérifié.
+    bool? proofHashVerified,
   }) = _MatchStream;
 
   factory MatchStream.fromJson(Map<String, dynamic> json) =>
