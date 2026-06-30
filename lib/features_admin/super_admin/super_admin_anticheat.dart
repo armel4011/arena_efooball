@@ -1,11 +1,15 @@
 import 'package:arena/core/services/anticheat/anticheat_config_service.dart';
 import 'package:arena/core/services/anticheat/anticheat_provider.dart';
+import 'package:arena/core/services/anticheat/anticheat_tiering_service.dart';
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/core/utils/arena_error_message.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_card.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
+import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Écran super-admin : choisir le provider anti-triche ACTIF
@@ -128,9 +132,167 @@ class _SuperAdminAntiCheatState extends ConsumerState<SuperAdminAntiCheat> {
                       onPressed: _saving ? null : _save,
                       isLoading: _saving,
                     ),
+                    const SizedBox(height: ArenaSpacing.xl),
+                    const _TieringThresholdsCard(),
                   ],
                 ),
         ),
+      ),
+    );
+  }
+}
+
+/// Réglage des seuils de tiering anti-triche (P4) : pilote la fraction de
+/// matchs egressés en LiveKit (= egress concurrents = capacité de matchs
+/// simultanés). N'a d'effet que sous le provider `livekit_track_egress`.
+class _TieringThresholdsCard extends ConsumerStatefulWidget {
+  const _TieringThresholdsCard();
+
+  @override
+  ConsumerState<_TieringThresholdsCard> createState() =>
+      _TieringThresholdsCardState();
+}
+
+class _TieringThresholdsCardState
+    extends ConsumerState<_TieringThresholdsCard> {
+  final _prizeCtrl = TextEditingController();
+  final _strikeCtrl = TextEditingController();
+  final _sampleCtrl = TextEditingController();
+  bool _loading = true;
+  bool _saving = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _prizeCtrl.dispose();
+    _strikeCtrl.dispose();
+    _sampleCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    final cfg = await ref.read(antiCheatTieringServiceProvider).fetch();
+    if (!mounted) return;
+    setState(() {
+      _prizeCtrl.text = _trim(cfg.prizeThreshold);
+      _strikeCtrl.text = cfg.strikeThreshold.toString();
+      _sampleCtrl.text = _trim(cfg.sampleRate);
+      _loading = false;
+    });
+  }
+
+  static String _trim(num v) =>
+      v == v.roundToDouble() ? v.toInt().toString() : v.toString();
+
+  Future<void> _save() async {
+    final prize = num.tryParse(_prizeCtrl.text.trim());
+    final strike = int.tryParse(_strikeCtrl.text.trim());
+    final sample = double.tryParse(_sampleCtrl.text.trim());
+    if (prize == null || prize < 0 ||
+        strike == null || strike < 1 ||
+        sample == null || sample < 0 || sample > 1) {
+      setState(() {
+        _error =
+            'Valeurs invalides : cagnotte ≥ 0, strikes ≥ 1, taux entre 0 et 1.';
+      });
+      return;
+    }
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(antiCheatTieringServiceProvider).save(
+            AntiCheatTieringConfig(
+              prizeThreshold: prize,
+              strikeThreshold: strike,
+              sampleRate: sample,
+            ),
+          );
+      ref.invalidate(antiCheatTieringConfigProvider);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Seuils de tiering enregistrés.')),
+      );
+    } catch (e) {
+      if (mounted) setState(() => _error = 'Échec : ${arenaErrorMessage(e)}');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ArenaCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'SEUILS DE TIERING (egress LiveKit)',
+            style: ArenaText.body.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Décide quels matchs reçoivent un egress LiveKit (1 joueur tiré au '
+            'hasard) plutôt que le seul commitment hash. Plus les seuils sont '
+            "hauts / le taux bas, moins d'egress concurrents → plus de matchs "
+            'simultanés. Sans effet sous le provider natif.',
+            style: ArenaText.small.copyWith(color: ArenaColors.silver),
+          ),
+          const SizedBox(height: ArenaSpacing.md),
+          if (_loading)
+            const Center(child: CircularProgressIndicator())
+          else ...[
+            ArenaTextField(
+              label: 'Cagnotte minimale (devise locale)',
+              helper: 'Match dont la cagnotte ≥ ce seuil → egressé.',
+              controller: _prizeCtrl,
+              keyboardType: TextInputType.number,
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp('[0-9.]')),
+              ],
+            ),
+            const SizedBox(height: ArenaSpacing.md),
+            ArenaTextField(
+              label: 'Verdicts coupables (surveillance)',
+              helper: 'Joueur ayant ≥ ce nombre de verdicts → ses matchs '
+                  'egressés.',
+              controller: _strikeCtrl,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            ),
+            const SizedBox(height: ArenaSpacing.md),
+            ArenaTextField(
+              label: "Taux d'échantillon aléatoire (0–1)",
+              helper: '0.1 = 10 % des autres matchs egressés au hasard.',
+              controller: _sampleCtrl,
+              keyboardType: TextInputType.number,
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp('[0-9.]')),
+              ],
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: ArenaSpacing.sm),
+              Text(
+                _error!,
+                style: ArenaText.small.copyWith(color: ArenaColors.neonRed),
+              ),
+            ],
+            const SizedBox(height: ArenaSpacing.md),
+            ArenaButton(
+              label: _saving ? 'ENREGISTREMENT…' : 'ENREGISTRER LES SEUILS',
+              variant: ArenaButtonVariant.secondary,
+              onPressed: _saving ? null : _save,
+              isLoading: _saving,
+            ),
+          ],
+        ],
       ),
     );
   }

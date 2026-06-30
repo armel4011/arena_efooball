@@ -100,7 +100,10 @@ void main() {
   // engagées » (anti-triche Phase 3, commitment hash) ajoutée aux écrans litiges
   // mobile (admin_disputes_page) + desktop (desktop_disputes_page) — badge de
   // statut + bouton « Réclamer la vidéo ». 0 vrai Colors.* ajouté (tous des tokens).
-  const colorsDotBaseline = 2379; // occurrences de `Colors.`
+  // 2379 → 2383 le 2026-06-30 : +4 `ArenaColors.*` de la carte « Seuils de
+  // tiering » anti-triche (P4) mobile (silver/neonRed) + desktop (carbon/silver).
+  // 0 vrai Colors.* ajouté (tous des tokens).
+  const colorsDotBaseline = 2383; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.
@@ -117,7 +120,10 @@ void main() {
   // 198 → 201 le 2026-06-29 : +3 `GoogleFonts.spaceGrotesk` de la section
   // « Preuves engagées » du litige desktop (desktop_disputes_page). Même
   // convention Fluent. À migrer vers ArenaText à terme.
-  const googleFontsBaseline = 201; // occurrences de `GoogleFonts.`
+  // 201 → 203 le 2026-06-30 : +2 `GoogleFonts.spaceGrotesk` de la carte
+  // « Seuils de tiering » anti-triche (P4) desktop (desktop_anticheat_page).
+  // Même convention Fluent. À migrer vers ArenaText à terme.
+  const googleFontsBaseline = 203; // occurrences de `GoogleFonts.`
 
   final colorsDotRe = RegExp(r'Colors\.');
   final colorHexRe = RegExp(r'Color\(0x');
