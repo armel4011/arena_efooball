@@ -16,18 +16,35 @@ abstract class VideoTranscoderBackend {
 
 /// Backend réel : video_compress en qualité la plus basse (≈ proxy 360p léger).
 class VideoCompressBackend implements VideoTranscoderBackend {
-  const VideoCompressBackend();
+  const VideoCompressBackend({this.timeout = const Duration(minutes: 2)});
+
+  /// Plafond au-delà duquel on considère l'encodeur natif bloqué. Sur
+  /// certains chips (observé : `c2.qti.avc` MIUI/Qualcomm), le
+  /// `GraphicBufferSource` famine en buffers et `compressVideo` ne rend
+  /// JAMAIS la main (deadlock `waitForFreeSlotThenRelock`). Sans ce timeout,
+  /// le commit anti-triche resterait bloqué indéfiniment. 2 min couvrent
+  /// largement le transcodage d'une capture de 25 min (cas légitime le plus
+  /// long) tout en bornant les hangs.
+  final Duration timeout;
 
   @override
   Future<String?> compressToLowRes(String inputPath) async {
     // LowQuality = preset le plus agressif du plugin → fichier le plus petit,
     // ce qu'on veut pour un proxy de preuve (uploadé seulement sur litige).
-    final info = await VideoCompress.compressVideo(
-      inputPath,
-      quality: VideoQuality.LowQuality,
-      deleteOrigin: false,
-    );
-    return info?.path;
+    try {
+      final info = await VideoCompress.compressVideo(
+        inputPath,
+        quality: VideoQuality.LowQuality,
+        deleteOrigin: false,
+      ).timeout(timeout);
+      return info?.path;
+    } on TimeoutException {
+      // Encodeur natif bloqué : on annule la compression en cours (libère
+      // au mieux le plugin) et on renvoie null → l'appelant retombe sur le
+      // 540p, garantissant que le commit aboutit quand même.
+      unawaited(VideoCompress.cancelCompression());
+      return null;
+    }
   }
 }
 

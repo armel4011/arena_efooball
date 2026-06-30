@@ -3,12 +3,10 @@ import 'dart:async';
 import 'package:arena/core/services/agora_streaming_service.dart';
 import 'package:arena/core/services/anticheat/anticheat_config_service.dart';
 import 'package:arena/core/services/anticheat/anticheat_provider.dart';
-import 'package:arena/core/services/gallery_exporter.dart';
 import 'package:arena/core/services/livekit_capture_service.dart';
 import 'package:arena/core/services/match_recording_coordinator.dart';
 import 'package:arena/core/services/native_lifecycle_events.dart';
 import 'package:arena/core/services/permissions_service.dart';
-import 'package:arena/core/services/proof_commitment_service.dart';
 import 'package:arena/core/services/recording_overlay_controller.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/arena_match.dart';
@@ -276,10 +274,6 @@ class _MatchRecordingLifecycleState
     await _stopLiveKitIfRunning();
   }
 
-  /// Anti-double export — un seul export par session, sinon le user voit
-  /// 2 snackbars (saveAndStop déjà déclenché + transition CoordinatorStopped).
-  String? _exportedPath;
-
   /// Démarre Agora en broadcaster après que l'overlay a demandé "Live".
   /// Le recording a déjà été stoppé par le coordinator (voir
   /// `_onOverlayAction.goLive`), donc plus aucune MediaProjection
@@ -310,83 +304,6 @@ class _MatchRecordingLifecycleState
         ),
       );
     }
-  }
-
-  /// Export auto vers `Téléchargements/ARENA/` dès que le coord transite
-  /// vers `CoordinatorStopped` avec un path. Couvre tous les chemins de
-  /// stop (notif système, auto-stop 25 min, terminal match status,
-  /// forfait), pas seulement l'overlay "Enregistrer & arrêter".
-  void _maybeAutoExportRecording(
-    CoordinatorState? prev,
-    CoordinatorState? next,
-  ) {
-    if (next is! CoordinatorStopped) {
-      if (kDebugMode) {
-        debugPrint('[recording] autoExport skip — state=${next.runtimeType}');
-      }
-      return;
-    }
-    final path = next.localRecordingPath;
-    if (path == null || path.isEmpty) {
-      if (kDebugMode) {
-        debugPrint('[recording] autoExport skip — Stopped reached but path=$path');
-      }
-      return;
-    }
-    if (_exportedPath == path) {
-      if (kDebugMode) {
-        debugPrint('[recording] autoExport skip — already exported $path');
-      }
-      return;
-    }
-    _exportedPath = path;
-    if (kDebugMode) {
-      debugPrint('[recording] autoExport firing for $path');
-    }
-    unawaited(_exportRecording(path));
-  }
-
-  /// Anti-triche Phase 3 (OPTION B) — engage le commitment hash du fichier
-  /// local dès la transition `CoordinatorStopped`, sans gater le score. Garde
-  /// `_committedPath` : un seul commit par fichier (la transition peut être
-  /// re-notifiée). Couvre tous les chemins de stop (notif système, auto-stop,
-  /// match terminé) comme l'auto-export.
-  String? _committedPath;
-  void _maybeCommitProof(CoordinatorState? next) {
-    if (next is! CoordinatorStopped) return;
-    final path = next.localRecordingPath;
-    if (path == null || path.isEmpty) return;
-    final self = widget.selfId;
-    if (self == null) return;
-    if (_committedPath == path) return;
-    _committedPath = path;
-    unawaited(
-      ref.read(proofCommitmentServiceProvider).commitForMatch(
-            matchId: next.matchId,
-            filePath: path,
-            playerId: self,
-          ),
-    );
-  }
-
-  Future<void> _exportRecording(String path) async {
-    final l10n = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.maybeOf(context);
-    final uri = await ref.read(galleryExporterProvider).saveVideoToGallery(path);
-    if (kDebugMode) {
-      debugPrint('[recording] saveVideoToGallery uri=$uri mounted=$mounted');
-    }
-    if (!mounted || messenger == null) return;
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          uri != null
-              ? l10n.recordingReplaySavedDownloads
-              : l10n.recordingReplayInCache,
-        ),
-        duration: const Duration(seconds: 4),
-      ),
-    );
   }
 
   String _bundleErrorMessage(RecordingPermissionsBundle bundle) {
@@ -459,13 +376,6 @@ class _MatchRecordingLifecycleState
           final matchId = next.valueOrNull;
           if (matchId == null || matchId.isEmpty) return;
           unawaited(_goLive(matchId));
-        },
-      )
-      ..listen<AsyncValue<CoordinatorState>>(
-        coordinatorStateProvider,
-        (prev, next) {
-          _maybeAutoExportRecording(prev?.valueOrNull, next.valueOrNull);
-          _maybeCommitProof(next.valueOrNull);
         },
       )
       // MediaProjection morte (user a tapé Stop sur la notif système, ou

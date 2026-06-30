@@ -7,8 +7,11 @@ import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/services/bootstrap.dart';
 import 'package:arena/core/services/callkit_service.dart';
 import 'package:arena/core/services/deep_link_service.dart';
+import 'package:arena/core/services/gallery_exporter.dart';
+import 'package:arena/core/services/match_recording_coordinator.dart';
 import 'package:arena/core/services/notification_service.dart';
 import 'package:arena/core/services/proof_claim_service.dart';
+import 'package:arena/core/services/proof_commitment_service.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/call_record.dart';
 import 'package:arena/data/repositories/call_repository.dart';
@@ -16,6 +19,8 @@ import 'package:arena/data/repositories/notification_repository.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/chat/call_screen.dart';
+import 'package:arena/features_user/match_room/widgets/match_recording_actions_sheet.dart'
+    show coordinatorStateProvider;
 import 'package:arena/features_user/recording/overlay/recording_overlay.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -47,6 +52,12 @@ void overlayMain() {
   runApp(const RecordingOverlayApp());
 }
 
+/// Messenger racine — permet d'afficher un snackbar (ex. « replay
+/// enregistré ») depuis un listener d'app, sans dépendre d'un `Scaffold`
+/// d'écran. Indispensable pour l'export post-enregistrement, qui se
+/// déclenche souvent alors qu'aucun écran de la salle de match n'est monté.
+final rootScaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+
 class ArenaUserApp extends ConsumerStatefulWidget {
   const ArenaUserApp({super.key});
 
@@ -72,6 +83,16 @@ class _ArenaUserAppState extends ConsumerState<ArenaUserApp> {
   /// car il peut arriver avant la connexion : on le persiste alors dès
   /// qu'une session s'ouvre. `null` sur Android (jamais émis).
   String? _voipToken;
+
+  /// Anti-triche Phase 3 / replay — anti-doublon par chemin de fichier.
+  /// La transition `CoordinatorStopped` peut être re-notifiée ; on n'engage
+  /// le hash et on n'exporte qu'une fois par enregistrement.
+  String? _committedRecordingPath;
+  String? _exportedRecordingPath;
+
+  /// Dernier userId pour lequel on a déjà lancé le rattrapage des réclamations
+  /// de preuve — évite de relancer reconcile à chaque émission de session.
+  String? _reconciledClaimsForUserId;
 
   @override
   void initState() {
@@ -101,6 +122,10 @@ class _ArenaUserAppState extends ConsumerState<ArenaUserApp> {
           );
         },
       );
+      // Démarrage à froid avec session déjà restaurée : le `listen` de session
+      // ne se déclenche pas pour la valeur initiale → on lance le rattrapage
+      // des réclamations ici aussi (dédup interne).
+      _reconcileProofClaims(ref.read(currentSessionProvider)?.user.id);
     });
   }
 
@@ -127,11 +152,6 @@ class _ArenaUserAppState extends ConsumerState<ArenaUserApp> {
       // (alimente le MAU/DAU du dashboard super-admin).
       unawaited(_pingHeartbeat());
       unawaited(service.attach(userId));
-      // Anti-triche Phase 3 : rattrape les réclamations reçues app fermée
-      // (la notif FCM n'a pas été traitée) → enfile les uploads en attente.
-      unawaited(
-        ref.read(proofClaimServiceProvider).reconcilePendingClaims(userId),
-      );
       // Token VoIP reçu avant la connexion : on le persiste maintenant.
       if (_voipToken != null) {
         unawaited(_persistVoipToken(userId, _voipToken));
@@ -143,6 +163,25 @@ class _ArenaUserAppState extends ConsumerState<ArenaUserApp> {
         unawaited(_persistVoipToken(previousUserId, null));
       }
     }
+  }
+
+  /// Backstop anti-triche Phase 3 : à session active, rattrape les preuves
+  /// RÉCLAMÉES mais pas encore uploadées (`reconcilePendingClaims`).
+  ///
+  /// Volontairement DÉCOUPLÉ du service de notifications : c'est précisément le
+  /// filet quand le push FCM n'arrive pas (token indisponible, isolate non
+  /// réveillé…). Il ne doit donc PAS être gardé par `_notifications != null`.
+  /// Idempotent côté serveur ; dédup local par [_reconciledClaimsForUserId].
+  void _reconcileProofClaims(String? userId) {
+    if (userId == null) {
+      _reconciledClaimsForUserId = null;
+      return;
+    }
+    if (userId == _reconciledClaimsForUserId) return;
+    _reconciledClaimsForUserId = userId;
+    unawaited(
+      ref.read(proofClaimServiceProvider).reconcilePendingClaims(userId),
+    );
   }
 
   /// Best-effort ping de `heartbeat()` RPC. Silencieux en cas d'échec
@@ -268,6 +307,64 @@ class _ArenaUserAppState extends ConsumerState<ArenaUserApp> {
     } catch (_) {/* best-effort — réessayé au prochain événement/session */}
   }
 
+  /// Anti-triche Phase 3 + sauvegarde du replay, pilotés au niveau RACINE
+  /// pour ne PAS dépendre du montage de l'écran salle de match.
+  ///
+  /// L'arrêt d'enregistrement survient typiquement depuis le jeu externe
+  /// (ARENA en arrière-plan) : un listener porté par le widget de la salle
+  /// ratait alors la transition `CoordinatorStopped` → ni hash engagé, ni
+  /// export. Ici le listener vit aussi longtemps que l'app, donc il capte
+  /// l'arrêt quel que soit l'écran courant.
+  void _onRecordingStopped(CoordinatorState? state) {
+    if (state is! CoordinatorStopped) return;
+    final path = state.localRecordingPath;
+    if (path == null || path.isEmpty) return;
+
+    // 1) Engage le commitment hash (anti-triche) — un seul par fichier.
+    if (_committedRecordingPath != path) {
+      final self = ref.read(currentSessionProvider)?.user.id;
+      if (self != null) {
+        _committedRecordingPath = path;
+        unawaited(
+          ref.read(proofCommitmentServiceProvider).commitForMatch(
+                matchId: state.matchId,
+                filePath: path,
+                playerId: self,
+              ),
+        );
+      }
+    }
+
+    // 2) Exporte le replay vers la galerie — un seul par fichier.
+    if (_exportedRecordingPath != path) {
+      _exportedRecordingPath = path;
+      unawaited(_exportRecording(path));
+    }
+  }
+
+  /// Copie l'enregistrement vers Téléchargements/galerie + snackbar via le
+  /// messenger racine (aucun `Scaffold` d'écran requis).
+  Future<void> _exportRecording(String path) async {
+    // Résolu AVANT l'await pour ne pas porter un BuildContext à travers le
+    // saut asynchrone (lint use_build_context_synchronously). La sauvegarde
+    // du replay a lieu de toute façon ; le snackbar est best-effort.
+    final messenger = rootScaffoldMessengerKey.currentState;
+    final l10n =
+        messenger == null ? null : AppLocalizations.of(messenger.context);
+    final uri = await ref.read(galleryExporterProvider).saveVideoToGallery(path);
+    if (messenger == null || l10n == null) return;
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          uri != null
+              ? l10n.recordingReplaySavedDownloads
+              : l10n.recordingReplayInCache,
+        ),
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
   /// Pousse [CallScreen] sur le navigator racine. En démarrage à froid
   /// (décroché depuis l'écran verrouillé) le navigator peut ne pas être
   /// encore monté — on réessaie alors au frame suivant.
@@ -317,6 +414,9 @@ class _ArenaUserAppState extends ConsumerState<ArenaUserApp> {
     ref
       ..listen(currentSessionProvider, (_, session) {
         _syncNotificationsWithSession(session?.user.id);
+        // Rattrapage des réclamations de preuve — indépendant du service de
+        // notifications (filet anti-triche quand le FCM n'arrive pas).
+        _reconcileProofClaims(session?.user.id);
       })
       // Appel entrant détecté en Realtime (app au premier plan) : on
       // déclenche l'UI d'appel native — sonnerie en boucle + plein
@@ -336,11 +436,19 @@ class _ArenaUserAppState extends ConsumerState<ArenaUserApp> {
         if (call.id == _shownIncomingCallId) return;
         _shownIncomingCallId = call.id;
         unawaited(_presentIncomingCall(call));
-      });
+      })
+      // Anti-triche Phase 3 + replay : on observe l'arrêt d'enregistrement au
+      // niveau racine (toujours monté) plutôt que depuis l'écran salle de
+      // match, qui peut être démonté/en arrière-plan au moment du stop.
+      ..listen<AsyncValue<CoordinatorState>>(
+        coordinatorStateProvider,
+        (_, next) => _onRecordingStopped(next.valueOrNull),
+      );
 
     return MaterialApp.router(
       title: FlavorConfig.instance.appName,
       debugShowCheckedModeBanner: false,
+      scaffoldMessengerKey: rootScaffoldMessengerKey,
       theme: arenaUserTheme,
       locale: locale.locale,
       supportedLocales: SupportedLocale.allFlutterLocales,
