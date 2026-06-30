@@ -1,5 +1,6 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/core/utils/arena_error_message.dart';
+import 'package:arena/data/models/anticheat_plan.dart';
 import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/models/dispute.dart';
 import 'package:arena/data/models/match_stream.dart';
@@ -82,6 +83,13 @@ class _DesktopDisputesPageState extends ConsumerState<DesktopDisputesPage> {
           ),
           const SizedBox(height: 12),
           _ProofsSection(matchId: widget.matchId),
+          const SizedBox(height: 24),
+          Text(
+            'PLAN ANTI-TRICHE',
+            style: _sectionStyle,
+          ),
+          const SizedBox(height: 12),
+          _AnticheatPlanSection(matchId: widget.matchId),
           const SizedBox(height: 24),
           Text(
             'ENREGISTREMENTS AUTO',
@@ -403,6 +411,84 @@ class _ProofTile extends StatelessWidget {
     final uri = Uri.tryParse(proof.url);
     if (uri == null) return;
     await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+}
+
+/// Bandeau « Plan anti-triche » (tiering P4, desktop) : tier (natif seul /
+/// egress LiveKit) + raison de la décision serveur + joueur egressé. Null =
+/// aucun plan assigné (provider natif).
+class _AnticheatPlanSection extends ConsumerWidget {
+  const _AnticheatPlanSection({required this.matchId});
+
+  final String matchId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final plan = ref.watch(adminMatchAnticheatPlanProvider(matchId));
+    return plan.when(
+      loading: () => const Center(child: ProgressRing()),
+      error: (e, _) => Text(
+        'Erreur de chargement du plan : ${arenaErrorMessage(e)}',
+        style: GoogleFonts.spaceGrotesk(color: ArenaColors.silver),
+      ),
+      data: (p) {
+        if (p == null) {
+          return Text(
+            'Aucun plan serveur assigné (provider natif ou match hors tiering).',
+            style: GoogleFonts.spaceGrotesk(color: ArenaColors.silver),
+          );
+        }
+        final livekit = p.isLivekit;
+        final color = livekit ? ArenaColors.signalBlue : ArenaColors.silver;
+        final who = p.recordedPlayerId;
+        return Card(
+          backgroundColor: ArenaColors.carbon,
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    livekit ? FluentIcons.cloud : FluentIcons.fingerprint,
+                    color: color,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    p.tier.label,
+                    style: GoogleFonts.spaceGrotesk(
+                      color: ArenaColors.bone,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Raison : ${anticheatReasonLabel(p.reason)}',
+                style: GoogleFonts.spaceGrotesk(
+                  color: ArenaColors.silver,
+                  fontSize: 12,
+                ),
+              ),
+              if (livekit && who != null && who.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(
+                  'Joueur egressé : '
+                  '${who.substring(0, who.length < 6 ? who.length : 6).toUpperCase()}',
+                  style: GoogleFonts.spaceGrotesk(
+                    color: ArenaColors.silver,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
   }
 }
 
