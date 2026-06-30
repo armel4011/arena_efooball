@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:arena/core/services/proof_file_store.dart';
+import 'package:arena/core/services/proof_transcoder.dart';
 import 'package:arena/core/services/sync_queue_service.dart';
 import 'package:arena/core/utils/error_reporter.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
@@ -48,20 +49,28 @@ class ProofCommitmentService {
     required String playerId,
   }) async {
     try {
-      final file = File(filePath);
       // Sync stat (avoid_slow_async_io) : un simple existence/taille, pas de
       // lecture — négligeable, et on est déjà hors chemin critique.
+      if (!File(filePath).existsSync()) return;
+
+      // Transcode le 540p en proxy 360p (allègement). GARDE-FOU : si le
+      // transcodage échoue, on retombe sur le 540p (on engage/uploade le 540p).
+      // Le fichier RÉELLEMENT hashé/stocké/uploadé est `proofPath`.
+      final proxy = await _ref.read(proofTranscoderProvider).to360pProxy(filePath);
+      final proofPath = proxy ?? filePath;
+
+      final file = File(proofPath);
       if (!file.existsSync()) return;
       final size = file.lengthSync();
       if (size <= 0) return;
 
       final sha = await sha256OfFile(file);
 
-      // Mémorise OÙ se trouve le fichier hashé : la réclamation admin peut
-      // arriver bien après la fin du match (cf. ProofFileStore).
+      // Mémorise OÙ se trouve le fichier hashé (le proxy si dispo) : la
+      // réclamation admin peut arriver bien après le match (cf. ProofFileStore).
       await _ref.read(proofFileStoreProvider).put(
             matchId: matchId,
-            filePath: filePath,
+            filePath: proofPath,
             playerId: playerId,
           );
 
