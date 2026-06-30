@@ -1,5 +1,6 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/core/utils/arena_error_message.dart';
+import 'package:arena/data/models/anticheat_plan.dart';
 import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/models/dispute.dart';
 import 'package:arena/data/models/match_stream.dart';
@@ -75,6 +76,10 @@ class _AdminDisputesPageState extends ConsumerState<AdminDisputesPage> {
               Text('PREUVES', style: ArenaText.inputLabel),
               const SizedBox(height: ArenaSpacing.sm),
               _ProofsSection(matchId: widget.matchId),
+              const SizedBox(height: ArenaSpacing.lg),
+              Text('PLAN ANTI-TRICHE', style: ArenaText.inputLabel),
+              const SizedBox(height: ArenaSpacing.sm),
+              _AnticheatPlanSection(matchId: widget.matchId),
               const SizedBox(height: ArenaSpacing.lg),
               Text('ENREGISTREMENTS AUTO', style: ArenaText.inputLabel),
               const SizedBox(height: ArenaSpacing.sm),
@@ -400,6 +405,85 @@ class _ProofTile extends StatelessWidget {
         const SnackBar(content: Text('Impossible d’ouvrir la vidéo.')),
       );
     }
+  }
+}
+
+/// Bandeau « Plan anti-triche » (tiering P4) : pour le match, indique s'il a été
+/// couvert par un egress LiveKit serveur (et POURQUOI : cagnotte / surveillance
+/// / litige / aléa) ou par le seul commitment hash. Null = aucun plan assigné
+/// (provider natif). Aide l'admin à savoir si une preuve serveur doit exister.
+class _AnticheatPlanSection extends ConsumerWidget {
+  const _AnticheatPlanSection({required this.matchId});
+
+  final String matchId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final plan = ref.watch(adminMatchAnticheatPlanProvider(matchId));
+    return plan.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.all(ArenaSpacing.sm),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, _) => Text(
+        'Erreur de chargement du plan : ${arenaErrorMessage(e)}',
+        style: ArenaText.bodyMuted,
+      ),
+      data: (p) {
+        if (p == null) {
+          return Text(
+            'Aucun plan serveur assigné (provider natif ou match hors tiering).',
+            style: ArenaText.bodyMuted,
+          );
+        }
+        final livekit = p.isLivekit;
+        final color = livekit ? ArenaColors.signalBlue : ArenaColors.silver;
+        final who = p.recordedPlayerId;
+        return Container(
+          padding: const EdgeInsets.all(ArenaSpacing.md),
+          decoration: BoxDecoration(
+            color: ArenaColors.carbon,
+            borderRadius: BorderRadius.circular(ArenaRadius.lg),
+            border: Border.all(color: ArenaColors.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    livekit ? Icons.cloud_done_outlined : Icons.fingerprint,
+                    color: color,
+                    size: 18,
+                  ),
+                  const SizedBox(width: ArenaSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      p.tier.label,
+                      style:
+                          ArenaText.body.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Raison : ${anticheatReasonLabel(p.reason)}',
+                style: ArenaText.small.copyWith(color: ArenaColors.silver),
+              ),
+              if (livekit && who != null && who.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(
+                  'Joueur egressé : '
+                  '${who.substring(0, who.length < 6 ? who.length : 6).toUpperCase()}',
+                  style: ArenaText.small.copyWith(color: ArenaColors.silver),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
   }
 }
 

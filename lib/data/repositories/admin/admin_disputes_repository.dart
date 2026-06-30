@@ -1,4 +1,5 @@
 import 'package:arena/core/utils/poll_stream.dart';
+import 'package:arena/data/models/anticheat_plan.dart';
 import 'package:arena/data/models/dispute.dart';
 import 'package:arena/data/models/dispute_proof.dart';
 import 'package:arena/data/models/match_stream.dart';
@@ -21,6 +22,7 @@ class AdminDisputesRepository {
   static const _proofBucket = 'match-proofs';
   static const _streamsTable = 'streams';
   static const _recordingsBucket = 'match-recordings';
+  static const _plansTable = 'match_anticheat_plans';
 
   final SupabaseClient _client;
 
@@ -167,6 +169,20 @@ class AdminDisputesRepository {
     ];
   }
 
+  /// Plan anti-triche (tiering) du match : `native_only` (hash seul) ou
+  /// `livekit` (egress d'un joueur tiré au hasard) + la raison de la décision.
+  /// Null si aucun plan n'a été assigné (match jamais passé par `livekit-token`,
+  /// ex. provider natif). Lecture gatée `is_admin()` (RLS).
+  Future<AnticheatPlan?> fetchAnticheatPlan(String matchId) async {
+    final row = await _client
+        .from(_plansTable)
+        .select('mode, recorded_player_id, reason, decided_at')
+        .eq('match_id', matchId)
+        .maybeSingle();
+    if (row == null) return null;
+    return AnticheatPlan.fromJson(row);
+  }
+
   /// Admin « réclamer la vidéo » : appelle la RPC `admin_claim_proof` qui
   /// estampille `streams.proof_claimed_at` et notifie le joueur (FCM). Le
   /// joueur uploadera le proxy à sa prochaine connexion ; proof-verify
@@ -308,4 +324,12 @@ final adminMatchRecordingsProvider = FutureProvider.family
 final adminMatchProofCommitmentsProvider = FutureProvider.family
     .autoDispose<List<MatchStream>, String>((ref, matchId) {
   return ref.watch(adminDisputesRepositoryProvider).fetchProofCommitments(matchId);
+});
+
+/// Plan anti-triche (tiering) d'un match : tier (natif seul / egress LiveKit) +
+/// raison de la décision serveur. Null si aucun plan assigné (provider natif).
+/// Alimente le bandeau « Plan anti-triche » des litiges.
+final adminMatchAnticheatPlanProvider = FutureProvider.family
+    .autoDispose<AnticheatPlan?, String>((ref, matchId) {
+  return ref.watch(adminDisputesRepositoryProvider).fetchAnticheatPlan(matchId);
 });
