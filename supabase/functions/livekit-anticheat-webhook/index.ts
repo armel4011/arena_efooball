@@ -10,7 +10,10 @@
 //   * `track_published` (piste VIDÉO) → démarre 1 Track Egress qui écrit la
 //     piste dans Supabase Storage (bucket `match-recordings`, endpoint S3),
 //     puis upsert une ligne `streams` (provider=livekit_track_egress).
-//     → 1 piste / joueur ⇒ 2 egress / match.
+//     → TIERING (P2) : seuls les matchs en tier `livekit` sont egressés, et
+//       pour ceux-là UN SEUL joueur (`recorded_player_id` du plan, tiré au
+//       hasard côté serveur) ⇒ 1 egress / match (au lieu de 2). Réduit le
+//       nombre d'egress concurrents = plus de matchs simultanés en compétition.
 //
 //   * `egress_ended` → clôture la ligne `streams` (ended_at, expires_at J+30,
 //     is_active=false) et ré-aligne `storage_path` sur le nom de fichier
@@ -140,45 +143,61 @@ async function onTrackPublished(
     return jsonResponse({ ok: true, skipped: "not_a_match_video_track" });
   }
 
+  // TIERING (P2) : charger le plan anti-triche du match. On n'egress QUE si
+  // tier=livekit, et alors seulement la piste de `recorded_player_id` (design
+  // opaque : les deux publient, un seul est enregistré → 1 egress / match).
+  // Le plan est posé (idempotent) par l'EF `livekit-token` au début du match.
+  const { data: plan } = await sb
+    .from("match_anticheat_plans")
+    .select("mode, recorded_player_id")
+    .eq("match_id", matchId)
+    .maybeSingle();
+  if (!plan || plan.mode !== "livekit" || !plan.recorded_player_id) {
+    return jsonResponse({ ok: true, skipped: "no_livekit_plan" });
+  }
+
   const egressClient = new EgressClient(
     toHttpUrl(LIVEKIT_URL!),
     LIVEKIT_API_KEY!,
     LIVEKIT_API_SECRET!,
   );
 
-  // GATE PRÉSENCE (Option B) : Track Egress est facturé à la minute, donc on ne
-  // démarre l'enregistrement QUE lorsque les DEUX joueurs publient leur écran
-  // dans la room. Tant qu'un seul est là (adversaire en cours de connexion ou
-  // no-show), on n'allume aucun egress — on attend le second `track_published`.
-  // On s'appuie sur la présence NATIVE de LiveKit (participants de la room) :
-  // pas de canal Realtime Supabase, pas de dépendance à l'app adverse.
+  // GATE PRÉSENCE : on ne démarre l'egress de l'élu QUE lorsque les DEUX joueurs
+  // publient leur écran (évite d'enregistrer un no-show et de gaspiller un slot
+  // egress concurrent — la capacité = matchs simultanés). Présence NATIVE
+  // LiveKit, pas de canal Realtime Supabase.
   const videoTracks = await listVideoTracks(roomName);
   // listParticipants peut accuser un léger retard de propagation : on garantit
   // que la piste de l'événement courant est comptée.
   if (!videoTracks.some((v) => v.playerId === playerId)) {
     videoTracks.push({ playerId, trackId });
   }
-
-  // Moins de 2 joueurs distincts qui publient → on attend l'adversaire.
   if (videoTracks.length < 2) {
     return jsonResponse({ ok: true, skipped: "waiting_for_opponent" });
   }
 
-  // Les deux sont là : un egress par piste (idempotent par joueur).
-  let started = 0;
-  for (const v of videoTracks) {
-    const r = await startTrackEgressFor(
-      sb,
-      egressClient,
-      roomName,
-      matchId,
-      v.playerId,
-      v.trackId,
-    );
-    if (r.egressId) started++;
+  // Les deux sont là : egress de l'ÉLU uniquement (1 egress / match). L'autre
+  // joueur publie mais n'est jamais enregistré (il ne le sait pas → dissuasion).
+  const elected = videoTracks.find(
+    (v) => v.playerId === plan.recorded_player_id,
+  );
+  if (!elected) {
+    // L'élu n'a pas encore (re)publié sa piste — on attend son track_published.
+    return jsonResponse({ ok: true, skipped: "elected_not_publishing" });
   }
-
-  return jsonResponse({ ok: true, players: videoTracks.length, started });
+  const r = await startTrackEgressFor(
+    sb,
+    egressClient,
+    roomName,
+    matchId,
+    elected.playerId,
+    elected.trackId,
+  );
+  return jsonResponse({
+    ok: true,
+    started: r.egressId ? 1 : 0,
+    skipped: r.skipped,
+  });
 }
 
 /// Liste les pistes VIDÉO publiées dans la room (une par joueur), via la
