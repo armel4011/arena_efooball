@@ -95,6 +95,7 @@ void main() {
       DateTime? claimedAt,
       DateTime? uploadedAt,
       bool? verified,
+      String? storagePath,
     }) =>
         MatchStream(
           id: 's1',
@@ -105,6 +106,7 @@ void main() {
           proofClaimedAt: claimedAt,
           proofUploadedAt: uploadedAt,
           proofHashVerified: verified,
+          storagePath: storagePath,
         );
 
     test('hasProofCommitment false sans hash, true avec', () {
@@ -125,6 +127,29 @@ void main() {
       );
       // Pas de commitment → pas réclamable.
       expect(s().canClaimProof, isFalse);
+    });
+
+    test('proofVideoAvailable : uploadé ET storage_path présent', () {
+      // Livrée avec objet stocké → visionnable.
+      expect(
+        s(
+          sha: 'a',
+          uploadedAt: DateTime(2026),
+          verified: true,
+          storagePath: 'm1/p1/proof.mp4',
+        ).proofVideoAvailable,
+        isTrue,
+      );
+      // Uploadée mais sans storage_path → pas (encore) signable.
+      expect(
+        s(sha: 'a', uploadedAt: DateTime(2026)).proofVideoAvailable,
+        isFalse,
+      );
+      // Engagée mais pas uploadée → rien à voir.
+      expect(
+        s(sha: 'a', storagePath: 'm1/p1/proof.mp4').proofVideoAvailable,
+        isFalse,
+      );
     });
 
     test('label couvre chaque statut', () {

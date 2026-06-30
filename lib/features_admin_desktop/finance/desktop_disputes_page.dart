@@ -540,6 +540,7 @@ class _ProofCommitmentTile extends ConsumerStatefulWidget {
 
 class _ProofCommitmentTileState extends ConsumerState<_ProofCommitmentTile> {
   bool _claiming = false;
+  bool _loadingVideo = false;
 
   static (Color, IconData) _decorFor(ProofStatus s) => switch (s) {
         ProofStatus.verified => (ArenaColors.success, FluentIcons.completed),
@@ -594,9 +595,45 @@ class _ProofCommitmentTileState extends ConsumerState<_ProofCommitmentTile> {
               ),
             ),
           ],
+          if (s.proofVideoAvailable) ...[
+            const SizedBox(width: 12),
+            Button(
+              onPressed: _loadingVideo ? null : _openVideo,
+              child: const Text('Voir la vidéo'),
+            ),
+          ],
         ],
       ),
     );
+  }
+
+  /// Signe le `storage_path` du proxy livré (1h) et l'ouvre dans le lecteur
+  /// externe — même mécanisme que la section « Enregistrements auto ».
+  Future<void> _openVideo() async {
+    final path = widget.stream.storagePath;
+    if (path == null || path.isEmpty) return;
+    setState(() => _loadingVideo = true);
+    try {
+      final signed = await ref
+          .read(adminDisputesRepositoryProvider)
+          .signedRecordingUrl(path);
+      final uri = Uri.tryParse(signed);
+      final ok = uri != null &&
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!mounted) return;
+      if (!ok) {
+        await _showResult(
+          context,
+          'Impossible d’ouvrir la vidéo.',
+          isError: true,
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      await _showResult(context, arenaErrorMessage(e), isError: true);
+    } finally {
+      if (mounted) setState(() => _loadingVideo = false);
+    }
   }
 
   Future<void> _claim() async {

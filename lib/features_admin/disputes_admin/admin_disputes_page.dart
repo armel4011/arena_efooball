@@ -552,6 +552,7 @@ class _ProofCommitmentTile extends ConsumerStatefulWidget {
 
 class _ProofCommitmentTileState extends ConsumerState<_ProofCommitmentTile> {
   bool _claiming = false;
+  bool _loadingVideo = false;
 
   static (Color, IconData) _decorFor(ProofStatus s) => switch (s) {
         ProofStatus.verified => (ArenaColors.success, Icons.verified_outlined),
@@ -609,9 +610,47 @@ class _ProofCommitmentTileState extends ConsumerState<_ProofCommitmentTile> {
               onPressed: _claiming ? null : _claim,
             ),
           ],
+          if (s.proofVideoAvailable) ...[
+            const SizedBox(height: ArenaSpacing.sm),
+            ArenaButton(
+              label: 'Voir la vidéo',
+              variant: ArenaButtonVariant.secondary,
+              fullWidth: true,
+              isLoading: _loadingVideo,
+              onPressed: _loadingVideo ? null : _openVideo,
+            ),
+          ],
         ],
       ),
     );
+  }
+
+  /// Signe le `storage_path` du proxy livré (1h) et l'ouvre dans le lecteur
+  /// externe — même mécanisme que la section « Enregistrements auto ».
+  Future<void> _openVideo() async {
+    final path = widget.stream.storagePath;
+    if (path == null || path.isEmpty) return;
+    setState(() => _loadingVideo = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final signed = await ref
+          .read(adminDisputesRepositoryProvider)
+          .signedRecordingUrl(path);
+      final uri = Uri.tryParse(signed);
+      final ok = uri != null &&
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!ok) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Impossible d’ouvrir la vidéo.')),
+        );
+      }
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Échec : ${arenaErrorMessage(e)}')),
+      );
+    } finally {
+      if (mounted) setState(() => _loadingVideo = false);
+    }
   }
 
   Future<void> _claim() async {
