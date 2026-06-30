@@ -70,4 +70,12 @@ extension MatchStreamProof on MatchStream {
   bool get canClaimProof =>
       proofStatus == ProofStatus.committed ||
       proofStatus == ProofStatus.claimed;
+
+  /// `true` si la vidéo de preuve a été livrée et porte un objet signable
+  /// (le joueur l'a uploadée, `proof-verify` a posé `storage_path`) — l'admin
+  /// peut alors la visionner via une URL signée.
+  bool get proofVideoAvailable =>
+      proofUploadedAt != null &&
+      storagePath != null &&
+      storagePath!.isNotEmpty;
 }
