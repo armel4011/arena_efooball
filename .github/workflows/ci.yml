@@ -30,7 +30,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Java 17
         # Requis pour build_runner / freezed (analyzer dépend du JDK).
@@ -119,7 +119,7 @@ jobs:
         # (`gitleaks dir`), pas tout l'historique git — les secrets
         # historiques déjà rotés (cf. .gitleaks.toml) n'ont pas à rouvrir
         # la CI à chaque run.
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Secret scan (gitleaks)
         # Bloquant — même posture que le garde-fou couleurs `--strict` :
@@ -164,7 +164,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       # Le build admin (Agora Windows + Firebase + libs natives) sature
       # les ~14 Go du runner pendant mergeNativeLibs → "No space left on
@@ -239,7 +239,7 @@ jobs:
     # passait inaperçue. Ce job compile la cible desktop à chaque PR.
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -374,7 +374,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Deno
         uses: denoland/setup-deno@v2
@@ -441,7 +441,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v2
