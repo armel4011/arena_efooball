@@ -1,12 +1,9 @@
-import 'dart:convert';
-import 'dart:typed_data';
-
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/admin/super_admin_dashboard_repository.dart';
+import 'package:arena/features_shared/excel_csv.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
-import 'package:csv/csv.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -140,9 +137,7 @@ class SuperAdminRevenue extends ConsumerWidget {
           ],
       ];
 
-      final csv = const ListToCsvConverter().convert(rows);
-      // BOM UTF-8 pour qu'Excel ouvre les caractères accentués correctement
-      final bytes = Uint8List.fromList([0xEF, 0xBB, 0xBF, ...utf8.encode(csv)]);
+      final bytes = buildExcelCsvBytes(rows);
 
       // file_picker.saveFile() ouvre le SAF picker natif Android :
       // l'utilisateur choisit le dossier de destination (Downloads,
