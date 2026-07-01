@@ -220,6 +220,21 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return jsonResponse({ skipped: 'no_token' });
   }
 
+  // Propage tous les champs scalaires posés par la RPC/trigger dans
+  // `notifications.data` vers le `data` FCM. Indispensable pour le chemin
+  // anti-triche Phase 3 : `admin_claim_proof` pose `match_id`/`stream_id`
+  // que `NotificationService._maybeHandleProofClaim` lit pour déclencher
+  // l'upload. Sans cette propagation, seuls `route`/`image_url` passaient
+  // et l'upload sur réclamation n'était jamais déclenché par le FCM (le
+  // filet reconcile au démarrage compensait). On saute les valeurs
+  // null/objets (FCM v1 n'accepte que des strings — cf. `sendFcmNotification`).
+  const forwardedData: Record<string, string> = {};
+  for (const [k, v] of Object.entries(r.data ?? {})) {
+    if (v !== null && v !== undefined && typeof v !== 'object') {
+      forwardedData[k] = String(v);
+    }
+  }
+
   // Envoi FCM. On stamp `sent_at` même si l'envoi échoue (l'erreur sera
   // remontée à l'appelant du webhook) — pas de retry pour V1.
   // Les appels entrants partent en message DATA-only haute priorité :
@@ -242,15 +257,15 @@ Deno.serve(async (req: Request): Promise<Response> => {
             caller_name: callerName,
           }
         : {
+            // Champs métier (`match_id`, `stream_id`, `route`, …) posés
+            // par la RPC/trigger, propagés tels quels côté app.
+            ...forwardedData,
             notification_id: r.id,
             notification_type: r.type,
-            // Aplatit `data.route` si présent — utilisé côté app pour
-            // router le tap (cf. ArenaNotification.route).
-            route: (r.data?.['route'] as string | undefined) ?? '',
-            // Aplatit l'image_url dans `data` aussi — sert de fallback
-            // au foreground handler (cf. NotificationService._handleForeground)
-            // au cas où `RemoteMessage.notification.android.imageUrl` ne
-            // serait pas remonté par certains OEM Android.
+            // `image_url` sert de fallback au foreground handler (cf.
+            // NotificationService._handleForeground) au cas où
+            // `RemoteMessage.notification.android.imageUrl` ne serait pas
+            // remonté par certains OEM Android.
             image_url: r.image_url ?? '',
           },
     });
