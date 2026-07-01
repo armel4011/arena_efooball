@@ -54,6 +54,9 @@ lib/features_admin/bracket_admin/admin_bracket_management_page.dart
 # Part extrait de admin_bracket_management_page (refactor god file 2026-06-14) :
 # hérite du Colors.white de contraste déjà allowlisté ci-dessus.
 lib/features_admin/bracket_admin/admin_bracket_management_page_widgets.dart
+# 2e part extrait (refactor god file 2026-07-01) : contient le Colors.white
+# de contraste du bouton danger (_SmallActionButton), même KEEP justifiée.
+lib/features_admin/bracket_admin/admin_bracket_management_page_actions.dart
 lib/features_admin/auth_admin/totp_setup_screen.dart
 
 # Part extrait de player_profile_page (refactor god file 2026-06-15, PR #157) :

@@ -24,6 +24,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 part 'admin_bracket_management_page_generate.dart';
 part 'admin_bracket_management_page_widgets.dart';
+part 'admin_bracket_management_page_actions.dart';
 
 /// PHASE 11 · A11 — admin bracket management.
 ///
