@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:arena/core/router/admin_desktop_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/core/utils/arena_error_message.dart';
+import 'package:arena/core/utils/supported_countries.dart';
 import 'package:arena/data/models/profile.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_users_repository.dart';
@@ -12,6 +13,7 @@ import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/whatsapp_export.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:fluent_ui/fluent_ui.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -175,6 +177,74 @@ class _DesktopUsersPageState extends ConsumerState<DesktopUsersPage> {
   }
 }
 
+/// Ligne « numéro WhatsApp » d'une carte utilisateur (desktop) : affiche le
+/// numéro complet E.164 (indicatif pays + numéro local) et le copie dans le
+/// presse-papier au clic. Placeholder discret si le compte n'a pas de numéro.
+class _WhatsappLine extends StatelessWidget {
+  const _WhatsappLine({required this.profile});
+
+  final Profile profile;
+
+  @override
+  Widget build(BuildContext context) {
+    final raw = profile.whatsappNumber?.trim() ?? '';
+    if (raw.isEmpty) {
+      return Text(
+        'WhatsApp : —',
+        style: GoogleFonts.spaceGrotesk(
+          color: ArenaColors.silver,
+          fontSize: 12,
+        ),
+      );
+    }
+    final e164 = buildE164Phone(countryCode: profile.countryCode, local: raw);
+    return Tooltip(
+      message: 'Cliquer pour copier',
+      child: GestureDetector(
+        onTap: () async {
+          await Clipboard.setData(ClipboardData(text: e164));
+          if (!context.mounted) return;
+          await displayInfoBar(
+            context,
+            builder: (ctx, close) => InfoBar(
+              title: Text('Numéro copié : $e164'),
+              severity: InfoBarSeverity.success,
+              onClose: close,
+            ),
+          );
+        },
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                FluentIcons.phone,
+                size: 12,
+                color: ArenaColors.statusOk,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                e164,
+                style: GoogleFonts.spaceGrotesk(
+                  color: ArenaColors.statusOk,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(width: 4),
+              const Icon(
+                FluentIcons.copy,
+                size: 10,
+                color: ArenaColors.silver,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _UserCard extends ConsumerWidget {
   const _UserCard({required this.profile});
 
@@ -230,6 +300,8 @@ class _UserCard extends ConsumerWidget {
                         fontSize: 12,
                       ),
                     ),
+                    const SizedBox(height: 2),
+                    _WhatsappLine(profile: profile),
                   ],
                 ),
               ),
