@@ -43,13 +43,14 @@ class _DesktopUsersPageState extends ConsumerState<DesktopUsersPage> {
     super.dispose();
   }
 
-  /// Exporte en CSV les numéros WhatsApp de TOUS les utilisateurs (avec
-  /// indicatif pays), indépendamment des filtres affichés.
+  /// Exporte en CSV les numéros WhatsApp des utilisateurs correspondant aux
+  /// filtres actuellement appliqués (pays, statut, activité, compétition…).
+  /// Limite élevée pour récupérer TOUT le sous-ensemble filtré.
   Future<void> _exportWhatsapp() async {
     setState(() => _exporting = true);
     try {
       final users = await ref.read(adminUsersRepositoryProvider).list(
-            filter: const AdminUsersFilter(),
+            filter: _filter,
             limit: 100000,
           );
       final bytes = buildWhatsappCsvBytes(users);
