@@ -45,15 +45,16 @@ class _SuperAdminUsersState extends ConsumerState<SuperAdminUsers> {
     super.dispose();
   }
 
-  /// Exporte en CSV les numéros WhatsApp de TOUS les utilisateurs (avec
-  /// indicatif pays). Indépendant des filtres affichés : on repart d'un
-  /// filtre vide + limite élevée pour récupérer tout le monde.
+  /// Exporte en CSV les numéros WhatsApp des utilisateurs correspondant aux
+  /// filtres actuellement appliqués (pays, statut, activité, compétition…).
+  /// Limite élevée pour récupérer TOUT le sous-ensemble filtré, pas seulement
+  /// la page affichée.
   Future<void> _exportWhatsapp() async {
     final scaffold = ScaffoldMessenger.of(context);
     setState(() => _exporting = true);
     try {
       final users = await ref.read(adminUsersRepositoryProvider).list(
-            filter: const AdminUsersFilter(),
+            filter: _filter,
             limit: 100000,
           );
       final bytes = buildWhatsappCsvBytes(users);

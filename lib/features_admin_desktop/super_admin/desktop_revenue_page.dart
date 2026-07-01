@@ -1,9 +1,8 @@
-import 'dart:convert';
-import 'dart:typed_data';
+import 'dart:io';
 
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/admin/super_admin_dashboard_repository.dart';
-import 'package:csv/csv.dart';
+import 'package:arena/features_shared/excel_csv.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:fluent_ui/fluent_ui.dart';
@@ -131,8 +130,7 @@ class DesktopRevenuePage extends ConsumerWidget {
           ],
       ];
 
-      final csv = const ListToCsvConverter().convert(rows);
-      final bytes = Uint8List.fromList([0xEF, 0xBB, 0xBF, ...utf8.encode(csv)]);
+      final bytes = buildExcelCsvBytes(rows);
 
       final savedPath = await FilePicker.platform.saveFile(
         dialogTitle: 'Enregistrer le CSV ARENA',
@@ -141,6 +139,12 @@ class DesktopRevenuePage extends ConsumerWidget {
         type: FileType.custom,
         allowedExtensions: const ['csv'],
       );
+      // Sur desktop, FilePicker.saveFile IGNORE `bytes` : il ne renvoie que le
+      // chemin choisi sans écrire le fichier → on l'écrit nous-mêmes (même
+      // correctif que l'export WhatsApp desktop).
+      if (savedPath != null) {
+        await File(savedPath).writeAsBytes(bytes, flush: true);
+      }
 
       if (!context.mounted) return;
       if (savedPath == null) {
