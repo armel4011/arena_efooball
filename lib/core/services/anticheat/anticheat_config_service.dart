@@ -10,7 +10,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 /// Clé : `anticheat_provider`, valeur jsonb = la chaîne `wire` du provider
 /// (`"native_recorder"` | `"livekit_track_egress"`). Tant que la ligne
 /// n'existe pas ou que Supabase est injoignable, on retombe sur
-/// [AntiCheatProviderKind.fallback] (LiveKit).
+/// [AntiCheatProviderKind.fallback] (recorder natif — repli sûr).
 class AntiCheatConfigService {
   const AntiCheatConfigService(this._client);
 

@@ -35,11 +35,16 @@ enum AntiCheatProviderKind {
   /// Valeur stable persistée en base / lue par le serveur.
   final String wire;
 
-  /// Provider retenu quand aucun réglage n'est présent (cold start, offline,
-  /// table vide). Décision produit : LiveKit Track Egress par défaut, le
-  /// recorder natif restant le filet de sécurité activable par l'admin.
+  /// Provider retenu quand le réglage `app_config` est ILLISIBLE (cold start,
+  /// blip réseau, table vide). Repli SÛR sur le recorder natif : c'est le
+  /// filet de sécurité toujours présent et sans crash (APK targetSdk=35),
+  /// alors que LiveKit exige un consentement FGS mediaProjection qui a déjà
+  /// crashé l'app à froid sur Android 14+/targetSdk36. Un échec transitoire
+  /// de lecture ne doit donc JAMAIS basculer silencieusement sur LiveKit.
+  /// NB : le provider ACTIF par défaut (quand la ligne existe) reste piloté
+  /// par l'admin via `app_config` — ce fallback ne concerne que l'illisible.
   static const AntiCheatProviderKind fallback =
-      AntiCheatProviderKind.livekitTrackEgress;
+      AntiCheatProviderKind.nativeRecorder;
 
   /// Parse tolérante depuis la valeur `wire` (clé `app_config`). Toute valeur
   /// inconnue / nulle retombe sur [fallback].

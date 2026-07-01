@@ -29,10 +29,11 @@ void main() {
       );
     });
 
-    test('default fallback is LiveKit Track Egress', () {
+    test('default fallback is the native recorder (safe net, no cold crash)',
+        () {
       expect(
         AntiCheatProviderKind.fallback,
-        AntiCheatProviderKind.livekitTrackEgress,
+        AntiCheatProviderKind.nativeRecorder,
       );
     });
 
