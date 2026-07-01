@@ -54,11 +54,46 @@ String dialCodeFor(String countryCode) {
 /// Construit un numéro E.164 à partir d'un code pays + numéro local
 /// éventuellement préfixé d'un `0` (convention nationale). Strip tous
 /// les caractères non-chiffres avant.
+///
+/// Robuste aux saisies où l'utilisateur inclut DÉJÀ l'indicatif (cause du
+/// bug « indicatif en double ») : un préfixe `00`, `+` ou l'indicatif nu en
+/// tête est retiré avant de re-préfixer, à condition qu'il reste ensuite un
+/// numéro local de longueur plausible (pour ne pas tronquer un vrai numéro
+/// commençant par les mêmes chiffres que l'indicatif).
 String buildE164Phone({required String countryCode, required String local}) {
   final dial = dialCodeFor(countryCode);
+  final dialDigits = dial.replaceAll(RegExp(r'\D'), '');
   var digits = local.replaceAll(RegExp(r'\D'), '');
+
+  // Préfixe international '00' (ex. 00237...) → équivalent au '+'.
+  if (digits.startsWith('00')) digits = digits.substring(2);
+
+  // Indicatif déjà saisi en tête → ne pas le dupliquer.
+  if (digits.startsWith(dialDigits)) {
+    final rest = digits.substring(dialDigits.length);
+    final restNo0 = rest.startsWith('0') ? rest.substring(1) : rest;
+    if (restNo0.length >= 7 && restNo0.length <= 12) {
+      digits = rest;
+    }
+  }
+
   if (digits.startsWith('0')) digits = digits.substring(1);
   return '$dial$digits';
+}
+
+/// Inverse de [buildE164Phone] : retire l'indicatif E.164 en tête d'un numéro
+/// STOCKÉ (`+237699…` → `699…`) pour l'afficher/éditer comme numéro local.
+/// Renvoie '' si l'entrée est vide.
+String stripDialCode(String? e164, String countryCode) {
+  final n = e164?.trim() ?? '';
+  if (n.isEmpty) return '';
+  final dial = dialCodeFor(countryCode);
+  if (n.startsWith(dial)) return n.substring(dial.length);
+  // Repli si le `+` manque : compare sur les chiffres.
+  final digits = n.replaceAll(RegExp(r'\D'), '');
+  final dialDigits = dial.replaceAll(RegExp(r'\D'), '');
+  if (digits.startsWith(dialDigits)) return digits.substring(dialDigits.length);
+  return digits;
 }
 
 /// Valide un numéro local : 7 à 12 chiffres une fois le `0` de tête

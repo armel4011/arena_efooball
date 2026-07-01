@@ -23,7 +23,7 @@ void main() {
       );
     });
 
-    test('numéro présent → colonnes téléphone en format texte Excel ="..."',
+    test('numéro E.164 stocké → local = indicatif retiré, complet tel quel',
         () {
       final csv = decode(
         buildWhatsappCsvBytes(const [
@@ -31,31 +31,14 @@ void main() {
             id: '1',
             username: 'Alice',
             countryCode: 'CM',
-            whatsappNumber: '699000000',
+            whatsappNumber: '+237699000000', // stocké en E.164
           ),
         ]),
       );
+      // Pas de re-préfixe : le complet reste +237699000000 (pas +237237…).
       expect(
         csv.split('\r\n')[2],
         '"Alice";"CM";="+237";="699000000";="+237699000000"',
-      );
-    });
-
-    test('zéro de tête retiré pour le numéro complet E.164', () {
-      final csv = decode(
-        buildWhatsappCsvBytes(const [
-          Profile(
-            id: '1',
-            username: 'Alice',
-            countryCode: 'CM',
-            whatsappNumber: '0699000000',
-          ),
-        ]),
-      );
-      // Local conservé tel que saisi, complet normalisé sans le 0.
-      expect(
-        csv.split('\r\n')[2],
-        '"Alice";"CM";="+237";="0699000000";="+237699000000"',
       );
     });
 

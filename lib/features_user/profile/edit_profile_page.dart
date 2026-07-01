@@ -40,21 +40,6 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   final ImagePicker _picker = ImagePicker();
   bool _avatarBusy = false;
 
-  /// Strip le préfixe `+XXX` du numéro stocké en DB pour qu'on l'édite
-  /// comme un numéro local. L'utilisateur change de pays → le dial code
-  /// change automatiquement, on n'écrase pas son input.
-  String _stripDialCode(String? e164, String countryCode) {
-    if (e164 == null || e164.isEmpty) return '';
-    final dial = dialCodeFor(countryCode);
-    if (e164.startsWith(dial)) return e164.substring(dial.length);
-    if (e164.startsWith('+')) {
-      final justDigits = e164.replaceAll(RegExp(r'\D'), '');
-      // Best-effort : strip les 3-4 premiers chiffres si on ne match pas
-      return justDigits.length > 4 ? justDigits.substring(3) : justDigits;
-    }
-    return e164;
-  }
-
   @override
   void initState() {
     super.initState();
@@ -65,7 +50,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     final inList = kSupportedCountries.any((c) => c.code == _countryCode);
     if (!inList) _countryCode = 'CM';
     _whatsappCtrl = TextEditingController(
-      text: _stripDialCode(profile?.whatsappNumber, _countryCode),
+      text: stripDialCode(profile?.whatsappNumber, _countryCode),
     );
     _whatsappCtrl.addListener(_onWhatsappChanged);
   }

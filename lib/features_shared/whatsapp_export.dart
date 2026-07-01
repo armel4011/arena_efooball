@@ -7,11 +7,11 @@ import 'package:arena/data/models/profile.dart';
 /// Construit le CSV (octets, BOM UTF-8) de l'annuaire WhatsApp des
 /// utilisateurs pour l'export super-admin.
 ///
-/// Colonnes : Username · Pays (code ISO) · Indicatif · Numéro WhatsApp (tel
-/// que saisi) · Numéro complet E.164 (indicatif + numéro). Le numéro complet
-/// est reconstruit via [buildE164Phone] à partir du `country_code` (le numéro
-/// est stocké sans préfixe pays). Les comptes sans numéro WhatsApp sont
-/// inclus avec des colonnes numéro vides.
+/// Colonnes : Username · Pays (code ISO) · Indicatif · Numéro WhatsApp (partie
+/// locale, sans indicatif) · Numéro complet E.164. Le numéro est STOCKÉ au
+/// format E.164 (`+237699…`) : le complet est la valeur telle quelle, le local
+/// est obtenu en retirant l'indicatif via [stripDialCode]. Les comptes sans
+/// numéro WhatsApp sont inclus avec des colonnes numéro vides.
 ///
 /// Structuration pensée pour Excel (le tableur des admins) :
 ///   * Séparateur `;` + première ligne `sep=;` → Excel (toutes locales, FR
@@ -48,10 +48,11 @@ Uint8List buildWhatsappCsvBytes(List<Profile> users) {
     ..write(eol);
 
   for (final u in users) {
-    final local = u.whatsappNumber?.trim() ?? '';
-    final full = local.isEmpty
-        ? ''
-        : buildE164Phone(countryCode: u.countryCode, local: local);
+    // `whatsapp_number` est STOCKÉ au format E.164 (`+237699…`) : c'est déjà
+    // le numéro complet. Le « Numéro WhatsApp » local = indicatif retiré.
+    // (Ne PAS re-préfixer via buildE164Phone : ça doublerait l'indicatif.)
+    final full = u.whatsappNumber?.trim() ?? '';
+    final local = full.isEmpty ? '' : stripDialCode(full, u.countryCode);
     buffer
       ..write(
         [

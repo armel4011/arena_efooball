@@ -1,7 +1,6 @@
 import 'package:arena/core/router/admin_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/core/utils/arena_error_message.dart';
-import 'package:arena/core/utils/supported_countries.dart';
 import 'package:arena/data/models/profile.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_users_repository.dart';
@@ -470,14 +469,12 @@ class _WhatsappLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final raw = profile.whatsappNumber?.trim() ?? '';
-    if (raw.isEmpty) {
+    // `whatsapp_number` est stocké au format E.164 → on l'affiche tel quel
+    // (ne pas re-préfixer l'indicatif, ça le doublerait).
+    final e164 = profile.whatsappNumber?.trim() ?? '';
+    if (e164.isEmpty) {
       return Text('WhatsApp : —', style: ArenaText.small);
     }
-    final e164 = buildE164Phone(
-      countryCode: profile.countryCode,
-      local: raw,
-    );
     return InkWell(
       onTap: () async {
         await Clipboard.setData(ClipboardData(text: e164));
