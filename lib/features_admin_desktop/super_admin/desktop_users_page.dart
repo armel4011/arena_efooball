@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:arena/core/router/admin_desktop_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/core/utils/arena_error_message.dart';
@@ -56,6 +58,16 @@ class _DesktopUsersPageState extends ConsumerState<DesktopUsersPage> {
         type: FileType.custom,
         allowedExtensions: const ['csv'],
       );
+      // ⚠️ Sur desktop (Windows/macOS/Linux), FilePicker.saveFile IGNORE le
+      // paramètre `bytes` : il ne fait qu'ouvrir la boîte de dialogue et
+      // renvoyer le chemin choisi, sans jamais écrire le fichier. On écrit
+      // donc nous-mêmes les octets. (Sur mobile, à l'inverse, `bytes` est
+      // écrit par le plugin via SAF — mais cette page est desktop-only.)
+      // Écrit avant le check `mounted` pour ne pas perdre le fichier si le
+      // widget se démonte pendant l'ouverture du dialogue.
+      if (savedPath != null) {
+        await File(savedPath).writeAsBytes(bytes, flush: true);
+      }
       if (!mounted) return;
       await displayInfoBar(
         context,
