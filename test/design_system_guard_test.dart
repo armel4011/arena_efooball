@@ -106,7 +106,10 @@ void main() {
   // 2383 → 2397 le 2026-06-30 : +14 `ArenaColors.*` du bandeau « Plan
   // anti-triche » des litiges mobile + desktop (signalBlue/silver/carbon/border/
   // bone). 0 vrai Colors.* ajouté (tous des tokens).
-  const colorsDotBaseline = 2397; // occurrences de `Colors.`
+  // 2397 → 2404 le 2026-07-01 : +7 `ArenaColors.*` (la regex `Colors\.` matche
+  // aussi `ArenaColors.`) de la ligne numéro WhatsApp copiable des cartes
+  // utilisateur admin mobile (3) + desktop (4).
+  const colorsDotBaseline = 2404; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.
@@ -126,9 +129,11 @@ void main() {
   // 201 → 203 le 2026-06-30 : +2 `GoogleFonts.spaceGrotesk` de la carte
   // « Seuils de tiering » anti-triche (P4) desktop (desktop_anticheat_page).
   // Même convention Fluent. À migrer vers ArenaText à terme.
+  // 208 → 210 le 2026-07-01 : +2 `GoogleFonts.spaceGrotesk` de la ligne numéro
+  // WhatsApp copiable (_WhatsappLine) sur la carte utilisateur desktop.
   // 203 → 208 le 2026-06-30 : +5 `GoogleFonts.spaceGrotesk` du bandeau « Plan
   // anti-triche » du litige desktop (desktop_disputes_page). Convention Fluent.
-  const googleFontsBaseline = 208; // occurrences de `GoogleFonts.`
+  const googleFontsBaseline = 210; // occurrences de `GoogleFonts.`
 
   final colorsDotRe = RegExp(r'Colors\.');
   final colorHexRe = RegExp(r'Color\(0x');

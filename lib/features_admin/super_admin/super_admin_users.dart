@@ -1,6 +1,7 @@
 import 'package:arena/core/router/admin_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/core/utils/arena_error_message.dart';
+import 'package:arena/core/utils/supported_countries.dart';
 import 'package:arena/data/models/profile.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_users_repository.dart';
@@ -16,6 +17,7 @@ import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -457,6 +459,60 @@ class _ActiveCompetitionsBadges extends StatelessWidget {
   }
 }
 
+/// Ligne « numéro WhatsApp » d'une carte utilisateur : affiche le numéro
+/// complet E.164 (indicatif pays + numéro local) et le copie dans le
+/// presse-papier au tap. Si le compte n'a pas de numéro, affiche un placeholder
+/// discret.
+class _WhatsappLine extends StatelessWidget {
+  const _WhatsappLine({required this.profile});
+  final Profile profile;
+
+  @override
+  Widget build(BuildContext context) {
+    final raw = profile.whatsappNumber?.trim() ?? '';
+    if (raw.isEmpty) {
+      return Text('WhatsApp : —', style: ArenaText.small);
+    }
+    final e164 = buildE164Phone(
+      countryCode: profile.countryCode,
+      local: raw,
+    );
+    return InkWell(
+      onTap: () async {
+        await Clipboard.setData(ClipboardData(text: e164));
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Numéro copié : $e164')),
+        );
+      },
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.phone_outlined,
+            size: 14,
+            color: ArenaColors.statusOk,
+          ),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              e164,
+              style: ArenaText.small.copyWith(color: ArenaColors.statusOk),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 4),
+          const Icon(
+            Icons.copy_outlined,
+            size: 12,
+            color: ArenaColors.textMuted,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _UserCard extends ConsumerWidget {
   const _UserCard({required this.profile});
   final Profile profile;
@@ -507,6 +563,8 @@ class _UserCard extends ConsumerWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(profile.email ?? '—', style: ArenaText.bodyMuted),
+                    const SizedBox(height: 2),
+                    _WhatsappLine(profile: profile),
                   ],
                 ),
               ),
