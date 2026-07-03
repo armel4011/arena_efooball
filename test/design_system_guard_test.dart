@@ -109,7 +109,16 @@ void main() {
   // 2397 → 2404 le 2026-07-01 : +7 `ArenaColors.*` (la regex `Colors\.` matche
   // aussi `ArenaColors.`) de la ligne numéro WhatsApp copiable des cartes
   // utilisateur admin mobile (3) + desktop (4).
-  const colorsDotBaseline = 2404; // occurrences de `Colors.`
+  // 2404 → 2423 le 2026-07-03 : +19 du panneau overlay « envoi du code room »
+  // du bouton flottant (recording_overlay.dart, isolate). Mix légitime :
+  // ~16 `ArenaColors.*` (tokens) + ~11 `Colors.white/black/transparent` bruts
+  // — l'overlay isolate n'a pas le thème, usage allowlisté dans check_colors.sh.
+  // 2423 → 2411 le 2026-07-03 : refonte flux Room (recording d'abord, code
+  // ensuite) — suppression de ShareCodeForm + CodeSharedInterstitial (dette
+  // nette réduite malgré l'ajout de StartRecordingForm + la saisie inline).
+  // 2411 → 2413 le 2026-07-03 : +2 des correctifs device de la saisie inline
+  // (bouton « Fermer » + carte compacte paysage : Colors.transparent/white70).
+  const colorsDotBaseline = 2413; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.

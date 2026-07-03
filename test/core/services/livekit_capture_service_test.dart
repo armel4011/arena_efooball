@@ -67,6 +67,33 @@ class _FakeOverlay implements RecordingOverlayController {
   }
 
   @override
+  Future<void> startOrMorphToRecording({
+    String? matchId,
+    bool simpleMode = false,
+  }) async {
+    startCount++;
+    lastSimpleMode = simpleMode;
+  }
+
+  @override
+  Future<bool> showAsCodeSender({String? matchId}) async => true;
+
+  @override
+  Future<void> morphToRecording({bool simpleMode = false}) async {}
+
+  @override
+  Future<void> enterCodeEntry() async {}
+
+  @override
+  Future<void> exitCodeEntry() async {}
+
+  @override
+  Stream<String> get roomCodeSubmissions => const Stream<String>.empty();
+
+  @override
+  bool get isShowing => false;
+
+  @override
   Future<void> stop() async => stopCount++;
 
   @override

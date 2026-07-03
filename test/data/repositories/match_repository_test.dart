@@ -89,19 +89,17 @@ void main() {
     });
   });
 
-  group('setRoomCode', () {
-    test('upper-case + trim le code, réclame le siège home, passe ready',
+  group('sendRoomCode', () {
+    test("upper-case + trim le code, N'ÉCRIT QUE room_code (pas de statut)",
         () async {
       final from = stub('matches', null);
-      await repo.setRoomCode(
-        matchId: 'm1',
-        hostProfileId: 'host',
-        code: '  abc12 ',
-      );
+      await repo.sendRoomCode(matchId: 'm1', code: '  abc12 ');
       final values = from.updatedValues!;
       expect(values['room_code'], 'ABC12');
-      expect(values['home_player_id'], 'host');
-      expect(values['status'], 'ready');
+      // Nouveau flux : ne touche PAS au statut (sinon régresserait in_progress)
+      // ni au siège home (déjà posé).
+      expect(values.containsKey('status'), isFalse);
+      expect(values.containsKey('home_player_id'), isFalse);
       expect(from.filters.any((f) => f == 'eq:id=m1'), isTrue);
     });
   });
@@ -109,7 +107,8 @@ void main() {
   group('setTeamName', () {
     test('player1 → player1_team_name (trim)', () async {
       final from = stub('matches', null);
-      await repo.setTeamName(matchId: 'm1', isPlayer1: true, teamName: ' FC X ');
+      await repo.setTeamName(
+          matchId: 'm1', isPlayer1: true, teamName: ' FC X ');
       expect(from.updatedValues!['player1_team_name'], 'FC X');
       expect(from.updatedValues!.containsKey('player2_team_name'), isFalse);
     });
@@ -175,9 +174,8 @@ void main() {
         proofPath: 'p/1.jpg',
         proofMimeType: 'image/jpeg',
       );
-      final payload =
-          (from.insertedValues! as Map<String, dynamic>)['payload']
-              as Map<String, dynamic>;
+      final payload = (from.insertedValues! as Map<String, dynamic>)['payload']
+          as Map<String, dynamic>;
       expect(payload['via_penalties'], true);
       expect(payload['penalty1'], 5);
       expect(payload['penalty2'], 4);

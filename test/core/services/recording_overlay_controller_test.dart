@@ -8,7 +8,12 @@ class _FakeOverlayPlatform implements OverlayPlatform {
   bool granted = true;
   bool requestResult = true;
   bool overlayShown = false;
+  bool codeSenderShown = false;
+  bool resizedToRecording = false;
+  bool resizedToCodeEntry = false;
+  int showOverlayCount = 0;
   Object? lastSharedData;
+  final sharedData = <Object>[];
   final _controller = StreamController<dynamic>.broadcast();
 
   void emit(dynamic event) => _controller.add(event);
@@ -20,8 +25,35 @@ class _FakeOverlayPlatform implements OverlayPlatform {
   Future<bool> requestPermission() async => requestResult;
 
   @override
+  Future<bool> isActive() async => overlayShown;
+
+  @override
   Future<void> showOverlay() async {
     overlayShown = true;
+    showOverlayCount++;
+  }
+
+  @override
+  Future<void> showCodeSenderOverlay() async {
+    overlayShown = true;
+    codeSenderShown = true;
+  }
+
+  @override
+  Future<void> resizeToRecording() async {
+    resizedToRecording = true;
+  }
+
+  @override
+  Future<void> resizeToCodeEntry() async {
+    resizedToCodeEntry = true;
+  }
+
+  bool movedToTop = false;
+
+  @override
+  Future<void> moveToTop() async {
+    movedToTop = true;
   }
 
   @override
@@ -32,6 +64,7 @@ class _FakeOverlayPlatform implements OverlayPlatform {
   @override
   Future<void> shareData(Object data) async {
     lastSharedData = data;
+    sharedData.add(data);
   }
 
   @override
@@ -99,6 +132,178 @@ void main() {
     final next = controller.actions.first;
     platform.emit('not_a_known_type');
     expect(await next, OverlayAction.unknown);
+  });
+
+  group('code-sender', () {
+    test('showAsCodeSender affiche le panneau + pousse mode_code_sender',
+        () async {
+      final ok = await controller.showAsCodeSender();
+      expect(ok, isTrue);
+      expect(platform.codeSenderShown, isTrue);
+      expect(controller.isShowing, isTrue);
+      expect(
+        platform.sharedData.any(
+          (d) =>
+              d is Map &&
+              d['type'] == RecordingOverlayMessages.modeCodeSenderType,
+        ),
+        isTrue,
+      );
+    });
+
+    test('showAsCodeSender renvoie false si permission refusée', () async {
+      platform
+        ..granted = false
+        ..requestResult = false;
+      final ok = await controller.showAsCodeSender();
+      expect(ok, isFalse);
+      expect(platform.codeSenderShown, isFalse);
+      expect(controller.isShowing, isFalse);
+    });
+
+    test("roomCodeSubmissions émet le code d'un submit_room_code", () async {
+      await controller.showAsCodeSender();
+      final next = controller.roomCodeSubmissions.first;
+      platform.emit(RecordingOverlayMessages.submitRoomCode('ABC123'));
+      expect(await next, 'ABC123');
+    });
+
+    test("un submit_room_code n'émet PAS d'action parasite", () async {
+      await controller.showAsCodeSender();
+      OverlayAction? action;
+      final sub = controller.actions.listen((a) => action = a);
+      platform.emit(RecordingOverlayMessages.submitRoomCode('ABC123'));
+      await Future<void>.delayed(Duration.zero);
+      expect(action, isNull);
+      await sub.cancel();
+    });
+
+    test('morphToRecording redimensionne quand un overlay est affiché',
+        () async {
+      await controller.showAsCodeSender();
+      expect(platform.resizedToRecording, isFalse);
+      await controller.morphToRecording();
+      expect(platform.resizedToRecording, isTrue);
+    });
+
+    test('morphToRecording est un no-op si aucun overlay affiché', () async {
+      await controller.morphToRecording();
+      expect(platform.resizedToRecording, isFalse);
+    });
+
+    test('isShowing suit show → stop', () async {
+      expect(controller.isShowing, isFalse);
+      await controller.showAsCodeSender();
+      expect(controller.isShowing, isTrue);
+      await controller.stop();
+      expect(controller.isShowing, isFalse);
+    });
+
+    test('startOrMorphToRecording sans overlay → start (showOverlay)',
+        () async {
+      await controller.startOrMorphToRecording();
+      expect(platform.showOverlayCount, 1);
+      expect(platform.resizedToRecording, isFalse);
+      expect(controller.isShowing, isTrue);
+    });
+
+    test(
+        'startOrMorphToRecording avec code-sender ouvert → morph, PAS de '
+        '2ᵉ showOverlay', () async {
+      await controller.showAsCodeSender();
+      await controller.startOrMorphToRecording();
+      // Le quirk MIUI #4 exige de NE JAMAIS re-showOverlay : on resize.
+      expect(platform.showOverlayCount, 0);
+      expect(platform.resizedToRecording, isTrue);
+    });
+
+    test(
+        'process recréé (MIUI) : overlay natif encore actif mais mémoire '
+        'perdue → morph, PAS de 2ᵉ showOverlay (anti panneau figé)', () async {
+      // Le panneau code-sender a été montré par un process précédent (la
+      // fenêtre native survit), puis l'app a été tuée/relancée : un NOUVEAU
+      // controller démarre avec `_overlayShown = false` alors que le natif
+      // est toujours `isActive`. Se fier au mémoire → 2ᵉ showOverlay → isolate
+      // mort → panneau figé. On doit détecter le natif et morpher.
+      platform.overlayShown = true; // fenêtre overlay native survivante
+      final fresh = RecordingOverlayController(platform: platform);
+      expect(fresh.isShowing, isFalse); // mémoire vierge du nouveau process
+      await fresh.startOrMorphToRecording();
+      expect(platform.showOverlayCount, 0); // JAMAIS de re-showOverlay
+      expect(platform.resizedToRecording, isTrue); // morph par resize
+      expect(fresh.isShowing, isTrue);
+      await fresh.dispose();
+    });
+  });
+
+  group('saisie inline du code (bouton recording)', () {
+    bool tickCodeEntry(Object d) => d is Map && d['codeEntry'] == true;
+
+    test('enterCodeEntry agrandit + pousse un tick codeEntry:true', () async {
+      await controller.start();
+      platform.sharedData.clear();
+      await controller.enterCodeEntry();
+      expect(platform.resizedToCodeEntry, isTrue);
+      expect(platform.sharedData.any(tickCodeEntry), isTrue);
+    });
+
+    test('exitCodeEntry rétrécit + pousse un tick codeEntry:false', () async {
+      await controller.start();
+      await controller.enterCodeEntry();
+      platform
+        ..sharedData.clear()
+        ..resizedToRecording = false;
+      await controller.exitCodeEntry();
+      expect(platform.resizedToRecording, isTrue);
+      expect(platform.sharedData.any(tickCodeEntry), isFalse);
+    });
+
+    test('ask_enter_code ouvre la saisie (resize) sans émettre d’action',
+        () async {
+      await controller.start();
+      OverlayAction? action;
+      final sub = controller.actions.listen((a) => action = a);
+      platform.emit(RecordingOverlayMessages.askEnterCodeType);
+      await Future<void>.delayed(Duration.zero);
+      expect(platform.resizedToCodeEntry, isTrue);
+      expect(action, isNull);
+      await sub.cancel();
+    });
+
+    test('ask_exit_code referme la saisie (resize retour bouton)', () async {
+      await controller.start();
+      await controller.enterCodeEntry();
+      platform.resizedToRecording = false;
+      OverlayAction? action;
+      final sub = controller.actions.listen((a) => action = a);
+      platform.emit(RecordingOverlayMessages.askExitCodeType);
+      await Future<void>.delayed(Duration.zero);
+      expect(platform.resizedToRecording, isTrue);
+      expect(action, isNull);
+      await sub.cancel();
+    });
+
+    test('submit_room_code émet le code ET referme la saisie', () async {
+      await controller.start();
+      await controller.enterCodeEntry();
+      platform.resizedToRecording = false;
+      final next = controller.roomCodeSubmissions.first;
+      platform.emit(RecordingOverlayMessages.submitRoomCode('ABC123'));
+      expect(await next, 'ABC123');
+      await Future<void>.delayed(Duration.zero);
+      expect(platform.resizedToRecording, isTrue);
+    });
+
+    test('les ticks périodiques gardent codeEntry:true pendant la saisie',
+        () async {
+      await controller.start();
+      await controller.enterCodeEntry();
+      platform.sharedData.clear();
+      // Le tick périodique (via setLiveAvailable qui pousse un tick immédiat)
+      // doit conserver codeEntry:true tant que la saisie est ouverte.
+      controller.setLiveAvailable(true);
+      expect(platform.sharedData.any(tickCodeEntry), isTrue);
+    });
   });
 
   group('OverlayTick', () {

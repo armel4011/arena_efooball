@@ -1429,6 +1429,40 @@ class AppLocalizationsFr extends AppLocalizations {
   String get roomReadyInRoomButton => 'JE SUIS DANS LA ROOM';
 
   @override
+  String get roomReadyJoinedButton => 'J\'AI REJOINT LA ROOM';
+
+  @override
+  String get startRecordingTitle => 'Prépare ton match';
+
+  @override
+  String get startRecordingDesc =>
+      'Saisis ton nom d\'équipe, puis démarre l\'enregistrement. Tu créeras ensuite ta room dans eFootball et enverras le code à ton adversaire depuis le bouton flottant, sans quitter le jeu.';
+
+  @override
+  String get startRecordingButton => 'DÉMARRER L\'ENREGISTREMENT';
+
+  @override
+  String get stepBodyHostPreparingTitle => 'L\'hôte prépare la room';
+
+  @override
+  String get stepBodyHostPreparingDesc =>
+      'Le joueur à domicile démarre son enregistrement et crée la room. Le code arrivera ici sous peu.';
+
+  @override
+  String get stepBodyHomeAwaitCreateRoomTitle => 'Enregistrement en cours';
+
+  @override
+  String get stepBodyHomeAwaitCreateRoomDesc =>
+      'Crée ta room dans eFootball, puis envoie le code à ton adversaire depuis le bouton flottant rouge (mini « clé »).';
+
+  @override
+  String get stepBodyAwayAwaitCodeTitle => 'En attente du code';
+
+  @override
+  String get stepBodyAwayAwaitCodeDesc =>
+      'L\'hôte crée sa room. Le code room arrivera ici — tu pourras alors rejoindre.';
+
+  @override
   String get roomReadyCodeSharedBadge => 'CODE PARTAGÉ';
 
   @override
@@ -1596,6 +1630,13 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get shareCodeSubmitButton => 'ENVOYER LE CODE';
+
+  @override
+  String get shareCodeOverlayButton => 'ENVOYER SANS QUITTER EFOOTBALL';
+
+  @override
+  String get shareCodeOverlayHint =>
+      'Crée ta room dans eFootball, puis envoie le code depuis un bouton flottant — sans quitter le jeu, la room reste active.';
 
   @override
   String get shareCodeInputHint => 'Ex: 8K3-TZ9';

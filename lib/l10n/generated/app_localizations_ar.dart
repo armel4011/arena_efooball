@@ -1416,6 +1416,40 @@ class AppLocalizationsAr extends AppLocalizations {
   String get roomReadyInRoomButton => 'أنا في الغرفة';
 
   @override
+  String get roomReadyJoinedButton => 'لقد انضممت إلى الغرفة';
+
+  @override
+  String get startRecordingTitle => 'جهّز مباراتك';
+
+  @override
+  String get startRecordingDesc =>
+      'أدخل اسم فريقك ثم ابدأ التسجيل. ستنشئ غرفتك في eFootball وترسل الرمز إلى خصمك من الزر العائم دون مغادرة اللعبة.';
+
+  @override
+  String get startRecordingButton => 'بدء التسجيل';
+
+  @override
+  String get stepBodyHostPreparingTitle => 'المضيف يجهّز الغرفة';
+
+  @override
+  String get stepBodyHostPreparingDesc =>
+      'يبدأ اللاعب المضيف التسجيل وينشئ الغرفة. سيصل الرمز هنا قريباً.';
+
+  @override
+  String get stepBodyHomeAwaitCreateRoomTitle => 'جارٍ التسجيل';
+
+  @override
+  String get stepBodyHomeAwaitCreateRoomDesc =>
+      'أنشئ غرفتك في eFootball ثم أرسل الرمز إلى خصمك من الزر العائم الأحمر (أيقونة المفتاح).';
+
+  @override
+  String get stepBodyAwayAwaitCodeTitle => 'بانتظار الرمز';
+
+  @override
+  String get stepBodyAwayAwaitCodeDesc =>
+      'المضيف ينشئ الغرفة. سيصل رمز الغرفة هنا — عندها يمكنك الانضمام.';
+
+  @override
   String get roomReadyCodeSharedBadge => 'تمت مشاركة الرمز';
 
   @override
@@ -1580,6 +1614,13 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get shareCodeSubmitButton => 'إرسال الرمز';
+
+  @override
+  String get shareCodeOverlayButton => 'أرسِل دون مغادرة eFootball';
+
+  @override
+  String get shareCodeOverlayHint =>
+      'أنشئ غرفتك في eFootball، ثم أرسل الرمز من زر عائم — دون مغادرة اللعبة، لتبقى الغرفة نشطة.';
 
   @override
   String get shareCodeInputHint => 'مثال: 8K3-TZ9';

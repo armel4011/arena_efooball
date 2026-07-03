@@ -1,5 +1,6 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/arena_match.dart';
+import 'package:arena/data/models/match_status.dart';
 import 'package:arena/data/repositories/match_repository.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
@@ -35,16 +36,19 @@ class _RoomReadyViewState extends ConsumerState<RoomReadyView> {
   bool get _isHome =>
       widget.match.homePlayerId != null &&
       switch (widget.role) {
-        MatchRole.player1 => widget.match.player1Id == widget.match.homePlayerId,
-        MatchRole.player2 => widget.match.player2Id == widget.match.homePlayerId,
+        MatchRole.player1 =>
+          widget.match.player1Id == widget.match.homePlayerId,
+        MatchRole.player2 =>
+          widget.match.player2Id == widget.match.homePlayerId,
         MatchRole.observer => false,
       };
 
   @override
   void initState() {
     super.initState();
-    final existing =
-        _isPlayer1 ? widget.match.player1TeamName : widget.match.player2TeamName;
+    final existing = _isPlayer1
+        ? widget.match.player1TeamName
+        : widget.match.player2TeamName;
     _teamCtrl = TextEditingController(text: existing ?? '');
   }
 
@@ -61,14 +65,20 @@ class _RoomReadyViewState extends ConsumerState<RoomReadyView> {
     setState(() => _submitting = true);
     try {
       final repo = ref.read(matchRepositoryProvider);
-      // Le nom d'équipe est obligatoire avant de démarrer — on le persiste
-      // d'abord (aide à l'arbitrage anti-triche) puis on flippe in_progress.
+      // Le nom d'équipe est obligatoire — on le persiste d'abord (aide à
+      // l'arbitrage anti-triche + sert de signal « ce joueur a rejoint »
+      // pour démarrer SON recording).
       await repo.setTeamName(
         matchId: widget.match.id,
         isPlayer1: _isPlayer1,
         teamName: teamName,
       );
-      await repo.markInProgress(widget.match.id);
+      // Nouveau flux : quand l'AWAY rejoint, le match est DÉJÀ `in_progress`
+      // (le HOME l'a démarré) — ne pas rappeler markInProgress (régresserait
+      // rien mais inutile). Flux legacy `ready` : on flippe in_progress.
+      if (widget.match.status != MatchStatus.inProgress) {
+        await repo.markInProgress(widget.match.id);
+      }
     } catch (e) {
       if (!mounted) return;
       final l10n = AppLocalizations.of(context);
@@ -159,7 +169,9 @@ class _RoomReadyViewState extends ConsumerState<RoomReadyView> {
           ),
           const SizedBox(height: ArenaSpacing.md),
           ArenaButton(
-            label: l10n.roomReadyInRoomButton,
+            label: widget.match.status == MatchStatus.inProgress
+                ? l10n.roomReadyJoinedButton
+                : l10n.roomReadyInRoomButton,
             icon: Icons.play_arrow_rounded,
             fullWidth: true,
             isLoading: _submitting,
@@ -168,70 +180,6 @@ class _RoomReadyViewState extends ConsumerState<RoomReadyView> {
           const SizedBox(height: ArenaSpacing.sm),
           OpenChatLink(matchId: widget.match.id),
         ],
-      ],
-    );
-  }
-}
-
-/// Interstitial affiché immédiatement après que le HOME ait envoyé son
-/// code, le temps que la sync DB arrive (et déclenche
-/// `MatchStatus.ready`). Affiche le code + un spinner.
-class CodeSharedInterstitial extends StatelessWidget {
-  const CodeSharedInterstitial({
-    required this.code,
-    required this.matchId,
-    super.key,
-  });
-
-  final String code;
-  final String matchId;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(l10n.roomReadyCodeLabel, style: ArenaText.inputLabel),
-        const SizedBox(height: ArenaSpacing.sm),
-        CyanDashedContainer(
-          child: Column(
-            children: [
-              const Icon(
-                Icons.check_circle,
-                color: ArenaColors.statusOk,
-                size: 28,
-              ),
-              const SizedBox(height: ArenaSpacing.xs),
-              Text(
-                l10n.roomReadyCodeSharedBadge,
-                style: ArenaText.inputLabel.copyWith(
-                  color: ArenaColors.statusOk,
-                ),
-              ),
-              const SizedBox(height: ArenaSpacing.sm),
-              Text(
-                code,
-                textAlign: TextAlign.center,
-                style: ArenaText.roomCode.copyWith(fontSize: 28),
-              ),
-              const SizedBox(height: ArenaSpacing.sm),
-              const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-              const SizedBox(height: ArenaSpacing.xs),
-              Text(
-                l10n.roomReadySyncingHint,
-                textAlign: TextAlign.center,
-                style: ArenaText.small.copyWith(color: ArenaColors.silver),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: ArenaSpacing.lg),
-        OpenChatLink(matchId: matchId),
       ],
     );
   }

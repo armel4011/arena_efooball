@@ -2788,6 +2788,66 @@ abstract class AppLocalizations {
   /// **'JE SUIS DANS LA ROOM'**
   String get roomReadyInRoomButton;
 
+  /// No description provided for @roomReadyJoinedButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'J\'AI REJOINT LA ROOM'**
+  String get roomReadyJoinedButton;
+
+  /// No description provided for @startRecordingTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prépare ton match'**
+  String get startRecordingTitle;
+
+  /// No description provided for @startRecordingDesc.
+  ///
+  /// In fr, this message translates to:
+  /// **'Saisis ton nom d\'équipe, puis démarre l\'enregistrement. Tu créeras ensuite ta room dans eFootball et enverras le code à ton adversaire depuis le bouton flottant, sans quitter le jeu.'**
+  String get startRecordingDesc;
+
+  /// No description provided for @startRecordingButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'DÉMARRER L\'ENREGISTREMENT'**
+  String get startRecordingButton;
+
+  /// No description provided for @stepBodyHostPreparingTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'L\'hôte prépare la room'**
+  String get stepBodyHostPreparingTitle;
+
+  /// No description provided for @stepBodyHostPreparingDesc.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le joueur à domicile démarre son enregistrement et crée la room. Le code arrivera ici sous peu.'**
+  String get stepBodyHostPreparingDesc;
+
+  /// No description provided for @stepBodyHomeAwaitCreateRoomTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrement en cours'**
+  String get stepBodyHomeAwaitCreateRoomTitle;
+
+  /// No description provided for @stepBodyHomeAwaitCreateRoomDesc.
+  ///
+  /// In fr, this message translates to:
+  /// **'Crée ta room dans eFootball, puis envoie le code à ton adversaire depuis le bouton flottant rouge (mini « clé »).'**
+  String get stepBodyHomeAwaitCreateRoomDesc;
+
+  /// No description provided for @stepBodyAwayAwaitCodeTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'En attente du code'**
+  String get stepBodyAwayAwaitCodeTitle;
+
+  /// No description provided for @stepBodyAwayAwaitCodeDesc.
+  ///
+  /// In fr, this message translates to:
+  /// **'L\'hôte crée sa room. Le code room arrivera ici — tu pourras alors rejoindre.'**
+  String get stepBodyAwayAwaitCodeDesc;
+
   /// No description provided for @roomReadyCodeSharedBadge.
   ///
   /// In fr, this message translates to:
@@ -3099,6 +3159,18 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'ENVOYER LE CODE'**
   String get shareCodeSubmitButton;
+
+  /// No description provided for @shareCodeOverlayButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'ENVOYER SANS QUITTER EFOOTBALL'**
+  String get shareCodeOverlayButton;
+
+  /// No description provided for @shareCodeOverlayHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Crée ta room dans eFootball, puis envoie le code depuis un bouton flottant — sans quitter le jeu, la room reste active.'**
+  String get shareCodeOverlayHint;
 
   /// No description provided for @shareCodeInputHint.
   ///
