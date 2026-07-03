@@ -109,7 +109,11 @@ void main() {
   // 2397 → 2404 le 2026-07-01 : +7 `ArenaColors.*` (la regex `Colors\.` matche
   // aussi `ArenaColors.`) de la ligne numéro WhatsApp copiable des cartes
   // utilisateur admin mobile (3) + desktop (4).
-  const colorsDotBaseline = 2404; // occurrences de `Colors.`
+  // 2404 → 2423 le 2026-07-03 : +19 du panneau overlay « envoi du code room »
+  // du bouton flottant (recording_overlay.dart, isolate). Mix légitime :
+  // ~16 `ArenaColors.*` (tokens) + ~11 `Colors.white/black/transparent` bruts
+  // — l'overlay isolate n'a pas le thème, usage allowlisté dans check_colors.sh.
+  const colorsDotBaseline = 2423; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.
