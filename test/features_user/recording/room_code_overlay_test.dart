@@ -175,7 +175,7 @@ void main() {
     });
 
     testWidgets(
-        'isCodeView:true (AWAY) → affiche le code + COPIER, pas de champ',
+        'isCodeView:true (AWAY) → affiche le code en lecture seule, pas de champ',
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -196,8 +196,10 @@ void main() {
       );
 
       expect(find.text('ROOM77'), findsOneWidget);
-      expect(find.text('COPIER'), findsOneWidget);
+      expect(find.textContaining('Recopie'), findsOneWidget);
+      // Lecture seule : ni champ de saisie ni bouton Copier.
       expect(find.byType(TextField), findsNothing);
+      expect(find.text('COPIER'), findsNothing);
     });
   });
 }
