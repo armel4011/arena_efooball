@@ -215,6 +215,9 @@ class RecordingOverlayController {
     if (_codeEntry) return;
     _codeEntry = true;
     await _platform.resizeToCodeEntry();
+    // Remonter l'overlay en haut de l'écran : sinon, centré, le clavier
+    // (moitié basse) recouvre le bouton ENVOYER (« coupé »).
+    await _platform.moveToTop();
     _pushTickNow();
   }
 
@@ -455,6 +458,11 @@ abstract class OverlayPlatform {
   /// quirk #3) — utilisé quand le HOME ouvre la saisie depuis le bouton rouge.
   Future<void> resizeToCodeEntry();
 
+  /// Repositionne l'overlay en haut de l'écran (centré horizontalement) —
+  /// utilisé à l'ouverture de la saisie pour que le clavier ne recouvre pas
+  /// le champ / le bouton ENVOYER.
+  Future<void> moveToTop();
+
   Future<void> closeOverlay();
   Future<void> shareData(Object data);
   Stream<dynamic> get overlayListener;
@@ -533,9 +541,21 @@ class _DefaultOverlayPlatform implements OverlayPlatform {
     // resizeToRecording quand la saisie se referme.
     await FlutterOverlayWindow.resizeOverlay(
       (360 * dpr).round(),
-      (380 * dpr).round(),
+      (420 * dpr).round(),
       false,
     );
+  }
+
+  @override
+  Future<void> moveToTop() async {
+    final view = PlatformDispatcher.instance.views.first;
+    final dpr = view.devicePixelRatio;
+    final screenW = view.physicalSize.width; // px
+    final overlayW = 360 * dpr;
+    final x = ((screenW - overlayW) / 2).clamp(0, screenW).toDouble();
+    // ~6 % depuis le haut (sous la barre de statut), en px.
+    final y = view.physicalSize.height * 0.06;
+    await FlutterOverlayWindow.moveOverlay(OverlayPosition(x, y));
   }
 
   @override

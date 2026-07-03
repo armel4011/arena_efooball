@@ -49,6 +49,13 @@ class _FakeOverlayPlatform implements OverlayPlatform {
     resizedToCodeEntry = true;
   }
 
+  bool movedToTop = false;
+
+  @override
+  Future<void> moveToTop() async {
+    movedToTop = true;
+  }
+
   @override
   Future<void> closeOverlay() async {
     overlayShown = false;
