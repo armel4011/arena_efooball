@@ -150,10 +150,22 @@ class RecordingOverlayController {
 
   /// Transforme l'overlay code-sender déjà affiché en bouton
   /// d'enregistrement — SANS re-`showOverlay` (quirk MIUI #4). No-op si
-  /// aucun overlay n'est affiché (l'appelant fait alors `start()`).
+  /// aucun overlay n'est réellement affiché (l'appelant fait alors `start()`).
+  ///
+  /// On teste l'état RÉEL du natif (`isActive`) et pas seulement le mémoire
+  /// `_overlayShown` : si le process principal a été recréé (MIUI) alors que
+  /// la fenêtre overlay survivait, `_overlayShown` est repassé à `false` à
+  /// tort — morpher reste le bon geste (re-`showOverlay` tuerait l'isolate).
   Future<void> morphToRecording({bool simpleMode = false}) async {
-    if (!_overlayShown) return;
+    if (!_overlayShown && !await _platform.isActive()) return;
+    _overlayShown = true;
     _simpleMode = simpleMode;
+    // Après une recréation du process, les canaux overlay→main (listener +
+    // port isolate) ont été perdus alors que la fenêtre native survivait :
+    // on les (re)lie de façon idempotente pour que les taps du bouton
+    // recording (stop/pause/forfait) remontent bien. No-op si déjà liés.
+    _bindListener();
+    _bindIsolatePort();
     await _platform.resizeToRecording();
     _startedAt = DateTime.now();
     await _platform.shareData(RecordingOverlayMessages.modeRecording());
@@ -164,11 +176,24 @@ class RecordingOverlayController {
   /// Démarre le bouton d'enregistrement, OU transforme l'overlay
   /// code-sender déjà affiché (HOME) — sans re-`showOverlay` (quirk MIUI
   /// #4). Point d'entrée unique pour le coordinator natif et LiveKit.
+  ///
+  /// La décision se base sur l'état RÉEL du natif (`isActive`) plutôt que sur
+  /// le seul `_overlayShown` mémoire : sinon, après une recréation du process
+  /// (MIUI tue l'app pendant eFootball), on croirait à tort qu'aucun overlay
+  /// n'est affiché → 2ᵉ `showOverlay` → mort de l'isolate → panneau figé.
   Future<void> startOrMorphToRecording({
     String? matchId,
     bool simpleMode = false,
   }) async {
-    if (_overlayShown) {
+    var overlayLive = _overlayShown;
+    if (!overlayLive) {
+      try {
+        overlayLive = await _platform.isActive();
+      } catch (_) {
+        overlayLive = false;
+      }
+    }
+    if (overlayLive) {
       await morphToRecording(simpleMode: simpleMode);
     } else {
       await start(matchId: matchId, simpleMode: simpleMode);
@@ -337,6 +362,12 @@ abstract class OverlayPlatform {
   Future<bool> isPermissionGranted();
   Future<bool> requestPermission();
 
+  /// Vrai si une fenêtre overlay native est actuellement affichée. Reflète
+  /// l'état RÉEL du service overlay — il survit à une recréation du process
+  /// principal (MIUI tue l'app en arrière-plan pendant eFootball), là où
+  /// l'état mémoire `_overlayShown` du controller, lui, est perdu.
+  Future<bool> isActive();
+
   /// Affiche l'overlay au format bouton d'enregistrement (220×220).
   Future<void> showOverlay();
 
@@ -365,6 +396,11 @@ class _DefaultOverlayPlatform implements OverlayPlatform {
   Future<bool> requestPermission() async {
     final res = await FlutterOverlayWindow.requestPermission();
     return res ?? false;
+  }
+
+  @override
+  Future<bool> isActive() async {
+    return FlutterOverlayWindow.isActive();
   }
 
   @override

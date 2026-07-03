@@ -24,6 +24,9 @@ class _FakeOverlayPlatform implements OverlayPlatform {
   Future<bool> requestPermission() async => requestResult;
 
   @override
+  Future<bool> isActive() async => overlayShown;
+
+  @override
   Future<void> showOverlay() async {
     overlayShown = true;
     showOverlayCount++;
@@ -198,6 +201,23 @@ void main() {
       // Le quirk MIUI #4 exige de NE JAMAIS re-showOverlay : on resize.
       expect(platform.showOverlayCount, 0);
       expect(platform.resizedToRecording, isTrue);
+    });
+
+    test('process recréé (MIUI) : overlay natif encore actif mais mémoire '
+        'perdue → morph, PAS de 2ᵉ showOverlay (anti panneau figé)', () async {
+      // Le panneau code-sender a été montré par un process précédent (la
+      // fenêtre native survit), puis l'app a été tuée/relancée : un NOUVEAU
+      // controller démarre avec `_overlayShown = false` alors que le natif
+      // est toujours `isActive`. Se fier au mémoire → 2ᵉ showOverlay → isolate
+      // mort → panneau figé. On doit détecter le natif et morpher.
+      platform.overlayShown = true; // fenêtre overlay native survivante
+      final fresh = RecordingOverlayController(platform: platform);
+      expect(fresh.isShowing, isFalse); // mémoire vierge du nouveau process
+      await fresh.startOrMorphToRecording();
+      expect(platform.showOverlayCount, 0); // JAMAIS de re-showOverlay
+      expect(platform.resizedToRecording, isTrue); // morph par resize
+      expect(fresh.isShowing, isTrue);
+      await fresh.dispose();
     });
   });
 

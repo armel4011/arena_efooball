@@ -62,6 +62,9 @@ class _FakeOverlayPlatform implements OverlayPlatform {
   Future<bool> requestPermission() async => true;
 
   @override
+  Future<bool> isActive() async => false;
+
+  @override
   Future<void> showOverlay() async {}
 
   @override
