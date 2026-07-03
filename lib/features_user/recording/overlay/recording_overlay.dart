@@ -466,7 +466,17 @@ class _RoomCodeViewState extends State<RoomCodeView> {
   Future<void> _copy() async {
     final code = widget.code;
     if (code == null || code.isEmpty) return;
-    await Clipboard.setData(ClipboardData(text: code));
+    // Sur Android 10+/MIUI, écrire le presse-papier exige que la fenêtre ait
+    // le FOCUS. L'overlay flotte en defaultFlag (non focus) par-dessus
+    // eFootball → l'écriture est ignorée. On prend donc le focus le temps de
+    // l'écriture (comme le clavier de la saisie — `updateFlag` sur une fenêtre
+    // vivante marche sur MIUI, spike-validé), puis on le rend.
+    try {
+      await FlutterOverlayWindow.updateFlag(OverlayFlag.focusPointer);
+      await Clipboard.setData(ClipboardData(text: code));
+    } finally {
+      await FlutterOverlayWindow.updateFlag(OverlayFlag.defaultFlag);
+    }
     if (!mounted) return;
     setState(() => _copied = true);
   }
