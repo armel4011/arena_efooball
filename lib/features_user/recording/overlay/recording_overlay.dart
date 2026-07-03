@@ -473,7 +473,13 @@ class _RoomCodeViewState extends State<RoomCodeView> {
     // vivante marche sur MIUI, spike-validé), puis on le rend.
     try {
       await FlutterOverlayWindow.updateFlag(OverlayFlag.focusPointer);
+      // Laisser le window manager appliquer réellement le focus AVANT
+      // d'écrire — sinon la fenêtre est encore non-focus et MIUI ignore
+      // l'écriture (le clavier marchait car il y a un délai naturel entre le
+      // focus et la frappe).
+      await Future<void>.delayed(const Duration(milliseconds: 350));
       await Clipboard.setData(ClipboardData(text: code));
+      await Future<void>.delayed(const Duration(milliseconds: 120));
     } finally {
       await FlutterOverlayWindow.updateFlag(OverlayFlag.defaultFlag);
     }
