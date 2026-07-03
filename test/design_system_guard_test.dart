@@ -116,7 +116,9 @@ void main() {
   // 2423 → 2411 le 2026-07-03 : refonte flux Room (recording d'abord, code
   // ensuite) — suppression de ShareCodeForm + CodeSharedInterstitial (dette
   // nette réduite malgré l'ajout de StartRecordingForm + la saisie inline).
-  const colorsDotBaseline = 2411; // occurrences de `Colors.`
+  // 2411 → 2413 le 2026-07-03 : +2 des correctifs device de la saisie inline
+  // (bouton « Fermer » + carte compacte paysage : Colors.transparent/white70).
+  const colorsDotBaseline = 2413; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.
