@@ -69,10 +69,17 @@ abstract final class RecordingOverlayMessages {
   /// (quirk MIUI #4 : un 2ᵉ cycle show casse l'isolate).
   static const String modeRecordingType = 'mode_recording';
 
-  /// `overlay → main` — le HOME a tapé un code room dans le panneau et
+  /// `overlay → main` — le HOME a tapé un code room dans le champ et
   /// appuyé sur « Envoyer ». Payload : `{'type': ..., 'code': 'ABC123'}`.
-  /// Le main appelle `matchRepository.setRoomCode(...)`.
+  /// Le main appelle `matchRepository.sendRoomCode(...)`.
   static const String submitRoomCodeType = 'submit_room_code';
+
+  /// `overlay → main` — depuis le bouton d'enregistrement, le HOME tape le
+  /// mini « envoyer le code » : il veut saisir/envoyer le code room. Le main
+  /// agrandit l'overlay (`resizeToCodeEntry`) et pousse un tick `codeEntry:
+  /// true` pour que le bouton affiche le champ inline. Nouveau flux : le code
+  /// s'envoie APRÈS le démarrage du recording, sans mode overlay séparé.
+  static const String askEnterCodeType = 'ask_enter_code';
 
   /// Construit le message `main → overlay` de bascule en mode code-sender.
   static Map<String, dynamic> modeCodeSender() => {'type': modeCodeSenderType};
@@ -94,12 +101,19 @@ abstract final class RecordingOverlayMessages {
   /// par le user). L'overlay affiche/cache son 5ᵉ mini button "Live"
   /// en fonction de ce flag — l'isolate overlay ne lit pas les
   /// providers Riverpod du main directement.
+  ///
+  /// `codeEntry` : quand true, le bouton d'enregistrement affiche le champ
+  /// de saisie du code room inline (l'overlay a été agrandi côté main). Le
+  /// chrono continue de tourner derrière ; ce flag DOIT être propagé dans
+  /// TOUS les ticks tant que la saisie est ouverte, sinon le premier tick
+  /// périodique qui l'omet refermerait le champ.
   static Map<String, dynamic> tick({
     required int elapsedSeconds,
     required bool warning,
     bool paused = false,
     bool liveAvailable = false,
     bool simple = false,
+    bool codeEntry = false,
   }) {
     final type = paused
         ? pausedType
@@ -111,6 +125,7 @@ abstract final class RecordingOverlayMessages {
       'elapsed': elapsedSeconds,
       'liveAvailable': liveAvailable,
       'simple': simple,
+      'codeEntry': codeEntry,
     };
   }
 }
@@ -124,6 +139,7 @@ class OverlayTick {
     this.isPaused = false,
     this.isLiveAvailable = false,
     this.isSimple = false,
+    this.isCodeEntry = false,
   });
 
   factory OverlayTick.fromMap(Object? raw) {
@@ -134,12 +150,14 @@ class OverlayTick {
     final elapsed = raw['elapsed'];
     final liveAvailable = raw['liveAvailable'];
     final simple = raw['simple'];
+    final codeEntry = raw['codeEntry'];
     return OverlayTick(
       elapsedSeconds: elapsed is int ? elapsed : 0,
       isWarning: type == RecordingOverlayMessages.warnType,
       isPaused: type == RecordingOverlayMessages.pausedType,
       isLiveAvailable: liveAvailable == true,
       isSimple: simple == true,
+      isCodeEntry: codeEntry == true,
     );
   }
 
@@ -147,6 +165,10 @@ class OverlayTick {
   final bool isWarning;
   final bool isPaused;
   final bool isLiveAvailable;
+
+  /// Le bouton d'enregistrement affiche le champ de saisie du code room
+  /// inline (nouveau flux : le HOME envoie son code depuis le bouton rouge).
+  final bool isCodeEntry;
 
   /// Mode « simplifié » (capture LiveKit Track Egress) : l'overlay ne
   /// montre que « ouvrir ARENA » + « stop » — pause / forfait / Live sont

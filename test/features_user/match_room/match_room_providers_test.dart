@@ -154,15 +154,4 @@ void main() {
       expect(c.read(pendingScoreSubmissionProvider('m2')), isNull);
     });
   });
-
-  group('pendingRoomCodeProvider (optimistic code room)', () {
-    test('défaut null puis mémorise le code partagé par match', () {
-      final c = makeContainer([]);
-      expect(c.read(pendingRoomCodeProvider('m1')), isNull);
-
-      c.read(pendingRoomCodeProvider('m1').notifier).state = 'ABCD12';
-      expect(c.read(pendingRoomCodeProvider('m1')), 'ABCD12');
-      expect(c.read(pendingRoomCodeProvider('m2')), isNull);
-    });
-  });
 }

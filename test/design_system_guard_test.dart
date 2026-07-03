@@ -113,7 +113,10 @@ void main() {
   // du bouton flottant (recording_overlay.dart, isolate). Mix légitime :
   // ~16 `ArenaColors.*` (tokens) + ~11 `Colors.white/black/transparent` bruts
   // — l'overlay isolate n'a pas le thème, usage allowlisté dans check_colors.sh.
-  const colorsDotBaseline = 2423; // occurrences de `Colors.`
+  // 2423 → 2411 le 2026-07-03 : refonte flux Room (recording d'abord, code
+  // ensuite) — suppression de ShareCodeForm + CodeSharedInterstitial (dette
+  // nette réduite malgré l'ajout de StartRecordingForm + la saisie inline).
+  const colorsDotBaseline = 2411; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.

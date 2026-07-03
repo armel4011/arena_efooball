@@ -74,6 +74,21 @@ class _MatchRecordingLifecycleState
     return null;
   }
 
+  /// Nom d'équipe du joueur courant (posé quand il rejoint / démarre). Sert
+  /// de signal « ce joueur a rejoint la room » dans le nouveau flux.
+  static String? _teamNameFor(ArenaMatch m, String? selfId) {
+    if (selfId == m.player1Id) return m.player1TeamName;
+    if (selfId == m.player2Id) return m.player2TeamName;
+    return null;
+  }
+
+  /// Vrai quand le joueur courant a rejoint (team name non vide). Le HOME
+  /// le pose à « DÉMARRER L'ENREGISTREMENT », l'AWAY à « J'AI REJOINT LA
+  /// ROOM » — on ne démarre donc SON recording qu'à ce moment (l'AWAY ne
+  /// filme pas avant d'avoir le code / rejoint la room).
+  bool get _selfJoined =>
+      _teamNameFor(widget.match, widget.selfId)?.trim().isNotEmpty ?? false;
+
   @override
   void initState() {
     super.initState();
@@ -83,7 +98,13 @@ class _MatchRecordingLifecycleState
   @override
   void didUpdateWidget(MatchRecordingLifecycle old) {
     super.didUpdateWidget(old);
-    if (old.match.status != widget.match.status) {
+    // Réagir au changement de statut ET au passage null→set du team name du
+    // joueur courant : dans le nouveau flux, l'AWAY rejoint (pose son team
+    // name) alors que le match est DÉJÀ in_progress — c'est ce changement,
+    // pas le statut, qui doit déclencher son recording.
+    final wasJoined =
+        _teamNameFor(old.match, old.selfId)?.trim().isNotEmpty ?? false;
+    if (old.match.status != widget.match.status || wasJoined != _selfJoined) {
       _maybeReact();
     }
   }
@@ -101,14 +122,13 @@ class _MatchRecordingLifecycleState
         status == MatchStatus.cancelled ||
         status == MatchStatus.forfeited;
 
-    if (isLive && !_startAttempted) {
+    if (isLive && _selfJoined && !_startAttempted) {
       // Lock recording if this player has already submitted a score
       // for the match. Once a score is in, the match is either
       // pending-opponent, in dispute, or up for admin validation —
       // recording adds no value and would just chew battery.
-      final submissions = ref
-          .read(matchScoreSubmissionsProvider(widget.match.id))
-          .valueOrNull;
+      final submissions =
+          ref.read(matchScoreSubmissionsProvider(widget.match.id)).valueOrNull;
       final alreadySubmitted = submissions?.any(
             (s) => s['created_by'] == widget.selfId,
           ) ??
@@ -314,8 +334,7 @@ class _MatchRecordingLifecycleState
       missing.add(l10n.recordingPermMissingNotifications);
     }
     final list = missing.join(' + ');
-    if (bundle.microphone.needsSettings ||
-        bundle.notifications.needsSettings) {
+    if (bundle.microphone.needsSettings || bundle.notifications.needsSettings) {
       return l10n.recordingPermBundleNeedsSettings(list);
     }
     return l10n.recordingPermBundleDenied(list);
@@ -362,8 +381,7 @@ class _MatchRecordingLifecycleState
           final streams = next.valueOrNull;
           final eligible = streams != null &&
               streams.any(
-                (s) =>
-                    s.isPublic && s.isActive && s.playerId == widget.selfId,
+                (s) => s.isPublic && s.isActive && s.playerId == widget.selfId,
               );
           ref
               .read(recordingOverlayControllerProvider)
@@ -461,9 +479,8 @@ class _MatchRecordingLifecycleState
 
     // Provider LiveKit actif : bannière simple « enregistrement en cours »
     // (pas d'overlay/pause/forfait — capture publish-only enregistrée serveur).
-    final livekitState =
-        ref.watch(liveKitCaptureStateProvider).value ??
-            const LiveKitCaptureIdle();
+    final livekitState = ref.watch(liveKitCaptureStateProvider).value ??
+        const LiveKitCaptureIdle();
     if (livekitState is LiveKitCapturePublishing) {
       return _LifecycleBanner(
         icon: Icons.fiber_manual_record,

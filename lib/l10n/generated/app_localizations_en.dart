@@ -1419,6 +1419,40 @@ class AppLocalizationsEn extends AppLocalizations {
   String get roomReadyInRoomButton => 'I\'M IN THE ROOM';
 
   @override
+  String get roomReadyJoinedButton => 'I\'VE JOINED THE ROOM';
+
+  @override
+  String get startRecordingTitle => 'Prepare your match';
+
+  @override
+  String get startRecordingDesc =>
+      'Enter your team name, then start recording. You\'ll create your room in eFootball and send the code to your opponent from the floating button, without leaving the game.';
+
+  @override
+  String get startRecordingButton => 'START RECORDING';
+
+  @override
+  String get stepBodyHostPreparingTitle => 'The host is setting up the room';
+
+  @override
+  String get stepBodyHostPreparingDesc =>
+      'The home player is starting their recording and creating the room. The code will arrive here shortly.';
+
+  @override
+  String get stepBodyHomeAwaitCreateRoomTitle => 'Recording in progress';
+
+  @override
+  String get stepBodyHomeAwaitCreateRoomDesc =>
+      'Create your room in eFootball, then send the code to your opponent from the red floating button (the \"key\" mini).';
+
+  @override
+  String get stepBodyAwayAwaitCodeTitle => 'Waiting for the code';
+
+  @override
+  String get stepBodyAwayAwaitCodeDesc =>
+      'The host is creating the room. The room code will arrive here — you\'ll be able to join then.';
+
+  @override
   String get roomReadyCodeSharedBadge => 'CODE SHARED';
 
   @override

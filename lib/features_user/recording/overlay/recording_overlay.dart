@@ -127,19 +127,29 @@ class _ArenaOverlayRootState extends State<ArenaOverlayRoot> {
           onSubmit: _onCodeSubmitted,
           onFocusChange: _onFieldFocusChange,
         ),
-      OverlayMode.recording => RecordingOverlayButton(tick: _tick),
+      OverlayMode.recording => RecordingOverlayButton(
+          tick: _tick,
+          onSubmitCode: _onCodeSubmitted,
+          onFieldFocusChange: _onFieldFocusChange,
+        ),
       null => const SizedBox.shrink(),
     };
   }
 }
 
-/// Code-sender face : a compact card with a text field + "Envoyer". Pure
-/// widget — the IPC (`onSubmit`) and the focus/flag toggle (`onFocusChange`)
-/// are injected so it stays testable without a platform channel.
-class RoomCodeOverlayPanel extends StatefulWidget {
-  const RoomCodeOverlayPanel({
+/// Champ de saisie du code room réutilisable — carte compacte (titre +
+/// champ + « Envoyer » + badge « Envoyé »). Widget PUR : l'IPC (`onSubmit`)
+/// et le toggle de flag focus (`onFocusChange`) sont injectés, donc testable
+/// sans platform channel. Utilisé à deux endroits :
+///   * inline dans [RecordingOverlayButton] quand `tick.isCodeEntry` (nouveau
+///     flux : le HOME envoie son code depuis le bouton rouge) — `timerLabel`
+///     affiche alors le chrono d'enregistrement en tête ;
+///   * via [RoomCodeOverlayPanel] (mode code-sender legacy, sans timer).
+class RoomCodeField extends StatefulWidget {
+  const RoomCodeField({
     required this.onSubmit,
     required this.onFocusChange,
+    this.timerLabel,
     super.key,
   });
 
@@ -153,11 +163,15 @@ class RoomCodeOverlayPanel extends StatefulWidget {
   // ignore: avoid_positional_boolean_parameters
   final Future<void> Function(bool hasFocus) onFocusChange;
 
+  /// Chrono d'enregistrement (MM:SS) affiché en tête quand le champ est
+  /// rendu inline dans le bouton rouge. `null` = pas de bandeau chrono.
+  final String? timerLabel;
+
   @override
-  State<RoomCodeOverlayPanel> createState() => _RoomCodeOverlayPanelState();
+  State<RoomCodeField> createState() => _RoomCodeFieldState();
 }
 
-class _RoomCodeOverlayPanelState extends State<RoomCodeOverlayPanel> {
+class _RoomCodeFieldState extends State<RoomCodeField> {
   final _controller = TextEditingController();
   String? _sentCode;
   bool _tooShort = false;
@@ -184,6 +198,7 @@ class _RoomCodeOverlayPanelState extends State<RoomCodeOverlayPanel> {
 
   @override
   Widget build(BuildContext context) {
+    final timer = widget.timerLabel;
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 320),
@@ -199,6 +214,29 @@ class _RoomCodeOverlayPanelState extends State<RoomCodeOverlayPanel> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (timer != null) ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.fiber_manual_record,
+                      color: ArenaColors.danger,
+                      size: 12,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      timer,
+                      style: const TextStyle(
+                        color: ArenaColors.danger,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                        fontFeatures: [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+              ],
               const Text(
                 'Code de la room',
                 textAlign: TextAlign.center,
@@ -323,6 +361,26 @@ class _RoomCodeOverlayPanelState extends State<RoomCodeOverlayPanel> {
   }
 }
 
+/// Code-sender face (mode legacy) : la carte plein panneau réutilisant
+/// [RoomCodeField]. Conservée pour le mode `OverlayMode.codeSender` ; le
+/// nouveau flux passe par la saisie inline du bouton d'enregistrement.
+class RoomCodeOverlayPanel extends StatelessWidget {
+  const RoomCodeOverlayPanel({
+    required this.onSubmit,
+    required this.onFocusChange,
+    super.key,
+  });
+
+  final void Function(String code) onSubmit;
+  // ignore: avoid_positional_boolean_parameters
+  final Future<void> Function(bool hasFocus) onFocusChange;
+
+  @override
+  Widget build(BuildContext context) {
+    return RoomCodeField(onSubmit: onSubmit, onFocusChange: onFocusChange);
+  }
+}
+
 /// Recording face : the anti-cheat floating button.
 ///
 /// Gestures — collapsed: tap → expand into a 4-mini-button cardinal cluster
@@ -338,9 +396,23 @@ class _RoomCodeOverlayPanelState extends State<RoomCodeOverlayPanel> {
 /// Receives its tick from [ArenaOverlayRoot] (the sole stream subscriber)
 /// rather than listening to `overlayListener` itself.
 class RecordingOverlayButton extends StatefulWidget {
-  const RecordingOverlayButton({required this.tick, super.key});
+  const RecordingOverlayButton({
+    required this.tick,
+    required this.onSubmitCode,
+    required this.onFieldFocusChange,
+    super.key,
+  });
 
   final OverlayTick tick;
+
+  /// Appelé avec le code normalisé quand le HOME l'envoie depuis la saisie
+  /// inline (nouveau flux). Route vers `submit_room_code` → main.
+  final void Function(String code) onSubmitCode;
+
+  /// Toggle du flag focus pendant l'édition du champ (focusPointer ↔
+  /// defaultFlag), comme pour [RoomCodeField].
+  // ignore: avoid_positional_boolean_parameters
+  final Future<void> Function(bool hasFocus) onFieldFocusChange;
 
   @override
   State<RecordingOverlayButton> createState() => _RecordingOverlayButtonState();
@@ -379,12 +451,32 @@ class _RecordingOverlayButtonState extends State<RecordingOverlayButton> {
 
   @override
   Widget build(BuildContext context) {
+    // Saisie du code inline (le HOME envoie son code depuis le bouton rouge).
+    // L'overlay a été agrandi côté main (resizeToCodeEntry) ; on rend la même
+    // carte que le panneau, avec le chrono en tête.
+    if (_tick.isCodeEntry) {
+      return RoomCodeField(
+        onSubmit: widget.onSubmitCode,
+        onFocusChange: widget.onFieldFocusChange,
+        timerLabel: _tick.formatted,
+      );
+    }
     return SizedBox(
       width: 220,
       height: 220,
       child: Stack(
         alignment: Alignment.center,
         children: [
+          // SW « envoyer le code » — nouveau flux : le HOME, déjà en train
+          // d'enregistrer, ouvre la saisie du code room. Masqué en mode simple
+          // (LiveKit egress n'a pas de bouton flottant de code).
+          _MiniButton(
+            visible: _expanded && !_tick.isSimple,
+            offset: const Offset(-_miniRadius * 0.707, _miniRadius * 0.707),
+            icon: Icons.vpn_key,
+            color: ArenaColors.gameEfoot,
+            onTap: () => _onMiniTap(RecordingOverlayMessages.askEnterCodeType),
+          ),
           // 4 cardinals — N pause / E focus / S save+stop / W forfeit.
           // IgnorePointer + opacity 0 while collapsed so they don't eat
           // touches around the main button.
@@ -515,7 +607,8 @@ class _MiniButton extends StatelessWidget {
     return AnimatedSlide(
       duration: const Duration(milliseconds: 160),
       curve: Curves.easeOutCubic,
-      offset: visible ? Offset(offset.dx / size, offset.dy / size) : Offset.zero,
+      offset:
+          visible ? Offset(offset.dx / size, offset.dy / size) : Offset.zero,
       child: AnimatedOpacity(
         duration: const Duration(milliseconds: 160),
         opacity: visible ? 1 : 0,

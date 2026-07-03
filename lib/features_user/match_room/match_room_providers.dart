@@ -9,13 +9,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// (back-to-bracket-and-return). Le widget tree ne le porte pas.
 final pendingScoreSubmissionProvider =
     StateProvider.family<Map<String, dynamic>?, String>(
-        (ref, matchId) => null,);
-
-/// Optimistic state pour le partage du code room (HOME) — survit aussi
-/// aux remounts. Permet d'afficher l'interstitial "code partagé" même
-/// si la sync DB tarde.
-final pendingRoomCodeProvider =
-    StateProvider.family<String?, String>((ref, matchId) => null);
+  (ref, matchId) => null,
+);
 
 /// Snapshot des deux profils players d'un match. Chargé en parallèle
 /// pour alimenter le header.
@@ -43,8 +38,8 @@ final matchGameTypeProvider =
 });
 
 /// Loads the two players' profiles in parallel for the match header.
-final matchPlayersProvider =
-    FutureProvider.family.autoDispose<MatchPlayers, String>((ref, matchId) async {
+final matchPlayersProvider = FutureProvider.family
+    .autoDispose<MatchPlayers, String>((ref, matchId) async {
   // On ne re-fetch les profils QUE si la paire de joueurs change, via
   // `selectAsync` sur `(player1Id, player2Id)` : sans ça, chaque tick realtime
   // de `matchByIdProvider` relancerait deux appels réseau profils inutiles.

@@ -123,4 +123,55 @@ void main() {
       expect(focusEvents, contains(true));
     });
   });
+
+  group('RecordingOverlayButton (saisie inline du code)', () {
+    testWidgets(
+        'isCodeEntry:true → rend le champ + chrono ; submit → onSubmitCode',
+        (tester) async {
+      String? sent;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: RecordingOverlayButton(
+              tick: const OverlayTick(
+                elapsedSeconds: 65,
+                isWarning: false,
+                isCodeEntry: true,
+              ),
+              onSubmitCode: (c) => sent = c,
+              onFieldFocusChange: (_) async {},
+            ),
+          ),
+        ),
+      );
+
+      // Chrono en tête + champ de saisie visible.
+      expect(find.text('01:05'), findsOneWidget);
+      expect(find.byType(TextField), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), 'xyz99');
+      await tester.tap(find.text('ENVOYER'));
+      await tester.pump();
+
+      expect(sent, 'XYZ99');
+    });
+
+    testWidgets('isCodeEntry:false → bouton chrono, pas de champ',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: RecordingOverlayButton(
+              tick: const OverlayTick(elapsedSeconds: 3, isWarning: false),
+              onSubmitCode: (_) {},
+              onFieldFocusChange: (_) async {},
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(TextField), findsNothing);
+      expect(find.text('00:03'), findsOneWidget);
+    });
+  });
 }

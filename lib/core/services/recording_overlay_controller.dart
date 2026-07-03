@@ -63,6 +63,11 @@ class RecordingOverlayController {
   // Mode simplifié (capture LiveKit Track Egress) : l'overlay ne montre que
   // « ouvrir ARENA » + « stop ». Propagé dans chaque tick payload.
   bool _simpleMode = false;
+  // Vrai quand le HOME a ouvert la saisie du code room depuis le bouton
+  // d'enregistrement (nouveau flux). L'overlay a été agrandi côté main et
+  // affiche le champ inline. DOIT être propagé dans CHAQUE tick tant que la
+  // saisie est ouverte, sinon le premier tick périodique refermerait le champ.
+  bool _codeEntry = false;
 
   /// Total length of a recording — must match `RecordingService.maxDuration`.
   /// Used by the overlay to flash a warning in the last 30 s.
@@ -103,6 +108,7 @@ class RecordingOverlayController {
           paused: _pausedElapsed != null,
           liveAvailable: _liveAvailable,
           simple: _simpleMode,
+          codeEntry: _codeEntry,
         ),
       ),
     );
@@ -200,6 +206,49 @@ class RecordingOverlayController {
     }
   }
 
+  /// Ouvre la saisie du code room DANS le bouton d'enregistrement (nouveau
+  /// flux : le HOME envoie son code depuis le bouton rouge, sans quitter
+  /// eFootball). Agrandit l'overlay pour loger le champ + clavier, puis
+  /// pousse un tick immédiat `codeEntry:true` (le dispatcher rend le champ).
+  /// Aucun re-`showOverlay` — juste un `resizeOverlay` (sûr, cf. quirk #4).
+  Future<void> enterCodeEntry() async {
+    if (_codeEntry) return;
+    _codeEntry = true;
+    await _platform.resizeToCodeEntry();
+    _pushTickNow();
+  }
+
+  /// Referme la saisie du code : redonne au bouton sa taille 220×220 et
+  /// pousse un tick `codeEntry:false`. Appelé après un envoi de code réussi.
+  Future<void> exitCodeEntry() async {
+    if (!_codeEntry) return;
+    _codeEntry = false;
+    await _platform.resizeToRecording();
+    _pushTickNow();
+  }
+
+  /// Pousse immédiatement un tick reflétant l'état courant (chrono +
+  /// `codeEntry`), sans attendre le prochain Timer périodique. Utilisé par
+  /// enter/exitCodeEntry pour un affichage instantané du champ / du bouton.
+  void _pushTickNow() {
+    final start = _startedAt;
+    final elapsed =
+        start == null ? Duration.zero : DateTime.now().difference(start);
+    final remaining = totalDuration - elapsed;
+    unawaited(
+      _platform.shareData(
+        RecordingOverlayMessages.tick(
+          elapsedSeconds: elapsed.inSeconds,
+          warning: remaining <= const Duration(seconds: 30),
+          paused: _pausedElapsed != null,
+          liveAvailable: _liveAvailable,
+          simple: _simpleMode,
+          codeEntry: _codeEntry,
+        ),
+      ),
+    );
+  }
+
   Future<bool> _ensurePermission() async {
     final granted = await _platform.isPermissionGranted();
     if (granted) return true;
@@ -227,6 +276,7 @@ class RecordingOverlayController {
     _pausedElapsed = null;
     _liveAvailable = false;
     _simpleMode = false;
+    _codeEntry = false;
     await _listener?.cancel();
     _listener = null;
     await _portSub?.cancel();
@@ -253,6 +303,7 @@ class RecordingOverlayController {
         warning: false,
         paused: true,
         simple: _simpleMode,
+        codeEntry: _codeEntry,
       ),
     );
   }
@@ -273,6 +324,7 @@ class RecordingOverlayController {
         elapsedSeconds: paused.inSeconds,
         warning: totalDuration - paused <= const Duration(seconds: 30),
         simple: _simpleMode,
+        codeEntry: _codeEntry,
       ),
     );
   }
@@ -289,9 +341,23 @@ class RecordingOverlayController {
     final code = roomCodeFromMessage(event);
     if (code != null) {
       _roomCodes.add(code);
+      // Envoi réussi → on referme la saisie et on rend au bouton sa taille.
+      unawaited(exitCodeEntry());
+      return;
+    }
+    // Le mini « envoyer le code » du bouton : affaire interne overlay/resize,
+    // pas une OverlayAction (pause/forfait/…). On ouvre la saisie inline.
+    if (_isEnterCodeRequest(event)) {
+      unawaited(enterCodeEntry());
       return;
     }
     _actions.add(_parseAction(event));
+  }
+
+  static bool _isEnterCodeRequest(Object? event) {
+    if (event == RecordingOverlayMessages.askEnterCodeType) return true;
+    return event is Map &&
+        event['type'] == RecordingOverlayMessages.askEnterCodeType;
   }
 
   void _bindListener() {
@@ -338,6 +404,7 @@ class RecordingOverlayController {
           warning: isWarning,
           liveAvailable: _liveAvailable,
           simple: _simpleMode,
+          codeEntry: _codeEntry,
         ),
       );
     });
@@ -378,6 +445,11 @@ abstract class OverlayPlatform {
   /// Redimensionne l'overlay AFFICHÉ au format bouton d'enregistrement
   /// (220×220, draggable) — utilisé par le morph, sans re-show.
   Future<void> resizeToRecording();
+
+  /// Redimensionne l'overlay AFFICHÉ au format saisie de code (fenêtre plus
+  /// grande, NON draggable pour ne pas voler les taps du champ/bouton —
+  /// quirk #3) — utilisé quand le HOME ouvre la saisie depuis le bouton rouge.
+  Future<void> resizeToCodeEntry();
 
   Future<void> closeOverlay();
   Future<void> shareData(Object data);
@@ -447,6 +519,19 @@ class _DefaultOverlayPlatform implements OverlayPlatform {
     final dpr = PlatformDispatcher.instance.views.first.devicePixelRatio;
     final sizePx = (220 * dpr).round();
     await FlutterOverlayWindow.resizeOverlay(sizePx, sizePx, true);
+  }
+
+  @override
+  Future<void> resizeToCodeEntry() async {
+    final dpr = PlatformDispatcher.instance.views.first.devicePixelRatio;
+    // enableDrag: false — pendant la saisie, le handler de drag natif volerait
+    // les taps du champ/bouton (quirk #3). Retour à draggable via
+    // resizeToRecording quand la saisie se referme.
+    await FlutterOverlayWindow.resizeOverlay(
+      (360 * dpr).round(),
+      (380 * dpr).round(),
+      false,
+    );
   }
 
   @override

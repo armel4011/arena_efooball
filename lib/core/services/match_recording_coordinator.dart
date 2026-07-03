@@ -102,6 +102,9 @@ class MatchRecordingCoordinator {
   Stream<String> get goLiveRequests => _goLiveController.stream;
 
   StreamSubscription<OverlayAction>? _actionsSub;
+  // Codes room saisis dans le bouton flottant (nouveau flux : le HOME envoie
+  // son code depuis le bouton rouge, pendant l'enregistrement).
+  StreamSubscription<String>? _roomCodeSub;
   Timer? _graceTimer;
 
   // Captured for the duration of a session — needed to call markForfeit.
@@ -144,7 +147,25 @@ class MatchRecordingCoordinator {
     await _actionsSub?.cancel();
     _actionsSub = _overlay.actions.listen(_onOverlayAction);
 
+    // Le HOME envoie son code eFootball depuis le bouton flottant → persiste
+    // en base (room_code uniquement, sans toucher au statut in_progress).
+    await _roomCodeSub?.cancel();
+    _roomCodeSub = _overlay.roomCodeSubmissions.listen(_onRoomCodeSubmitted);
+
     _emit(CoordinatorRecording(matchId: matchId, playerId: playerId));
+  }
+
+  Future<void> _onRoomCodeSubmitted(String code) async {
+    final matchId = _matchId;
+    if (matchId == null) return;
+    try {
+      await _matches.sendRoomCode(matchId: matchId, code: code);
+    } catch (e, st) {
+      await Sentry.captureException(e, stackTrace: st);
+      if (kDebugMode) {
+        debugPrint('[coordinator] sendRoomCode failed: $e\n$st');
+      }
+    }
   }
 
   /// Normal stop — the match ended on its own (score validated, etc.).
@@ -175,6 +196,8 @@ class MatchRecordingCoordinator {
     _graceTimer = null;
     await _actionsSub?.cancel();
     _actionsSub = null;
+    await _roomCodeSub?.cancel();
+    _roomCodeSub = null;
     final matchId = _matchId ?? '';
     _emit(
       CoordinatorStopped(
@@ -191,6 +214,7 @@ class MatchRecordingCoordinator {
   Future<void> dispose() async {
     _graceTimer?.cancel();
     await _actionsSub?.cancel();
+    await _roomCodeSub?.cancel();
     await _stateController.close();
     await _focusController.close();
     await _saveStopController.close();
@@ -268,8 +292,7 @@ class MatchRecordingCoordinator {
 
   /// Public entry for the in-app actions sheet to declare a forfeit.
   /// Mirrors the overlay "Arrêter (forfait)" tile.
-  Future<void> declareForfeit() =>
-      _declareForfeit('user_chose_forfeit');
+  Future<void> declareForfeit() => _declareForfeit('user_chose_forfeit');
 
   Future<void> _onPause() async {
     final matchId = _matchId;
@@ -337,6 +360,8 @@ class MatchRecordingCoordinator {
         debugPrint('[coordinator] overlay.stop() failed: $e\n$st');
       }
     }
+    await _roomCodeSub?.cancel();
+    _roomCodeSub = null;
 
     await _matches.markForfeit(
       matchId: matchId,

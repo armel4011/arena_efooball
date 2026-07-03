@@ -8,7 +8,7 @@ import 'package:arena/features_user/match_room/match_room_page.dart'
 import 'package:arena/features_user/match_room/widgets/match_outcome_views.dart';
 import 'package:arena/features_user/match_room/widgets/room_ready_view.dart';
 import 'package:arena/features_user/match_room/widgets/score_flow_view.dart';
-import 'package:arena/features_user/match_room/widgets/share_code_form.dart';
+import 'package:arena/features_user/match_room/widgets/start_recording_form.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 
@@ -40,7 +40,7 @@ class StepBody extends StatelessWidget {
           ? (role == MatchRole.observer
               ? _observerWaiting(context)
               : DraughtsLobbyView(match: match, selfId: selfId))
-          : _stepShareCode(context),
+          : _stepPrepare(context),
       MatchStatus.ready => isDraughts
           ? (role == MatchRole.observer
               ? _observerWaiting(context)
@@ -65,7 +65,7 @@ class StepBody extends StatelessWidget {
                   ))
             : isDraughts
                 ? DraughtsMatchView(match: match, selfId: selfId)
-                : ScoreFlowView(match: match, role: role),
+                : _inProgressPlayerBody(context),
       MatchStatus.disputed =>
         DisputedView(match: match, selfId: selfId, isDraughts: isDraughts),
       MatchStatus.completed =>
@@ -102,7 +102,10 @@ class StepBody extends StatelessWidget {
     );
   }
 
-  Widget _stepShareCode(BuildContext context) {
+  /// Statut `pending`/`scheduled` (nouveau flux) : le HOME voit l'écran de
+  /// démarrage (nom d'équipe + « DÉMARRER L'ENREGISTREMENT ») ; l'AWAY et
+  /// l'observer attendent que l'hôte prépare la room.
+  Widget _stepPrepare(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     if (role == MatchRole.observer) {
       return ObserverWaitingPlaceholder(
@@ -112,14 +115,60 @@ class StepBody extends StatelessWidget {
       );
     }
     if (!role.isHomeOf(match)) {
-      // AWAY player : attend que HOME envoie le code.
+      // AWAY : l'hôte démarre son enregistrement puis créera la room.
       return ObserverWaitingPlaceholder(
         icon: Icons.hourglass_top,
-        title: l10n.stepBodyAwaitHomeCodeTitle,
-        description: l10n.stepBodyAwaitHomeCodeDesc,
+        title: l10n.stepBodyHostPreparingTitle,
+        description: l10n.stepBodyHostPreparingDesc,
       );
     }
-    return ShareCodeForm(match: match);
+    return StartRecordingForm(match: match, role: role);
+  }
+
+  /// Nom d'équipe du joueur courant (signal « a rejoint la room »).
+  String? _selfTeamName() {
+    if (selfId == match.player1Id) return match.player1TeamName;
+    if (selfId == match.player2Id) return match.player2TeamName;
+    return null;
+  }
+
+  /// Corps `in_progress` pour un JOUEUR (non-dames, non-observer). Sous-état
+  /// selon le rôle / la présence du code / le fait d'avoir rejoint.
+  Widget _inProgressPlayerBody(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final isHome = role.isHomeOf(match);
+    final code = match.roomCode;
+    final hasCode = code != null && code.isNotEmpty;
+    final selfJoined = _selfTeamName()?.trim().isNotEmpty ?? false;
+
+    // HOME sans code encore : il enregistre, doit créer sa room dans eFootball
+    // puis envoyer le code depuis le bouton flottant rouge. (Testé AVANT
+    // `selfJoined` : le HOME a posé son team name au démarrage.)
+    if (isHome && !hasCode) {
+      return ObserverWaitingPlaceholder(
+        icon: Icons.fiber_manual_record,
+        title: l10n.stepBodyHomeAwaitCreateRoomTitle,
+        description: l10n.stepBodyHomeAwaitCreateRoomDesc,
+      );
+    }
+
+    // Le joueur a rejoint (team name posé) → flux de score normal.
+    if (selfJoined) {
+      return ScoreFlowView(match: match, role: role);
+    }
+
+    // AWAY, code pas encore arrivé : attend le code de l'hôte.
+    if (!hasCode) {
+      return ObserverWaitingPlaceholder(
+        icon: Icons.hourglass_top,
+        title: l10n.stepBodyAwayAwaitCodeTitle,
+        description: l10n.stepBodyAwayAwaitCodeDesc,
+      );
+    }
+
+    // AWAY, code présent, pas encore rejoint : code + nom d'équipe +
+    // « J'AI REJOINT LA ROOM ».
+    return RoomReadyView(match: match, role: role);
   }
 }
 

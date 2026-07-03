@@ -29,6 +29,7 @@ void main() {
   late _MockMatches matches;
   late _MockBringer bringer;
   late StreamController<OverlayAction> actions;
+  late StreamController<String> roomCodes;
   late MatchRecordingCoordinator coordinator;
 
   setUp(() {
@@ -37,8 +38,10 @@ void main() {
     matches = _MockMatches();
     bringer = _MockBringer();
     actions = StreamController<OverlayAction>.broadcast();
+    roomCodes = StreamController<String>.broadcast();
 
     when(() => overlay.actions).thenAnswer((_) => actions.stream);
+    when(() => overlay.roomCodeSubmissions).thenAnswer((_) => roomCodes.stream);
     when(
       () => recording.start(
         matchId: any(named: 'matchId'),
@@ -75,6 +78,12 @@ void main() {
       ),
     ).thenAnswer((_) async {});
     when(() => bringer.bringArenaToFront()).thenAnswer((_) async => true);
+    when(
+      () => matches.sendRoomCode(
+        matchId: any(named: 'matchId'),
+        code: any(named: 'code'),
+      ),
+    ).thenAnswer((_) async {});
 
     coordinator = MatchRecordingCoordinator(
       recording: recording,
@@ -87,10 +96,12 @@ void main() {
 
   tearDown(() async {
     await actions.close();
+    await roomCodes.close();
     await coordinator.dispose();
   });
 
-  test('startForMatch boots both recording + overlay and goes Recording', () async {
+  test('startForMatch boots both recording + overlay and goes Recording',
+      () async {
     await coordinator.startForMatch(
       matchId: 'match-1',
       playerId: 'player-1',
@@ -101,6 +112,21 @@ void main() {
         .called(1);
     verify(() => overlay.startOrMorphToRecording(matchId: 'match-1')).called(1);
     expect(coordinator.state, isA<CoordinatorRecording>());
+  });
+
+  test('un code room saisi dans le bouton → sendRoomCode(matchId, code)',
+      () async {
+    await coordinator.startForMatch(
+      matchId: 'match-1',
+      playerId: 'player-1',
+      opponentId: 'player-2',
+    );
+
+    roomCodes.add('ABC123');
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+
+    verify(() => matches.sendRoomCode(matchId: 'match-1', code: 'ABC123'))
+        .called(1);
   });
 
   test('focusMain action invokes BringToFront', () async {
@@ -162,7 +188,8 @@ void main() {
     );
   });
 
-  test('pause grace expiry declares forfeit with pause_grace_expired', () async {
+  test('pause grace expiry declares forfeit with pause_grace_expired',
+      () async {
     await coordinator.startForMatch(
       matchId: 'match-1',
       playerId: 'player-1',

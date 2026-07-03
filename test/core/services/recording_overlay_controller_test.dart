@@ -10,6 +10,7 @@ class _FakeOverlayPlatform implements OverlayPlatform {
   bool overlayShown = false;
   bool codeSenderShown = false;
   bool resizedToRecording = false;
+  bool resizedToCodeEntry = false;
   int showOverlayCount = 0;
   Object? lastSharedData;
   final sharedData = <Object>[];
@@ -41,6 +42,11 @@ class _FakeOverlayPlatform implements OverlayPlatform {
   @override
   Future<void> resizeToRecording() async {
     resizedToRecording = true;
+  }
+
+  @override
+  Future<void> resizeToCodeEntry() async {
+    resizedToCodeEntry = true;
   }
 
   @override
@@ -194,7 +200,8 @@ void main() {
       expect(controller.isShowing, isTrue);
     });
 
-    test('startOrMorphToRecording avec code-sender ouvert → morph, PAS de '
+    test(
+        'startOrMorphToRecording avec code-sender ouvert → morph, PAS de '
         '2ᵉ showOverlay', () async {
       await controller.showAsCodeSender();
       await controller.startOrMorphToRecording();
@@ -203,7 +210,8 @@ void main() {
       expect(platform.resizedToRecording, isTrue);
     });
 
-    test('process recréé (MIUI) : overlay natif encore actif mais mémoire '
+    test(
+        'process recréé (MIUI) : overlay natif encore actif mais mémoire '
         'perdue → morph, PAS de 2ᵉ showOverlay (anti panneau figé)', () async {
       // Le panneau code-sender a été montré par un process précédent (la
       // fenêtre native survit), puis l'app a été tuée/relancée : un NOUVEAU
@@ -218,6 +226,63 @@ void main() {
       expect(platform.resizedToRecording, isTrue); // morph par resize
       expect(fresh.isShowing, isTrue);
       await fresh.dispose();
+    });
+  });
+
+  group('saisie inline du code (bouton recording)', () {
+    bool tickCodeEntry(Object d) => d is Map && d['codeEntry'] == true;
+
+    test('enterCodeEntry agrandit + pousse un tick codeEntry:true', () async {
+      await controller.start();
+      platform.sharedData.clear();
+      await controller.enterCodeEntry();
+      expect(platform.resizedToCodeEntry, isTrue);
+      expect(platform.sharedData.any(tickCodeEntry), isTrue);
+    });
+
+    test('exitCodeEntry rétrécit + pousse un tick codeEntry:false', () async {
+      await controller.start();
+      await controller.enterCodeEntry();
+      platform
+        ..sharedData.clear()
+        ..resizedToRecording = false;
+      await controller.exitCodeEntry();
+      expect(platform.resizedToRecording, isTrue);
+      expect(platform.sharedData.any(tickCodeEntry), isFalse);
+    });
+
+    test('ask_enter_code ouvre la saisie (resize) sans émettre d’action',
+        () async {
+      await controller.start();
+      OverlayAction? action;
+      final sub = controller.actions.listen((a) => action = a);
+      platform.emit(RecordingOverlayMessages.askEnterCodeType);
+      await Future<void>.delayed(Duration.zero);
+      expect(platform.resizedToCodeEntry, isTrue);
+      expect(action, isNull);
+      await sub.cancel();
+    });
+
+    test('submit_room_code émet le code ET referme la saisie', () async {
+      await controller.start();
+      await controller.enterCodeEntry();
+      platform.resizedToRecording = false;
+      final next = controller.roomCodeSubmissions.first;
+      platform.emit(RecordingOverlayMessages.submitRoomCode('ABC123'));
+      expect(await next, 'ABC123');
+      await Future<void>.delayed(Duration.zero);
+      expect(platform.resizedToRecording, isTrue);
+    });
+
+    test('les ticks périodiques gardent codeEntry:true pendant la saisie',
+        () async {
+      await controller.start();
+      await controller.enterCodeEntry();
+      platform.sharedData.clear();
+      // Le tick périodique (via setLiveAvailable qui pousse un tick immédiat)
+      // doit conserver codeEntry:true tant que la saisie est ouverte.
+      controller.setLiveAvailable(true);
+      expect(platform.sharedData.any(tickCodeEntry), isTrue);
     });
   });
 

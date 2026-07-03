@@ -124,17 +124,18 @@ class MatchRepository {
 
   // ─── Writes ────────────────────────────────────────────────────────────
 
-  /// HOME shares the eFootball room code: stamps `room_code`,
-  /// claims the home seat, and flips the match to `ready`.
-  Future<void> setRoomCode({
+  /// Nouveau flux : le HOME envoie son code eFootball depuis le bouton
+  /// flottant rouge APRÈS avoir déjà démarré son enregistrement (le match
+  /// est donc déjà `in_progress`). On n'écrit QUE `room_code` — surtout pas
+  /// `status`, sinon on régresserait `in_progress → ready` et on casserait
+  /// la state machine (et le recording en cours). `home_player_id` est déjà
+  /// posé (seed du bracket / démarrage), donc pas réécrit ici.
+  Future<void> sendRoomCode({
     required String matchId,
-    required String hostProfileId,
     required String code,
   }) async {
     await _client.from(_table).update({
       'room_code': code.trim().toUpperCase(),
-      'home_player_id': hostProfileId,
-      'status': 'ready',
     }).eq('id', matchId);
   }
 
@@ -302,8 +303,8 @@ final competitionMatchesProvider = StreamProvider.family
 /// stream WebSocket de rester actif pour chaque match visité. Le cache
 /// disque ne garde lui que le dernier JSON connu par match (borne, ~Ko) →
 /// la MatchRoom reste affichee hors-ligne au lieu d'une ErrorState.
-final matchByIdProvider =
-    StreamProvider.family.autoDispose<ArenaMatch?, String>((ref, matchId) async* {
+final matchByIdProvider = StreamProvider.family
+    .autoDispose<ArenaMatch?, String>((ref, matchId) async* {
   final cache = await ref.watch(persistentCacheProvider.future);
   yield* cache.hydrateSingle<ArenaMatch>(
     namespace: 'match.$matchId',
