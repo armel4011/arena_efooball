@@ -397,6 +397,24 @@ class _MatchRecordingLifecycleState
     // coordinator : stopCleanly + push matchId via `goLiveRequests`,
     // qu'on récupère ici pour appeler `joinAsBroadcaster`.
     ref
+      // Code room LIVE vers l'overlay : on écoute le provider Realtime du
+      // match (et pas le cycle de vie du widget) — quand le HOME ré-envoie un
+      // code, le provider émet même si l'app est en arrière-plan (le joueur
+      // est dans eFootball), et ce callback pousse le nouveau code à la clé de
+      // l'AWAY. `didUpdateWidget` ne suffit pas : les widgets ne se
+      // reconstruisent pas tant que l'app n'est pas au premier plan.
+      ..listen<AsyncValue<ArenaMatch?>>(
+        matchByIdProvider(widget.match.id),
+        (_, next) {
+          final m = next.valueOrNull;
+          if (m == null) return;
+          final isHome =
+              widget.selfId != null && widget.selfId == m.homePlayerId;
+          ref
+              .read(recordingOverlayControllerProvider)
+              .setRoomCodeInfo(m.roomCode, isHome);
+        },
+      )
       ..listen<AsyncValue<List<MatchStream>>>(
         matchStreamsByMatchProvider(widget.match.id),
         (_, next) {
