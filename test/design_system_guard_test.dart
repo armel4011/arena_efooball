@@ -122,7 +122,9 @@ void main() {
   // `RoomCodeView` — la clé du bouton flottant affiche le code + « Copier ».
   // 2428 → 2424 le 2026-07-03 : suppression du bouton « Copier » (écriture
   // presse-papier impossible depuis un overlay sur MIUI) → affichage seul.
-  const colorsDotBaseline = 2424; // occurrences de `Colors.`
+  // 2424 → 2428 le 2026-07-03 : bouton « Copier » ré-ajouté (best-effort,
+  // marche hors MIUI) à la demande, à côté de l'affichage du code.
+  const colorsDotBaseline = 2428; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.
