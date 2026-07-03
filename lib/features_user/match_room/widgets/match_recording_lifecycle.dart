@@ -62,6 +62,7 @@ class _MatchRecordingLifecycleState
     extends ConsumerState<MatchRecordingLifecycle> {
   bool _startAttempted = false;
   String? _startError;
+  StreamSubscription<void>? _codeViewSub;
 
   bool get _isPlayer =>
       widget.selfId != null &&
@@ -93,6 +94,34 @@ class _MatchRecordingLifecycleState
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _maybeReact());
+    // Quand l'AWAY ouvre la clé (vue du code), on refait un fetch REST frais :
+    // en arrière-plan (eFootball) le Realtime peut être tombé, donc le code
+    // affiché serait périmé — le REST one-shot passe et remet le bon code.
+    _codeViewSub = ref
+        .read(recordingOverlayControllerProvider)
+        .codeViewRequests
+        .listen((_) => _refreshRoomCode());
+  }
+
+  @override
+  void dispose() {
+    _codeViewSub?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _refreshRoomCode() async {
+    if (!_isAndroidNative || !_isPlayer) return;
+    try {
+      final m =
+          await ref.read(matchRepositoryProvider).fetchById(widget.match.id);
+      if (m == null || !mounted) return;
+      final isHome = widget.selfId != null && widget.selfId == m.homePlayerId;
+      ref
+          .read(recordingOverlayControllerProvider)
+          .setRoomCodeInfo(m.roomCode, isHome);
+    } catch (_) {
+      // Best-effort : on garde le dernier code connu affiché.
+    }
   }
 
   @override

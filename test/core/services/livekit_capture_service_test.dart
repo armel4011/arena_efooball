@@ -101,6 +101,9 @@ class _FakeOverlay implements RecordingOverlayController {
   Stream<String> get roomCodeSubmissions => const Stream<String>.empty();
 
   @override
+  Stream<void> get codeViewRequests => const Stream<void>.empty();
+
+  @override
   bool get isShowing => false;
 
   @override

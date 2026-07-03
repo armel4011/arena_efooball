@@ -103,6 +103,17 @@ class MatchRepository {
         .map((rows) => rows.isEmpty ? null : ArenaMatch.fromJson(rows.first));
   }
 
+  /// Lecture REST one-shot d'un match (pas de Realtime). Utilisée pour
+  /// rafraîchir le code room à la demande quand l'AWAY ouvre la clé du bouton
+  /// flottant : en arrière-plan (eFootball), le WebSocket Realtime tombe
+  /// (Doze), mais une requête REST ponctuelle passe (foreground service
+  /// recording ⇒ process vivant).
+  Future<ArenaMatch?> fetchById(String matchId) async {
+    final row =
+        await _client.from(_table).select().eq('id', matchId).maybeSingle();
+    return row == null ? null : ArenaMatch.fromJson(row);
+  }
+
   /// Realtime stream of `score_submitted` events for a match. Used by
   /// the score-validation step to detect when both players have posted.
   ///

@@ -42,6 +42,10 @@ class RecordingOverlayController {
   final _actions = StreamController<OverlayAction>.broadcast();
   // Codes room tapés par le HOME dans le panneau overlay code-sender.
   final _roomCodes = StreamController<String>.broadcast();
+  // Émis quand l'AWAY OUVRE la vue lecture seule du code (clé) — le cycle de
+  // vie déclenche alors un fetch REST frais du code (le Realtime peut être
+  // tombé en arrière-plan dans eFootball).
+  final _codeViewRequests = StreamController<void>.broadcast();
   // Vrai entre un show* et le stop() : permet au cycle de vie de choisir
   // entre morphToRecording (overlay déjà ouvert) et start (rien d'ouvert).
   bool _overlayShown = false;
@@ -88,6 +92,10 @@ class RecordingOverlayController {
   /// Codes room soumis depuis le panneau overlay code-sender (HOME).
   /// L'écran de partage du code s'y abonne pour appeler `setRoomCode`.
   Stream<String> get roomCodeSubmissions => _roomCodes.stream;
+
+  /// Émis quand l'AWAY ouvre la vue lecture seule du code (tap sur la clé).
+  /// `MatchRecordingLifecycle` s'y abonne pour rafraîchir le code (fetch REST).
+  Stream<void> get codeViewRequests => _codeViewRequests.stream;
 
   /// Vrai tant qu'un overlay (code-sender OU recording) est affiché. Le
   /// cycle de vie l'inspecte : si `true` au passage in_progress, on
@@ -248,6 +256,9 @@ class RecordingOverlayController {
     await _platform.resizeToCodeEntry();
     await _platform.moveToTop();
     _pushTickNow();
+    // Demande un fetch REST frais du code : en arrière-plan (eFootball) le
+    // Realtime peut être tombé → l'AWAY verrait un code périmé sinon.
+    _codeViewRequests.add(null);
   }
 
   /// Referme la vue lecture seule → retour au bouton 220×220.
@@ -381,6 +392,7 @@ class RecordingOverlayController {
     await stop();
     await _actions.close();
     await _roomCodes.close();
+    await _codeViewRequests.close();
   }
 
   /// Route un événement overlay→main : soit une soumission de code room

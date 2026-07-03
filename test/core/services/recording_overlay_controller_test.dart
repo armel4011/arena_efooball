@@ -294,6 +294,15 @@ void main() {
       expect(platform.resizedToRecording, isTrue);
     });
 
+    test('enterCodeView émet sur codeViewRequests (→ fetch REST frais)',
+        () async {
+      await controller.start();
+      final next = controller.codeViewRequests.first;
+      await controller.enterCodeView();
+      await next.timeout(const Duration(seconds: 1));
+      expect(true, isTrue);
+    });
+
     test('setRoomCodeInfo pousse un tick avec roomCode + canSendCode',
         () async {
       await controller.start();
