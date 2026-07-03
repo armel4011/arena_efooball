@@ -173,5 +173,31 @@ void main() {
       expect(find.byType(TextField), findsNothing);
       expect(find.text('00:03'), findsOneWidget);
     });
+
+    testWidgets(
+        'isCodeView:true (AWAY) → affiche le code + COPIER, pas de champ',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: RecordingOverlayButton(
+              tick: const OverlayTick(
+                elapsedSeconds: 3,
+                isWarning: false,
+                isCodeView: true,
+                roomCode: 'ROOM77',
+                canSendCode: false,
+              ),
+              onSubmitCode: (_) {},
+              onFieldFocusChange: (_) async {},
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('ROOM77'), findsOneWidget);
+      expect(find.text('COPIER'), findsOneWidget);
+      expect(find.byType(TextField), findsNothing);
+    });
   });
 }

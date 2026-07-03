@@ -107,6 +107,25 @@ class _MatchRecordingLifecycleState
     if (old.match.status != widget.match.status || wasJoined != _selfJoined) {
       _maybeReact();
     }
+    // Pousse le code room courant + le rôle à l'overlay : la clé de l'AWAY
+    // reflète en direct tout nouveau code renvoyé par le HOME. No-op si rien
+    // n'a changé / overlay pas affiché.
+    if (old.match.roomCode != widget.match.roomCode ||
+        old.match.homePlayerId != widget.match.homePlayerId) {
+      _pushRoomCodeInfo();
+    }
+  }
+
+  /// true si le joueur courant est le HOME (la clé ouvre la SAISIE ; sinon la
+  /// VUE lecture seule + Copier côté AWAY).
+  bool get _isHome =>
+      widget.selfId != null && widget.selfId == widget.match.homePlayerId;
+
+  void _pushRoomCodeInfo() {
+    if (!_isAndroidNative || !_isPlayer) return;
+    ref
+        .read(recordingOverlayControllerProvider)
+        .setRoomCodeInfo(widget.match.roomCode, _isHome);
   }
 
   Future<void> _maybeReact() async {
@@ -239,6 +258,9 @@ class _MatchRecordingLifecycleState
         playerId: widget.selfId!,
         opponentId: opp,
       );
+      // Overlay affiché : pousse le code + rôle pour l'état initial de la clé
+      // (AWAY = vue lecture seule du code ; HOME = saisie).
+      _pushRoomCodeInfo();
     } catch (e) {
       if (mounted) {
         setState(() => _startError = e.toString());

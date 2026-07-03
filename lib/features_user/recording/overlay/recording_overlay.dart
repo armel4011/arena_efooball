@@ -4,6 +4,7 @@ import 'package:arena/core/theme/arena_colors.dart';
 import 'package:arena/features_user/recording/overlay/recording_overlay_messages.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 
 /// Floating window rendered on top of eFootball / the game. Lives in its
@@ -432,6 +433,186 @@ class RoomCodeOverlayPanel extends StatelessWidget {
   }
 }
 
+/// Vue LECTURE SEULE du code room (AWAY) affichée dans le bouton flottant :
+/// le code courant + « Copier ». Pas de saisie ni de clavier. Le HOME peut
+/// ré-envoyer un nouveau code à tout moment — `code` reflète la dernière
+/// valeur reçue via le tick (live), et le bouton Copier se ré-arme alors.
+class RoomCodeView extends StatefulWidget {
+  const RoomCodeView({
+    required this.code,
+    required this.onClose,
+    this.timerLabel,
+    super.key,
+  });
+
+  final String? code;
+  final VoidCallback onClose;
+  final String? timerLabel;
+
+  @override
+  State<RoomCodeView> createState() => _RoomCodeViewState();
+}
+
+class _RoomCodeViewState extends State<RoomCodeView> {
+  bool _copied = false;
+
+  @override
+  void didUpdateWidget(RoomCodeView old) {
+    super.didUpdateWidget(old);
+    // Nouveau code renvoyé par le HOME → on ré-arme le bouton « Copier ».
+    if (old.code != widget.code) _copied = false;
+  }
+
+  Future<void> _copy() async {
+    final code = widget.code;
+    if (code == null || code.isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: code));
+    if (!mounted) return;
+    setState(() => _copied = true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final timer = widget.timerLabel;
+    final code = widget.code;
+    final hasCode = code != null && code.isNotEmpty;
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 340),
+        child: Container(
+          margin: const EdgeInsets.all(6),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: ArenaColors.void_.withValues(alpha: 0.94),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: ArenaColors.gameEfoot, width: 1.5),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (timer != null) ...[
+                    const Icon(
+                      Icons.fiber_manual_record,
+                      color: ArenaColors.danger,
+                      size: 12,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      timer,
+                      style: const TextStyle(
+                        color: ArenaColors.danger,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                        fontFeatures: [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                  ],
+                  const Flexible(
+                    child: Text(
+                      'Code de la room',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white10,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: ArenaColors.gameEfoot),
+                ),
+                child: Text(
+                  hasCode ? code : '—',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    letterSpacing: 3,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              if (!hasCode) ...[
+                const SizedBox(height: 4),
+                const Text(
+                  "En attente du code de l'hôte…",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white60, fontSize: 11),
+                ),
+              ],
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: hasCode ? ArenaColors.gameEfoot : Colors.white24,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: hasCode ? _copy : null,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            child: Text(
+                              _copied ? 'COPIÉ ✓' : 'COPIER',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: widget.onClose,
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        child: Text(
+                          'Fermer',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Recording face : the anti-cheat floating button.
 ///
 /// Gestures — collapsed: tap → expand into a 4-mini-button cardinal cluster
@@ -509,6 +690,14 @@ class _RecordingOverlayButtonState extends State<RecordingOverlayButton> {
       return RoomCodeField(
         onSubmit: widget.onSubmitCode,
         onFocusChange: widget.onFieldFocusChange,
+        timerLabel: _tick.formatted,
+        onClose: () => sendToMain(RecordingOverlayMessages.askExitCodeType),
+      );
+    }
+    // Vue lecture seule du code (AWAY) : le code courant (live) + « Copier ».
+    if (_tick.isCodeView) {
+      return RoomCodeView(
+        code: _tick.roomCode,
         timerLabel: _tick.formatted,
         onClose: () => sendToMain(RecordingOverlayMessages.askExitCodeType),
       );

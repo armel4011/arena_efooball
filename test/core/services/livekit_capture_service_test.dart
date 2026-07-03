@@ -88,6 +88,16 @@ class _FakeOverlay implements RecordingOverlayController {
   Future<void> exitCodeEntry() async {}
 
   @override
+  Future<void> enterCodeView() async {}
+
+  @override
+  Future<void> exitCodeView() async {}
+
+  @override
+  // ignore: avoid_positional_boolean_parameters
+  void setRoomCodeInfo(String? code, bool canSend) {}
+
+  @override
   Stream<String> get roomCodeSubmissions => const Stream<String>.empty();
 
   @override

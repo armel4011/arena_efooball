@@ -68,6 +68,15 @@ class RecordingOverlayController {
   // affiche le champ inline. DOIT être propagé dans CHAQUE tick tant que la
   // saisie est ouverte, sinon le premier tick périodique refermerait le champ.
   bool _codeEntry = false;
+  // Vrai quand l'AWAY a ouvert la VUE lecture seule du code (clé du bouton).
+  bool _codeView = false;
+  // Dernier code room connu (poussé par MatchRecordingLifecycle via le
+  // Realtime) — affiché dans la vue AWAY, mis à jour en direct si le HOME
+  // ré-envoie un nouveau code.
+  String? _roomCode;
+  // true = ce joueur est le HOME (la clé ouvre la SAISIE) ; false = AWAY
+  // (la clé ouvre la VUE lecture seule + Copier).
+  bool _canSendCode = true;
 
   /// Total length of a recording — must match `RecordingService.maxDuration`.
   /// Used by the overlay to flash a warning in the last 30 s.
@@ -96,22 +105,22 @@ class RecordingOverlayController {
     if (_liveAvailable == value) return;
     _liveAvailable = value;
     // Push immédiat pour éviter d'attendre 1 s le prochain Timer tick.
-    final start = _startedAt;
-    if (start == null) return;
-    final elapsed = DateTime.now().difference(start);
-    final remaining = totalDuration - elapsed;
-    unawaited(
-      _platform.shareData(
-        RecordingOverlayMessages.tick(
-          elapsedSeconds: elapsed.inSeconds,
-          warning: remaining <= const Duration(seconds: 30),
-          paused: _pausedElapsed != null,
-          liveAvailable: _liveAvailable,
-          simple: _simpleMode,
-          codeEntry: _codeEntry,
-        ),
-      ),
-    );
+    if (_startedAt == null) return;
+    _pushTickNow();
+  }
+
+  /// Pousse à l'overlay le code room courant + le rôle (HOME peut envoyer,
+  /// AWAY est en lecture seule). Appelé par `MatchRecordingLifecycle` sur
+  /// chaque mise à jour Realtime du match → la clé de l'AWAY reflète en
+  /// direct tout nouveau code renvoyé par le HOME. No-op si rien n'a changé
+  /// ou si l'overlay n'est pas affiché.
+  // ignore: avoid_positional_boolean_parameters
+  void setRoomCodeInfo(String? code, bool canSend) {
+    if (_roomCode == code && _canSendCode == canSend) return;
+    _roomCode = code;
+    _canSendCode = canSend;
+    if (_startedAt == null) return;
+    _pushTickNow();
   }
 
   /// Shows the floating button and starts the per-second tick.
@@ -230,6 +239,25 @@ class RecordingOverlayController {
     _pushTickNow();
   }
 
+  /// Ouvre la VUE lecture seule du code (AWAY) : le code courant + « Copier ».
+  /// Contrairement à la saisie, pas de clavier — la vue peut se rebuild à
+  /// chaque tick pour refléter en direct un nouveau code renvoyé par le HOME.
+  Future<void> enterCodeView() async {
+    if (_codeView) return;
+    _codeView = true;
+    await _platform.resizeToCodeEntry();
+    await _platform.moveToTop();
+    _pushTickNow();
+  }
+
+  /// Referme la vue lecture seule → retour au bouton 220×220.
+  Future<void> exitCodeView() async {
+    if (!_codeView) return;
+    _codeView = false;
+    await _platform.resizeToRecording();
+    _pushTickNow();
+  }
+
   /// Pousse immédiatement un tick reflétant l'état courant (chrono +
   /// `codeEntry`), sans attendre le prochain Timer périodique. Utilisé par
   /// enter/exitCodeEntry pour un affichage instantané du champ / du bouton.
@@ -240,15 +268,33 @@ class RecordingOverlayController {
     final remaining = totalDuration - elapsed;
     unawaited(
       _platform.shareData(
-        RecordingOverlayMessages.tick(
+        _buildTick(
           elapsedSeconds: elapsed.inSeconds,
           warning: remaining <= const Duration(seconds: 30),
           paused: _pausedElapsed != null,
-          liveAvailable: _liveAvailable,
-          simple: _simpleMode,
-          codeEntry: _codeEntry,
         ),
       ),
+    );
+  }
+
+  /// Construit un payload de tick avec TOUT l'état courant (live, simple,
+  /// codeEntry/codeView, roomCode, canSendCode). Centralisé pour qu'aucun
+  /// point d'émission n'oublie un flag (ex. codeEntry qui refermait le champ).
+  Map<String, dynamic> _buildTick({
+    required int elapsedSeconds,
+    required bool warning,
+    bool paused = false,
+  }) {
+    return RecordingOverlayMessages.tick(
+      elapsedSeconds: elapsedSeconds,
+      warning: warning,
+      paused: paused,
+      liveAvailable: _liveAvailable,
+      simple: _simpleMode,
+      codeEntry: _codeEntry,
+      codeView: _codeView,
+      roomCode: _roomCode,
+      canSendCode: _canSendCode,
     );
   }
 
@@ -280,6 +326,9 @@ class RecordingOverlayController {
     _liveAvailable = false;
     _simpleMode = false;
     _codeEntry = false;
+    _codeView = false;
+    _roomCode = null;
+    _canSendCode = true;
     await _listener?.cancel();
     _listener = null;
     await _portSub?.cancel();
@@ -301,12 +350,10 @@ class RecordingOverlayController {
     if (start == null || _pausedElapsed != null) return;
     _pausedElapsed = DateTime.now().difference(start);
     await _platform.shareData(
-      RecordingOverlayMessages.tick(
+      _buildTick(
         elapsedSeconds: _pausedElapsed!.inSeconds,
         warning: false,
         paused: true,
-        simple: _simpleMode,
-        codeEntry: _codeEntry,
       ),
     );
   }
@@ -323,11 +370,9 @@ class RecordingOverlayController {
     // Push an immediate tick so the overlay UI flips to red without
     // waiting for the next 1-second period.
     await _platform.shareData(
-      RecordingOverlayMessages.tick(
+      _buildTick(
         elapsedSeconds: paused.inSeconds,
         warning: totalDuration - paused <= const Duration(seconds: 30),
-        simple: _simpleMode,
-        codeEntry: _codeEntry,
       ),
     );
   }
@@ -348,15 +393,16 @@ class RecordingOverlayController {
       unawaited(exitCodeEntry());
       return;
     }
-    // Le mini « envoyer le code » du bouton : affaire interne overlay/resize,
-    // pas une OverlayAction (pause/forfait/…). On ouvre la saisie inline.
+    // Tap sur la clé du bouton : le rôle décide — HOME (canSend) ouvre la
+    // SAISIE, AWAY ouvre la VUE lecture seule + Copier. Affaire interne
+    // overlay/resize, pas une OverlayAction (pause/forfait/…).
     if (_isMessage(event, RecordingOverlayMessages.askEnterCodeType)) {
-      unawaited(enterCodeEntry());
+      unawaited(_canSendCode ? enterCodeEntry() : enterCodeView());
       return;
     }
-    // Bouton « Fermer » de la saisie : on referme sans envoyer.
+    // Bouton « Fermer » : referme la saisie OU la vue (celle qui est ouverte).
     if (_isMessage(event, RecordingOverlayMessages.askExitCodeType)) {
-      unawaited(exitCodeEntry());
+      unawaited(_codeView ? exitCodeView() : exitCodeEntry());
       return;
     }
     _actions.add(_parseAction(event));
@@ -406,13 +452,7 @@ class RecordingOverlayController {
       final remaining = totalDuration - elapsed;
       final isWarning = remaining <= const Duration(seconds: 30);
       _platform.shareData(
-        RecordingOverlayMessages.tick(
-          elapsedSeconds: elapsed.inSeconds,
-          warning: isWarning,
-          liveAvailable: _liveAvailable,
-          simple: _simpleMode,
-          codeEntry: _codeEntry,
-        ),
+        _buildTick(elapsedSeconds: elapsed.inSeconds, warning: isWarning),
       );
     });
   }

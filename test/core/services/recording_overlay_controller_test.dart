@@ -294,6 +294,44 @@ void main() {
       expect(platform.resizedToRecording, isTrue);
     });
 
+    test('setRoomCodeInfo pousse un tick avec roomCode + canSendCode',
+        () async {
+      await controller.start();
+      platform.sharedData.clear();
+      controller.setRoomCodeInfo('ROOM99', false);
+      final t = platform.sharedData.whereType<Map<String, dynamic>>().last;
+      expect(t['roomCode'], 'ROOM99');
+      expect(t['canSendCode'], false);
+    });
+
+    test('AWAY (canSend=false) : la clé ouvre la VUE (codeView), pas la saisie',
+        () async {
+      await controller.start();
+      controller.setRoomCodeInfo('ROOM99', false);
+      platform
+        ..sharedData.clear()
+        ..resizedToCodeEntry = false;
+      platform.emit(RecordingOverlayMessages.askEnterCodeType);
+      await Future<void>.delayed(Duration.zero);
+      expect(platform.resizedToCodeEntry, isTrue);
+      final maps = platform.sharedData.whereType<Map<String, dynamic>>();
+      expect(maps.any((d) => d['codeView'] == true), isTrue);
+      expect(maps.any((d) => d['codeEntry'] == true), isFalse);
+    });
+
+    test('HOME (canSend=true) : la clé ouvre la SAISIE (codeEntry)', () async {
+      await controller.start();
+      controller.setRoomCodeInfo('ROOM99', true);
+      platform
+        ..sharedData.clear()
+        ..resizedToCodeEntry = false;
+      platform.emit(RecordingOverlayMessages.askEnterCodeType);
+      await Future<void>.delayed(Duration.zero);
+      final maps = platform.sharedData.whereType<Map<String, dynamic>>();
+      expect(maps.any((d) => d['codeEntry'] == true), isTrue);
+      expect(maps.any((d) => d['codeView'] == true), isFalse);
+    });
+
     test('les ticks périodiques gardent codeEntry:true pendant la saisie',
         () async {
       await controller.start();

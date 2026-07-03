@@ -112,6 +112,11 @@ abstract final class RecordingOverlayMessages {
   /// chrono continue de tourner derrière ; ce flag DOIT être propagé dans
   /// TOUS les ticks tant que la saisie est ouverte, sinon le premier tick
   /// périodique qui l'omet refermerait le champ.
+  /// `codeView` : quand true, le bouton affiche le code room en LECTURE SEULE
+  /// + « Copier » (côté AWAY) — le HOME peut ré-envoyer un nouveau code, et
+  /// `roomCode` reflète en direct la dernière valeur. `canSendCode` : true si
+  /// ce joueur est le HOME (la clé ouvre la SAISIE) ; false pour l'AWAY (la
+  /// clé ouvre la VUE lecture seule).
   static Map<String, dynamic> tick({
     required int elapsedSeconds,
     required bool warning,
@@ -119,6 +124,9 @@ abstract final class RecordingOverlayMessages {
     bool liveAvailable = false,
     bool simple = false,
     bool codeEntry = false,
+    bool codeView = false,
+    String? roomCode,
+    bool canSendCode = true,
   }) {
     final type = paused
         ? pausedType
@@ -131,6 +139,9 @@ abstract final class RecordingOverlayMessages {
       'liveAvailable': liveAvailable,
       'simple': simple,
       'codeEntry': codeEntry,
+      'codeView': codeView,
+      'roomCode': roomCode,
+      'canSendCode': canSendCode,
     };
   }
 }
@@ -145,6 +156,9 @@ class OverlayTick {
     this.isLiveAvailable = false,
     this.isSimple = false,
     this.isCodeEntry = false,
+    this.isCodeView = false,
+    this.roomCode,
+    this.canSendCode = true,
   });
 
   factory OverlayTick.fromMap(Object? raw) {
@@ -156,6 +170,9 @@ class OverlayTick {
     final liveAvailable = raw['liveAvailable'];
     final simple = raw['simple'];
     final codeEntry = raw['codeEntry'];
+    final codeView = raw['codeView'];
+    final code = raw['roomCode'];
+    final canSend = raw['canSendCode'];
     return OverlayTick(
       elapsedSeconds: elapsed is int ? elapsed : 0,
       isWarning: type == RecordingOverlayMessages.warnType,
@@ -163,6 +180,9 @@ class OverlayTick {
       isLiveAvailable: liveAvailable == true,
       isSimple: simple == true,
       isCodeEntry: codeEntry == true,
+      isCodeView: codeView == true,
+      roomCode: code is String ? code : null,
+      canSendCode: canSend != false,
     );
   }
 
@@ -170,6 +190,15 @@ class OverlayTick {
   final bool isWarning;
   final bool isPaused;
   final bool isLiveAvailable;
+
+  /// Le bouton affiche le code en LECTURE SEULE + « Copier » (AWAY).
+  final bool isCodeView;
+
+  /// Dernier code room connu (pour la vue AWAY ; live via le Realtime).
+  final String? roomCode;
+
+  /// true = HOME (la clé ouvre la saisie) ; false = AWAY (la clé ouvre la vue).
+  final bool canSendCode;
 
   /// Le bouton d'enregistrement affiche le champ de saisie du code room
   /// inline (nouveau flux : le HOME envoie son code depuis le bouton rouge).
