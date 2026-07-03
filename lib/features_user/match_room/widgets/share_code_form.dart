@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:arena/core/services/recording_overlay_controller.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/repositories/match_repository.dart';
@@ -10,6 +13,8 @@ import 'package:arena/features_user/match_room/widgets/open_chat_link.dart';
 import 'package:arena/features_user/match_room/widgets/room_ready_view.dart'
     show CodeSharedInterstitial;
 import 'package:arena/l10n/generated/app_localizations.dart';
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -31,16 +36,40 @@ class _ShareCodeFormState extends ConsumerState<ShareCodeForm> {
   final _controller = TextEditingController();
   bool _submitting = false;
   String? _error;
+  StreamSubscription<String>? _codeSub;
+
+  /// L'envoi via bouton flottant repose sur l'overlay anti-triche —
+  /// Android-natif uniquement (comme l'enregistrement).
+  bool get _overlaySupported =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_overlaySupported) {
+      // Codes tapés dans le bouton flottant, pendant que le HOME reste dans
+      // eFootball. Même sink que la saisie in-app.
+      _codeSub = ref
+          .read(recordingOverlayControllerProvider)
+          .roomCodeSubmissions
+          .listen((code) => _persistCode(code.trim().toUpperCase()));
+    }
+  }
 
   @override
   void dispose() {
+    _codeSub?.cancel();
     _controller.dispose();
     super.dispose();
   }
 
-  Future<void> _submit() async {
+  Future<void> _submit() => _persistCode(_controller.text.trim().toUpperCase());
+
+  /// Persiste le code — saisie in-app OU bouton flottant : même appel
+  /// `setRoomCode`, mêmes règles, puis bascule optimiste sur l'interstitiel.
+  Future<void> _persistCode(String raw) async {
+    if (!mounted) return;
     final l10n = AppLocalizations.of(context);
-    final raw = _controller.text.trim().toUpperCase();
     if (raw.length < 4 || raw.length > 12) {
       setState(() => _error = l10n.shareCodeErrorLength);
       return;
@@ -72,6 +101,18 @@ class _ShareCodeFormState extends ConsumerState<ShareCodeForm> {
     setState(() => _submitting = false);
   }
 
+  /// Affiche le bouton flottant de saisie du code par-dessus eFootball. Le
+  /// code tapé revient via `roomCodeSubmissions` → `_persistCode`.
+  Future<void> _startOverlayFlow() async {
+    final l10n = AppLocalizations.of(context);
+    final ok = await ref
+        .read(recordingOverlayControllerProvider)
+        .showAsCodeSender(matchId: widget.match.id);
+    if (!ok && mounted) {
+      setState(() => _error = l10n.recordingPermOverlayDenied);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -86,6 +127,40 @@ class _ShareCodeFormState extends ConsumerState<ShareCodeForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // CTA recommandé (Android) : envoyer le code via le bouton flottant
+        // sans quitter eFootball, pour ne pas perdre la connexion à la room.
+        if (_overlaySupported) ...[
+          ArenaButton(
+            label: l10n.shareCodeOverlayButton,
+            icon: Icons.open_in_new,
+            fullWidth: true,
+            isLoading: _submitting,
+            onPressed: _startOverlayFlow,
+          ),
+          const SizedBox(height: ArenaSpacing.sm),
+          Text(
+            l10n.shareCodeOverlayHint,
+            textAlign: TextAlign.center,
+            style: ArenaText.small.copyWith(color: ArenaColors.silver),
+          ),
+          const SizedBox(height: ArenaSpacing.lg),
+          Row(
+            children: [
+              const Expanded(child: Divider(color: ArenaColors.silverDim)),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: ArenaSpacing.sm,
+                ),
+                child: Text(
+                  '— ou —',
+                  style: ArenaText.small.copyWith(color: ArenaColors.silver),
+                ),
+              ),
+              const Expanded(child: Divider(color: ArenaColors.silverDim)),
+            ],
+          ),
+          const SizedBox(height: ArenaSpacing.lg),
+        ],
         Text(
           l10n.shareCodeRoomLabel,
           style: ArenaText.inputLabel,

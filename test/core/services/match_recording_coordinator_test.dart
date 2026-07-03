@@ -54,6 +54,12 @@ void main() {
     );
     when(() => overlay.start(matchId: any(named: 'matchId')))
         .thenAnswer((_) async {});
+    when(
+      () => overlay.startOrMorphToRecording(
+        matchId: any(named: 'matchId'),
+        simpleMode: any(named: 'simpleMode'),
+      ),
+    ).thenAnswer((_) async {});
     when(() => overlay.stop()).thenAnswer((_) async {});
     // L'overlay a aussi pause()/resume() pour figer le chrono pendant
     // une pause — les stubber empêche les appels de tomber dans le
@@ -93,7 +99,7 @@ void main() {
 
     verify(() => recording.start(matchId: 'match-1', playerId: 'player-1'))
         .called(1);
-    verify(() => overlay.start(matchId: 'match-1')).called(1);
+    verify(() => overlay.startOrMorphToRecording(matchId: 'match-1')).called(1);
     expect(coordinator.state, isA<CoordinatorRecording>());
   });
 

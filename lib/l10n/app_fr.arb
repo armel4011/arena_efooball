@@ -525,6 +525,8 @@
   "shareCodeOpponentWillReceive": "Ton adversaire recevra ce code au chat dès envoi.",
   "shareCodeOpponentReceives": "Ton adversaire reçoit ce code au chat dès envoi.",
   "shareCodeSubmitButton": "ENVOYER LE CODE",
+  "shareCodeOverlayButton": "ENVOYER SANS QUITTER EFOOTBALL",
+  "shareCodeOverlayHint": "Crée ta room dans eFootball, puis envoie le code depuis un bouton flottant — sans quitter le jeu, la room reste active.",
   "shareCodeInputHint": "Ex: 8K3-TZ9",
   "notificationsTitle": "Notifications",
   "notificationsMarkAllReadTooltip": "Marquer tout comme lu",

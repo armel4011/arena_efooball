@@ -161,7 +161,7 @@ class LiveKitCaptureService {
     final overlay = _overlay;
     if (overlay != null && _supportsCapture) {
       try {
-        await overlay.start(matchId: matchId, simpleMode: true);
+        await overlay.startOrMorphToRecording(matchId: matchId, simpleMode: true);
         _overlaySub = overlay.actions.listen(_onOverlayAction);
       } catch (e, st) {
         unawaited(

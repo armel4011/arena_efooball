@@ -3100,6 +3100,18 @@ abstract class AppLocalizations {
   /// **'ENVOYER LE CODE'**
   String get shareCodeSubmitButton;
 
+  /// No description provided for @shareCodeOverlayButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'ENVOYER SANS QUITTER EFOOTBALL'**
+  String get shareCodeOverlayButton;
+
+  /// No description provided for @shareCodeOverlayHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Crée ta room dans eFootball, puis envoie le code depuis un bouton flottant — sans quitter le jeu, la room reste active.'**
+  String get shareCodeOverlayHint;
+
   /// No description provided for @shareCodeInputHint.
   ///
   /// In fr, this message translates to:

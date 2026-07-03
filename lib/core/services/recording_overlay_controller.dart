@@ -40,6 +40,11 @@ class RecordingOverlayController {
 
   final OverlayPlatform _platform;
   final _actions = StreamController<OverlayAction>.broadcast();
+  // Codes room tapés par le HOME dans le panneau overlay code-sender.
+  final _roomCodes = StreamController<String>.broadcast();
+  // Vrai entre un show* et le stop() : permet au cycle de vie de choisir
+  // entre morphToRecording (overlay déjà ouvert) et start (rien d'ouvert).
+  bool _overlayShown = false;
 
   StreamSubscription<dynamic>? _listener;
   ReceivePort? _port;
@@ -65,6 +70,16 @@ class RecordingOverlayController {
 
   /// Stream of typed actions raised inside the overlay (long-press menu).
   Stream<OverlayAction> get actions => _actions.stream;
+
+  /// Codes room soumis depuis le panneau overlay code-sender (HOME).
+  /// L'écran de partage du code s'y abonne pour appeler `setRoomCode`.
+  Stream<String> get roomCodeSubmissions => _roomCodes.stream;
+
+  /// Vrai tant qu'un overlay (code-sender OU recording) est affiché. Le
+  /// cycle de vie l'inspecte : si `true` au passage in_progress, on
+  /// `morphToRecording()` au lieu de `start()` (quirk MIUI #4 : ne jamais
+  /// re-`showOverlay`).
+  bool get isShowing => _overlayShown;
 
   /// Bascule l'éligibilité streaming de la session courante. Appelé
   /// depuis `MatchRecordingLifecycle` quand le provider
@@ -99,23 +114,84 @@ class RecordingOverlayController {
   /// stable when we wire deep-link "tap on overlay → open match-room"
   /// in PHASE 8.5.
   Future<void> start({String? matchId, bool simpleMode = false}) async {
-    final granted = await _platform.isPermissionGranted();
-    if (!granted) {
-      final ok = await _platform.requestPermission();
-      if (!ok) {
-        if (kDebugMode) {
-          debugPrint('[overlay] user denied SYSTEM_ALERT_WINDOW permission');
-        }
-        return;
-      }
-    }
+    if (!await _ensurePermission()) return;
 
     _simpleMode = simpleMode;
     await _platform.showOverlay();
+    _overlayShown = true;
     _startedAt = DateTime.now();
     _bindListener();
     _bindIsolatePort();
+    // Bascule immédiate en mode recording pour que le bouton apparaisse sans
+    // attendre le 1er tick périodique (le dispatcher ne rend rien tant qu'il
+    // n'a pas reçu de mode). Belt-and-braces : le tick suivant le confirme.
+    await _platform.shareData(RecordingOverlayMessages.modeRecording());
     _startTicking();
+  }
+
+  /// Affiche l'overlay en mode « saisie du code room » (HOME, à l'étape
+  /// partage du code, AVANT que l'enregistrement ne démarre). Renvoie
+  /// `false` si la permission overlay est refusée.
+  ///
+  /// Un heartbeat pousse `mode_code_sender` chaque seconde : contrairement
+  /// au mode recording (ticks périodiques), le panneau code-sender n'a pas
+  /// de flux périodique, donc si le tout premier message court-circuite le
+  /// spawn de l'isolate le panneau resterait vide — le heartbeat garantit
+  /// son affichage (le dispatcher ignore les répétitions sans changement).
+  Future<bool> showAsCodeSender({String? matchId}) async {
+    if (!await _ensurePermission()) return false;
+    await _platform.showCodeSenderOverlay();
+    _overlayShown = true;
+    _bindListener();
+    _bindIsolatePort();
+    _startCodeSenderHeartbeat();
+    return true;
+  }
+
+  /// Transforme l'overlay code-sender déjà affiché en bouton
+  /// d'enregistrement — SANS re-`showOverlay` (quirk MIUI #4). No-op si
+  /// aucun overlay n'est affiché (l'appelant fait alors `start()`).
+  Future<void> morphToRecording({bool simpleMode = false}) async {
+    if (!_overlayShown) return;
+    _simpleMode = simpleMode;
+    await _platform.resizeToRecording();
+    _startedAt = DateTime.now();
+    await _platform.shareData(RecordingOverlayMessages.modeRecording());
+    // Remplace le heartbeat code-sender par les ticks recording.
+    _startTicking();
+  }
+
+  /// Démarre le bouton d'enregistrement, OU transforme l'overlay
+  /// code-sender déjà affiché (HOME) — sans re-`showOverlay` (quirk MIUI
+  /// #4). Point d'entrée unique pour le coordinator natif et LiveKit.
+  Future<void> startOrMorphToRecording({
+    String? matchId,
+    bool simpleMode = false,
+  }) async {
+    if (_overlayShown) {
+      await morphToRecording(simpleMode: simpleMode);
+    } else {
+      await start(matchId: matchId, simpleMode: simpleMode);
+    }
+  }
+
+  Future<bool> _ensurePermission() async {
+    final granted = await _platform.isPermissionGranted();
+    if (granted) return true;
+    final ok = await _platform.requestPermission();
+    if (!ok && kDebugMode) {
+      debugPrint('[overlay] user denied SYSTEM_ALERT_WINDOW permission');
+    }
+    return ok;
+  }
+
+  void _startCodeSenderHeartbeat() {
+    _tickTimer?.cancel();
+    // Push immédiat + répétition 1 s (voir showAsCodeSender).
+    unawaited(_platform.shareData(RecordingOverlayMessages.modeCodeSender()));
+    _tickTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      _platform.shareData(RecordingOverlayMessages.modeCodeSender());
+    });
   }
 
   /// Hides the overlay and stops the tick timer.
@@ -135,6 +211,7 @@ class RecordingOverlayController {
     IsolateNameServer.removePortNameMapping(
       RecordingOverlayMessages.mainPortName,
     );
+    _overlayShown = false;
     await _platform.closeOverlay();
   }
 
@@ -178,13 +255,23 @@ class RecordingOverlayController {
   Future<void> dispose() async {
     await stop();
     await _actions.close();
+    await _roomCodes.close();
+  }
+
+  /// Route un événement overlay→main : soit une soumission de code room
+  /// (→ `roomCodeSubmissions`), soit une action du menu (→ `actions`).
+  void _onOverlayEvent(Object? event) {
+    final code = roomCodeFromMessage(event);
+    if (code != null) {
+      _roomCodes.add(code);
+      return;
+    }
+    _actions.add(_parseAction(event));
   }
 
   void _bindListener() {
     _listener?.cancel();
-    _listener = _platform.overlayListener.listen((event) {
-      _actions.add(_parseAction(event));
-    });
+    _listener = _platform.overlayListener.listen(_onOverlayEvent);
   }
 
   /// Registers a `ReceivePort` so the overlay isolate can deliver
@@ -206,9 +293,7 @@ class RecordingOverlayController {
       debugPrint('[overlay-ctrl] failed to register isolate port');
     }
     _port = port;
-    _portSub = port.listen((event) {
-      _actions.add(_parseAction(event));
-    });
+    _portSub = port.listen(_onOverlayEvent);
   }
 
   void _startTicking() {
@@ -251,7 +336,18 @@ class RecordingOverlayController {
 abstract class OverlayPlatform {
   Future<bool> isPermissionGranted();
   Future<bool> requestPermission();
+
+  /// Affiche l'overlay au format bouton d'enregistrement (220×220).
   Future<void> showOverlay();
+
+  /// Affiche l'overlay au format panneau code-sender (fenêtre plus grande,
+  /// non draggable pour ne pas voler les taps du champ/bouton — quirk #3).
+  Future<void> showCodeSenderOverlay();
+
+  /// Redimensionne l'overlay AFFICHÉ au format bouton d'enregistrement
+  /// (220×220, draggable) — utilisé par le morph, sans re-show.
+  Future<void> resizeToRecording();
+
   Future<void> closeOverlay();
   Future<void> shareData(Object data);
   Stream<dynamic> get overlayListener;
@@ -288,6 +384,33 @@ class _DefaultOverlayPlatform implements OverlayPlatform {
       overlayTitle: 'ARENA',
       overlayContent: 'Enregistrement en cours',
     );
+  }
+
+  @override
+  Future<void> showCodeSenderOverlay() {
+    // Fenêtre plus grande que le bouton (champ + badge). `defaultFlag` :
+    // `showOverlay(focusPointer)` ne s'attache pas sur MIUI — l'overlay
+    // isolate bascule focusPointer via updateFlag pendant la saisie
+    // (spike-validé). `enableDrag: false` pour ne pas voler les taps du
+    // champ/bouton (quirk #3). Taille en px = dp × devicePixelRatio.
+    final dpr = PlatformDispatcher.instance.views.first.devicePixelRatio;
+    return FlutterOverlayWindow.showOverlay(
+      enableDrag: false,
+      flag: OverlayFlag.defaultFlag,
+      alignment: OverlayAlignment.center,
+      positionGravity: PositionGravity.none,
+      width: (360 * dpr).round(),
+      height: (380 * dpr).round(),
+      overlayTitle: 'ARENA',
+      overlayContent: 'Envoi du code room',
+    );
+  }
+
+  @override
+  Future<void> resizeToRecording() async {
+    final dpr = PlatformDispatcher.instance.views.first.devicePixelRatio;
+    final sizePx = (220 * dpr).round();
+    await FlutterOverlayWindow.resizeOverlay(sizePx, sizePx, true);
   }
 
   @override

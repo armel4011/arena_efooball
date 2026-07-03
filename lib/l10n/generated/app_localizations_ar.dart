@@ -1582,6 +1582,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get shareCodeSubmitButton => 'إرسال الرمز';
 
   @override
+  String get shareCodeOverlayButton => 'أرسِل دون مغادرة eFootball';
+
+  @override
+  String get shareCodeOverlayHint =>
+      'أنشئ غرفتك في eFootball، ثم أرسل الرمز من زر عائم — دون مغادرة اللعبة، لتبقى الغرفة نشطة.';
+
+  @override
   String get shareCodeInputHint => 'مثال: 8K3-TZ9';
 
   @override

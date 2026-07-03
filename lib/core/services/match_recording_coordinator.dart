@@ -137,7 +137,9 @@ class MatchRecordingCoordinator {
     _opponentId = opponentId;
 
     await _recording.start(matchId: matchId, playerId: playerId);
-    await _overlay.start(matchId: matchId);
+    // Transforme l'overlay code-sender du HOME s'il est déjà ouvert, sinon
+    // affiche le bouton d'enregistrement (quirk MIUI #4 : pas de 2ᵉ show).
+    await _overlay.startOrMorphToRecording(matchId: matchId);
 
     await _actionsSub?.cancel();
     _actionsSub = _overlay.actions.listen(_onOverlayAction);

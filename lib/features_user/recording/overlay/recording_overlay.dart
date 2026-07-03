@@ -6,26 +6,24 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 
-/// Floating button rendered on top of eFootball / the game during a
-/// recorded match. Lives in its own Flutter isolate spawned by
-/// `flutter_overlay_window` — it cannot read providers from the
-/// main app, so all state arrives through `FlutterOverlayWindow.shareData`.
+/// Floating window rendered on top of eFootball / the game. Lives in its
+/// own Flutter isolate spawned by `flutter_overlay_window` — it cannot
+/// read providers from the main app, so all state arrives through
+/// `FlutterOverlayWindow.shareData` / `overlayListener`.
 ///
-/// Gestures — collapsed:
-///   - tap → expand into a 4-mini-button cardinal cluster
-///     (N pause / E open ARENA / S save+stop / W forfeit).
+/// A SINGLE overlay window (one `showOverlay` per match) carries two
+/// faces, chosen by [ArenaOverlayRoot] from the mode messages:
+///   * [OverlayMode.codeSender] → [RoomCodeOverlayPanel] : the HOME types
+///     the eFootball room code without leaving the game (before the match
+///     starts).
+///   * [OverlayMode.recording] → [RecordingOverlayButton] : the anti-cheat
+///     floating button (4-mini cardinal cluster + chrono).
 ///
-/// Gestures — expanded:
-///   - tap on the main button → collapse,
-///   - tap on a mini → send the action and auto-collapse.
-///
-/// Taps are wired through `Listener.onPointerDown` rather than
-/// `GestureDetector.onTap`: the native drag handler in
-/// `flutter_overlay_window` claims ACTION_MOVE on any micro-jitter,
-/// which makes Flutter's gesture arena cancel `onTap` before it can
-/// fire. `Listener` sits below the arena and receives `PointerDownEvent`
-/// synchronously on every touch — so the action fires on touch-down,
-/// before drag tracking can steal the gesture.
+/// The two faces never coexist and the window is never re-shown between
+/// them (MIUI quirk #4 : a 2nd `closeOverlay → showOverlay` cycle breaks
+/// the isolate). The code-sender morphs into the recording button via
+/// `resizeOverlay` + a `mode_recording` message. See
+/// `_anticheat_ref/PLAN_OVERLAY_CODE_ROOM.md`.
 class RecordingOverlayApp extends StatelessWidget {
   const RecordingOverlayApp({super.key});
 
@@ -35,14 +33,314 @@ class RecordingOverlayApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       home: Material(
         color: Colors.transparent,
-        child: Center(child: RecordingOverlayButton()),
+        child: Center(child: ArenaOverlayRoot()),
       ),
     );
   }
 }
 
+/// Sends a message from the overlay isolate back to the main app.
+///
+/// Primary route — Dart-native `SendPort` looked up in `IsolateNameServer`
+/// — is reliable even when ARENA is paused (MIUI / Android 12+), where the
+/// plugin's `shareData → overlayListener` channel silently drops events.
+/// The `shareData` call is kept belt-and-braces (harmless duplicate; the
+/// main-side handlers are idempotent).
+Future<void> sendToMain(Object message) async {
+  final port =
+      IsolateNameServer.lookupPortByName(RecordingOverlayMessages.mainPortName);
+  if (port != null) {
+    port.send(message);
+  } else if (kDebugMode) {
+    debugPrint('[overlay] main port not registered, falling back');
+  }
+  await FlutterOverlayWindow.shareData(message);
+}
+
+/// Sole subscriber of `FlutterOverlayWindow.overlayListener` (which is a
+/// single-subscription stream — quirk #4). Tracks the current [OverlayMode]
+/// and the latest recording tick, and dispatches to the right face. The
+/// recording button therefore receives its tick as a prop rather than
+/// listening itself (two listeners on the stream would throw).
+class ArenaOverlayRoot extends StatefulWidget {
+  const ArenaOverlayRoot({super.key});
+
+  @override
+  State<ArenaOverlayRoot> createState() => _ArenaOverlayRootState();
+}
+
+class _ArenaOverlayRootState extends State<ArenaOverlayRoot> {
+  // Null until the main app pushes the first mode / tick. Rendering nothing
+  // in the meantime avoids a flash of the wrong face.
+  OverlayMode? _mode;
+  OverlayTick _tick = const OverlayTick(elapsedSeconds: 0, isWarning: false);
+
+  @override
+  void initState() {
+    super.initState();
+    FlutterOverlayWindow.overlayListener.listen(_onMessage);
+  }
+
+  void _onMessage(Object? event) {
+    if (!mounted) return;
+    final mode = overlayModeFromMessage(event);
+    // Only tick-shaped payloads carry a chrono; mode-only messages (e.g. the
+    // 1 Hz code-sender heartbeat) leave the last tick untouched.
+    final tick = (event is Map && _isTickPayload(event))
+        ? OverlayTick.fromMap(event)
+        : null;
+    final modeChanged = mode != null && mode != _mode;
+    // Skip rebuilds when nothing changed — avoids re-rendering the code-sender
+    // panel (and any focus/keyboard flicker) on every heartbeat tick.
+    if (!modeChanged && tick == null) return;
+    setState(() {
+      if (mode != null) _mode = mode;
+      if (tick != null) _tick = tick;
+    });
+  }
+
+  bool _isTickPayload(Map<dynamic, dynamic> event) {
+    final type = event['type'];
+    return type == RecordingOverlayMessages.tickType ||
+        type == RecordingOverlayMessages.warnType ||
+        type == RecordingOverlayMessages.pausedType;
+  }
+
+  Future<void> _onCodeSubmitted(String code) async {
+    await sendToMain(RecordingOverlayMessages.submitRoomCode(code));
+  }
+
+  // Focusable window steals input focus (dims the game, hides other apps'
+  // keyboards) — so we only request focus WHILE the field is focused, then
+  // drop back to defaultFlag. `showOverlay(focusPointer)` doesn't even
+  // attach on MIUI, but `updateFlag` on a live window does. Spike-validated.
+  Future<void> _onFieldFocusChange(bool hasFocus) async {
+    await FlutterOverlayWindow.updateFlag(
+      hasFocus ? OverlayFlag.focusPointer : OverlayFlag.defaultFlag,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return switch (_mode) {
+      OverlayMode.codeSender => RoomCodeOverlayPanel(
+          onSubmit: _onCodeSubmitted,
+          onFocusChange: _onFieldFocusChange,
+        ),
+      OverlayMode.recording => RecordingOverlayButton(tick: _tick),
+      null => const SizedBox.shrink(),
+    };
+  }
+}
+
+/// Code-sender face : a compact card with a text field + "Envoyer". Pure
+/// widget — the IPC (`onSubmit`) and the focus/flag toggle (`onFocusChange`)
+/// are injected so it stays testable without a platform channel.
+class RoomCodeOverlayPanel extends StatefulWidget {
+  const RoomCodeOverlayPanel({
+    required this.onSubmit,
+    required this.onFocusChange,
+    super.key,
+  });
+
+  /// Called with the normalised (trimmed, upper-cased) code when the user
+  /// taps "Envoyer" and the code passes the 4–12 length check.
+  final void Function(String code) onSubmit;
+
+  /// Called when the text field gains / loses focus, so the host can flip
+  /// the overlay window flag (focusPointer ↔ defaultFlag). Positional bool
+  /// mirrors the `Focus.onFocusChange` signature it wraps.
+  // ignore: avoid_positional_boolean_parameters
+  final Future<void> Function(bool hasFocus) onFocusChange;
+
+  @override
+  State<RoomCodeOverlayPanel> createState() => _RoomCodeOverlayPanelState();
+}
+
+class _RoomCodeOverlayPanelState extends State<RoomCodeOverlayPanel> {
+  final _controller = TextEditingController();
+  String? _sentCode;
+  bool _tooShort = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final code = _controller.text.trim().toUpperCase();
+    if (code.length < 4 || code.length > 12) {
+      setState(() => _tooShort = true);
+      return;
+    }
+    widget.onSubmit(code);
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() {
+      _sentCode = code;
+      _tooShort = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 320),
+        child: Container(
+          margin: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: ArenaColors.void_.withValues(alpha: 0.94),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: ArenaColors.gameEfoot, width: 1.5),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Code de la room',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Tape le code eFootball et envoie-le à ton adversaire, '
+                'sans quitter le jeu.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white60, fontSize: 11),
+              ),
+              const SizedBox(height: 10),
+              Focus(
+                onFocusChange: widget.onFocusChange,
+                child: TextField(
+                  controller: _controller,
+                  autofocus: false,
+                  maxLength: 12,
+                  textAlign: TextAlign.center,
+                  textCapitalization: TextCapitalization.characters,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    letterSpacing: 3,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  decoration: InputDecoration(
+                    counterText: '',
+                    hintText: 'ABC123',
+                    hintStyle: const TextStyle(
+                      color: Colors.white24,
+                      letterSpacing: 3,
+                    ),
+                    filled: true,
+                    fillColor: Colors.white10,
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide:
+                          const BorderSide(color: ArenaColors.gameEfoot),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(
+                        color: ArenaColors.gameEfoot,
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              if (_tooShort) ...[
+                const SizedBox(height: 6),
+                const Text(
+                  'Le code doit faire 4 à 12 caractères.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: ArenaColors.neonRed, fontSize: 11),
+                ),
+              ],
+              const SizedBox(height: 10),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: ArenaColors.gameEfoot,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(2),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: _submit,
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 10),
+                        child: Text(
+                          'ENVOYER',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              if (_sentCode != null) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: ArenaColors.statusOk.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'Envoyé : $_sentCode',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: ArenaColors.statusOk,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Recording face : the anti-cheat floating button.
+///
+/// Gestures — collapsed: tap → expand into a 4-mini-button cardinal cluster
+/// (N pause / E open ARENA / S save+stop / W forfeit). Expanded: tap on the
+/// main button → collapse; tap on a mini → send the action and auto-collapse.
+///
+/// Taps are wired through `Listener.onPointerDown` rather than
+/// `GestureDetector.onTap`: the native drag handler in
+/// `flutter_overlay_window` claims ACTION_MOVE on any micro-jitter, which
+/// makes Flutter's gesture arena cancel `onTap` before it can fire.
+/// `Listener` sits below the arena and fires synchronously on touch-down.
+///
+/// Receives its tick from [ArenaOverlayRoot] (the sole stream subscriber)
+/// rather than listening to `overlayListener` itself.
 class RecordingOverlayButton extends StatefulWidget {
-  const RecordingOverlayButton({super.key});
+  const RecordingOverlayButton({required this.tick, super.key});
+
+  final OverlayTick tick;
 
   @override
   State<RecordingOverlayButton> createState() => _RecordingOverlayButtonState();
@@ -55,17 +353,9 @@ class _RecordingOverlayButtonState extends State<RecordingOverlayButton> {
   // 72 dp main fits with a 14 dp gutter to the window edge.
   static const double _miniRadius = 64;
 
-  OverlayTick _tick = const OverlayTick(elapsedSeconds: 0, isWarning: false);
   bool _expanded = false;
 
-  @override
-  void initState() {
-    super.initState();
-    FlutterOverlayWindow.overlayListener.listen((event) {
-      if (!mounted) return;
-      setState(() => _tick = OverlayTick.fromMap(event));
-    });
-  }
+  OverlayTick get _tick => widget.tick;
 
   void _onMainTap() {
     setState(() => _expanded = !_expanded);
@@ -73,20 +363,7 @@ class _RecordingOverlayButtonState extends State<RecordingOverlayButton> {
 
   Future<void> _onMiniTap(String message) async {
     setState(() => _expanded = false);
-    // Primary route — Dart-native SendPort. Reliable even when the
-    // main activity is paused (MIUI / Android 12+).
-    final port =
-        IsolateNameServer.lookupPortByName(RecordingOverlayMessages.mainPortName);
-    if (port != null) {
-      port.send(message);
-    } else if (kDebugMode) {
-      debugPrint('[overlay] main port not registered, falling back');
-    }
-    // Belt-and-braces — also push via the plugin's channel. Harmless if
-    // the main side ignores duplicate events (parser maps both routes
-    // to the same OverlayAction and the coordinator's handlers are
-    // idempotent).
-    await FlutterOverlayWindow.shareData(message);
+    await sendToMain(message);
   }
 
   Color get _mainColor {

@@ -505,6 +505,8 @@
   "shareCodeOpponentWillReceive": "سيتلقّى خصمك هذا الرمز في الدردشة بمجرد إرساله.",
   "shareCodeOpponentReceives": "يتلقّى خصمك هذا الرمز في الدردشة بمجرد إرساله.",
   "shareCodeSubmitButton": "إرسال الرمز",
+  "shareCodeOverlayButton": "أرسِل دون مغادرة eFootball",
+  "shareCodeOverlayHint": "أنشئ غرفتك في eFootball، ثم أرسل الرمز من زر عائم — دون مغادرة اللعبة، لتبقى الغرفة نشطة.",
   "shareCodeInputHint": "مثال: 8K3-TZ9",
   "notificationsTitle": "الإشعارات",
   "notificationsMarkAllReadTooltip": "تعليم الكل كمقروء",

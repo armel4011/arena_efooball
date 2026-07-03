@@ -57,6 +57,35 @@ abstract final class RecordingOverlayMessages {
   /// constraints), exporte le MP4 puis appelle joinAsBroadcaster.
   static const String askGoLiveType = 'ask_go_live';
 
+  /// `main → overlay` — bascule l'overlay en mode « saisie du code room »
+  /// (panneau champ + « Envoyer »). Utilisé par le HOME à l'étape
+  /// « partager le code » AVANT que l'enregistrement ne démarre. Voir
+  /// _anticheat_ref/PLAN_OVERLAY_CODE_ROOM.md.
+  static const String modeCodeSenderType = 'mode_code_sender';
+
+  /// `main → overlay` — bascule l'overlay en mode « bouton
+  /// d'enregistrement » (le cluster 4-minis + chrono). Envoyé au morph
+  /// (in_progress) juste après `resizeOverlay`, SANS re-`showOverlay`
+  /// (quirk MIUI #4 : un 2ᵉ cycle show casse l'isolate).
+  static const String modeRecordingType = 'mode_recording';
+
+  /// `overlay → main` — le HOME a tapé un code room dans le panneau et
+  /// appuyé sur « Envoyer ». Payload : `{'type': ..., 'code': 'ABC123'}`.
+  /// Le main appelle `matchRepository.setRoomCode(...)`.
+  static const String submitRoomCodeType = 'submit_room_code';
+
+  /// Construit le message `main → overlay` de bascule en mode code-sender.
+  static Map<String, dynamic> modeCodeSender() => {'type': modeCodeSenderType};
+
+  /// Construit le message `main → overlay` de bascule en mode recording.
+  static Map<String, dynamic> modeRecording() => {'type': modeRecordingType};
+
+  /// Construit le message `overlay → main` portant le code room saisi.
+  static Map<String, dynamic> submitRoomCode(String code) => {
+        'type': submitRoomCodeType,
+        'code': code,
+      };
+
   /// Builds a tick payload. Kept as a free function so both ends
   /// agree on the JSON shape.
   ///
@@ -129,4 +158,47 @@ class OverlayTick {
     final s = (elapsedSeconds % 60).toString().padLeft(2, '0');
     return '$m:$s';
   }
+}
+
+/// Deux visages de l'overlay Arena, portés par un unique isolate /
+/// une unique fenêtre (quirk MIUI #4 : on ne rouvre jamais l'overlay,
+/// on le *transforme*). Voir `ArenaOverlayRoot`.
+enum OverlayMode {
+  /// Panneau de saisie du code room (HOME, avant démarrage du match).
+  codeSender,
+
+  /// Bouton d'enregistrement anti-triche (cluster 4-minis + chrono).
+  recording,
+}
+
+/// Déduit le mode overlay d'un message `main → overlay`, ou `null` si le
+/// message ne porte pas d'information de mode (l'appelant garde alors le
+/// mode courant).
+///
+/// Rétro-compat : un tick / warn / paused implique `recording` — c'est le
+/// tout premier message que l'overlay d'enregistrement reçoit aujourd'hui
+/// (chemin AWAY / recording direct), donc le dispatcher affiche bien le
+/// bouton sans qu'on ait à modifier le contrôleur existant.
+OverlayMode? overlayModeFromMessage(Object? raw) {
+  if (raw is! Map) return null;
+  switch (raw['type']) {
+    case RecordingOverlayMessages.modeCodeSenderType:
+      return OverlayMode.codeSender;
+    case RecordingOverlayMessages.modeRecordingType:
+    case RecordingOverlayMessages.tickType:
+    case RecordingOverlayMessages.warnType:
+    case RecordingOverlayMessages.pausedType:
+      return OverlayMode.recording;
+    default:
+      return null;
+  }
+}
+
+/// Extrait le code room d'un message `overlay → main`, ou `null` si le
+/// message n'est pas une soumission de code.
+String? roomCodeFromMessage(Object? raw) {
+  if (raw is! Map) return null;
+  if (raw['type'] != RecordingOverlayMessages.submitRoomCodeType) return null;
+  final code = raw['code'];
+  return code is String ? code : null;
 }

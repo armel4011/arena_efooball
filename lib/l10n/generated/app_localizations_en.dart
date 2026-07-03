@@ -1587,6 +1587,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shareCodeSubmitButton => 'SEND CODE';
 
   @override
+  String get shareCodeOverlayButton => 'SEND WITHOUT LEAVING EFOOTBALL';
+
+  @override
+  String get shareCodeOverlayHint =>
+      'Create your room in eFootball, then send the code from a floating button — without leaving the game, so the room stays alive.';
+
+  @override
   String get shareCodeInputHint => 'e.g. 8K3-TZ9';
 
   @override

@@ -8,7 +8,11 @@ class _FakeOverlayPlatform implements OverlayPlatform {
   bool granted = true;
   bool requestResult = true;
   bool overlayShown = false;
+  bool codeSenderShown = false;
+  bool resizedToRecording = false;
+  int showOverlayCount = 0;
   Object? lastSharedData;
+  final sharedData = <Object>[];
   final _controller = StreamController<dynamic>.broadcast();
 
   void emit(dynamic event) => _controller.add(event);
@@ -22,6 +26,18 @@ class _FakeOverlayPlatform implements OverlayPlatform {
   @override
   Future<void> showOverlay() async {
     overlayShown = true;
+    showOverlayCount++;
+  }
+
+  @override
+  Future<void> showCodeSenderOverlay() async {
+    overlayShown = true;
+    codeSenderShown = true;
+  }
+
+  @override
+  Future<void> resizeToRecording() async {
+    resizedToRecording = true;
   }
 
   @override
@@ -32,6 +48,7 @@ class _FakeOverlayPlatform implements OverlayPlatform {
   @override
   Future<void> shareData(Object data) async {
     lastSharedData = data;
+    sharedData.add(data);
   }
 
   @override
@@ -99,6 +116,89 @@ void main() {
     final next = controller.actions.first;
     platform.emit('not_a_known_type');
     expect(await next, OverlayAction.unknown);
+  });
+
+  group('code-sender', () {
+    test('showAsCodeSender affiche le panneau + pousse mode_code_sender',
+        () async {
+      final ok = await controller.showAsCodeSender();
+      expect(ok, isTrue);
+      expect(platform.codeSenderShown, isTrue);
+      expect(controller.isShowing, isTrue);
+      expect(
+        platform.sharedData.any(
+          (d) =>
+              d is Map &&
+              d['type'] == RecordingOverlayMessages.modeCodeSenderType,
+        ),
+        isTrue,
+      );
+    });
+
+    test('showAsCodeSender renvoie false si permission refusée', () async {
+      platform
+        ..granted = false
+        ..requestResult = false;
+      final ok = await controller.showAsCodeSender();
+      expect(ok, isFalse);
+      expect(platform.codeSenderShown, isFalse);
+      expect(controller.isShowing, isFalse);
+    });
+
+    test("roomCodeSubmissions émet le code d'un submit_room_code", () async {
+      await controller.showAsCodeSender();
+      final next = controller.roomCodeSubmissions.first;
+      platform.emit(RecordingOverlayMessages.submitRoomCode('ABC123'));
+      expect(await next, 'ABC123');
+    });
+
+    test("un submit_room_code n'émet PAS d'action parasite", () async {
+      await controller.showAsCodeSender();
+      OverlayAction? action;
+      final sub = controller.actions.listen((a) => action = a);
+      platform.emit(RecordingOverlayMessages.submitRoomCode('ABC123'));
+      await Future<void>.delayed(Duration.zero);
+      expect(action, isNull);
+      await sub.cancel();
+    });
+
+    test('morphToRecording redimensionne quand un overlay est affiché',
+        () async {
+      await controller.showAsCodeSender();
+      expect(platform.resizedToRecording, isFalse);
+      await controller.morphToRecording();
+      expect(platform.resizedToRecording, isTrue);
+    });
+
+    test('morphToRecording est un no-op si aucun overlay affiché', () async {
+      await controller.morphToRecording();
+      expect(platform.resizedToRecording, isFalse);
+    });
+
+    test('isShowing suit show → stop', () async {
+      expect(controller.isShowing, isFalse);
+      await controller.showAsCodeSender();
+      expect(controller.isShowing, isTrue);
+      await controller.stop();
+      expect(controller.isShowing, isFalse);
+    });
+
+    test('startOrMorphToRecording sans overlay → start (showOverlay)',
+        () async {
+      await controller.startOrMorphToRecording();
+      expect(platform.showOverlayCount, 1);
+      expect(platform.resizedToRecording, isFalse);
+      expect(controller.isShowing, isTrue);
+    });
+
+    test('startOrMorphToRecording avec code-sender ouvert → morph, PAS de '
+        '2ᵉ showOverlay', () async {
+      await controller.showAsCodeSender();
+      await controller.startOrMorphToRecording();
+      // Le quirk MIUI #4 exige de NE JAMAIS re-showOverlay : on resize.
+      expect(platform.showOverlayCount, 0);
+      expect(platform.resizedToRecording, isTrue);
+    });
   });
 
   group('OverlayTick', () {

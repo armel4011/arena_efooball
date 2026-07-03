@@ -4,11 +4,15 @@
 // en MAJUSCULES) appelle MatchRepository.setRoomCode puis bascule sur
 // l'interstitiel. Un code trop court est rejeté sans appeler le repository.
 
+import 'dart:async';
+
+import 'package:arena/core/services/recording_overlay_controller.dart';
 import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/repositories/match_repository.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_user/match_room/widgets/share_code_form.dart';
+import 'package:arena/features_user/recording/overlay/recording_overlay_messages.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -44,6 +48,38 @@ class _FakeMatchRepo extends Fake implements MatchRepository {
   }
 }
 
+/// Plateforme overlay fake : aucune méthode plateforme réelle, avec un
+/// `emit()` pour simuler un message overlay→main (soumission de code).
+class _FakeOverlayPlatform implements OverlayPlatform {
+  final _controller = StreamController<dynamic>.broadcast();
+
+  void emit(dynamic event) => _controller.add(event);
+
+  @override
+  Future<bool> isPermissionGranted() async => true;
+
+  @override
+  Future<bool> requestPermission() async => true;
+
+  @override
+  Future<void> showOverlay() async {}
+
+  @override
+  Future<void> showCodeSenderOverlay() async {}
+
+  @override
+  Future<void> resizeToRecording() async {}
+
+  @override
+  Future<void> closeOverlay() async {}
+
+  @override
+  Future<void> shareData(Object data) async {}
+
+  @override
+  Stream<dynamic> get overlayListener => _controller.stream;
+}
+
 // scheduledAt == null → pas de ForfeitTimerCard (pas de timer dans le test).
 ArenaMatch _match() => const ArenaMatch(
       id: 'm1',
@@ -55,12 +91,16 @@ ArenaMatch _match() => const ArenaMatch(
 Widget _scoped({
   required _FakeMatchRepo repo,
   String selfId = 'p1',
+  RecordingOverlayController? overlay,
 }) {
   return ProviderScope(
     overrides: [
       currentSessionProvider
           .overrideWith((ref) => _FakeSession(_FakeUser(selfId))),
       matchRepositoryProvider.overrideWithValue(repo),
+      recordingOverlayControllerProvider.overrideWithValue(
+        overlay ?? RecordingOverlayController(platform: _FakeOverlayPlatform()),
+      ),
     ],
     child: MaterialApp(
       locale: const Locale('fr'),
@@ -117,5 +157,37 @@ void main() {
     expect(repo.setRoomCodeCalls, 0);
     // Le formulaire reste affiché.
     expect(submitButton, findsOneWidget);
+  });
+
+  testWidgets('bouton flottant : code reçu via overlay → setRoomCode',
+      (tester) async {
+    await bumpViewport(tester);
+    final repo = _FakeMatchRepo();
+    final platform = _FakeOverlayPlatform();
+    final overlay = RecordingOverlayController(platform: platform);
+    await tester.pumpWidget(_scoped(repo: repo, overlay: overlay));
+    await tester.pump();
+
+    // Tap le CTA overlay (icône open_in_new, distinct du bouton d'envoi).
+    await tester.tap(find.widgetWithIcon(ArenaButton, Icons.open_in_new));
+    await tester.pump();
+    await tester.pump();
+
+    // L'overlay renvoie un code tapé par le joueur.
+    platform.emit(RecordingOverlayMessages.submitRoomCode('WXYZ9'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(repo.setRoomCodeCalls, 1);
+    expect(repo.lastCode, 'WXYZ9');
+    expect(repo.lastHost, 'p1');
+    // Bascule sur l'interstitiel → le bouton d'envoi in-app a disparu.
+    expect(submitButton, findsNothing);
+
+    // Cleanup en zone async RÉELLE : dispose ferme le ReceivePort
+    // (IsolateNameServer), primitive isolate que le fake-async de
+    // testWidgets ne résout pas. Le contrôleur n'est pas auto-disposé
+    // (injecté via overrideWithValue).
+    await tester.runAsync(overlay.dispose);
   });
 }
