@@ -215,12 +215,17 @@ class _RoomCodeFieldState extends State<RoomCodeField> {
   @override
   Widget build(BuildContext context) {
     final timer = widget.timerLabel;
+    // Mode inline (dans le bouton rouge, par-dessus eFootball) : eFootball
+    // tourne en PAYSAGE (écran court) → carte COMPACTE, sinon ENVOYER déborde
+    // hors de l'écran (« coupé »). Titre + chrono sur une ligne, pas de
+    // sous-titre, ENVOYER + Fermer côte à côte.
+    final compact = timer != null;
     return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 320),
+        constraints: const BoxConstraints(maxWidth: 340),
         child: Container(
-          margin: const EdgeInsets.all(8),
-          padding: const EdgeInsets.all(14),
+          margin: EdgeInsets.all(compact ? 6 : 8),
+          padding: EdgeInsets.all(compact ? 10 : 14),
           decoration: BoxDecoration(
             color: ArenaColors.void_.withValues(alpha: 0.94),
             borderRadius: BorderRadius.circular(16),
@@ -230,10 +235,10 @@ class _RoomCodeFieldState extends State<RoomCodeField> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (timer != null) ...[
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (timer != null) ...[
                     const Icon(
                       Icons.fiber_manual_record,
                       color: ArenaColors.danger,
@@ -249,27 +254,31 @@ class _RoomCodeFieldState extends State<RoomCodeField> {
                         fontFeatures: [FontFeature.tabularFigures()],
                       ),
                     ),
+                    const SizedBox(width: 10),
                   ],
+                  const Flexible(
+                    child: Text(
+                      'Code de la room',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (!compact) ...[
+                const SizedBox(height: 4),
+                const Text(
+                  'Tape le code eFootball et envoie-le à ton adversaire, '
+                  'sans quitter le jeu.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white60, fontSize: 11),
                 ),
-                const SizedBox(height: 8),
               ],
-              const Text(
-                'Code de la room',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'Tape le code eFootball et envoie-le à ton adversaire, '
-                'sans quitter le jeu.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white60, fontSize: 11),
-              ),
-              const SizedBox(height: 10),
+              SizedBox(height: compact ? 8 : 10),
               Focus(
                 onFocusChange: widget.onFocusChange,
                 child: TextField(
@@ -296,7 +305,7 @@ class _RoomCodeFieldState extends State<RoomCodeField> {
                     isDense: true,
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 12,
-                      vertical: 12,
+                      vertical: 10,
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
@@ -314,67 +323,72 @@ class _RoomCodeFieldState extends State<RoomCodeField> {
                 ),
               ),
               if (_tooShort) ...[
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 const Text(
                   'Le code doit faire 4 à 12 caractères.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: ArenaColors.neonRed, fontSize: 11),
                 ),
               ],
-              const SizedBox(height: 10),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: ArenaColors.gameEfoot,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(2),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: _submit,
-                      child: const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 10),
-                        child: Text(
-                          'ENVOYER',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 14,
+              SizedBox(height: compact ? 8 : 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: ArenaColors.gameEfoot,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: _submit,
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 10),
+                            child: Text(
+                              'ENVOYER',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 14,
+                              ),
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ),
-              if (widget.onClose != null) ...[
-                const SizedBox(height: 6),
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: widget.onClose,
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8),
-                      child: Text(
-                        'Fermer',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
+                  if (widget.onClose != null) ...[
+                    const SizedBox(width: 8),
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: widget.onClose,
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          child: Text(
+                            'Fermer',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-              ],
+                  ],
+                ],
+              ),
               if (_sentCode != null) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                   decoration: BoxDecoration(
                     color: ArenaColors.statusOk.withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(8),

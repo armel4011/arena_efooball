@@ -539,9 +539,12 @@ class _DefaultOverlayPlatform implements OverlayPlatform {
     // enableDrag: false — pendant la saisie, le handler de drag natif volerait
     // les taps du champ/bouton (quirk #3). Retour à draggable via
     // resizeToRecording quand la saisie se referme.
+    // Fenêtre COMPACTE : eFootball tourne en paysage (écran court) — une
+    // fenêtre trop haute déborde et « coupe » le bouton ENVOYER. La carte
+    // inline compacte fait ~155 dp ; 190 laisse une petite marge.
     await FlutterOverlayWindow.resizeOverlay(
       (360 * dpr).round(),
-      (420 * dpr).round(),
+      (190 * dpr).round(),
       false,
     );
   }
@@ -553,8 +556,9 @@ class _DefaultOverlayPlatform implements OverlayPlatform {
     final screenW = view.physicalSize.width; // px
     final overlayW = 360 * dpr;
     final x = ((screenW - overlayW) / 2).clamp(0, screenW).toDouble();
-    // ~6 % depuis le haut (sous la barre de statut), en px.
-    final y = view.physicalSize.height * 0.06;
+    // Tout en haut (juste sous la barre de statut) pour laisser le maximum
+    // de place au clavier en bas (paysage).
+    final y = view.physicalSize.height * 0.02;
     await FlutterOverlayWindow.moveOverlay(OverlayPosition(x, y));
   }
 
