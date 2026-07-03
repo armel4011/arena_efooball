@@ -81,6 +81,11 @@ abstract final class RecordingOverlayMessages {
   /// s'envoie APRÈS le démarrage du recording, sans mode overlay séparé.
   static const String askEnterCodeType = 'ask_enter_code';
 
+  /// `overlay → main` — le HOME referme la saisie du code sans envoyer
+  /// (bouton « Fermer »). Le main rétrécit l'overlay (`exitCodeEntry`) et
+  /// pousse un tick `codeEntry:false` → retour au bouton d'enregistrement.
+  static const String askExitCodeType = 'ask_exit_code';
+
   /// Construit le message `main → overlay` de bascule en mode code-sender.
   static Map<String, dynamic> modeCodeSender() => {'type': modeCodeSenderType};
 

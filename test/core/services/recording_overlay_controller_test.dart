@@ -263,6 +263,19 @@ void main() {
       await sub.cancel();
     });
 
+    test('ask_exit_code referme la saisie (resize retour bouton)', () async {
+      await controller.start();
+      await controller.enterCodeEntry();
+      platform.resizedToRecording = false;
+      OverlayAction? action;
+      final sub = controller.actions.listen((a) => action = a);
+      platform.emit(RecordingOverlayMessages.askExitCodeType);
+      await Future<void>.delayed(Duration.zero);
+      expect(platform.resizedToRecording, isTrue);
+      expect(action, isNull);
+      await sub.cancel();
+    });
+
     test('submit_room_code émet le code ET referme la saisie', () async {
       await controller.start();
       await controller.enterCodeEntry();

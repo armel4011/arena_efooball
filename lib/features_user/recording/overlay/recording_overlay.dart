@@ -90,6 +90,17 @@ class _ArenaOverlayRootState extends State<ArenaOverlayRoot> {
         ? OverlayTick.fromMap(event)
         : null;
     final modeChanged = mode != null && mode != _mode;
+
+    // Pendant la saisie du code inline, un tick chrono arrive chaque seconde.
+    // Reconstruire le TextField à chaque tick lui ferait perdre focus/clavier
+    // (champ figé). On met donc à jour `_tick` SANS setState tant que la
+    // saisie reste ouverte ; on ne rebuild que si `codeEntry` (ou le mode)
+    // change réellement (ouverture / fermeture du champ).
+    if (tick != null && !modeChanged && _tick.isCodeEntry && tick.isCodeEntry) {
+      _tick = tick;
+      return;
+    }
+
     // Skip rebuilds when nothing changed — avoids re-rendering the code-sender
     // panel (and any focus/keyboard flicker) on every heartbeat tick.
     if (!modeChanged && tick == null) return;
@@ -150,6 +161,7 @@ class RoomCodeField extends StatefulWidget {
     required this.onSubmit,
     required this.onFocusChange,
     this.timerLabel,
+    this.onClose,
     super.key,
   });
 
@@ -166,6 +178,10 @@ class RoomCodeField extends StatefulWidget {
   /// Chrono d'enregistrement (MM:SS) affiché en tête quand le champ est
   /// rendu inline dans le bouton rouge. `null` = pas de bandeau chrono.
   final String? timerLabel;
+
+  /// Referme la saisie sans envoyer (bouton « Fermer »). `null` = pas de
+  /// bouton fermer (mode panneau legacy).
+  final VoidCallback? onClose;
 
   @override
   State<RoomCodeField> createState() => _RoomCodeFieldState();
@@ -333,6 +349,27 @@ class _RoomCodeFieldState extends State<RoomCodeField> {
                   ),
                 ),
               ),
+              if (widget.onClose != null) ...[
+                const SizedBox(height: 6),
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: widget.onClose,
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: Text(
+                        'Fermer',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
               if (_sentCode != null) ...[
                 const SizedBox(height: 8),
                 Container(
@@ -459,6 +496,7 @@ class _RecordingOverlayButtonState extends State<RecordingOverlayButton> {
         onSubmit: widget.onSubmitCode,
         onFocusChange: widget.onFieldFocusChange,
         timerLabel: _tick.formatted,
+        onClose: () => sendToMain(RecordingOverlayMessages.askExitCodeType),
       );
     }
     return SizedBox(

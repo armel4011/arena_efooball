@@ -347,17 +347,21 @@ class RecordingOverlayController {
     }
     // Le mini « envoyer le code » du bouton : affaire interne overlay/resize,
     // pas une OverlayAction (pause/forfait/…). On ouvre la saisie inline.
-    if (_isEnterCodeRequest(event)) {
+    if (_isMessage(event, RecordingOverlayMessages.askEnterCodeType)) {
       unawaited(enterCodeEntry());
+      return;
+    }
+    // Bouton « Fermer » de la saisie : on referme sans envoyer.
+    if (_isMessage(event, RecordingOverlayMessages.askExitCodeType)) {
+      unawaited(exitCodeEntry());
       return;
     }
     _actions.add(_parseAction(event));
   }
 
-  static bool _isEnterCodeRequest(Object? event) {
-    if (event == RecordingOverlayMessages.askEnterCodeType) return true;
-    return event is Map &&
-        event['type'] == RecordingOverlayMessages.askEnterCodeType;
+  static bool _isMessage(Object? event, String type) {
+    if (event == type) return true;
+    return event is Map && event['type'] == type;
   }
 
   void _bindListener() {
