@@ -197,9 +197,9 @@ void main() {
 
       expect(find.text('ROOM77'), findsOneWidget);
       expect(find.textContaining('Recopie'), findsOneWidget);
-      expect(find.text('COPIER'), findsOneWidget);
-      // Pas de champ de saisie (vue lecture seule).
+      // Lecture seule : ni champ de saisie ni bouton Copier.
       expect(find.byType(TextField), findsNothing);
+      expect(find.text('COPIER'), findsNothing);
     });
   });
 }
