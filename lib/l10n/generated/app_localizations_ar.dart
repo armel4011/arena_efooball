@@ -3235,4 +3235,113 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get matchStepWord => 'الخطوة';
+
+  @override
+  String get paymentOptionsMissing =>
+      'لم يتم إعداد الدفع لهذه المسابقة بعد. تواصل مع المنظم.';
+
+  @override
+  String get countryPickTitle => 'اختر بلدك';
+
+  @override
+  String get countryPickSubtitle => 'اختر البلد الذي ستدفع منه.';
+
+  @override
+  String get countryPickConfirm => 'متابعة';
+
+  @override
+  String get countryPickCancel => 'إلغاء';
+
+  @override
+  String get countryStepTitle => 'البلد';
+
+  @override
+  String get countryOrganizerLabel => 'بلد المنظّم';
+
+  @override
+  String get countryOrganizerHint =>
+      'يُستخدم لتحديد نطاق المشرف حسب البلد. لا يؤثر على البلدان المسموح لها بالدفع.';
+
+  @override
+  String get countryPaymentSectionTitle => 'خيارات الدفع حسب البلد';
+
+  @override
+  String get countryPaymentSectionHint =>
+      'لكل بلد مسموح، أضف مشغّلاً واحداً أو أكثر (Orange Money، MTN MoMo، Wave…) مع رمز التحويل الخاص به. يختار اللاعب بلده ثم مشغّلاً عند الدفع.';
+
+  @override
+  String get countryFreeNote =>
+      'مسابقة مجانية — لا حاجة لإعداد الدفع. يلزم فقط بلد المنظّم.';
+
+  @override
+  String get countryOperatorNameLabel => 'اسم المشغّل';
+
+  @override
+  String get countryOperatorNameHint => 'مثال: Orange Money';
+
+  @override
+  String get countryTransferCodeLabel => 'رمز التحويل';
+
+  @override
+  String get countryTransferCodeHint => 'مثال: *126*1*001234#';
+
+  @override
+  String get countryAddOperator => 'إضافة مشغّل';
+
+  @override
+  String get countryRemoveOperator => 'حذف المشغّل';
+
+  @override
+  String get countryAddCountry => 'إضافة بلد';
+
+  @override
+  String get countryRemoveCountry => 'حذف هذا البلد';
+
+  @override
+  String get countryChooseCountry => 'اختر بلداً';
+
+  @override
+  String get countrySaveOperator => 'حفظ هذا المشغّل';
+
+  @override
+  String countryOperatorTemplatesButton(int count) {
+    return 'مشغّلاتي ($count)';
+  }
+
+  @override
+  String get countryOperatorSavedToast => 'تم حفظ المشغّل كنموذج.';
+
+  @override
+  String get countryOperatorEmptyToast => 'أدخل اسم المشغّل والرمز قبل الحفظ.';
+
+  @override
+  String get countryValidationNeedOne =>
+      'فعّل بلداً واحداً على الأقل وأكمل كل مشغّل (اسم + رمز).';
+
+  @override
+  String get adminScopeRestrictionsTitle => 'قيود (اختياري)';
+
+  @override
+  String get adminScopeRestrictionsHint =>
+      'قيّد هذا المشرف المستقبلي ببلدان و/أو أقسام محددة. اتركه فارغاً للوصول الكامل.';
+
+  @override
+  String get adminScopeCountriesLabel => 'البلدان المسموح بها';
+
+  @override
+  String get adminScopeSectionsLabel => 'الأقسام المسموح بها';
+
+  @override
+  String get adminScopeAllCountries => 'كل البلدان';
+
+  @override
+  String get adminScopeAllSections => 'كل الأقسام';
+
+  @override
+  String adminScopePerimeterBanner(String countries) {
+    return 'النطاق: $countries';
+  }
+
+  @override
+  String get adminScopeOutOfPerimeter => 'إجراء خارج نطاقك.';
 }

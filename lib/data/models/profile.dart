@@ -49,6 +49,12 @@ sealed class Profile with _$Profile {
     // Lot D — Système de parrainage (item 8).
     @Default('') String referralCode,
     String? referredBy,
+    // VOLET 3 — périmètre admin restreint (par code d'invitation). NULL ou
+    // liste vide = aucune restriction (voit tout). Sinon l'admin/super-admin
+    // est limité aux pays (ISO alpha-2) / sections listés. Propagé par l'EF
+    // `register-admin` depuis `invitation_codes.allowed_*`.
+    List<String>? adminAllowedCountries,
+    List<String>? adminAllowedSections,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) = _Profile;

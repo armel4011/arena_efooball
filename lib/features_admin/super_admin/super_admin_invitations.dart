@@ -1,14 +1,17 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/core/utils/arena_error_message.dart';
+import 'package:arena/core/utils/supported_countries.dart';
 import 'package:arena/data/models/invitation_code.dart';
 import 'package:arena/data/models/user_role.dart';
 import 'package:arena/data/repositories/admin/admin_invitations_repository.dart';
+import 'package:arena/features_shared/admin_sections.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -35,6 +38,10 @@ class _SuperAdminInvitationsState extends ConsumerState<SuperAdminInvitations> {
   UserRole _role = UserRole.admin;
   _Expiration _expiration = _Expiration.thirtyDays;
   final _emailCtrl = TextEditingController();
+
+  // VOLET 3 — périmètre facultatif (vide = aucune restriction).
+  final Set<String> _countries = <String>{};
+  final Set<String> _sections = <String>{};
 
   @override
   void dispose() {
@@ -87,8 +94,20 @@ class _SuperAdminInvitationsState extends ConsumerState<SuperAdminInvitations> {
                 role: _role,
                 expiration: _expiration,
                 emailCtrl: _emailCtrl,
+                selectedCountries: _countries,
+                selectedSections: _sections,
                 onRoleChanged: (r) => setState(() => _role = r),
                 onExpirationChanged: (e) => setState(() => _expiration = e),
+                onToggleCountry: (code) => setState(() {
+                  _countries.contains(code)
+                      ? _countries.remove(code)
+                      : _countries.add(code);
+                }),
+                onToggleSection: (key) => setState(() {
+                  _sections.contains(key)
+                      ? _sections.remove(key)
+                      : _sections.add(key);
+                }),
                 onSubmit: _submit,
               ),
             ],
@@ -108,9 +127,16 @@ class _SuperAdminInvitationsState extends ConsumerState<SuperAdminInvitations> {
             role: _role,
             targetEmail: email.isEmpty ? null : email,
             expiresAt: _expiration.deadline,
+            allowedCountryCodes:
+                _countries.isEmpty ? null : _countries.toList(),
+            allowedSections: _sections.isEmpty ? null : _sections.toList(),
           );
       ref.invalidate(adminInvitationsProvider);
       _emailCtrl.clear();
+      setState(() {
+        _countries.clear();
+        _sections.clear();
+      });
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Code généré.')),
@@ -363,20 +389,29 @@ class _GenerateCard extends StatelessWidget {
     required this.role,
     required this.expiration,
     required this.emailCtrl,
+    required this.selectedCountries,
+    required this.selectedSections,
     required this.onRoleChanged,
     required this.onExpirationChanged,
+    required this.onToggleCountry,
+    required this.onToggleSection,
     required this.onSubmit,
   });
 
   final UserRole role;
   final _Expiration expiration;
   final TextEditingController emailCtrl;
+  final Set<String> selectedCountries;
+  final Set<String> selectedSections;
   final ValueChanged<UserRole> onRoleChanged;
   final ValueChanged<_Expiration> onExpirationChanged;
+  final ValueChanged<String> onToggleCountry;
+  final ValueChanged<String> onToggleSection;
   final Future<void> Function() onSubmit;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.lg),
       decoration: arenaGlowCardDecoration(),
@@ -438,6 +473,50 @@ class _GenerateCard extends StatelessWidget {
                 ),
             ],
           ),
+          const SizedBox(height: ArenaSpacing.lg),
+          Text(l10n.adminScopeRestrictionsTitle, style: ArenaText.inputLabel),
+          const SizedBox(height: ArenaSpacing.xs),
+          Text(l10n.adminScopeRestrictionsHint, style: ArenaText.small),
+          const SizedBox(height: ArenaSpacing.md),
+          Text(
+            selectedCountries.isEmpty
+                ? '${l10n.adminScopeCountriesLabel} · ${l10n.adminScopeAllCountries}'
+                : l10n.adminScopeCountriesLabel,
+            style: ArenaText.inputLabel,
+          ),
+          const SizedBox(height: ArenaSpacing.xs),
+          Wrap(
+            spacing: ArenaSpacing.xs,
+            runSpacing: ArenaSpacing.xs,
+            children: [
+              for (final c in kSupportedCountries)
+                _ScopeChip(
+                  label: '${c.flag} ${c.code}',
+                  selected: selectedCountries.contains(c.code),
+                  onTap: () => onToggleCountry(c.code),
+                ),
+            ],
+          ),
+          const SizedBox(height: ArenaSpacing.md),
+          Text(
+            selectedSections.isEmpty
+                ? '${l10n.adminScopeSectionsLabel} · ${l10n.adminScopeAllSections}'
+                : l10n.adminScopeSectionsLabel,
+            style: ArenaText.inputLabel,
+          ),
+          const SizedBox(height: ArenaSpacing.xs),
+          Wrap(
+            spacing: ArenaSpacing.xs,
+            runSpacing: ArenaSpacing.xs,
+            children: [
+              for (final s in kAdminSections)
+                _ScopeChip(
+                  label: s.labelFr,
+                  selected: selectedSections.contains(s.key),
+                  onTap: () => onToggleSection(s.key),
+                ),
+            ],
+          ),
           const SizedBox(height: ArenaSpacing.md),
           ArenaButton(
             label: '🔑 GÉNÉRER',
@@ -445,6 +524,49 @@ class _GenerateCard extends StatelessWidget {
             onPressed: () async => onSubmit(),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Puce sélectionnable (pays / section) du périmètre d'invitation.
+class _ScopeChip extends StatelessWidget {
+  const _ScopeChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(ArenaRadius.md),
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: ArenaSpacing.sm,
+          vertical: ArenaSpacing.xs,
+        ),
+        decoration: BoxDecoration(
+          color: selected
+              ? ArenaColors.signalBlue.withValues(alpha: 0.18)
+              : ArenaColors.surface,
+          borderRadius: BorderRadius.circular(ArenaRadius.md),
+          border: Border.all(
+            color: selected ? ArenaColors.signalBlue : ArenaColors.border,
+          ),
+        ),
+        child: Text(
+          label,
+          style: ArenaText.body.copyWith(
+            color: selected ? ArenaColors.bone : ArenaColors.silver,
+            fontWeight: selected ? FontWeight.w700 : null,
+          ),
+        ),
       ),
     );
   }

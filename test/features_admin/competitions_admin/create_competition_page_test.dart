@@ -27,7 +27,7 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
   }
 
-  testWidgets("démarre à l'étape 1/5 (Infos) en mode création",
+  testWidgets("démarre à l'étape 1/6 (Infos) en mode création",
       (tester) async {
     await bumpViewport(tester);
     await tester.pumpWidget(_scoped());
@@ -35,7 +35,7 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('CRÉER'), findsOneWidget);
-    expect(find.textContaining('Étape 1 / 5'), findsOneWidget);
+    expect(find.textContaining('Étape 1 / 6'), findsOneWidget);
     // Premier champ de l'étape Infos.
     expect(find.text('Nom de la compétition'), findsOneWidget);
     // CTA de navigation.

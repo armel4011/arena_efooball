@@ -24,6 +24,10 @@ sealed class InvitationCode with _$InvitationCode {
     @Default(0) int usesCount,
     DateTime? usedAt,
     String? usedBy,
+    // VOLET 3 — périmètre facultatif du futur admin. NULL/vide = aucune
+    // restriction (tous les pays / toutes les sections).
+    List<String>? allowedCountryCodes,
+    List<String>? allowedSections,
     DateTime? createdAt,
   }) = _InvitationCode;
 

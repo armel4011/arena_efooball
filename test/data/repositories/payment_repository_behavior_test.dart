@@ -27,6 +27,8 @@ void main() {
           currency: 'XOF',
           payerMethodCode: 'MTN_MOMO',
           payerPhone: '+237600000000',
+          countryCode: 'CM',
+          operatorLabel: 'MTN MoMo',
         ),
         throwsStateError,
       );
@@ -46,6 +48,8 @@ void main() {
           currency: 'XOF',
           payerMethodCode: 'ORANGE_MONEY',
           payerPhone: '+237600000000',
+          countryCode: 'CM',
+          operatorLabel: 'Orange Money',
         );
 
         expect(id, 'pay-9');
@@ -54,6 +58,9 @@ void main() {
         expect(payload['status'], 'awaiting_admin');
         expect(payload['user_id'], 'user-42');
         expect(payload['competition_id'], 'comp-1');
+        // Multi-pays : le pays + l'opérateur choisis sont persistés.
+        expect(payload['country_code'], 'CM');
+        expect(payload['operator_label'], 'Orange Money');
         // Le client ne doit JAMAIS pouvoir marquer un paiement réglé.
         expect(payload['status'], isNot(anyOf('succeeded', 'validated')));
       },

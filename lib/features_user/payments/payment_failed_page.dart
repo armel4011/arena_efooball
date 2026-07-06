@@ -22,7 +22,7 @@ class PaymentFailedPage extends StatelessWidget {
   const PaymentFailedPage({
     this.reason = PaymentFailReason.unknown,
     this.adminReason,
-    this.method,
+    this.operator,
     this.onRetry,
     this.onContactSupport,
     super.key,
@@ -32,7 +32,7 @@ class PaymentFailedPage extends StatelessWidget {
 
   /// Justification saisie par le super-admin quand reason == rejected.
   final String? adminReason;
-  final PaymentMethod? method;
+  final PaymentOperator? operator;
   final VoidCallback? onRetry;
   final VoidCallback? onContactSupport;
 

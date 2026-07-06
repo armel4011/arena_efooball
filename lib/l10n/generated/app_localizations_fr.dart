@@ -3269,4 +3269,115 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get matchStepWord => 'ÉTAPE';
+
+  @override
+  String get paymentOptionsMissing =>
+      'Le paiement n\'est pas encore configuré pour cette compétition. Contacte l\'organisateur.';
+
+  @override
+  String get countryPickTitle => 'Choisis ton pays';
+
+  @override
+  String get countryPickSubtitle =>
+      'Sélectionne le pays depuis lequel tu vas payer.';
+
+  @override
+  String get countryPickConfirm => 'CONTINUER';
+
+  @override
+  String get countryPickCancel => 'Annuler';
+
+  @override
+  String get countryStepTitle => 'Pays';
+
+  @override
+  String get countryOrganizerLabel => 'Pays organisateur';
+
+  @override
+  String get countryOrganizerHint =>
+      'Sert au périmètre admin par pays. N\'affecte pas les pays autorisés au paiement.';
+
+  @override
+  String get countryPaymentSectionTitle => 'Options de paiement par pays';
+
+  @override
+  String get countryPaymentSectionHint =>
+      'Pour chaque pays autorisé, ajoute un ou plusieurs opérateurs (Orange Money, MTN MoMo, Wave…) avec leur code de transfert. Le joueur choisit son pays puis un opérateur au moment de payer.';
+
+  @override
+  String get countryFreeNote =>
+      'Compétition gratuite — aucune configuration de paiement nécessaire. Seul le pays organisateur est requis.';
+
+  @override
+  String get countryOperatorNameLabel => 'Nom de l\'opérateur';
+
+  @override
+  String get countryOperatorNameHint => 'ex. Orange Money';
+
+  @override
+  String get countryTransferCodeLabel => 'Code de transfert';
+
+  @override
+  String get countryTransferCodeHint => 'ex. *126*1*001234#';
+
+  @override
+  String get countryAddOperator => 'Ajouter un opérateur';
+
+  @override
+  String get countryRemoveOperator => 'Supprimer l\'opérateur';
+
+  @override
+  String get countryAddCountry => 'Ajouter un pays';
+
+  @override
+  String get countryRemoveCountry => 'Supprimer ce pays';
+
+  @override
+  String get countryChooseCountry => 'Choisir un pays';
+
+  @override
+  String get countrySaveOperator => 'Enregistrer cet opérateur';
+
+  @override
+  String countryOperatorTemplatesButton(int count) {
+    return 'Mes opérateurs ($count)';
+  }
+
+  @override
+  String get countryOperatorSavedToast => 'Opérateur enregistré comme modèle.';
+
+  @override
+  String get countryOperatorEmptyToast =>
+      'Renseigne le nom et le code de l\'opérateur avant d\'enregistrer.';
+
+  @override
+  String get countryValidationNeedOne =>
+      'Active au moins un pays et complète chaque opérateur (nom + code).';
+
+  @override
+  String get adminScopeRestrictionsTitle => 'RESTRICTIONS (optionnel)';
+
+  @override
+  String get adminScopeRestrictionsHint =>
+      'Limite ce futur admin à certains pays et/ou sections. Laisse vide pour un accès complet.';
+
+  @override
+  String get adminScopeCountriesLabel => 'Pays autorisés';
+
+  @override
+  String get adminScopeSectionsLabel => 'Sections autorisées';
+
+  @override
+  String get adminScopeAllCountries => 'Tous les pays';
+
+  @override
+  String get adminScopeAllSections => 'Toutes les sections';
+
+  @override
+  String adminScopePerimeterBanner(String countries) {
+    return 'Périmètre : $countries';
+  }
+
+  @override
+  String get adminScopeOutOfPerimeter => 'Action hors de votre périmètre.';
 }

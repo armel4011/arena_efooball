@@ -28,7 +28,7 @@ import 'package:intl/intl.dart';
 class PaymentProcessingPage extends ConsumerStatefulWidget {
   const PaymentProcessingPage({
     required this.paymentId,
-    required this.method,
+    required this.operator,
     required this.amountXaf,
     required this.competitionName,
     required this.maskedPhone,
@@ -36,7 +36,7 @@ class PaymentProcessingPage extends ConsumerStatefulWidget {
   });
 
   final String paymentId;
-  final PaymentMethod method;
+  final PaymentOperator operator;
   final int amountXaf;
   final String competitionName;
   final String maskedPhone;
@@ -58,7 +58,7 @@ class _PaymentProcessingPageState extends ConsumerState<PaymentProcessingPage> {
         context.go(
           UserRoutes.paymentSuccess,
           extra: PaymentResultArgs(
-            method: widget.method,
+            operator: widget.operator,
             amountXaf: widget.amountXaf,
             transactionId: 'ARENA-${rec.id.substring(0, 8).toUpperCase()}',
             dateLabel: DateFormat('dd/MM HH:mm').format(
@@ -78,7 +78,7 @@ class _PaymentProcessingPageState extends ConsumerState<PaymentProcessingPage> {
           extra: PaymentFailedArgs(
             reason: PaymentFailReason.rejected,
             adminReason: rec.rejectionReason,
-            method: widget.method,
+            operator: widget.operator,
           ),
         );
       });
@@ -88,7 +88,7 @@ class _PaymentProcessingPageState extends ConsumerState<PaymentProcessingPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final accent = widget.method.brandColor;
+    final accent = widget.operator.brandColor;
     ref.watch(paymentByIdProvider(widget.paymentId)).whenData((rec) {
       if (rec != null) _handleStatus(context, rec);
     });
@@ -105,7 +105,7 @@ class _PaymentProcessingPageState extends ConsumerState<PaymentProcessingPage> {
             children: [
               const SizedBox(height: ArenaSpacing.lg),
               Center(
-                child: PaymentMethodLogo(method: widget.method, size: 70),
+                child: PaymentOperatorLogo(operator: widget.operator, size: 70),
               ),
               const SizedBox(height: ArenaSpacing.md),
               Center(
@@ -119,7 +119,7 @@ class _PaymentProcessingPageState extends ConsumerState<PaymentProcessingPage> {
               Center(
                 child: Text(
                   '${l10n.paymentProcessingWaitingSubtitle}'
-                  '${widget.method.labelOf(l10n)}'
+                  '${widget.operator.label}'
                   '${l10n.paymentProcessingWaitingSubtitleSuffix}',
                   textAlign: TextAlign.center,
                   style: ArenaText.bodyMuted,
@@ -138,7 +138,7 @@ class _PaymentProcessingPageState extends ConsumerState<PaymentProcessingPage> {
               ),
               const SizedBox(height: ArenaSpacing.lg),
               _PaymentRecap(
-                method: widget.method,
+                operator: widget.operator,
                 amountXaf: widget.amountXaf,
                 competitionName: widget.competitionName,
                 maskedPhone: widget.maskedPhone,
@@ -219,14 +219,14 @@ class _PaymentProcessingPageState extends ConsumerState<PaymentProcessingPage> {
 
 class _PaymentRecap extends StatelessWidget {
   const _PaymentRecap({
-    required this.method,
+    required this.operator,
     required this.amountXaf,
     required this.competitionName,
     required this.maskedPhone,
     required this.paymentId,
   });
 
-  final PaymentMethod method;
+  final PaymentOperator operator;
   final int amountXaf;
   final String competitionName;
   final String maskedPhone;
@@ -248,7 +248,7 @@ class _PaymentRecap extends StatelessWidget {
           const SizedBox(height: 4),
           _Row(label: l10n.paymentProcessingRecapAmount, value: '${_formatXaf(amountXaf)} XAF'),
           const SizedBox(height: 4),
-          _Row(label: l10n.paymentProcessingRecapMethod, value: method.labelOf(l10n)),
+          _Row(label: l10n.paymentProcessingRecapMethod, value: operator.label),
           const SizedBox(height: 4),
           _Row(label: l10n.paymentProcessingRecapPhone, value: maskedPhone),
           const SizedBox(height: 4),

@@ -54,6 +54,12 @@ _$ProfileImpl _$$ProfileImplFromJson(Map<String, dynamic> json) =>
           : DateTime.parse(json['kyc_verified_at'] as String),
       referralCode: json['referral_code'] as String? ?? '',
       referredBy: json['referred_by'] as String?,
+      adminAllowedCountries: (json['admin_allowed_countries'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+      adminAllowedSections: (json['admin_allowed_sections'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
       createdAt: json['created_at'] == null
           ? null
           : DateTime.parse(json['created_at'] as String),
@@ -105,6 +111,10 @@ Map<String, dynamic> _$$ProfileImplToJson(_$ProfileImpl instance) =>
         'kyc_verified_at': value,
       'referral_code': instance.referralCode,
       if (instance.referredBy case final value?) 'referred_by': value,
+      if (instance.adminAllowedCountries case final value?)
+        'admin_allowed_countries': value,
+      if (instance.adminAllowedSections case final value?)
+        'admin_allowed_sections': value,
       if (instance.createdAt?.toIso8601String() case final value?)
         'created_at': value,
       if (instance.updatedAt?.toIso8601String() case final value?)

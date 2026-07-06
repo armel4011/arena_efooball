@@ -156,7 +156,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const { data: invite, error: inviteErr } = await service
     .from("invitation_codes")
     .select(
-      "id, code, role, target_email, expires_at, uses_count, max_uses, used_at",
+      "id, code, role, target_email, expires_at, uses_count, max_uses, used_at, allowed_country_codes, allowed_sections",
     )
     .eq("code", code)
     .maybeSingle();
@@ -272,6 +272,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
   //    `country_code` n'est pas demandé par le form admin V1 — on default
   //    sur "CM" (cf. seed dev super-admin) ; l'admin pourra l'éditer
   //    depuis son écran profil.
+  //    Scope (volet 3) : le code d'invitation peut restreindre le futur admin
+  //    à certains pays / sections. On propage tel quel (null = aucun scope).
   const { data: profile, error: profileErr } = await service
     .from("profiles")
     .insert({
@@ -280,6 +282,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
       email,
       country_code: "CM",
       role: invite.role,
+      admin_allowed_countries: invite.allowed_country_codes ?? null,
+      admin_allowed_sections: invite.allowed_sections ?? null,
       auth_provider: "email",
       cgu_accepted_at: cguAcceptedAt || new Date().toISOString(),
       cgu_version_accepted: cguVersionAccepted || "2026-05-01",

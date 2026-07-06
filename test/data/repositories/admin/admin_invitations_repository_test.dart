@@ -51,6 +51,34 @@ void main() {
       );
       expect((from.insertedValues! as Map)['target_email'], 'bob@x.com');
     });
+
+    test('périmètre pays/sections écrit seulement si non vide (VOLET 3)',
+        () async {
+      final from = stub('invitation_codes', codeRow());
+      await repo.create(
+        generatedBy: 'a1',
+        role: UserRole.admin,
+        allowedCountryCodes: const ['CM', 'SN'],
+        allowedSections: const ['payouts'],
+      );
+      final ins = from.insertedValues! as Map<String, dynamic>;
+      expect(ins['allowed_country_codes'], const ['CM', 'SN']);
+      expect(ins['allowed_sections'], const ['payouts']);
+    });
+
+    test('périmètre vide/null → clés absentes (= aucune restriction)',
+        () async {
+      final from = stub('invitation_codes', codeRow());
+      await repo.create(
+        generatedBy: 'a1',
+        role: UserRole.admin,
+        allowedCountryCodes: const [],
+        allowedSections: null,
+      );
+      final ins = from.insertedValues! as Map<String, dynamic>;
+      expect(ins.containsKey('allowed_country_codes'), isFalse);
+      expect(ins.containsKey('allowed_sections'), isFalse);
+    });
   });
 
   group('markUsed', () {

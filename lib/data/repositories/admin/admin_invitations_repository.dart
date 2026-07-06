@@ -38,6 +38,8 @@ class AdminInvitationsRepository {
     String? targetEmail,
     DateTime? expiresAt,
     int maxUses = 1,
+    List<String>? allowedCountryCodes,
+    List<String>? allowedSections,
   }) async {
     final code = _generateCode();
     final row = await _client.from(_table).insert({
@@ -49,6 +51,13 @@ class AdminInvitationsRepository {
       if (expiresAt != null)
         'expires_at': expiresAt.toUtc().toIso8601String(),
       'max_uses': maxUses,
+      // VOLET 3 — périmètre facultatif. On n'écrit la clé que si une
+      // restriction est demandée ; sinon la colonne reste NULL (= aucune
+      // restriction, l'admin verra tout / tous les pays).
+      if (allowedCountryCodes != null && allowedCountryCodes.isNotEmpty)
+        'allowed_country_codes': allowedCountryCodes,
+      if (allowedSections != null && allowedSections.isNotEmpty)
+        'allowed_sections': allowedSections,
     }).select().single();
     return InvitationCode.fromJson(row);
   }

@@ -3,7 +3,9 @@ import 'package:arena/core/utils/arena_error_message.dart';
 import 'package:arena/data/models/payout.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_payouts_repository.dart';
+import 'package:arena/features_admin_desktop/shared/desktop_scope_banner.dart';
 import 'package:arena/features_admin_desktop/shared/desktop_totp_gate.dart';
+import 'package:arena/features_shared/admin_sections.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -22,6 +24,7 @@ class DesktopPayoutsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final payoutsAsync = ref.watch(adminPendingPayoutsProvider);
+    final profile = ref.watch(currentProfileProvider).valueOrNull;
 
     return ScaffoldPage(
       header: PageHeader(
@@ -37,7 +40,23 @@ class DesktopPayoutsPage extends ConsumerWidget {
           ],
         ),
       ),
-      content: payoutsAsync.when(
+      content: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (adminHasCountryScope(profile))
+            DesktopScopeBanner(profile: profile),
+          Expanded(child: _body(context, ref, payoutsAsync)),
+        ],
+      ),
+    );
+  }
+
+  Widget _body(
+    BuildContext context,
+    WidgetRef ref,
+    AsyncValue<List<Payout>> payoutsAsync,
+  ) {
+    return payoutsAsync.when(
         loading: () => const Center(child: ProgressRing()),
         error: (e, _) => Padding(
           padding: const EdgeInsets.all(24),
@@ -66,7 +85,6 @@ class DesktopPayoutsPage extends ConsumerWidget {
             ],
           );
         },
-      ),
     );
   }
 }

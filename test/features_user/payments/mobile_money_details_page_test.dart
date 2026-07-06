@@ -1,7 +1,7 @@
 // Tests UI du flux ARGENT — P2 : détails Mobile Money + soumission "J'AI PAYÉ".
 //
-// MobileMoneyDetailsPage gate le bouton de soumission sur (numéro valide à 9
-// chiffres ET code marchand présent), puis sur tap appelle
+// MobileMoneyDetailsPage gate le bouton de soumission sur (numéro local valide
+// ET code de transfert présent), puis sur tap appelle
 // PaymentRepository.submitManualPayment et navigue vers P3. On monte la page
 // dans un GoRouter minimal pour que la navigation post-submit aboutisse.
 
@@ -21,6 +21,8 @@ class _FakePaymentRepo extends Fake implements PaymentRepository {
   String? lastMethodCode;
   String? lastPhone;
   double? lastAmount;
+  String? lastCountryCode;
+  String? lastOperatorLabel;
 
   @override
   Future<String> submitManualPayment({
@@ -29,18 +31,22 @@ class _FakePaymentRepo extends Fake implements PaymentRepository {
     required String currency,
     required String payerMethodCode,
     required String payerPhone,
+    required String countryCode,
+    required String operatorLabel,
   }) async {
     calls++;
     lastMethodCode = payerMethodCode;
     lastPhone = payerPhone;
     lastAmount = amountLocal;
+    lastCountryCode = countryCode;
+    lastOperatorLabel = operatorLabel;
     return 'pay-123';
   }
 }
 
 Widget _app({
   required _FakePaymentRepo repo,
-  String merchantCode = '*126*1*ARENA#',
+  String transferCode = '*126*1*ARENA#',
 }) {
   final router = GoRouter(
     initialLocation: '/p2',
@@ -48,11 +54,16 @@ Widget _app({
       GoRoute(
         path: '/p2',
         builder: (context, state) => MobileMoneyDetailsPage(
-          method: PaymentMethod.mtnMoMo,
+          operator: PaymentOperator(
+            label: 'MTN MoMo',
+            code: 'MTN_MOMO',
+            countryCode: 'CM',
+            transferCode: transferCode,
+            dialCode: '+237',
+          ),
           amountXaf: 1500,
           competitionId: 'c1',
           competitionName: 'Coupe ARENA',
-          merchantCode: merchantCode,
         ),
       ),
       GoRoute(
@@ -82,7 +93,7 @@ void main() {
   }
 
   // Le bouton "J'AI PAYÉ" est le dernier ArenaButton (après copier/exécuter
-  // de la carte code marchand).
+  // de la carte code de transfert).
   ArenaButton submitButton(WidgetTester tester) =>
       tester.widget<ArenaButton>(find.byType(ArenaButton).last);
 
@@ -93,7 +104,7 @@ void main() {
     await tester.pumpWidget(_app(repo: repo));
     await tester.pumpAndSettle();
 
-    // Le code marchand est affiché.
+    // Le code de transfert est affiché.
     expect(find.text('*126*1*ARENA#'), findsOneWidget);
     // Sans numéro valide, le bouton est désactivé (onPressed null).
     expect(submitButton(tester).onPressed, isNull);
@@ -106,7 +117,7 @@ void main() {
     await tester.pumpWidget(_app(repo: repo));
     await tester.pumpAndSettle();
 
-    // 9 chiffres → numéro valide.
+    // 9 chiffres → numéro local valide.
     await tester.enterText(find.byType(TextField).last, '678451242');
     await tester.pumpAndSettle();
 
@@ -120,18 +131,20 @@ void main() {
     expect(repo.lastAmount, 1500.0);
     expect(repo.lastPhone, contains('678451242'));
     expect(repo.lastPhone, contains('+237'));
+    expect(repo.lastCountryCode, 'CM');
+    expect(repo.lastOperatorLabel, 'MTN MoMo');
     // Navigation vers P3.
     expect(find.text('P3-PROCESSING'), findsOneWidget);
   });
 
-  testWidgets('code marchand manquant → bannière + bouton désactivé même si '
-      'le numéro est valide', (tester) async {
+  testWidgets('code de transfert manquant → bannière + bouton désactivé même '
+      'si le numéro est valide', (tester) async {
     await bumpViewport(tester);
     final repo = _FakePaymentRepo();
-    await tester.pumpWidget(_app(repo: repo, merchantCode: ''));
+    await tester.pumpWidget(_app(repo: repo, transferCode: ''));
     await tester.pumpAndSettle();
 
-    // Pas de carte code marchand (donc pas le code affiché).
+    // Pas de carte code (donc pas le code affiché).
     expect(find.text('*126*1*ARENA#'), findsNothing);
 
     await tester.enterText(find.byType(TextField).last, '678451242');

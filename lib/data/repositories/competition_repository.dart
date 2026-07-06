@@ -5,6 +5,7 @@ import 'package:arena/core/utils/error_reporter.dart';
 import 'package:arena/core/utils/poll_stream.dart';
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
+import 'package:arena/data/models/competition_payment_option.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:flutter/foundation.dart';
@@ -96,6 +97,25 @@ class CompetitionRepository {
     final row = await _client.from(_table).select().eq('id', id).maybeSingle();
     if (row == null) return null;
     return Competition.fromJson(row);
+  }
+
+  /// Options de paiement (pays × opérateur × code) d'une compétition payante,
+  /// triées par pays puis `sort_order`. Sert le dialog « choisis ton pays »
+  /// et le picker d'opérateur (P1). Lecture publique (RLS
+  /// `comp_payment_options_select`).
+  Future<List<CompetitionPaymentOption>> fetchPaymentOptions(
+    String competitionId,
+  ) async {
+    final rows = await _client
+        .from('competition_payment_options')
+        .select()
+        .eq('competition_id', competitionId)
+        .order('country_code')
+        .order('sort_order');
+    return [
+      for (final row in rows as List<dynamic>)
+        CompetitionPaymentOption.fromJson(row as Map<String, dynamic>),
+    ];
   }
 
   /// Realtime stream of competitions. The Supabase `.stream()` API does
@@ -352,6 +372,17 @@ final competitionByIdProvider =
     fromJson: Competition.fromJson,
     toJson: (c) => c.toJson(),
   );
+});
+
+/// Options de paiement (pays × opérateur × code) d'une compétition payante.
+/// `FutureProvider` — invalidé à l'ouverture du checkout ; la config paiement
+/// bouge rarement (l'admin la fige à la création). Les pays DISTINCTS =
+/// les pays sélectionnables par le joueur.
+final competitionPaymentOptionsProvider = FutureProvider.family
+    .autoDispose<List<CompetitionPaymentOption>, String>((ref, competitionId) {
+  return ref
+      .watch(competitionRepositoryProvider)
+      .fetchPaymentOptions(competitionId);
 });
 
 /// Classement général final d'une compétition (lecture seule côté

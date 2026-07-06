@@ -1,13 +1,18 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/core/utils/arena_error_message.dart';
 import 'package:arena/data/repositories/payout_repository.dart';
+import 'package:arena/features_shared/admin_sections.dart';
+import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
+import 'package:arena/features_shared/widgets/admin_scope_banner.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Au-delà de N jours après réclamation sans versement, on signale un retard.
 const _slaOverdueDays = 3;
@@ -25,6 +30,7 @@ class SuperAdminPayoutsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final profile = ref.watch(currentProfileProvider).valueOrNull;
     return DefaultTabController(
       length: 2,
       child: Scaffold(
@@ -34,6 +40,16 @@ class SuperAdminPayoutsPage extends ConsumerWidget {
           child: SafeArea(
             child: Column(
               children: [
+                if (adminHasCountryScope(profile))
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      ArenaSpacing.lg,
+                      ArenaSpacing.sm,
+                      ArenaSpacing.lg,
+                      0,
+                    ),
+                    child: AdminScopeBanner(profile: profile),
+                  ),
                 const TabBar(
                   labelColor: ArenaColors.bone,
                   unselectedLabelColor: ArenaColors.silver,
@@ -105,7 +121,7 @@ class SuperAdminPayoutsPage extends ConsumerWidget {
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur : ${arenaErrorMessage(e)}')),
+        SnackBar(content: Text('Erreur : ${_scopeAwareError(context, e)}')),
       );
     }
   }
@@ -153,9 +169,19 @@ class SuperAdminPayoutsPage extends ConsumerWidget {
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur : ${arenaErrorMessage(e)}')),
+        SnackBar(content: Text('Erreur : ${_scopeAwareError(context, e)}')),
       );
     }
+  }
+
+  /// Un rejet 42501 des RPC `generate_payouts`/`mark_payout_paid` signifie
+  /// que l'action sort du périmètre (pays/section) de l'admin. On le rend
+  /// avec un message dédié plutôt que le générique « pas la permission ».
+  String _scopeAwareError(BuildContext context, Object e) {
+    if (e is PostgrestException && e.code == '42501') {
+      return AppLocalizations.of(context).adminScopeOutOfPerimeter;
+    }
+    return arenaErrorMessage(e);
   }
 }
 

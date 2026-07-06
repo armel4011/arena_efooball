@@ -19,7 +19,7 @@ import 'package:go_router/go_router.dart';
 class PaymentSuccessPage extends StatelessWidget {
   const PaymentSuccessPage({
     required this.amountXaf,
-    required this.method,
+    required this.operator,
     required this.transactionId,
     required this.dateLabel,
     this.tournamentName = 'DAMES WEEKEND CUP',
@@ -31,7 +31,7 @@ class PaymentSuccessPage extends StatelessWidget {
   });
 
   final int amountXaf;
-  final PaymentMethod method;
+  final PaymentOperator operator;
   final String transactionId;
   final String dateLabel;
   final String tournamentName;
@@ -83,7 +83,7 @@ class PaymentSuccessPage extends StatelessWidget {
               const SizedBox(height: ArenaSpacing.lg),
               _Receipt(
                 amountXaf: amountXaf,
-                method: method,
+                operator: operator,
                 transactionId: transactionId,
                 dateLabel: dateLabel,
               ).animate(delay: 200.ms).fadeIn(
@@ -155,13 +155,13 @@ class _SuccessHero extends StatelessWidget {
 class _Receipt extends StatelessWidget {
   const _Receipt({
     required this.amountXaf,
-    required this.method,
+    required this.operator,
     required this.transactionId,
     required this.dateLabel,
   });
 
   final int amountXaf;
-  final PaymentMethod method;
+  final PaymentOperator operator;
   final String transactionId;
   final String dateLabel;
 
@@ -179,7 +179,7 @@ class _Receipt extends StatelessWidget {
             valueStyle: ArenaText.mono.copyWith(fontWeight: FontWeight.w700),
           ),
           const ArenaDivider(),
-          _Row(label: l10n.paymentSuccessReceiptMethod, value: method.labelOf(l10n)),
+          _Row(label: l10n.paymentSuccessReceiptMethod, value: operator.label),
           const ArenaDivider(),
           _Row(
             label: l10n.paymentSuccessReceiptTransaction,

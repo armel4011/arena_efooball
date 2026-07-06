@@ -24,6 +24,12 @@ _$InvitationCodeImpl _$$InvitationCodeImplFromJson(Map<String, dynamic> json) =>
           ? null
           : DateTime.parse(json['used_at'] as String),
       usedBy: json['used_by'] as String?,
+      allowedCountryCodes: (json['allowed_country_codes'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+      allowedSections: (json['allowed_sections'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
       createdAt: json['created_at'] == null
           ? null
           : DateTime.parse(json['created_at'] as String),
@@ -45,6 +51,9 @@ Map<String, dynamic> _$$InvitationCodeImplToJson(
       if (instance.usedAt?.toIso8601String() case final value?)
         'used_at': value,
       if (instance.usedBy case final value?) 'used_by': value,
+      if (instance.allowedCountryCodes case final value?)
+        'allowed_country_codes': value,
+      if (instance.allowedSections case final value?) 'allowed_sections': value,
       if (instance.createdAt?.toIso8601String() case final value?)
         'created_at': value,
     };

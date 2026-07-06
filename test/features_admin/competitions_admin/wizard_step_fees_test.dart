@@ -1,6 +1,7 @@
-// Audit 2026-05-19 — couvre la conditional rendering de WizardStepFees
-// (extrait de create_competition_page.dart 1254→787 lignes). Pas de
-// mocking de Supabase — c'est un StatelessWidget pur.
+// Audit 2026-05-19 — couvre la conditional rendering de WizardStepFees.
+// Depuis l'ajout de l'étape « Pays », les codes marchands (Orange/MTN) ont
+// quitté cet écran : ils vivent dans WizardStepCountry. Ce test vérifie donc
+// que l'étape Frais ne montre plus de codes marchands, quel que soit le mode.
 
 import 'package:arena/features_admin/competitions_admin/widgets/wizard_step_fees.dart';
 import 'package:flutter/material.dart';
@@ -14,30 +15,32 @@ Widget _wrap(Widget child) {
   );
 }
 
+WizardStepFees _fees({
+  required TextEditingController entryFee,
+  required TextEditingController commission,
+  required TextEditingController referralQuota,
+}) {
+  return WizardStepFees(
+    entryFeeCtrl: entryFee,
+    currency: 'XAF',
+    commissionXafCtrl: commission,
+    referralQuotaCtrl: referralQuota,
+    isEditing: false,
+    onChanged: () {},
+    onCurrencyChanged: (_) {},
+  );
+}
+
 void main() {
   group('WizardStepFees', () {
-    testWidgets('fee = 0 → mode gratuit, montre le quota parrainage', (tester) async {
-      final entryFee = TextEditingController(text: '0');
-      final commission = TextEditingController(text: '0');
-      final orange = TextEditingController();
-      final mtn = TextEditingController();
-      final referralQuota = TextEditingController(text: '0');
-
+    testWidgets('fee = 0 → mode gratuit, montre le quota parrainage',
+        (tester) async {
       await tester.pumpWidget(
         _wrap(
-          WizardStepFees(
-            entryFeeCtrl: entryFee,
-            currency: 'XAF',
-            commissionXafCtrl: commission,
-            orangeMomoCtrl: orange,
-            mtnMomoCtrl: mtn,
-            referralQuotaCtrl: referralQuota,
-            isEditing: false,
-            savedTemplateCount: 0,
-            onChanged: () {},
-            onCurrencyChanged: (_) {},
-            onSaveTemplate: () {},
-            onOpenLibrary: () {},
+          _fees(
+            entryFee: TextEditingController(text: '0'),
+            commission: TextEditingController(text: '0'),
+            referralQuota: TextEditingController(text: '0'),
           ),
         ),
       );
@@ -46,66 +49,36 @@ void main() {
       expect(find.textContaining('Codes marchands'), findsNothing);
     });
 
-    testWidgets('fee > 0 → mode payant, montre les codes marchands', (tester) async {
-      final entryFee = TextEditingController(text: '500');
-      final commission = TextEditingController(text: '50');
-      final orange = TextEditingController();
-      final mtn = TextEditingController();
-      final referralQuota = TextEditingController(text: '0');
-
+    testWidgets('fee > 0 → mode payant, PAS de codes marchands (→ étape Pays)',
+        (tester) async {
       await tester.pumpWidget(
         _wrap(
-          WizardStepFees(
-            entryFeeCtrl: entryFee,
-            currency: 'XAF',
-            commissionXafCtrl: commission,
-            orangeMomoCtrl: orange,
-            mtnMomoCtrl: mtn,
-            referralQuotaCtrl: referralQuota,
-            isEditing: false,
-            savedTemplateCount: 0,
-            onChanged: () {},
-            onCurrencyChanged: (_) {},
-            onSaveTemplate: () {},
-            onOpenLibrary: () {},
+          _fees(
+            entryFee: TextEditingController(text: '500'),
+            commission: TextEditingController(text: '50'),
+            referralQuota: TextEditingController(text: '0'),
           ),
         ),
       );
 
-      expect(find.textContaining('Codes marchands'), findsOneWidget);
+      // Les codes marchands ont migré vers l'étape « Pays ».
+      expect(find.textContaining('Codes marchands'), findsNothing);
+      expect(find.text('Code marchand Orange Money'), findsNothing);
       expect(find.textContaining('Parrainage requis'), findsNothing);
-      expect(find.text('Code marchand Orange Money'), findsOneWidget);
-      expect(find.text('Code marchand MTN MoMo'), findsOneWidget);
     });
 
-    testWidgets('quota parrainage > 0 → affiche le mode de comptage', (tester) async {
-      final entryFee = TextEditingController(text: '0');
-      final commission = TextEditingController(text: '0');
-      final orange = TextEditingController();
-      final mtn = TextEditingController();
-      final referralQuota = TextEditingController(text: '5');
-
+    testWidgets('quota parrainage > 0 → affiche le mode de comptage',
+        (tester) async {
       await tester.pumpWidget(
         _wrap(
-          WizardStepFees(
-            entryFeeCtrl: entryFee,
-            currency: 'XAF',
-            commissionXafCtrl: commission,
-            orangeMomoCtrl: orange,
-            mtnMomoCtrl: mtn,
-            referralQuotaCtrl: referralQuota,
-            isEditing: false,
-            savedTemplateCount: 0,
-            onChanged: () {},
-            onCurrencyChanged: (_) {},
-            onSaveTemplate: () {},
-            onOpenLibrary: () {},
+          _fees(
+            entryFee: TextEditingController(text: '0'),
+            commission: TextEditingController(text: '0'),
+            referralQuota: TextEditingController(text: '5'),
           ),
         ),
       );
 
-      // Avec quota > 0, on affiche l'explication "Tout invité actif"
-      // (le ModeChip de choix any/engaged a été retiré 2026-05-19).
       expect(
         find.textContaining('Tout invité actif compte'),
         findsOneWidget,

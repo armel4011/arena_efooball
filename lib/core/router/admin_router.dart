@@ -35,6 +35,7 @@ import 'package:arena/features_admin/super_admin/super_admin_support_inbox.dart'
 import 'package:arena/features_admin/super_admin/super_admin_support_thread.dart';
 import 'package:arena/features_admin/super_admin/super_admin_tutorial_video.dart';
 import 'package:arena/features_admin/super_admin/super_admin_users.dart';
+import 'package:arena/features_shared/admin_sections.dart';
 import 'package:arena/features_shared/presentation/dev_preview_page.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:flutter/foundation.dart';
@@ -182,6 +183,15 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
       // atteignables en deep-link par un admin simple ; la RLS protège la
       // donnée côté serveur, ceci ferme l'accès UI (défense en profondeur).
       if (loc.startsWith('/super') && !profile.isSuperAdmin) {
+        return AdminRoutes.home;
+      }
+
+      // VOLET 3 — garde de périmètre par SECTION. Un admin/super-admin
+      // au scope restreint qui tente un deep-link vers une section masquée
+      // est renvoyé à l'accueil. Défense en profondeur (la RLS/les RPC
+      // protègent déjà la donnée côté serveur).
+      final section = adminSectionForLocation(loc);
+      if (section != null && !adminCanSection(profile, section)) {
         return AdminRoutes.home;
       }
 

@@ -1,8 +1,10 @@
 import 'package:arena/core/router/admin_desktop_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/data/models/profile.dart';
 import 'package:arena/features_admin_desktop/notifications/desktop_notification_bell.dart';
 import 'package:arena/features_admin_desktop/notifications/desktop_notification_service.dart';
 import 'package:arena/features_admin_desktop/shared/desktop_window_controls.dart';
+import 'package:arena/features_shared/admin_sections.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,12 +19,17 @@ class _NavEntry {
     required this.icon,
     required this.label,
     this.superAdminOnly = false,
+    this.section,
   });
 
   final String route;
   final IconData icon;
   final String label;
   final bool superAdminOnly;
+
+  /// Clé de section [kAdminSections] pour le gating par périmètre. `null`
+  /// = destination toujours visible (dashboard / vue d'ensemble).
+  final String? section;
 }
 
 const List<_NavEntry> _mainEntries = [
@@ -35,31 +42,37 @@ const List<_NavEntry> _mainEntries = [
     route: AdminDesktopRoutes.competitions,
     icon: FluentIcons.trophy2,
     label: 'Compétitions',
+    section: 'competitions',
   ),
   _NavEntry(
     route: AdminDesktopRoutes.matches,
     icon: FluentIcons.game,
     label: 'Matchs',
+    section: 'matches',
   ),
   _NavEntry(
     route: AdminDesktopRoutes.streams,
     icon: FluentIcons.video,
     label: 'Streams live',
+    section: 'streams',
   ),
   _NavEntry(
     route: AdminDesktopRoutes.payouts,
     icon: FluentIcons.money,
     label: 'Paiements',
+    section: 'payouts',
   ),
   _NavEntry(
     route: AdminDesktopRoutes.recordings,
     icon: FluentIcons.video,
     label: 'Enregistrements',
+    section: 'recordings',
   ),
   _NavEntry(
     route: AdminDesktopRoutes.auditLog,
     icon: FluentIcons.compliance_audit,
     label: "Journal d'audit",
+    section: 'audit',
   ),
 ];
 
@@ -75,72 +88,84 @@ const List<_NavEntry> _superEntries = [
     icon: FluentIcons.people,
     label: 'Utilisateurs',
     superAdminOnly: true,
+    section: 'users',
   ),
   _NavEntry(
     route: AdminDesktopRoutes.superPaymentsValidation,
     icon: FluentIcons.receipt_check,
     label: 'Validation paiements',
     superAdminOnly: true,
+    section: 'payments',
   ),
   _NavEntry(
     route: AdminDesktopRoutes.superPayouts,
     icon: FluentIcons.send,
     label: 'Versements',
     superAdminOnly: true,
+    section: 'payouts',
   ),
   _NavEntry(
     route: AdminDesktopRoutes.superInvitations,
     icon: FluentIcons.add_friend,
     label: 'Invitations admin',
     superAdminOnly: true,
+    section: 'invitations',
   ),
   _NavEntry(
     route: AdminDesktopRoutes.superRevenue,
     icon: FluentIcons.chart,
     label: 'Revenus',
     superAdminOnly: true,
+    section: 'revenue',
   ),
   _NavEntry(
     route: AdminDesktopRoutes.superBroadcast,
     icon: FluentIcons.megaphone,
     label: 'Diffusion',
     superAdminOnly: true,
+    section: 'broadcast',
   ),
   _NavEntry(
     route: AdminDesktopRoutes.superPromoBanner,
     icon: FluentIcons.photo2,
     label: 'Bannière promo',
     superAdminOnly: true,
+    section: 'promo',
   ),
   _NavEntry(
     route: AdminDesktopRoutes.superReintegration,
     icon: FluentIcons.follow_user,
     label: 'Réintégrations',
     superAdminOnly: true,
+    section: 'reintegration',
   ),
   _NavEntry(
     route: AdminDesktopRoutes.superSupport,
     icon: FluentIcons.chat,
     label: 'Support',
     superAdminOnly: true,
+    section: 'support',
   ),
   _NavEntry(
     route: AdminDesktopRoutes.superAppUpdate,
     icon: FluentIcons.cloud_download,
     label: 'Mise à jour app',
     superAdminOnly: true,
+    section: 'app_update',
   ),
   _NavEntry(
     route: AdminDesktopRoutes.superTutorialBanners,
     icon: FluentIcons.video,
     label: 'Bannières tuto',
     superAdminOnly: true,
+    section: 'tutorial',
   ),
   _NavEntry(
     route: AdminDesktopRoutes.superAntiCheat,
     icon: FluentIcons.shield,
     label: 'Anti-triche',
     superAdminOnly: true,
+    section: 'anticheat',
   ),
 ];
 
@@ -163,10 +188,19 @@ class AdminDesktopShell extends ConsumerWidget {
   /// Chemin de la route active (ex. `/competitions`).
   final String currentPath;
 
-  List<_NavEntry> _visibleEntries({required bool isSuperAdmin}) => [
+  /// Une destination sans `section` (dashboard / vue d'ensemble) reste
+  /// toujours visible ; sinon on applique le périmètre de l'admin courant.
+  static bool _entryVisible(_NavEntry e, Profile? profile) =>
+      e.section == null || adminCanSection(profile, e.section!);
+
+  List<_NavEntry> _visibleEntries({
+    required bool isSuperAdmin,
+    required Profile? profile,
+  }) =>
+      [
         ..._mainEntries,
         if (isSuperAdmin) ..._superEntries,
-      ];
+      ].where((e) => _entryVisible(e, profile)).toList();
 
   int? _selectedIndex(List<_NavEntry> entries) {
     // Correspondance par préfixe : `/competitions/xyz` sélectionne
@@ -188,7 +222,8 @@ class AdminDesktopShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(currentProfileProvider).valueOrNull;
     final isSuperAdmin = profile?.isSuperAdmin ?? false;
-    final entries = _visibleEntries(isSuperAdmin: isSuperAdmin);
+    final entries =
+        _visibleEntries(isSuperAdmin: isSuperAdmin, profile: profile);
     final selected = _selectedIndex(entries);
 
     // Active l'abonnement Realtime (paiements/litiges/messages/réintégrations)
@@ -196,9 +231,14 @@ class AdminDesktopShell extends ConsumerWidget {
     // la première ouverture de la cloche.
     ref.watch(desktopNotificationsProvider);
 
+    final visibleMain =
+        _mainEntries.where((e) => _entryVisible(e, profile)).toList();
+    final visibleSuper =
+        _superEntries.where((e) => _entryVisible(e, profile)).toList();
+
     final items = <NavigationPaneItem>[
-      ..._mainEntries.map((e) => _paneItem(context, e)),
-      if (isSuperAdmin) ...[
+      ...visibleMain.map((e) => _paneItem(context, e)),
+      if (isSuperAdmin && visibleSuper.isNotEmpty) ...[
         PaneItemSeparator(),
         PaneItemHeader(
           header: Text(
@@ -210,7 +250,7 @@ class AdminDesktopShell extends ConsumerWidget {
             ),
           ),
         ),
-        ..._superEntries.map((e) => _paneItem(context, e)),
+        ...visibleSuper.map((e) => _paneItem(context, e)),
       ],
     ];
 

@@ -35,7 +35,11 @@ Widget _app(PaymentRecord rec) {
         path: '/p3',
         builder: (context, state) => const PaymentProcessingPage(
           paymentId: 'pay-12345678',
-          method: PaymentMethod.mtnMoMo,
+          operator: PaymentOperator(
+            label: 'MTN MoMo',
+            code: 'MTN_MOMO',
+            countryCode: 'CM',
+          ),
           amountXaf: 1500,
           competitionName: 'Coupe ARENA',
           maskedPhone: '+237 ••• •• •• 42',

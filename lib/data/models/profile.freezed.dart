@@ -58,7 +58,13 @@ mixin _$Profile {
   DateTime? get kycVerifiedAt =>
       throw _privateConstructorUsedError; // Lot D — Système de parrainage (item 8).
   String get referralCode => throw _privateConstructorUsedError;
-  String? get referredBy => throw _privateConstructorUsedError;
+  String? get referredBy =>
+      throw _privateConstructorUsedError; // VOLET 3 — périmètre admin restreint (par code d'invitation). NULL ou
+// liste vide = aucune restriction (voit tout). Sinon l'admin/super-admin
+// est limité aux pays (ISO alpha-2) / sections listés. Propagé par l'EF
+// `register-admin` depuis `invitation_codes.allowed_*`.
+  List<String>? get adminAllowedCountries => throw _privateConstructorUsedError;
+  List<String>? get adminAllowedSections => throw _privateConstructorUsedError;
   DateTime? get createdAt => throw _privateConstructorUsedError;
   DateTime? get updatedAt => throw _privateConstructorUsedError;
 
@@ -108,6 +114,8 @@ abstract class $ProfileCopyWith<$Res> {
       DateTime? kycVerifiedAt,
       String referralCode,
       String? referredBy,
+      List<String>? adminAllowedCountries,
+      List<String>? adminAllowedSections,
       DateTime? createdAt,
       DateTime? updatedAt});
 }
@@ -158,6 +166,8 @@ class _$ProfileCopyWithImpl<$Res, $Val extends Profile>
     Object? kycVerifiedAt = freezed,
     Object? referralCode = null,
     Object? referredBy = freezed,
+    Object? adminAllowedCountries = freezed,
+    Object? adminAllowedSections = freezed,
     Object? createdAt = freezed,
     Object? updatedAt = freezed,
   }) {
@@ -286,6 +296,14 @@ class _$ProfileCopyWithImpl<$Res, $Val extends Profile>
           ? _value.referredBy
           : referredBy // ignore: cast_nullable_to_non_nullable
               as String?,
+      adminAllowedCountries: freezed == adminAllowedCountries
+          ? _value.adminAllowedCountries
+          : adminAllowedCountries // ignore: cast_nullable_to_non_nullable
+              as List<String>?,
+      adminAllowedSections: freezed == adminAllowedSections
+          ? _value.adminAllowedSections
+          : adminAllowedSections // ignore: cast_nullable_to_non_nullable
+              as List<String>?,
       createdAt: freezed == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -337,6 +355,8 @@ abstract class _$$ProfileImplCopyWith<$Res> implements $ProfileCopyWith<$Res> {
       DateTime? kycVerifiedAt,
       String referralCode,
       String? referredBy,
+      List<String>? adminAllowedCountries,
+      List<String>? adminAllowedSections,
       DateTime? createdAt,
       DateTime? updatedAt});
 }
@@ -385,6 +405,8 @@ class __$$ProfileImplCopyWithImpl<$Res>
     Object? kycVerifiedAt = freezed,
     Object? referralCode = null,
     Object? referredBy = freezed,
+    Object? adminAllowedCountries = freezed,
+    Object? adminAllowedSections = freezed,
     Object? createdAt = freezed,
     Object? updatedAt = freezed,
   }) {
@@ -513,6 +535,14 @@ class __$$ProfileImplCopyWithImpl<$Res>
           ? _value.referredBy
           : referredBy // ignore: cast_nullable_to_non_nullable
               as String?,
+      adminAllowedCountries: freezed == adminAllowedCountries
+          ? _value._adminAllowedCountries
+          : adminAllowedCountries // ignore: cast_nullable_to_non_nullable
+              as List<String>?,
+      adminAllowedSections: freezed == adminAllowedSections
+          ? _value._adminAllowedSections
+          : adminAllowedSections // ignore: cast_nullable_to_non_nullable
+              as List<String>?,
       createdAt: freezed == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -560,9 +590,13 @@ class _$ProfileImpl extends _Profile {
       this.kycVerifiedAt,
       this.referralCode = '',
       this.referredBy,
+      final List<String>? adminAllowedCountries,
+      final List<String>? adminAllowedSections,
       this.createdAt,
       this.updatedAt})
       : _stats = stats,
+        _adminAllowedCountries = adminAllowedCountries,
+        _adminAllowedSections = adminAllowedSections,
         super._();
 
   factory _$ProfileImpl.fromJson(Map<String, dynamic> json) =>
@@ -657,6 +691,36 @@ class _$ProfileImpl extends _Profile {
   final String referralCode;
   @override
   final String? referredBy;
+// VOLET 3 — périmètre admin restreint (par code d'invitation). NULL ou
+// liste vide = aucune restriction (voit tout). Sinon l'admin/super-admin
+// est limité aux pays (ISO alpha-2) / sections listés. Propagé par l'EF
+// `register-admin` depuis `invitation_codes.allowed_*`.
+  final List<String>? _adminAllowedCountries;
+// VOLET 3 — périmètre admin restreint (par code d'invitation). NULL ou
+// liste vide = aucune restriction (voit tout). Sinon l'admin/super-admin
+// est limité aux pays (ISO alpha-2) / sections listés. Propagé par l'EF
+// `register-admin` depuis `invitation_codes.allowed_*`.
+  @override
+  List<String>? get adminAllowedCountries {
+    final value = _adminAllowedCountries;
+    if (value == null) return null;
+    if (_adminAllowedCountries is EqualUnmodifiableListView)
+      return _adminAllowedCountries;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(value);
+  }
+
+  final List<String>? _adminAllowedSections;
+  @override
+  List<String>? get adminAllowedSections {
+    final value = _adminAllowedSections;
+    if (value == null) return null;
+    if (_adminAllowedSections is EqualUnmodifiableListView)
+      return _adminAllowedSections;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(value);
+  }
+
   @override
   final DateTime? createdAt;
   @override
@@ -664,7 +728,7 @@ class _$ProfileImpl extends _Profile {
 
   @override
   String toString() {
-    return 'Profile(id: $id, username: $username, countryCode: $countryCode, email: $email, avatarColor: $avatarColor, avatarUrl: $avatarUrl, role: $role, isActive: $isActive, permanentBan: $permanentBan, fcmToken: $fcmToken, stats: $stats, authProvider: $authProvider, authProviderId: $authProviderId, whatsappNumber: $whatsappNumber, preferredLanguage: $preferredLanguage, preferredCurrency: $preferredCurrency, timezone: $timezone, onboardingCompleted: $onboardingCompleted, onboardingCompletedAt: $onboardingCompletedAt, totpEnabled: $totpEnabled, cguAcceptedAt: $cguAcceptedAt, cguVersionAccepted: $cguVersionAccepted, privacyPolicyAcceptedAt: $privacyPolicyAcceptedAt, marketingConsent: $marketingConsent, accountDeletionRequestedAt: $accountDeletionRequestedAt, accountDeletionReason: $accountDeletionReason, deletedAt: $deletedAt, kycStatus: $kycStatus, kycVerifiedAt: $kycVerifiedAt, referralCode: $referralCode, referredBy: $referredBy, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'Profile(id: $id, username: $username, countryCode: $countryCode, email: $email, avatarColor: $avatarColor, avatarUrl: $avatarUrl, role: $role, isActive: $isActive, permanentBan: $permanentBan, fcmToken: $fcmToken, stats: $stats, authProvider: $authProvider, authProviderId: $authProviderId, whatsappNumber: $whatsappNumber, preferredLanguage: $preferredLanguage, preferredCurrency: $preferredCurrency, timezone: $timezone, onboardingCompleted: $onboardingCompleted, onboardingCompletedAt: $onboardingCompletedAt, totpEnabled: $totpEnabled, cguAcceptedAt: $cguAcceptedAt, cguVersionAccepted: $cguVersionAccepted, privacyPolicyAcceptedAt: $privacyPolicyAcceptedAt, marketingConsent: $marketingConsent, accountDeletionRequestedAt: $accountDeletionRequestedAt, accountDeletionReason: $accountDeletionReason, deletedAt: $deletedAt, kycStatus: $kycStatus, kycVerifiedAt: $kycVerifiedAt, referralCode: $referralCode, referredBy: $referredBy, adminAllowedCountries: $adminAllowedCountries, adminAllowedSections: $adminAllowedSections, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -733,6 +797,10 @@ class _$ProfileImpl extends _Profile {
                 other.referralCode == referralCode) &&
             (identical(other.referredBy, referredBy) ||
                 other.referredBy == referredBy) &&
+            const DeepCollectionEquality()
+                .equals(other._adminAllowedCountries, _adminAllowedCountries) &&
+            const DeepCollectionEquality()
+                .equals(other._adminAllowedSections, _adminAllowedSections) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
             (identical(other.updatedAt, updatedAt) ||
@@ -774,6 +842,8 @@ class _$ProfileImpl extends _Profile {
         kycVerifiedAt,
         referralCode,
         referredBy,
+        const DeepCollectionEquality().hash(_adminAllowedCountries),
+        const DeepCollectionEquality().hash(_adminAllowedSections),
         createdAt,
         updatedAt
       ]);
@@ -827,6 +897,8 @@ abstract class _Profile extends Profile {
       final DateTime? kycVerifiedAt,
       final String referralCode,
       final String? referredBy,
+      final List<String>? adminAllowedCountries,
+      final List<String>? adminAllowedSections,
       final DateTime? createdAt,
       final DateTime? updatedAt}) = _$ProfileImpl;
   const _Profile._() : super._();
@@ -900,7 +972,15 @@ abstract class _Profile extends Profile {
   @override
   String get referralCode;
   @override
-  String? get referredBy;
+  String?
+      get referredBy; // VOLET 3 — périmètre admin restreint (par code d'invitation). NULL ou
+// liste vide = aucune restriction (voit tout). Sinon l'admin/super-admin
+// est limité aux pays (ISO alpha-2) / sections listés. Propagé par l'EF
+// `register-admin` depuis `invitation_codes.allowed_*`.
+  @override
+  List<String>? get adminAllowedCountries;
+  @override
+  List<String>? get adminAllowedSections;
   @override
   DateTime? get createdAt;
   @override

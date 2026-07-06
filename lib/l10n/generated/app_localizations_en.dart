@@ -3247,4 +3247,114 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get matchStepWord => 'STEP';
+
+  @override
+  String get paymentOptionsMissing =>
+      'Payment isn\'t set up for this competition yet. Contact the organizer.';
+
+  @override
+  String get countryPickTitle => 'Choose your country';
+
+  @override
+  String get countryPickSubtitle => 'Select the country you\'ll pay from.';
+
+  @override
+  String get countryPickConfirm => 'CONTINUE';
+
+  @override
+  String get countryPickCancel => 'Cancel';
+
+  @override
+  String get countryStepTitle => 'Country';
+
+  @override
+  String get countryOrganizerLabel => 'Organizer country';
+
+  @override
+  String get countryOrganizerHint =>
+      'Used for per-country admin scoping. Does not affect the countries allowed to pay.';
+
+  @override
+  String get countryPaymentSectionTitle => 'Payment options by country';
+
+  @override
+  String get countryPaymentSectionHint =>
+      'For each allowed country, add one or more operators (Orange Money, MTN MoMo, Wave…) with their transfer code. The player picks their country then an operator when paying.';
+
+  @override
+  String get countryFreeNote =>
+      'Free competition — no payment setup needed. Only the organizer country is required.';
+
+  @override
+  String get countryOperatorNameLabel => 'Operator name';
+
+  @override
+  String get countryOperatorNameHint => 'e.g. Orange Money';
+
+  @override
+  String get countryTransferCodeLabel => 'Transfer code';
+
+  @override
+  String get countryTransferCodeHint => 'e.g. *126*1*001234#';
+
+  @override
+  String get countryAddOperator => 'Add an operator';
+
+  @override
+  String get countryRemoveOperator => 'Remove operator';
+
+  @override
+  String get countryAddCountry => 'Add a country';
+
+  @override
+  String get countryRemoveCountry => 'Remove this country';
+
+  @override
+  String get countryChooseCountry => 'Choose a country';
+
+  @override
+  String get countrySaveOperator => 'Save this operator';
+
+  @override
+  String countryOperatorTemplatesButton(int count) {
+    return 'My operators ($count)';
+  }
+
+  @override
+  String get countryOperatorSavedToast => 'Operator saved as a template.';
+
+  @override
+  String get countryOperatorEmptyToast =>
+      'Fill in the operator name and code before saving.';
+
+  @override
+  String get countryValidationNeedOne =>
+      'Enable at least one country and complete each operator (name + code).';
+
+  @override
+  String get adminScopeRestrictionsTitle => 'RESTRICTIONS (optional)';
+
+  @override
+  String get adminScopeRestrictionsHint =>
+      'Limit this future admin to specific countries and/or sections. Leave empty for full access.';
+
+  @override
+  String get adminScopeCountriesLabel => 'Allowed countries';
+
+  @override
+  String get adminScopeSectionsLabel => 'Allowed sections';
+
+  @override
+  String get adminScopeAllCountries => 'All countries';
+
+  @override
+  String get adminScopeAllSections => 'All sections';
+
+  @override
+  String adminScopePerimeterBanner(String countries) {
+    return 'Scope: $countries';
+  }
+
+  @override
+  String get adminScopeOutOfPerimeter => 'Action outside your scope.';
 }

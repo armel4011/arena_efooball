@@ -1499,5 +1499,52 @@
   "compFormatSingleElim": "Élimination directe",
   "compFormatGroupsKnockout": "Poules + élimination",
   "compFormatRoundRobin": "Round robin",
-  "matchStepWord": "ÉTAPE"
+  "matchStepWord": "ÉTAPE",
+  "paymentOptionsMissing": "Le paiement n'est pas encore configuré pour cette compétition. Contacte l'organisateur.",
+  "countryPickTitle": "Choisis ton pays",
+  "countryPickSubtitle": "Sélectionne le pays depuis lequel tu vas payer.",
+  "countryPickConfirm": "CONTINUER",
+  "countryPickCancel": "Annuler",
+  "countryStepTitle": "Pays",
+  "countryOrganizerLabel": "Pays organisateur",
+  "countryOrganizerHint": "Sert au périmètre admin par pays. N'affecte pas les pays autorisés au paiement.",
+  "countryPaymentSectionTitle": "Options de paiement par pays",
+  "countryPaymentSectionHint": "Pour chaque pays autorisé, ajoute un ou plusieurs opérateurs (Orange Money, MTN MoMo, Wave…) avec leur code de transfert. Le joueur choisit son pays puis un opérateur au moment de payer.",
+  "countryFreeNote": "Compétition gratuite — aucune configuration de paiement nécessaire. Seul le pays organisateur est requis.",
+  "countryOperatorNameLabel": "Nom de l'opérateur",
+  "countryOperatorNameHint": "ex. Orange Money",
+  "countryTransferCodeLabel": "Code de transfert",
+  "countryTransferCodeHint": "ex. *126*1*001234#",
+  "countryAddOperator": "Ajouter un opérateur",
+  "countryRemoveOperator": "Supprimer l'opérateur",
+  "countryAddCountry": "Ajouter un pays",
+  "countryRemoveCountry": "Supprimer ce pays",
+  "countryChooseCountry": "Choisir un pays",
+  "countrySaveOperator": "Enregistrer cet opérateur",
+  "countryOperatorTemplatesButton": "Mes opérateurs ({count})",
+  "@countryOperatorTemplatesButton": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "countryOperatorSavedToast": "Opérateur enregistré comme modèle.",
+  "countryOperatorEmptyToast": "Renseigne le nom et le code de l'opérateur avant d'enregistrer.",
+  "countryValidationNeedOne": "Active au moins un pays et complète chaque opérateur (nom + code).",
+  "adminScopeRestrictionsTitle": "RESTRICTIONS (optionnel)",
+  "@adminScopeRestrictionsTitle": {
+    "description": "Section title for the optional country/section scope of an admin invitation code."
+  },
+  "adminScopeRestrictionsHint": "Limite ce futur admin à certains pays et/ou sections. Laisse vide pour un accès complet.",
+  "adminScopeCountriesLabel": "Pays autorisés",
+  "adminScopeSectionsLabel": "Sections autorisées",
+  "adminScopeAllCountries": "Tous les pays",
+  "adminScopeAllSections": "Toutes les sections",
+  "adminScopePerimeterBanner": "Périmètre : {countries}",
+  "@adminScopePerimeterBanner": {
+    "description": "Banner shown to a scoped admin on the payouts screens.",
+    "placeholders": {
+      "countries": { "type": "String" }
+    }
+  },
+  "adminScopeOutOfPerimeter": "Action hors de votre périmètre."
 }
