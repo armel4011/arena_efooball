@@ -110,7 +110,11 @@ grant execute on function public.admin_can_section(uuid, text)  to authenticated
 -- 3. RLS payouts : un admin restreint ne LIT que les versements de ses pays.
 --    On remplace l'unique policy SELECT canonique (payouts_select de
 --    20260505185438) — pas d'ajout permissif (sinon OR annulerait le scope).
---    Pattern initplan : (select fn((select auth.uid()))) hoisté une fois.
+--    ⚠️ `admin_allowed_countries(...)` est appelée DIRECTEMENT (pas via un
+--    `(select ...)`) : wrapper la fonction dans un scalar-subquery casse la
+--    forme tableau de `= ANY` (Postgres l'interprète comme `= ANY (sous-requête)`
+--    → `text = text[]`). La fonction est STABLE + `(select auth.uid())` est
+--    hoisté, donc l'évaluation reste bornée.
 -- -----------------------------------------------------------------------------
 drop policy if exists "payouts_select" on public.payouts;
 create policy "payouts_select"
@@ -120,8 +124,8 @@ create policy "payouts_select"
     or (
       (select public.is_admin())
       and (
-        (select public.admin_allowed_countries((select auth.uid()))) is null
-        or country_code = any ((select public.admin_allowed_countries((select auth.uid()))))
+        public.admin_allowed_countries((select auth.uid())) is null
+        or country_code = any (public.admin_allowed_countries((select auth.uid())))
       )
     )
   );
