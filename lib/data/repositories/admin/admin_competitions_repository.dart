@@ -1,6 +1,7 @@
 
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
+import 'package:arena/data/models/competition_payment_option.dart';
 import 'package:arena/data/models/user_role.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
@@ -90,6 +91,40 @@ class AdminCompetitionsRepository {
         .select()
         .single();
     return Competition.fromJson(row);
+  }
+
+  /// Options de paiement (pays × opérateur × code) d'une compétition —
+  /// préremplissage de l'étape « Pays » en édition.
+  Future<List<CompetitionPaymentOption>> fetchPaymentOptions(
+    String competitionId,
+  ) async {
+    final rows = await _client
+        .from('competition_payment_options')
+        .select()
+        .eq('competition_id', competitionId)
+        .order('country_code')
+        .order('sort_order');
+    return [
+      for (final row in rows as List<dynamic>)
+        CompetitionPaymentOption.fromJson(row as Map<String, dynamic>),
+    ];
+  }
+
+  /// (Ré)écrit toutes les options de paiement d'une compétition via la RPC
+  /// `set_competition_payment_options` (remplace-tout transactionnel, gate
+  /// `is_admin()`). Retourne le nombre d'options écrites.
+  Future<int> setPaymentOptions(
+    String competitionId,
+    List<CompetitionPaymentOption> options,
+  ) async {
+    final res = await _client.rpc<dynamic>(
+      'set_competition_payment_options',
+      params: {
+        'p_competition_id': competitionId,
+        'p_options': [for (final o in options) o.toRpcJson()],
+      },
+    );
+    return (res as num?)?.toInt() ?? 0;
   }
 
   /// Régénère une compétition `completed` : crée une NOUVELLE compétition

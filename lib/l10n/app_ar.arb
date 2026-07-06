@@ -987,5 +987,52 @@
   "compFormatSingleElim": "إقصاء مباشر",
   "compFormatGroupsKnockout": "مجموعات + إقصاء",
   "compFormatRoundRobin": "دوري",
-  "matchStepWord": "الخطوة"
+  "matchStepWord": "الخطوة",
+  "paymentOptionsMissing": "لم يتم إعداد الدفع لهذه المسابقة بعد. تواصل مع المنظم.",
+  "countryPickTitle": "اختر بلدك",
+  "countryPickSubtitle": "اختر البلد الذي ستدفع منه.",
+  "countryPickConfirm": "متابعة",
+  "countryPickCancel": "إلغاء",
+  "countryStepTitle": "البلد",
+  "countryOrganizerLabel": "بلد المنظّم",
+  "countryOrganizerHint": "يُستخدم لتحديد نطاق المشرف حسب البلد. لا يؤثر على البلدان المسموح لها بالدفع.",
+  "countryPaymentSectionTitle": "خيارات الدفع حسب البلد",
+  "countryPaymentSectionHint": "لكل بلد مسموح، أضف مشغّلاً واحداً أو أكثر (Orange Money، MTN MoMo، Wave…) مع رمز التحويل الخاص به. يختار اللاعب بلده ثم مشغّلاً عند الدفع.",
+  "countryFreeNote": "مسابقة مجانية — لا حاجة لإعداد الدفع. يلزم فقط بلد المنظّم.",
+  "countryOperatorNameLabel": "اسم المشغّل",
+  "countryOperatorNameHint": "مثال: Orange Money",
+  "countryTransferCodeLabel": "رمز التحويل",
+  "countryTransferCodeHint": "مثال: *126*1*001234#",
+  "countryAddOperator": "إضافة مشغّل",
+  "countryRemoveOperator": "حذف المشغّل",
+  "countryAddCountry": "إضافة بلد",
+  "countryRemoveCountry": "حذف هذا البلد",
+  "countryChooseCountry": "اختر بلداً",
+  "countrySaveOperator": "حفظ هذا المشغّل",
+  "countryOperatorTemplatesButton": "مشغّلاتي ({count})",
+  "@countryOperatorTemplatesButton": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "countryOperatorSavedToast": "تم حفظ المشغّل كنموذج.",
+  "countryOperatorEmptyToast": "أدخل اسم المشغّل والرمز قبل الحفظ.",
+  "countryValidationNeedOne": "فعّل بلداً واحداً على الأقل وأكمل كل مشغّل (اسم + رمز).",
+  "adminScopeRestrictionsTitle": "قيود (اختياري)",
+  "@adminScopeRestrictionsTitle": {
+    "description": "Section title for the optional country/section scope of an admin invitation code."
+  },
+  "adminScopeRestrictionsHint": "قيّد هذا المشرف المستقبلي ببلدان و/أو أقسام محددة. اتركه فارغاً للوصول الكامل.",
+  "adminScopeCountriesLabel": "البلدان المسموح بها",
+  "adminScopeSectionsLabel": "الأقسام المسموح بها",
+  "adminScopeAllCountries": "كل البلدان",
+  "adminScopeAllSections": "كل الأقسام",
+  "adminScopePerimeterBanner": "النطاق: {countries}",
+  "@adminScopePerimeterBanner": {
+    "description": "Banner shown to a scoped admin on the payouts screens.",
+    "placeholders": {
+      "countries": { "type": "String" }
+    }
+  },
+  "adminScopeOutOfPerimeter": "إجراء خارج نطاقك."
 }

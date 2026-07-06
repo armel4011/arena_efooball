@@ -30,7 +30,8 @@ class ProfileRepository {
       'cgu_accepted_at, cgu_version_accepted, privacy_policy_accepted_at, '
       'marketing_consent, account_deletion_requested_at, '
       'account_deletion_reason, deleted_at, kyc_status, kyc_verified_at, '
-      'referral_code, referred_by, created_at, updated_at';
+      'referral_code, referred_by, admin_allowed_countries, '
+      'admin_allowed_sections, created_at, updated_at';
 
   /// Vue exposant uniquement les colonnes PUBLIQUES (sans PII). Toute
   /// lecture d'un profil d'AUTRE utilisateur passe par là — la table

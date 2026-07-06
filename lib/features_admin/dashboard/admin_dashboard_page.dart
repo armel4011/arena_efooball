@@ -3,6 +3,7 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/admin_audit_log.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_kpis_repository.dart';
+import 'package:arena/features_shared/admin_sections.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
@@ -33,10 +34,8 @@ class AdminDashboardPage extends ConsumerWidget {
     final recent = ref.watch(
       adminAuditLogProvider(const AdminAuditLogFilter(periodDays: 7)),
     );
-    final isSuperAdmin = ref.watch(currentProfileProvider).maybeWhen(
-          data: (p) => p?.isSuperAdmin ?? false,
-          orElse: () => false,
-        );
+    final profile = ref.watch(currentProfileProvider).valueOrNull;
+    final isSuperAdmin = profile?.isSuperAdmin ?? false;
 
     return Scaffold(
       appBar: ArenaAppBar(
@@ -148,53 +147,65 @@ class AdminDashboardPage extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: ArenaSpacing.sm),
-                ArenaButton(
-                  label: '+ NOUVELLE COMPÉTITION',
-                  fullWidth: true,
-                  onPressed: () => context.push(AdminRoutes.competitionsCreate),
-                ),
-                const SizedBox(height: ArenaSpacing.xs),
-                ArenaButton(
-                  label: '🏆 VOIR LES COMPÉTITIONS',
-                  fullWidth: true,
-                  variant: ArenaButtonVariant.secondary,
-                  onPressed: () => context.push(AdminRoutes.competitions),
-                ),
-                const SizedBox(height: ArenaSpacing.xs),
-                ArenaButton(
-                  label: '⚔ VOIR LES MATCHS',
-                  fullWidth: true,
-                  variant: ArenaButtonVariant.secondary,
-                  onPressed: () => context.push(AdminRoutes.matches),
-                ),
-                const SizedBox(height: ArenaSpacing.xs),
-                ArenaButton(
-                  label: '📺 MODÉRATION STREAMS',
-                  fullWidth: true,
-                  variant: ArenaButtonVariant.secondary,
-                  onPressed: () => context.push(AdminRoutes.streams),
-                ),
-                const SizedBox(height: ArenaSpacing.xs),
-                ArenaButton(
-                  label: '⚖ LITIGES',
-                  fullWidth: true,
-                  variant: ArenaButtonVariant.secondary,
-                  onPressed: () => context.push(AdminRoutes.disputesList),
-                ),
-                const SizedBox(height: ArenaSpacing.xs),
-                ArenaButton(
-                  label: '🎥 ENREGISTREMENTS',
-                  fullWidth: true,
-                  variant: ArenaButtonVariant.secondary,
-                  onPressed: () => context.push(AdminRoutes.recordings),
-                ),
-                const SizedBox(height: ArenaSpacing.xs),
-                ArenaButton(
-                  label: "📜 JOURNAL D'AUDIT",
-                  fullWidth: true,
-                  variant: ArenaButtonVariant.secondary,
-                  onPressed: () => context.push(AdminRoutes.auditLog),
-                ),
+                if (adminCanSection(profile, 'competitions')) ...[
+                  ArenaButton(
+                    label: '+ NOUVELLE COMPÉTITION',
+                    fullWidth: true,
+                    onPressed: () =>
+                        context.push(AdminRoutes.competitionsCreate),
+                  ),
+                  const SizedBox(height: ArenaSpacing.xs),
+                  ArenaButton(
+                    label: '🏆 VOIR LES COMPÉTITIONS',
+                    fullWidth: true,
+                    variant: ArenaButtonVariant.secondary,
+                    onPressed: () => context.push(AdminRoutes.competitions),
+                  ),
+                  const SizedBox(height: ArenaSpacing.xs),
+                ],
+                if (adminCanSection(profile, 'matches')) ...[
+                  ArenaButton(
+                    label: '⚔ VOIR LES MATCHS',
+                    fullWidth: true,
+                    variant: ArenaButtonVariant.secondary,
+                    onPressed: () => context.push(AdminRoutes.matches),
+                  ),
+                  const SizedBox(height: ArenaSpacing.xs),
+                ],
+                if (adminCanSection(profile, 'streams')) ...[
+                  ArenaButton(
+                    label: '📺 MODÉRATION STREAMS',
+                    fullWidth: true,
+                    variant: ArenaButtonVariant.secondary,
+                    onPressed: () => context.push(AdminRoutes.streams),
+                  ),
+                  const SizedBox(height: ArenaSpacing.xs),
+                ],
+                if (adminCanSection(profile, 'disputes')) ...[
+                  ArenaButton(
+                    label: '⚖ LITIGES',
+                    fullWidth: true,
+                    variant: ArenaButtonVariant.secondary,
+                    onPressed: () => context.push(AdminRoutes.disputesList),
+                  ),
+                  const SizedBox(height: ArenaSpacing.xs),
+                ],
+                if (adminCanSection(profile, 'recordings')) ...[
+                  ArenaButton(
+                    label: '🎥 ENREGISTREMENTS',
+                    fullWidth: true,
+                    variant: ArenaButtonVariant.secondary,
+                    onPressed: () => context.push(AdminRoutes.recordings),
+                  ),
+                  const SizedBox(height: ArenaSpacing.xs),
+                ],
+                if (adminCanSection(profile, 'audit'))
+                  ArenaButton(
+                    label: "📜 JOURNAL D'AUDIT",
+                    fullWidth: true,
+                    variant: ArenaButtonVariant.secondary,
+                    onPressed: () => context.push(AdminRoutes.auditLog),
+                  ),
                 if (isSuperAdmin) ...[
                   const SizedBox(height: ArenaSpacing.lg),
                   Text(
@@ -213,63 +224,80 @@ class AdminDashboardPage extends ConsumerWidget {
                     onPressed: () => context.push(AdminRoutes.superDashboard),
                   ),
                   const SizedBox(height: ArenaSpacing.xs),
-                  ArenaButton(
-                    label: 'GESTION UTILISATEURS',
-                    fullWidth: true,
-                    variant: ArenaButtonVariant.secondary,
-                    onPressed: () => context.push(AdminRoutes.superUsers),
-                  ),
-                  const SizedBox(height: ArenaSpacing.xs),
-                  ArenaButton(
-                    label: 'INVITATIONS ADMIN',
-                    fullWidth: true,
-                    variant: ArenaButtonVariant.secondary,
-                    onPressed: () => context.push(AdminRoutes.superInvitations),
-                  ),
-                  const SizedBox(height: ArenaSpacing.xs),
-                  ArenaButton(
-                    label: '💸 VALIDER PAIEMENTS',
-                    fullWidth: true,
-                    variant: ArenaButtonVariant.primary,
-                    onPressed: () =>
-                        context.push(AdminRoutes.superPaymentsValidation),
-                  ),
-                  const SizedBox(height: ArenaSpacing.xs),
-                  ArenaButton(
-                    label: '💰 VERSEMENTS GAINS',
-                    fullWidth: true,
-                    variant: ArenaButtonVariant.secondary,
-                    onPressed: () => context.push(AdminRoutes.superPayouts),
-                  ),
-                  const SizedBox(height: ArenaSpacing.xs),
-                  ArenaButton(
-                    label: 'REVENUE PLATEFORME',
-                    fullWidth: true,
-                    variant: ArenaButtonVariant.secondary,
-                    onPressed: () => context.push(AdminRoutes.superRevenue),
-                  ),
-                  const SizedBox(height: ArenaSpacing.xs),
-                  ArenaButton(
-                    label: '🖼 ESPACE PUBLICITAIRE',
-                    fullWidth: true,
-                    variant: ArenaButtonVariant.secondary,
-                    onPressed: () => context.push(AdminRoutes.superPromoBanner),
-                  ),
-                  const SizedBox(height: ArenaSpacing.xs),
-                  ArenaButton(
-                    label: '🎬 VIDÉO TUTORIEL',
-                    fullWidth: true,
-                    variant: ArenaButtonVariant.secondary,
-                    onPressed: () =>
-                        context.push(AdminRoutes.superTutorialVideo),
-                  ),
-                  const SizedBox(height: ArenaSpacing.xs),
-                  ArenaButton(
-                    label: '🛡 ANTI-TRICHE',
-                    fullWidth: true,
-                    variant: ArenaButtonVariant.secondary,
-                    onPressed: () => context.push(AdminRoutes.superAntiCheat),
-                  ),
+                  if (adminCanSection(profile, 'users')) ...[
+                    ArenaButton(
+                      label: 'GESTION UTILISATEURS',
+                      fullWidth: true,
+                      variant: ArenaButtonVariant.secondary,
+                      onPressed: () => context.push(AdminRoutes.superUsers),
+                    ),
+                    const SizedBox(height: ArenaSpacing.xs),
+                  ],
+                  if (adminCanSection(profile, 'invitations')) ...[
+                    ArenaButton(
+                      label: 'INVITATIONS ADMIN',
+                      fullWidth: true,
+                      variant: ArenaButtonVariant.secondary,
+                      onPressed: () =>
+                          context.push(AdminRoutes.superInvitations),
+                    ),
+                    const SizedBox(height: ArenaSpacing.xs),
+                  ],
+                  if (adminCanSection(profile, 'payments')) ...[
+                    ArenaButton(
+                      label: '💸 VALIDER PAIEMENTS',
+                      fullWidth: true,
+                      variant: ArenaButtonVariant.primary,
+                      onPressed: () =>
+                          context.push(AdminRoutes.superPaymentsValidation),
+                    ),
+                    const SizedBox(height: ArenaSpacing.xs),
+                  ],
+                  if (adminCanSection(profile, 'payouts')) ...[
+                    ArenaButton(
+                      label: '💰 VERSEMENTS GAINS',
+                      fullWidth: true,
+                      variant: ArenaButtonVariant.secondary,
+                      onPressed: () => context.push(AdminRoutes.superPayouts),
+                    ),
+                    const SizedBox(height: ArenaSpacing.xs),
+                  ],
+                  if (adminCanSection(profile, 'revenue')) ...[
+                    ArenaButton(
+                      label: 'REVENUE PLATEFORME',
+                      fullWidth: true,
+                      variant: ArenaButtonVariant.secondary,
+                      onPressed: () => context.push(AdminRoutes.superRevenue),
+                    ),
+                    const SizedBox(height: ArenaSpacing.xs),
+                  ],
+                  if (adminCanSection(profile, 'promo')) ...[
+                    ArenaButton(
+                      label: '🖼 ESPACE PUBLICITAIRE',
+                      fullWidth: true,
+                      variant: ArenaButtonVariant.secondary,
+                      onPressed: () =>
+                          context.push(AdminRoutes.superPromoBanner),
+                    ),
+                    const SizedBox(height: ArenaSpacing.xs),
+                  ],
+                  if (adminCanSection(profile, 'tutorial')) ...[
+                    ArenaButton(
+                      label: '🎬 VIDÉO TUTORIEL',
+                      fullWidth: true,
+                      variant: ArenaButtonVariant.secondary,
+                      onPressed: () =>
+                          context.push(AdminRoutes.superTutorialVideo),
+                    ),
+                    const SizedBox(height: ArenaSpacing.xs),
+                  ],
+                  if (adminCanSection(profile, 'anticheat'))
+                    ArenaButton(
+                      label: '🛡 ANTI-TRICHE',
+                      fullWidth: true,
+                      variant: ArenaButtonVariant.secondary,
+                      onPressed: () => context.push(AdminRoutes.superAntiCheat),
+                    ),
                 ],
                 const SizedBox(height: ArenaSpacing.lg),
                 Text(

@@ -30,7 +30,11 @@ mixin _$InvitationCode {
   int get maxUses => throw _privateConstructorUsedError;
   int get usesCount => throw _privateConstructorUsedError;
   DateTime? get usedAt => throw _privateConstructorUsedError;
-  String? get usedBy => throw _privateConstructorUsedError;
+  String? get usedBy =>
+      throw _privateConstructorUsedError; // VOLET 3 — périmètre facultatif du futur admin. NULL/vide = aucune
+// restriction (tous les pays / toutes les sections).
+  List<String>? get allowedCountryCodes => throw _privateConstructorUsedError;
+  List<String>? get allowedSections => throw _privateConstructorUsedError;
   DateTime? get createdAt => throw _privateConstructorUsedError;
 
   /// Serializes this InvitationCode to a JSON map.
@@ -60,6 +64,8 @@ abstract class $InvitationCodeCopyWith<$Res> {
       int usesCount,
       DateTime? usedAt,
       String? usedBy,
+      List<String>? allowedCountryCodes,
+      List<String>? allowedSections,
       DateTime? createdAt});
 }
 
@@ -88,6 +94,8 @@ class _$InvitationCodeCopyWithImpl<$Res, $Val extends InvitationCode>
     Object? usesCount = null,
     Object? usedAt = freezed,
     Object? usedBy = freezed,
+    Object? allowedCountryCodes = freezed,
+    Object? allowedSections = freezed,
     Object? createdAt = freezed,
   }) {
     return _then(_value.copyWith(
@@ -131,6 +139,14 @@ class _$InvitationCodeCopyWithImpl<$Res, $Val extends InvitationCode>
           ? _value.usedBy
           : usedBy // ignore: cast_nullable_to_non_nullable
               as String?,
+      allowedCountryCodes: freezed == allowedCountryCodes
+          ? _value.allowedCountryCodes
+          : allowedCountryCodes // ignore: cast_nullable_to_non_nullable
+              as List<String>?,
+      allowedSections: freezed == allowedSections
+          ? _value.allowedSections
+          : allowedSections // ignore: cast_nullable_to_non_nullable
+              as List<String>?,
       createdAt: freezed == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -158,6 +174,8 @@ abstract class _$$InvitationCodeImplCopyWith<$Res>
       int usesCount,
       DateTime? usedAt,
       String? usedBy,
+      List<String>? allowedCountryCodes,
+      List<String>? allowedSections,
       DateTime? createdAt});
 }
 
@@ -184,6 +202,8 @@ class __$$InvitationCodeImplCopyWithImpl<$Res>
     Object? usesCount = null,
     Object? usedAt = freezed,
     Object? usedBy = freezed,
+    Object? allowedCountryCodes = freezed,
+    Object? allowedSections = freezed,
     Object? createdAt = freezed,
   }) {
     return _then(_$InvitationCodeImpl(
@@ -227,6 +247,14 @@ class __$$InvitationCodeImplCopyWithImpl<$Res>
           ? _value.usedBy
           : usedBy // ignore: cast_nullable_to_non_nullable
               as String?,
+      allowedCountryCodes: freezed == allowedCountryCodes
+          ? _value._allowedCountryCodes
+          : allowedCountryCodes // ignore: cast_nullable_to_non_nullable
+              as List<String>?,
+      allowedSections: freezed == allowedSections
+          ? _value._allowedSections
+          : allowedSections // ignore: cast_nullable_to_non_nullable
+              as List<String>?,
       createdAt: freezed == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -249,8 +277,12 @@ class _$InvitationCodeImpl extends _InvitationCode {
       this.usesCount = 0,
       this.usedAt,
       this.usedBy,
+      final List<String>? allowedCountryCodes,
+      final List<String>? allowedSections,
       this.createdAt})
-      : super._();
+      : _allowedCountryCodes = allowedCountryCodes,
+        _allowedSections = allowedSections,
+        super._();
 
   factory _$InvitationCodeImpl.fromJson(Map<String, dynamic> json) =>
       _$$InvitationCodeImplFromJson(json);
@@ -279,12 +311,37 @@ class _$InvitationCodeImpl extends _InvitationCode {
   final DateTime? usedAt;
   @override
   final String? usedBy;
+// VOLET 3 — périmètre facultatif du futur admin. NULL/vide = aucune
+// restriction (tous les pays / toutes les sections).
+  final List<String>? _allowedCountryCodes;
+// VOLET 3 — périmètre facultatif du futur admin. NULL/vide = aucune
+// restriction (tous les pays / toutes les sections).
+  @override
+  List<String>? get allowedCountryCodes {
+    final value = _allowedCountryCodes;
+    if (value == null) return null;
+    if (_allowedCountryCodes is EqualUnmodifiableListView)
+      return _allowedCountryCodes;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(value);
+  }
+
+  final List<String>? _allowedSections;
+  @override
+  List<String>? get allowedSections {
+    final value = _allowedSections;
+    if (value == null) return null;
+    if (_allowedSections is EqualUnmodifiableListView) return _allowedSections;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(value);
+  }
+
   @override
   final DateTime? createdAt;
 
   @override
   String toString() {
-    return 'InvitationCode(id: $id, code: $code, role: $role, generatedBy: $generatedBy, targetEmail: $targetEmail, expiresAt: $expiresAt, maxUses: $maxUses, usesCount: $usesCount, usedAt: $usedAt, usedBy: $usedBy, createdAt: $createdAt)';
+    return 'InvitationCode(id: $id, code: $code, role: $role, generatedBy: $generatedBy, targetEmail: $targetEmail, expiresAt: $expiresAt, maxUses: $maxUses, usesCount: $usesCount, usedAt: $usedAt, usedBy: $usedBy, allowedCountryCodes: $allowedCountryCodes, allowedSections: $allowedSections, createdAt: $createdAt)';
   }
 
   @override
@@ -306,14 +363,31 @@ class _$InvitationCodeImpl extends _InvitationCode {
                 other.usesCount == usesCount) &&
             (identical(other.usedAt, usedAt) || other.usedAt == usedAt) &&
             (identical(other.usedBy, usedBy) || other.usedBy == usedBy) &&
+            const DeepCollectionEquality()
+                .equals(other._allowedCountryCodes, _allowedCountryCodes) &&
+            const DeepCollectionEquality()
+                .equals(other._allowedSections, _allowedSections) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, id, code, role, generatedBy,
-      targetEmail, expiresAt, maxUses, usesCount, usedAt, usedBy, createdAt);
+  int get hashCode => Object.hash(
+      runtimeType,
+      id,
+      code,
+      role,
+      generatedBy,
+      targetEmail,
+      expiresAt,
+      maxUses,
+      usesCount,
+      usedAt,
+      usedBy,
+      const DeepCollectionEquality().hash(_allowedCountryCodes),
+      const DeepCollectionEquality().hash(_allowedSections),
+      createdAt);
 
   /// Create a copy of InvitationCode
   /// with the given fields replaced by the non-null parameter values.
@@ -344,6 +418,8 @@ abstract class _InvitationCode extends InvitationCode {
       final int usesCount,
       final DateTime? usedAt,
       final String? usedBy,
+      final List<String>? allowedCountryCodes,
+      final List<String>? allowedSections,
       final DateTime? createdAt}) = _$InvitationCodeImpl;
   const _InvitationCode._() : super._();
 
@@ -370,7 +446,13 @@ abstract class _InvitationCode extends InvitationCode {
   @override
   DateTime? get usedAt;
   @override
-  String? get usedBy;
+  String?
+      get usedBy; // VOLET 3 — périmètre facultatif du futur admin. NULL/vide = aucune
+// restriction (tous les pays / toutes les sections).
+  @override
+  List<String>? get allowedCountryCodes;
+  @override
+  List<String>? get allowedSections;
   @override
   DateTime? get createdAt;
 

@@ -46,6 +46,7 @@ extension _CreateCompetitionSubmit on _CreateCompetitionPageState {
           'max_players': _maxPlayers,
           'registration_fee': fee,
           'registration_currency': _currency,
+          'country_code': _countryCode,
           'commission_xaf': commissionXaf,
           'commission_pct': derivedCommissionPct,
           'prize_pool_local': pool,
@@ -59,8 +60,6 @@ extension _CreateCompetitionSubmit on _CreateCompetitionPageState {
           'referral_activity_mode': 'any',
           'round_intervals': _roundIntervals(),
           'format_config': _formatConfig(),
-          if (fee > 0) 'orange_money_code': _orangeMomoCtrl.text.trim(),
-          if (fee > 0) 'mtn_momo_code': _mtnMomoCtrl.text.trim(),
           'android_store_url': _androidStoreUrlCtrl.text.trim().isEmpty
               ? null
               : _androidStoreUrlCtrl.text.trim(),
@@ -69,6 +68,13 @@ extension _CreateCompetitionSubmit on _CreateCompetitionPageState {
               : _iosStoreUrlCtrl.text.trim(),
         }),
       );
+      // Options de paiement (pays × opérateur × code) — écrites séparément via
+      // la RPC dédiée APRÈS l'INSERT (non-atomique avec, acceptable). Vide si
+      // gratuite ou si l'admin n'a rien saisi.
+      await ref.read(adminCompetitionsRepositoryProvider).setPaymentOptions(
+            created.id,
+            paymentOptionsFromDrafts(_paymentCountries),
+          );
       await ref.read(adminAuditLogRepositoryProvider).record(
         adminId: adminId,
         action: 'competition_created',
@@ -110,13 +116,13 @@ extension _CreateCompetitionSubmit on _CreateCompetitionPageState {
     double derivedCommissionPct,
   ) async {
     final id = widget.editing!.id;
-    final fee = double.tryParse(_entryFeeCtrl.text) ?? 0;
     try {
       await ref.read(adminCompetitionsRepositoryProvider).update(id, {
         'name': _nameCtrl.text.trim(),
         'description':
             _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
         'start_date': _startDate!.toUtc().toIso8601String(),
+        'country_code': _countryCode,
         'commission_xaf': commissionXaf,
         'commission_pct': derivedCommissionPct,
         'prize_pool_local': pool,
@@ -128,8 +134,6 @@ extension _CreateCompetitionSubmit on _CreateCompetitionPageState {
         'referral_activity_mode': 'any',
         'round_intervals': _roundIntervals(),
         'format_config': _formatConfig(),
-        if (fee > 0) 'orange_money_code': _orangeMomoCtrl.text.trim(),
-        if (fee > 0) 'mtn_momo_code': _mtnMomoCtrl.text.trim(),
         'android_store_url': _androidStoreUrlCtrl.text.trim().isEmpty
             ? null
             : _androidStoreUrlCtrl.text.trim(),
@@ -137,6 +141,11 @@ extension _CreateCompetitionSubmit on _CreateCompetitionPageState {
             ? null
             : _iosStoreUrlCtrl.text.trim(),
       });
+      // Remplace-tout transactionnel des options de paiement.
+      await ref.read(adminCompetitionsRepositoryProvider).setPaymentOptions(
+            id,
+            paymentOptionsFromDrafts(_paymentCountries),
+          );
       await ref.read(adminAuditLogRepositoryProvider).record(
         adminId: adminId,
         action: 'competition_updated',

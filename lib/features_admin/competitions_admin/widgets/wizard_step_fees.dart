@@ -15,32 +15,21 @@ class WizardStepFees extends StatelessWidget {
     required this.entryFeeCtrl,
     required this.currency,
     required this.commissionXafCtrl,
-    required this.orangeMomoCtrl,
-    required this.mtnMomoCtrl,
     required this.referralQuotaCtrl,
     required this.isEditing,
-    required this.savedTemplateCount,
     required this.onChanged,
     required this.onCurrencyChanged,
-    required this.onSaveTemplate,
-    required this.onOpenLibrary,
     super.key,
   });
 
   final TextEditingController entryFeeCtrl;
   final String currency;
   final TextEditingController commissionXafCtrl;
-  final TextEditingController orangeMomoCtrl;
-  final TextEditingController mtnMomoCtrl;
   final TextEditingController referralQuotaCtrl;
   final bool isEditing;
 
-  /// Nombre de jeux de codes enregistrés (affiché sur le bouton « Modèles »).
-  final int savedTemplateCount;
   final VoidCallback onChanged;
   final ValueChanged<String> onCurrencyChanged;
-  final VoidCallback onSaveTemplate;
-  final VoidCallback onOpenLibrary;
 
   Widget _lockable(Widget child) {
     if (!isEditing) return child;
@@ -69,8 +58,8 @@ class WizardStepFees extends StatelessWidget {
           ),
           child: Text(
             "ℹ Frais d'inscription = 0 → compétition GRATUITE (badge sur la "
-            'carte + bypass paiement). Sinon le joueur paie en P2P sur les '
-            'codes marchands ci-dessous, et le super-admin valide manuellement.',
+            'carte + bypass paiement). Sinon le joueur paie en P2P : les codes '
+            "marchands par pays/opérateur se configurent à l'étape « Pays ».",
             style: ArenaText.body,
           ),
         ),
@@ -208,63 +197,6 @@ class WizardStepFees extends StatelessWidget {
                 ],
               ],
             ),
-          ),
-        ],
-        if (isPaid) ...[
-          const SizedBox(height: ArenaSpacing.lg),
-          Container(
-            padding: const EdgeInsets.all(ArenaSpacing.md),
-            decoration: arenaWarningCardDecoration(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '📱 Codes marchands (requis pour comp. payante)',
-                  style: ArenaText.h3,
-                ),
-                const SizedBox(height: ArenaSpacing.xs),
-                Text(
-                  'Affichés au joueur sur P2 quand il paie. Le super-admin '
-                  'valide ensuite manuellement chaque transaction reçue.',
-                  style: ArenaText.small,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: ArenaSpacing.md),
-          Text('Code marchand Orange Money', style: ArenaText.inputLabel),
-          const SizedBox(height: ArenaSpacing.xs),
-          ArenaTextField(
-            controller: orangeMomoCtrl,
-            hint: 'ex. *126*1*001234#',
-            onChanged: (_) => onChanged(),
-          ),
-          const SizedBox(height: ArenaSpacing.md),
-          Text('Code marchand MTN MoMo', style: ArenaText.inputLabel),
-          const SizedBox(height: ArenaSpacing.xs),
-          ArenaTextField(
-            controller: mtnMomoCtrl,
-            hint: 'ex. *126*7*009876#',
-            onChanged: (_) => onChanged(),
-          ),
-          const SizedBox(height: ArenaSpacing.sm),
-          Row(
-            children: [
-              Expanded(
-                child: TextButton.icon(
-                  onPressed: onSaveTemplate,
-                  icon: const Icon(Icons.bookmark_add_outlined, size: 18),
-                  label: const Text('Enregistrer ces codes'),
-                ),
-              ),
-              Expanded(
-                child: TextButton.icon(
-                  onPressed: savedTemplateCount > 0 ? onOpenLibrary : null,
-                  icon: const Icon(Icons.folder_open_outlined, size: 18),
-                  label: Text('Modèles ($savedTemplateCount)'),
-                ),
-              ),
-            ],
           ),
         ],
       ],

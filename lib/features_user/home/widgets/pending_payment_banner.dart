@@ -22,7 +22,10 @@ class PendingPaymentBanner extends ConsumerWidget {
         .toList(growable: false);
     if (pending.isEmpty) return const SizedBox.shrink();
     final p = pending.first;
-    final method = PaymentMethod.fromCode(p.payerMethod ?? 'MTN_MOMO');
+    final operator = PaymentOperator.fromCode(
+      p.payerMethod ?? 'MTN_MOMO',
+      label: p.operatorLabel,
+    );
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         ArenaSpacing.lg,
@@ -35,7 +38,7 @@ class PendingPaymentBanner extends ConsumerWidget {
           UserRoutes.paymentProcessing,
           extra: PaymentProcessingArgs(
             paymentId: p.id,
-            method: method,
+            operator: operator,
             amountXaf: p.amountLocal.round(),
             competitionName: l10n.pendingPaymentCompetitionFallback,
             maskedPhone: p.payerPhone ?? '+••• •• •• ••',

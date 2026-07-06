@@ -414,7 +414,10 @@ void _resumeProcessing(
     UserRoutes.paymentProcessing,
     extra: PaymentProcessingArgs(
       paymentId: pending.id,
-      method: PaymentMethod.fromCode(pending.payerMethod ?? 'MTN_MOMO'),
+      operator: PaymentOperator.fromCode(
+        pending.payerMethod ?? 'MTN_MOMO',
+        label: pending.operatorLabel,
+      ),
       amountXaf: pending.amountLocal.round(),
       competitionName: c.name,
       maskedPhone: pending.payerPhone ?? '+••• •• •• ••',

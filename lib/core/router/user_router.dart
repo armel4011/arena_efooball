@@ -1,5 +1,6 @@
 import 'package:arena/core/router/router_refresh.dart';
 import 'package:arena/core/services/onboarding_service.dart';
+import 'package:arena/data/models/competition_payment_option.dart';
 import 'package:arena/dev/bracket_showcase_page.dart';
 import 'package:arena/dev/design_showcase_page.dart';
 import 'package:arena/features/splash/splash_router.dart';
@@ -460,6 +461,7 @@ final userRouterProvider = Provider<GoRouter>((ref) {
           return PaymentMethodPickerPage(
             amountXaf: extra?.amountXaf ?? 0,
             contextLabel: extra?.contextLabel ?? '',
+            options: extra?.options ?? const [],
           );
         },
       ),
@@ -469,11 +471,10 @@ final userRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final extra = state.extra as PaymentMomoArgs?;
           return MobileMoneyDetailsPage(
-            method: extra?.method ?? PaymentMethod.mtnMoMo,
+            operator: extra?.operator ?? _fallbackOperator,
             amountXaf: extra?.amountXaf ?? 0,
             competitionId: extra?.competitionId ?? '',
             competitionName: extra?.competitionName ?? '',
-            merchantCode: extra?.merchantCode ?? '',
           );
         },
       ),
@@ -484,7 +485,7 @@ final userRouterProvider = Provider<GoRouter>((ref) {
           final extra = state.extra as PaymentProcessingArgs?;
           return PaymentProcessingPage(
             paymentId: extra?.paymentId ?? '',
-            method: extra?.method ?? PaymentMethod.mtnMoMo,
+            operator: extra?.operator ?? _fallbackOperator,
             amountXaf: extra?.amountXaf ?? 0,
             competitionName: extra?.competitionName ?? '',
             maskedPhone: extra?.maskedPhone ?? '+••• •• •• ••',
@@ -498,7 +499,7 @@ final userRouterProvider = Provider<GoRouter>((ref) {
           final extra = state.extra as PaymentResultArgs?;
           return PaymentSuccessPage(
             amountXaf: extra?.amountXaf ?? 0,
-            method: extra?.method ?? PaymentMethod.mtnMoMo,
+            operator: extra?.operator ?? _fallbackOperator,
             transactionId: extra?.transactionId ?? '—',
             dateLabel: extra?.dateLabel ?? '',
             tournamentName: extra?.tournamentName ?? 'COMPÉTITION',
@@ -514,7 +515,7 @@ final userRouterProvider = Provider<GoRouter>((ref) {
           return PaymentFailedPage(
             reason: extra?.reason ?? PaymentFailReason.unknown,
             adminReason: extra?.adminReason,
-            method: extra?.method,
+            operator: extra?.operator,
           );
         },
       ),
@@ -567,33 +568,43 @@ class LinkAccountArgs {
   final String providerLabel;
 }
 
-/// Args carried into `PaymentMethodPickerPage` (P1).
+/// Opérateur de repli quand une route paiement est atteinte sans `extra`
+/// (deep-link direct / hot-reload). En pratique ces routes reçoivent
+/// toujours leur `PaymentOperator` via `extra`.
+const _fallbackOperator = PaymentOperator(
+  label: 'MTN MoMo',
+  code: 'MTN_MOMO',
+  countryCode: 'CM',
+);
+
+/// Args carried into `PaymentMethodPickerPage` (P1). Porte les options de
+/// paiement DÉJÀ filtrées sur le pays choisi par le joueur.
 class PaymentPickerArgs {
   const PaymentPickerArgs({
     required this.amountXaf,
     required this.contextLabel,
+    required this.options,
   });
 
   final int amountXaf;
   final String contextLabel;
+  final List<CompetitionPaymentOption> options;
 }
 
 /// Args carried into `MobileMoneyDetailsPage` (P2) once la P1 a renvoyé
-/// la méthode. La P2 a besoin de l'ID compétition (pour persister le
-/// paiement) + du code marchand correspondant à la méthode choisie.
+/// l'opérateur choisi. La P2 a besoin de l'ID compétition (pour persister
+/// le paiement) + de l'opérateur (label + code de transfert + pays).
 class PaymentMomoArgs {
   const PaymentMomoArgs({
-    required this.method,
+    required this.operator,
     required this.amountXaf,
     required this.competitionId,
     required this.competitionName,
-    required this.merchantCode,
   });
-  final PaymentMethod method;
+  final PaymentOperator operator;
   final int amountXaf;
   final String competitionId;
   final String competitionName;
-  final String merchantCode;
 }
 
 /// Args carried into `PaymentProcessingPage` (P3) — page d'attente de
@@ -601,14 +612,14 @@ class PaymentMomoArgs {
 class PaymentProcessingArgs {
   const PaymentProcessingArgs({
     required this.paymentId,
-    required this.method,
+    required this.operator,
     required this.amountXaf,
     required this.competitionName,
     required this.maskedPhone,
   });
 
   final String paymentId;
-  final PaymentMethod method;
+  final PaymentOperator operator;
   final int amountXaf;
   final String competitionName;
   final String maskedPhone;
@@ -617,7 +628,7 @@ class PaymentProcessingArgs {
 /// Args carried into `PaymentSuccessPage` (P4).
 class PaymentResultArgs {
   const PaymentResultArgs({
-    required this.method,
+    required this.operator,
     required this.amountXaf,
     required this.transactionId,
     required this.dateLabel,
@@ -625,7 +636,7 @@ class PaymentResultArgs {
     this.competitionId,
   });
 
-  final PaymentMethod method;
+  final PaymentOperator operator;
   final int amountXaf;
   final String transactionId;
   final String dateLabel;
@@ -642,11 +653,11 @@ class PaymentFailedArgs {
   const PaymentFailedArgs({
     required this.reason,
     this.adminReason,
-    this.method,
+    this.operator,
   });
   final PaymentFailReason reason;
   final String? adminReason;
-  final PaymentMethod? method;
+  final PaymentOperator? operator;
 }
 
 /// Args carried into `PayoutKycPage` (P7) when a payout > 100 000 XAF

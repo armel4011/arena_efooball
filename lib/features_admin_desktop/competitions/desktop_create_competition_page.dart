@@ -2,6 +2,7 @@ import 'package:arena/core/router/admin_desktop_router.dart';
 import 'package:arena/core/theme/arena_fluent_theme.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/core/utils/arena_error_message.dart';
+import 'package:arena/core/utils/supported_countries.dart';
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
@@ -9,6 +10,8 @@ import 'package:arena/data/repositories/admin/admin_competitions_repository.dart
 import 'package:arena/features_admin_desktop/competitions/desktop_competition_visuals.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/competition_description_templates.dart';
+import 'package:arena/features_shared/payment_operator_templates.dart';
+import 'package:arena/features_shared/payment_option_draft.dart';
 import 'package:arena/features_shared/prize_ranks.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter/services.dart';
@@ -58,12 +61,20 @@ class DesktopCreateCompetitionPage extends ConsumerStatefulWidget {
 class _DesktopCreateCompetitionPageState
     extends ConsumerState<DesktopCreateCompetitionPage>
     with _SubmitAndCompute, _StepBuilders {
-  static const _stepCount = 5;
+  static const _stepCount = 6;
   int _step = 0;
   @override
   bool _submitting = false;
   @override
   String? _error;
+
+  // Étape « Pays » ───────────────────────────────────────────────────
+  @override
+  String _countryCode = 'CM';
+  @override
+  final List<PaymentDraftCountry> _paymentCountries = [];
+  @override
+  bool _paymentOptionsLoading = false;
 
   // Form state ──────────────────────────────────────────────────────
   @override
@@ -80,10 +91,6 @@ class _DesktopCreateCompetitionPageState
   DateTime? _startDate;
   @override
   final _entryFeeCtrl = TextEditingController(text: '0');
-  @override
-  final _orangeMomoCtrl = TextEditingController();
-  @override
-  final _mtnMomoCtrl = TextEditingController();
   @override
   String _currency = 'XAF';
   @override
@@ -147,12 +154,12 @@ class _DesktopCreateCompetitionPageState
     _format = c.format;
     _maxPlayers = c.maxPlayers;
     _startDate = c.startDate;
+    _countryCode = c.countryCode;
     _entryFeeCtrl.text = c.registrationFee == c.registrationFee.roundToDouble()
         ? c.registrationFee.round().toString()
         : c.registrationFee.toString();
-    _orangeMomoCtrl.text = c.orangeMoneyCode ?? '';
-    _mtnMomoCtrl.text = c.mtnMomoCode ?? '';
     _currency = c.registrationCurrency;
+    _loadPaymentOptions(c.id);
     final commissionXaf = c.commissionXaf;
     _commissionXafCtrl.text = commissionXaf == commissionXaf.roundToDouble()
         ? commissionXaf.round().toString()
@@ -204,8 +211,6 @@ class _DesktopCreateCompetitionPageState
     _nameCtrl.dispose();
     _descCtrl.dispose();
     _entryFeeCtrl.dispose();
-    _orangeMomoCtrl.dispose();
-    _mtnMomoCtrl.dispose();
     _commissionXafCtrl.dispose();
     _referralQuotaCtrl.dispose();
     _customIntervalCtrl.dispose();
@@ -220,7 +225,32 @@ class _DesktopCreateCompetitionPageState
     for (final c in _blockShareCtrls) {
       c.dispose();
     }
+    for (final country in _paymentCountries) {
+      country.dispose();
+    }
     super.dispose();
+  }
+
+  /// Charge les options de paiement existantes (mode édition) et reconstruit
+  /// les brouillons groupés par pays. Best-effort.
+  Future<void> _loadPaymentOptions(String competitionId) async {
+    setState(() => _paymentOptionsLoading = true);
+    try {
+      final options = await ref
+          .read(adminCompetitionsRepositoryProvider)
+          .fetchPaymentOptions(competitionId);
+      if (!mounted) return;
+      final drafts = paymentDraftsFromOptions(options);
+      setState(() {
+        _paymentCountries
+          ..clear()
+          ..addAll(drafts);
+        _paymentOptionsLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _paymentOptionsLoading = false);
+    }
   }
 
   bool get _canAdvance {
@@ -233,18 +263,24 @@ class _DesktopCreateCompetitionPageState
         return true;
       case 3:
         final fee = double.tryParse(_entryFeeCtrl.text) ?? -1;
-        if (fee < 0) return false;
-        if (fee > 0) {
-          if (_orangeMomoCtrl.text.trim().isEmpty) return false;
-          if (_mtnMomoCtrl.text.trim().isEmpty) return false;
-        }
-        return true;
+        return fee >= 0;
+      case 4:
+        final fee = double.tryParse(_entryFeeCtrl.text) ?? 0;
+        if (fee <= 0) return true;
+        return paymentDraftsValid(_paymentCountries);
       default:
         return true;
     }
   }
 
-  static const _stepTitles = ['Infos', 'Format', 'Récompenses', 'Frais', 'Récap'];
+  static const _stepTitles = [
+    'Infos',
+    'Format',
+    'Récompenses',
+    'Frais',
+    'Pays',
+    'Récap',
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -350,6 +386,8 @@ class _DesktopCreateCompetitionPageState
         return _buildPrizesStep();
       case 3:
         return _buildFeesStep();
+      case 4:
+        return _buildCountryStep();
       default:
         return _buildReviewStep();
     }

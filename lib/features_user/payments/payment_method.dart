@@ -1,77 +1,140 @@
 import 'package:arena/core/theme/arena_theme.dart';
-import 'package:arena/l10n/generated/app_localizations.dart';
+import 'package:arena/data/models/competition_payment_option.dart';
 import 'package:flutter/material.dart';
 
-/// V1.0 supported mobile-money providers (paiement P2P manuel).
+/// Opérateur de paiement Mobile Money **libre** (paiement P2P manuel).
 ///
-/// CinetPay / NowPayments / Wave / Moov / crypto sont reportés en V2.
-/// En V1, seuls MTN MoMo et Orange Money sont actifs : le joueur paie
-/// directement sur le code marchand affiché en P2 (saisi par l'admin
-/// créateur de la compétition), puis le super-admin valide manuellement.
-enum PaymentMethod {
-  mtnMoMo(
-    code: 'MTN_MOMO',
-    badge: 'MTN',
-    brandColor: ArenaColors.brandMtnMomo,
-    foreground: ArenaColors.bone,
-  ),
-  orangeMoney(
-    code: 'ORANGE_MONEY',
-    badge: 'OM',
-    brandColor: ArenaColors.brandOrangeMoney,
-    foreground: ArenaColors.bone,
-  );
-
-  const PaymentMethod({
+/// Remplace l'ancien enum `PaymentMethod` figé sur MTN / Orange : l'admin
+/// créateur d'une compétition définit désormais librement ses opérateurs
+/// (Orange Money, MTN MoMo, Wave, Moov, Free Money…) par pays via
+/// `competition_payment_options`. Le joueur choisit son pays puis un
+/// opérateur de ce pays, et voit le code de transfert associé.
+///
+/// Les 2 opérateurs historiques gardent leurs slugs canoniques
+/// (`MTN_MOMO` / `ORANGE_MONEY`) et leur couleur de marque ; les autres
+/// dérivent un slug MAJUSCULE depuis le label et une couleur neutre du
+/// design system.
+@immutable
+class PaymentOperator {
+  const PaymentOperator({
+    required this.label,
     required this.code,
-    required this.badge,
-    required this.brandColor,
-    required this.foreground,
+    required this.countryCode,
+    this.transferCode,
+    this.dialCode,
   });
 
-  final String code;
-  final String badge;
-  final Color brandColor;
-  final Color foreground;
-
-  /// Localized provider label (e.g. "MTN Mobile Money" / "Orange Money").
-  String labelOf(AppLocalizations l10n) {
-    switch (this) {
-      case PaymentMethod.mtnMoMo:
-        return l10n.paymentMethodMtnLabel;
-      case PaymentMethod.orangeMoney:
-        return l10n.paymentMethodOrangeLabel;
-    }
-  }
-
-  /// Localized list of supported countries for the provider.
-  String countriesLineOf(AppLocalizations l10n) {
-    switch (this) {
-      case PaymentMethod.mtnMoMo:
-        return l10n.paymentMethodMtnCountries;
-      case PaymentMethod.orangeMoney:
-        return l10n.paymentMethodOrangeCountries;
-    }
-  }
-
-  static PaymentMethod fromCode(String code) {
-    return PaymentMethod.values.firstWhere(
-      (m) => m.code == code,
-      orElse: () => PaymentMethod.mtnMoMo,
+  /// Reconstruit un opérateur depuis une option de paiement compétition.
+  factory PaymentOperator.fromOption(CompetitionPaymentOption o) {
+    return PaymentOperator(
+      label: o.operatorLabel,
+      code: slugForLabel(o.operatorLabel),
+      transferCode: o.transferCode,
+      countryCode: o.countryCode,
+      dialCode: o.dialCode,
     );
+  }
+
+  /// Reconstruit l'affichage d'un opérateur depuis son slug persisté (ex.
+  /// pour l'historique paiements). [label] restaure le libellé exact saisi
+  /// par l'admin ; à défaut on dérive un label lisible du code.
+  factory PaymentOperator.fromCode(String code, {String? label}) {
+    final hasLabel = label != null && label.trim().isNotEmpty;
+    return PaymentOperator(
+      label: hasLabel ? label.trim() : readableFromCode(code),
+      code: code,
+      countryCode: '',
+    );
+  }
+
+  /// Libellé affiché (ex. "Orange Money", "Wave"). Vient du champ
+  /// `operator_label` saisi par l'admin.
+  final String label;
+
+  /// Slug technique persisté dans `payments.payer_method` (ex.
+  /// `ORANGE_MONEY`, `MTN_MOMO`, `WAVE`).
+  final String code;
+
+  /// Code de transfert Mobile Money à composer (peut être null si
+  /// l'admin ne l'a pas encore configuré).
+  final String? transferCode;
+
+  /// ISO 3166-1 alpha-2 du pays de l'opérateur.
+  final String countryCode;
+
+  /// Indicatif E.164 (ex. `+237`). Repli sur `dialCodeFor(countryCode)`.
+  final String? dialCode;
+
+  /// Initiales dérivées du label (1–3 lettres majuscules) pour le logo.
+  String get badge {
+    if (code == 'MTN_MOMO') return 'MTN';
+    if (code == 'ORANGE_MONEY') return 'OM';
+    final words = label
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((w) => w.isNotEmpty)
+        .toList();
+    if (words.isEmpty) return '?';
+    if (words.length >= 2) {
+      return words.take(3).map((w) => w[0].toUpperCase()).join();
+    }
+    final single = words.first;
+    return single.substring(0, single.length >= 3 ? 3 : single.length).toUpperCase();
+  }
+
+  /// Couleur de marque : MTN / Orange conservent leur token dédié ; les
+  /// opérateurs libres retombent sur une couleur neutre du design system.
+  Color get brandColor {
+    if (code == 'MTN_MOMO') return ArenaColors.brandMtnMomo;
+    if (code == 'ORANGE_MONEY') return ArenaColors.brandOrangeMoney;
+    return ArenaColors.signalBlue;
+  }
+
+  /// Couleur de texte sur le badge coloré.
+  Color get foreground => ArenaColors.bone;
+
+  /// Dérive un slug MAJUSCULE depuis un libellé libre. Les 2 opérateurs
+  /// connus gardent leur slug canonique ; sinon "Wave" → "WAVE",
+  /// "Free Money" → "FREE_MONEY".
+  static String slugForLabel(String label) {
+    final l = label.toLowerCase();
+    if (l.contains('mtn')) return 'MTN_MOMO';
+    if (l.contains('orange')) return 'ORANGE_MONEY';
+    final slug = label
+        .toUpperCase()
+        .replaceAll(RegExp('[^A-Z0-9]+'), '_')
+        .replaceAll(RegExp(r'^_+|_+$'), '');
+    return slug.isEmpty ? 'OPERATOR' : slug;
+  }
+
+  /// Repli lisible d'un slug (ex. `FREE_MONEY` → "Free Money").
+  static String readableFromCode(String code) {
+    switch (code) {
+      case 'MTN_MOMO':
+        return 'MTN MoMo';
+      case 'ORANGE_MONEY':
+        return 'Orange Money';
+      default:
+        final words = code
+            .split('_')
+            .where((w) => w.isNotEmpty)
+            .map((w) => w[0].toUpperCase() + w.substring(1).toLowerCase());
+        final joined = words.join(' ');
+        return joined.isEmpty ? code : joined;
+    }
   }
 }
 
-/// Square brand-coloured chip with the provider initials. Reusable across
-/// the picker, details, processing, success and history screens.
-class PaymentMethodLogo extends StatelessWidget {
-  const PaymentMethodLogo({
-    required this.method,
+/// Carré coloré aux initiales de l'opérateur. Réutilisé par le picker (P1),
+/// les détails (P2), l'attente (P3), le succès (P4) et l'historique.
+class PaymentOperatorLogo extends StatelessWidget {
+  const PaymentOperatorLogo({
+    required this.operator,
     this.size = 36,
     super.key,
   });
 
-  final PaymentMethod method;
+  final PaymentOperator operator;
   final double size;
 
   @override
@@ -80,14 +143,14 @@ class PaymentMethodLogo extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: method.brandColor,
+        color: operator.brandColor,
         borderRadius: BorderRadius.circular(size / 4.5),
       ),
       alignment: Alignment.center,
       child: Text(
-        method.badge,
+        operator.badge,
         style: ArenaText.h3.copyWith(
-          color: method.foreground,
+          color: operator.foreground,
           fontSize: size * 0.36,
           fontWeight: FontWeight.w800,
           letterSpacing: 1,

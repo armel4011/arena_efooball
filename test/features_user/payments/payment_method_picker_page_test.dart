@@ -1,14 +1,13 @@
-// Tests UI du flux ARGENT — P1 : choix du moyen de paiement.
+// Tests UI du flux ARGENT — P1 : choix de l'opérateur.
 //
-// PaymentMethodPickerPage est l'entrée du flux d'inscription payante.
-// C'est un StatefulWidget auto-contenu (pas de Riverpod / Supabase) : il
-// reçoit le montant + un callback `onConfirm(PaymentMethod)`. On vérifie le
-// rendu des deux moyens (MTN / Orange), la sélection par défaut, le changement
-// de sélection, et que `onConfirm` renvoie bien le moyen choisi.
+// PaymentMethodPickerPage reçoit les options de paiement (déjà filtrées sur
+// le pays) + un callback `onConfirm(CompetitionPaymentOption)`. On vérifie le
+// rendu des opérateurs, la sélection par défaut, le changement de sélection,
+// et que `onConfirm` renvoie bien l'option choisie.
 //
-// On cible les tuiles via leur badge stable ('MTN' / 'OM') plutôt que via les
-// libellés localisés, pour ne pas coupler le test aux strings l10n.
+// On cible les tuiles via leur badge stable ('MTN' / 'OM' / 'WAV').
 
+import 'package:arena/data/models/competition_payment_option.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_user/payments/payment_method.dart';
 import 'package:arena/features_user/payments/payment_method_picker_page.dart';
@@ -16,10 +15,28 @@ import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+const _options = <CompetitionPaymentOption>[
+  CompetitionPaymentOption(
+    id: 'o1',
+    competitionId: 'c1',
+    countryCode: 'CM',
+    operatorLabel: 'MTN MoMo',
+    transferCode: '*126*1#',
+  ),
+  CompetitionPaymentOption(
+    id: 'o2',
+    competitionId: 'c1',
+    countryCode: 'CM',
+    operatorLabel: 'Orange Money',
+    transferCode: '#150*1#',
+  ),
+];
+
 Widget _scoped({
   int amountXaf = 1500,
   String contextLabel = 'Coupe ARENA',
-  ValueChanged<PaymentMethod>? onConfirm,
+  List<CompetitionPaymentOption> options = _options,
+  ValueChanged<CompetitionPaymentOption>? onConfirm,
 }) {
   return MaterialApp(
     locale: const Locale('fr'),
@@ -28,6 +45,7 @@ Widget _scoped({
     home: PaymentMethodPickerPage(
       amountXaf: amountXaf,
       contextLabel: contextLabel,
+      options: options,
       onConfirm: onConfirm,
     ),
   );
@@ -41,16 +59,15 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
   }
 
-  testWidgets('affiche les deux moyens Mobile Money + le montant formaté',
-      (tester) async {
+  testWidgets('affiche les opérateurs + le montant formaté', (tester) async {
     await bumpViewport(tester);
     await tester.pumpWidget(_scoped(amountXaf: 1500));
     await tester.pumpAndSettle();
 
-    // Les deux badges de moyen de paiement sont rendus.
+    // Les deux badges d'opérateur sont rendus.
     expect(find.text('MTN'), findsOneWidget);
     expect(find.text('OM'), findsOneWidget);
-    expect(find.byType(PaymentMethodLogo), findsNWidgets(2));
+    expect(find.byType(PaymentOperatorLogo), findsNWidgets(2));
 
     // Le montant est affiché avec séparateur de milliers : 1500 → "1 500".
     expect(find.text('1 500'), findsOneWidget);
@@ -59,7 +76,7 @@ void main() {
     expect(find.byType(ArenaButton), findsOneWidget);
   });
 
-  testWidgets('sélection par défaut = MTN MoMo (une seule coche visible)',
+  testWidgets('sélection par défaut = 1re option (une seule coche visible)',
       (tester) async {
     await bumpViewport(tester);
     await tester.pumpWidget(_scoped());
@@ -69,24 +86,24 @@ void main() {
     expect(find.byIcon(Icons.check), findsOneWidget);
   });
 
-  testWidgets('confirme MTN MoMo par défaut (sans interaction)',
+  testWidgets('confirme la 1re option par défaut (sans interaction)',
       (tester) async {
     await bumpViewport(tester);
-    PaymentMethod? confirmed;
-    await tester.pumpWidget(_scoped(onConfirm: (m) => confirmed = m));
+    CompetitionPaymentOption? confirmed;
+    await tester.pumpWidget(_scoped(onConfirm: (o) => confirmed = o));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byType(ArenaButton));
     await tester.pumpAndSettle();
 
-    expect(confirmed, PaymentMethod.mtnMoMo);
+    expect(confirmed?.id, 'o1');
   });
 
-  testWidgets('sélectionner Orange puis confirmer renvoie orangeMoney',
+  testWidgets("sélectionner Orange puis confirmer renvoie l'option Orange",
       (tester) async {
     await bumpViewport(tester);
-    PaymentMethod? confirmed;
-    await tester.pumpWidget(_scoped(onConfirm: (m) => confirmed = m));
+    CompetitionPaymentOption? confirmed;
+    await tester.pumpWidget(_scoped(onConfirm: (o) => confirmed = o));
     await tester.pumpAndSettle();
 
     // Tape la tuile Orange (le badge 'OM' est descendant de l'InkWell tapable).
@@ -96,6 +113,6 @@ void main() {
     await tester.tap(find.byType(ArenaButton));
     await tester.pumpAndSettle();
 
-    expect(confirmed, PaymentMethod.orangeMoney);
+    expect(confirmed?.id, 'o2');
   });
 }

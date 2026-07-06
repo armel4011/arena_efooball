@@ -32,7 +32,11 @@ void main() {
       _scoped(
         const PaymentSuccessPage(
           amountXaf: 1500,
-          method: PaymentMethod.mtnMoMo,
+          operator: PaymentOperator(
+            label: 'MTN MoMo',
+            code: 'MTN_MOMO',
+            countryCode: 'CM',
+          ),
           transactionId: 'ARENA-ABCD1234',
           dateLabel: '14/06 10:30',
           tournamentName: 'COUPE TEST',
@@ -52,7 +56,11 @@ void main() {
       _scoped(
         PaymentSuccessPage(
           amountXaf: 1500,
-          method: PaymentMethod.orangeMoney,
+          operator: const PaymentOperator(
+            label: 'Orange Money',
+            code: 'ORANGE_MONEY',
+            countryCode: 'CM',
+          ),
           transactionId: 'ARENA-ABCD1234',
           dateLabel: '14/06 10:30',
           onBackHome: () => backHome = true,
@@ -74,7 +82,11 @@ void main() {
       _scoped(
         const PaymentSuccessPage(
           amountXaf: 1500,
-          method: PaymentMethod.mtnMoMo,
+          operator: PaymentOperator(
+            label: 'MTN MoMo',
+            code: 'MTN_MOMO',
+            countryCode: 'CM',
+          ),
           transactionId: 'ARENA-ABCD1234',
           dateLabel: '14/06 10:30',
           competitionId: 'c-1',

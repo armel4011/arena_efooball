@@ -118,7 +118,16 @@ void main() {
   // nette réduite malgré l'ajout de StartRecordingForm + la saisie inline).
   // 2411 → 2413 le 2026-07-03 : +2 des correctifs device de la saisie inline
   // (bouton « Fermer » + carte compacte paysage : Colors.transparent/white70).
-  const colorsDotBaseline = 2413; // occurrences de `Colors.`
+  // 2413 → 2417 le 2026-07-06 : +4 `ArenaColors.*` nets du paiement multi-pays /
+  // opérateurs libres (dialog choix du pays country_pick_dialog + logo/tuiles
+  // opérateur du picker P1 + carte code P2). 0 vrai Colors.* ajouté net (le
+  // `Colors.transparent` du dialog compense le `Colors.white` retiré du picker).
+  // 2417 → 2449 le 2026-07-06 : +32 `ArenaColors.*` du VOLET 3 (périmètre admin
+  // par pays/section) — puces de sélection pays/sections des invitations mobile
+  // (_ScopeChip) + desktop (_ScopeChip) + bandeau « Périmètre » mobile
+  // (admin_scope_banner). check_colors.sh --strict = 0 régression (aucun vrai
+  // `Colors.*` ajouté ; tous des tokens ArenaColors matchés par le regex).
+  const colorsDotBaseline = 2449; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.
@@ -142,7 +151,11 @@ void main() {
   // WhatsApp copiable (_WhatsappLine) sur la carte utilisateur desktop.
   // 203 → 208 le 2026-06-30 : +5 `GoogleFonts.spaceGrotesk` du bandeau « Plan
   // anti-triche » du litige desktop (desktop_disputes_page). Convention Fluent.
-  const googleFontsBaseline = 210; // occurrences de `GoogleFonts.`
+  // 210 → 212 le 2026-07-06 : +2 `GoogleFonts.spaceGrotesk` de la puce
+  // sélectionnable pays/section (_ScopeChip) de la page desktop des invitations
+  // (VOLET 3). Même convention Fluent que le reste du desktop. À migrer vers
+  // ArenaText à terme.
+  const googleFontsBaseline = 212; // occurrences de `GoogleFonts.`
 
   final colorsDotRe = RegExp(r'Colors\.');
   final colorHexRe = RegExp(r'Color\(0x');

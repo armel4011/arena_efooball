@@ -1,6 +1,7 @@
 import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/services/sync_queue_service.dart';
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/data/models/competition_payment_option.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
 import 'package:arena/data/repositories/referral_repository.dart';
 import 'package:arena/features_shared/prize_ranks.dart';
@@ -9,6 +10,7 @@ import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_divider.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
+import 'package:arena/features_user/competitions/widgets/country_pick_dialog.dart';
 import 'package:arena/features_user/competitions/widgets/referral_progress_card.dart';
 import 'package:arena/features_user/payments/payment_method.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
@@ -224,36 +226,75 @@ class _RegistrationConfirmPageState
         );
         context.go(UserRoutes.home);
       } else {
-        // Récupère la compétition pour passer les codes marchands à la P2.
-        final comp = await ref
+        // Récupère les options de paiement (pays × opérateur × code)
+        // configurées par l'admin pour cette compétition.
+        final options = await ref
             .read(competitionRepositoryProvider)
-            .getById(widget.competitionId);
+            .fetchPaymentOptions(widget.competitionId);
         if (!mounted) return;
-        // P1 picker → on capture la méthode puis on push P2 avec le code.
-        final selected = await context.push<PaymentMethod>(
+        if (options.isEmpty) {
+          setState(() => _submitting = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.paymentOptionsMissing)),
+          );
+          return;
+        }
+
+        // Pays distincts activés (ordre = tri country_code déjà appliqué
+        // côté repo). 1 seul pays → auto-sélection sans dialog.
+        final countries = <String>[];
+        for (final o in options) {
+          if (!countries.contains(o.countryCode)) countries.add(o.countryCode);
+        }
+        String countryCode;
+        if (countries.length == 1) {
+          countryCode = countries.first;
+        } else {
+          // Pré-sélectionne le pays du profil joueur s'il fait partie de la
+          // liste, sinon le 1er pays disponible.
+          final profileCountry =
+              ref.read(currentProfileProvider).valueOrNull?.countryCode;
+          final preselect =
+              (profileCountry != null && countries.contains(profileCountry))
+                  ? profileCountry
+                  : countries.first;
+          final picked = await showCountryPickDialog(
+            context,
+            countryCodes: countries,
+            selected: preselect,
+          );
+          if (picked == null || !mounted) {
+            setState(() => _submitting = false);
+            return;
+          }
+          countryCode = picked;
+        }
+
+        // P1 picker sur les options du pays choisi → option retenue.
+        final countryOptions =
+            options.where((o) => o.countryCode == countryCode).toList();
+        if (!mounted) return;
+        final selected = await context.push<CompetitionPaymentOption>(
           UserRoutes.paymentMethodPicker,
           extra: PaymentPickerArgs(
             amountXaf: widget.entryFeeXaf,
             contextLabel: widget.competitionName,
+            options: countryOptions,
           ),
         );
         if (selected == null || !mounted) {
           setState(() => _submitting = false);
           return;
         }
-        final merchantCode = switch (selected) {
-          PaymentMethod.mtnMoMo => comp?.mtnMomoCode,
-          PaymentMethod.orangeMoney => comp?.orangeMoneyCode,
-        };
+        final operator = PaymentOperator.fromOption(selected);
         if (!mounted) return;
         context.go(
           UserRoutes.paymentMomoDetails,
           extra: PaymentMomoArgs(
-            method: selected,
+            operator: operator,
             amountXaf: widget.entryFeeXaf,
             competitionId: widget.competitionId,
             competitionName: widget.competitionName,
-            merchantCode: merchantCode ?? '',
           ),
         );
       }

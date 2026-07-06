@@ -34,7 +34,11 @@ void main() {
         const PaymentFailedPage(
           reason: PaymentFailReason.rejected,
           adminReason: 'Montant incorrect reçu',
-          method: PaymentMethod.mtnMoMo,
+          operator: PaymentOperator(
+            label: 'MTN MoMo',
+            code: 'MTN_MOMO',
+            countryCode: 'CM',
+          ),
         ),
       ),
     );

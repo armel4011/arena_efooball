@@ -33,12 +33,12 @@ mixin _SubmitAndCompute on ConsumerState<DesktopCreateCompetitionPage> {
   bool get _autoGenerateBracket;
   int get _matchIntervalMinutes;
   bool get _thirdPlaceMatch;
+  String get _countryCode;
+  List<PaymentDraftCountry> get _paymentCountries;
 
   TextEditingController get _nameCtrl;
   TextEditingController get _descCtrl;
   TextEditingController get _entryFeeCtrl;
-  TextEditingController get _orangeMomoCtrl;
-  TextEditingController get _mtnMomoCtrl;
   TextEditingController get _commissionXafCtrl;
   List<TextEditingController> get _topShareCtrls;
   List<TextEditingController> get _blockShareCtrls;
@@ -79,6 +79,7 @@ mixin _SubmitAndCompute on ConsumerState<DesktopCreateCompetitionPage> {
                     ? null
                     : _descCtrl.text.trim(),
                 'start_date': _startDate!.toUtc().toIso8601String(),
+                'country_code': _countryCode,
                 'commission_xaf': commissionXaf,
                 'commission_pct': derivedCommissionPct,
                 'prize_pool_local': pool,
@@ -90,11 +91,13 @@ mixin _SubmitAndCompute on ConsumerState<DesktopCreateCompetitionPage> {
                 'referral_activity_mode': 'any',
                 'round_intervals': _roundIntervals(),
                 'format_config': _formatConfig(),
-                if (fee > 0) 'orange_money_code': _orangeMomoCtrl.text.trim(),
-                if (fee > 0) 'mtn_momo_code': _mtnMomoCtrl.text.trim(),
                 'android_store_url': _emptyToNull(_androidStoreUrlCtrl.text),
                 'ios_store_url': _emptyToNull(_iosStoreUrlCtrl.text),
               },
+            );
+        await ref.read(adminCompetitionsRepositoryProvider).setPaymentOptions(
+              widget.editing!.id,
+              paymentOptionsFromDrafts(_paymentCountries),
             );
         await ref.read(adminAuditLogRepositoryProvider).record(
           adminId: adminId,
@@ -119,6 +122,7 @@ mixin _SubmitAndCompute on ConsumerState<DesktopCreateCompetitionPage> {
           'max_players': _maxPlayers,
           'registration_fee': fee,
           'registration_currency': _currency,
+          'country_code': _countryCode,
           'commission_xaf': commissionXaf,
           'commission_pct': derivedCommissionPct,
           'prize_pool_local': pool,
@@ -132,11 +136,13 @@ mixin _SubmitAndCompute on ConsumerState<DesktopCreateCompetitionPage> {
           'referral_activity_mode': 'any',
           'round_intervals': _roundIntervals(),
           'format_config': _formatConfig(),
-          if (fee > 0) 'orange_money_code': _orangeMomoCtrl.text.trim(),
-          if (fee > 0) 'mtn_momo_code': _mtnMomoCtrl.text.trim(),
           'android_store_url': _emptyToNull(_androidStoreUrlCtrl.text),
           'ios_store_url': _emptyToNull(_iosStoreUrlCtrl.text),
         });
+        await ref.read(adminCompetitionsRepositoryProvider).setPaymentOptions(
+              created.id,
+              paymentOptionsFromDrafts(_paymentCountries),
+            );
         await ref.read(adminAuditLogRepositoryProvider).record(
           adminId: adminId,
           action: 'competition_created',

@@ -506,8 +506,10 @@ class _TxCard extends StatelessWidget {
     final dateLabel = DateFormat('dd/MM HH:mm').format(
       payment.createdAt.toLocal(),
     );
-    final methodLabel =
-        payment.payerMethod == 'ORANGE_MONEY' ? 'Orange Money' : 'MTN MoMo';
+    final methodLabel = PaymentOperator.fromCode(
+      payment.payerMethod ?? 'MTN_MOMO',
+      label: payment.operatorLabel,
+    ).label;
     final amount = NumberFormat('#,##0', 'fr_FR')
         .format(payment.amountLocal)
         .replaceAll(',', ' ');
@@ -582,12 +584,15 @@ class _TxCard extends StatelessWidget {
 
   void _resume(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final method = PaymentMethod.fromCode(payment.payerMethod ?? 'MTN_MOMO');
+    final operator = PaymentOperator.fromCode(
+      payment.payerMethod ?? 'MTN_MOMO',
+      label: payment.operatorLabel,
+    );
     context.push(
       UserRoutes.paymentProcessing,
       extra: PaymentProcessingArgs(
         paymentId: payment.id,
-        method: method,
+        operator: operator,
         amountXaf: payment.amountLocal.round(),
         competitionName: l10n.paymentHistoryResumeCompetition,
         maskedPhone: payment.payerPhone ?? '+••• •• •• ••',

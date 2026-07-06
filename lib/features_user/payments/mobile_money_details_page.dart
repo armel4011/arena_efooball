@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/core/utils/supported_countries.dart';
 import 'package:arena/data/repositories/payment_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
@@ -21,40 +22,31 @@ import 'package:url_launcher/url_launcher.dart';
 /// PHASE 11bis · P2 — Mobile Money details (paiement P2P manuel).
 ///
 /// L'utilisateur saisit le numéro depuis lequel il va payer puis voit le
-/// code marchand de la compétition (saisi par l'admin créateur). Deux
-/// actions principales :
+/// code de transfert de l'opérateur choisi (saisi par l'admin créateur).
+/// Deux actions principales :
 ///   • **Copier** le code dans le presse-papier
 ///   • **Exécuter le paiement** — lance `tel:` avec le code USSD
 ///
 /// Une fois le paiement effectué côté Mobile Money, l'utilisateur clique
-/// "J'AI PAYÉ" : on INSERT un row `payments(status=awaiting_admin)` puis
-/// on navigue vers P3 (page d'attente de validation super-admin).
+/// "J'AI PAYÉ" : on INSERT un row `payments(status=awaiting_admin)` (avec le
+/// pays + l'opérateur) puis on navigue vers P3 (attente validation admin).
 ///
 /// Maps to screen P2 of `arena_v2.html`.
 class MobileMoneyDetailsPage extends ConsumerStatefulWidget {
   const MobileMoneyDetailsPage({
-    required this.method,
+    required this.operator,
     required this.amountXaf,
     required this.competitionId,
     required this.competitionName,
-    required this.merchantCode,
-    this.dialCode = '+237',
-    this.country,
     super.key,
   });
 
-  final PaymentMethod method;
+  /// Opérateur choisi en P1 (label libre + code de transfert + pays +
+  /// indicatif).
+  final PaymentOperator operator;
   final int amountXaf;
   final String competitionId;
   final String competitionName;
-
-  /// Code marchand Orange Money OU MTN MoMo (selon [method]) saisi par
-  /// l'admin créateur lors de la création de la compétition.
-  final String merchantCode;
-  final String dialCode;
-
-  /// Falls back to [AppLocalizations.mobileMoneyDefaultCountry] when null.
-  final String? country;
 
   @override
   ConsumerState<MobileMoneyDetailsPage> createState() =>
@@ -67,6 +59,22 @@ class _MobileMoneyDetailsPageState
   final _countryCtrl = TextEditingController();
   bool _submitting = false;
 
+  /// Indicatif E.164 : celui saisi par l'admin, sinon dérivé du pays.
+  String get _dialCode =>
+      widget.operator.dialCode ?? dialCodeFor(widget.operator.countryCode);
+
+  /// Code de transfert de l'opérateur (peut être vide si non configuré).
+  String get _transferCode => widget.operator.transferCode ?? '';
+
+  /// Nom du pays affiché (drapeau + nom) — repli sur le code brut.
+  String get _countryDisplay {
+    final match = kSupportedCountries
+        .where((c) => c.code == widget.operator.countryCode)
+        .toList();
+    if (match.isEmpty) return widget.operator.countryCode;
+    return '${match.first.flag} ${match.first.name}';
+  }
+
   @override
   void dispose() {
     _phoneCtrl.dispose();
@@ -74,23 +82,23 @@ class _MobileMoneyDetailsPageState
     super.dispose();
   }
 
-  bool get _phoneValid => _phoneCtrl.text.replaceAll(' ', '').length == 9;
+  bool get _phoneValid => isLocalPhoneValid(_phoneCtrl.text);
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final method = widget.method;
-    final hasCode = widget.merchantCode.trim().isNotEmpty;
-    // Disabled, read-only field — resolve the localized default once.
-    _countryCtrl.text = widget.country ?? l10n.mobileMoneyDefaultCountry;
+    final operator = widget.operator;
+    final hasCode = _transferCode.trim().isNotEmpty;
+    // Disabled, read-only field — nom du pays de l'opérateur.
+    _countryCtrl.text = _countryDisplay;
     return Scaffold(
-      appBar: ArenaAppBar(title: method.labelOf(l10n).toUpperCase()),
+      appBar: ArenaAppBar(title: operator.label.toUpperCase()),
       body: ArenaScreenBackground(
         child: SafeArea(
           child: ListView(
             padding: const EdgeInsets.all(ArenaSpacing.lg),
             children: [
-              _Hero(method: method, amountXaf: widget.amountXaf)
+              _Hero(operator: operator, amountXaf: widget.amountXaf)
                   .animate()
                   .fadeIn(duration: ArenaDurations.medium),
               const SizedBox(height: ArenaSpacing.lg),
@@ -99,8 +107,8 @@ class _MobileMoneyDetailsPageState
                 const SizedBox(height: ArenaSpacing.md),
               ] else
                 _MerchantCodeCard(
-                  method: method,
-                  code: widget.merchantCode,
+                  operator: operator,
+                  code: _transferCode,
                   onCopy: () => _copyCode(context),
                   onDial: () => _dialPayment(context),
                 ),
@@ -120,7 +128,7 @@ class _MobileMoneyDetailsPageState
               ),
               const SizedBox(height: ArenaSpacing.md),
               Text(
-                '${l10n.mobileMoneyNumberLabel}${method.labelOf(l10n).toUpperCase()}',
+                '${l10n.mobileMoneyNumberLabel}${operator.label.toUpperCase()}',
                 style: ArenaText.monoSmall.copyWith(
                   color: ArenaColors.silver,
                   letterSpacing: 1.5,
@@ -135,7 +143,7 @@ class _MobileMoneyDetailsPageState
               const SizedBox(height: ArenaSpacing.xs),
               Row(
                 children: [
-                  _DialBox(label: widget.dialCode),
+                  _DialBox(label: _dialCode),
                   const SizedBox(width: ArenaSpacing.xs),
                   Expanded(
                     child: ArenaTextField(
@@ -145,7 +153,7 @@ class _MobileMoneyDetailsPageState
                       onChanged: (_) => setState(() {}),
                       inputFormatters: [
                         FilteringTextInputFormatter.allow(RegExp('[0-9 ]')),
-                        LengthLimitingTextInputFormatter(13),
+                        LengthLimitingTextInputFormatter(15),
                       ],
                     ),
                   ),
@@ -154,7 +162,7 @@ class _MobileMoneyDetailsPageState
               if (_phoneValid) ...[
                 const SizedBox(height: ArenaSpacing.xs),
                 Text(
-                  '${l10n.mobileMoneyPhoneValid}${method.labelOf(l10n)}',
+                  '${l10n.mobileMoneyPhoneValid}${operator.label}',
                   style:
                       ArenaText.bodyMuted.copyWith(color: ArenaColors.statusOk),
                 ),
@@ -182,7 +190,7 @@ class _MobileMoneyDetailsPageState
   }
 
   Future<void> _copyCode(BuildContext context) async {
-    await Clipboard.setData(ClipboardData(text: widget.merchantCode));
+    await Clipboard.setData(ClipboardData(text: _transferCode));
     if (!context.mounted) return;
     final l10n = AppLocalizations.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
@@ -195,7 +203,7 @@ class _MobileMoneyDetailsPageState
     // mais `#` doit être encodé `%23` pour ne pas être interprété comme
     // fragment URI par Android — sinon le code arrive coupé dans le
     // composeur (et `%23` apparaît en `23` dans certains dialers).
-    final ussd = widget.merchantCode.replaceAll('#', '%23');
+    final ussd = _transferCode.replaceAll('#', '%23');
     final uri = Uri.parse('tel:$ussd');
     final ok = await launchUrl(uri);
     if (!ok && context.mounted) {
@@ -216,18 +224,20 @@ class _MobileMoneyDetailsPageState
         competitionId: widget.competitionId,
         amountLocal: widget.amountXaf.toDouble(),
         currency: 'XAF',
-        payerMethodCode: widget.method.code,
-        payerPhone: '${widget.dialCode} ${_phoneCtrl.text.trim()}',
+        payerMethodCode: widget.operator.code,
+        payerPhone: '$_dialCode ${_phoneCtrl.text.trim()}',
+        countryCode: widget.operator.countryCode,
+        operatorLabel: widget.operator.label,
       );
       if (!mounted) return;
       context.go(
         UserRoutes.paymentProcessing,
         extra: PaymentProcessingArgs(
           paymentId: id,
-          method: widget.method,
+          operator: widget.operator,
           amountXaf: widget.amountXaf,
           competitionName: widget.competitionName,
-          maskedPhone: _maskPhone(_phoneCtrl.text.trim(), widget.dialCode),
+          maskedPhone: _maskPhone(_phoneCtrl.text.trim(), _dialCode),
         ),
       );
     } on PostgrestException catch (e, st) {
@@ -265,9 +275,9 @@ String _maskPhone(String raw, String dialCode) {
 }
 
 class _Hero extends StatelessWidget {
-  const _Hero({required this.method, required this.amountXaf});
+  const _Hero({required this.operator, required this.amountXaf});
 
-  final PaymentMethod method;
+  final PaymentOperator operator;
   final int amountXaf;
 
   @override
@@ -276,10 +286,10 @@ class _Hero extends StatelessWidget {
     return Center(
       child: Column(
         children: [
-          PaymentMethodLogo(method: method, size: 70),
+          PaymentOperatorLogo(operator: operator, size: 70),
           const SizedBox(height: ArenaSpacing.sm),
           Text(
-            '${l10n.mobileMoneyHeroPayment}${method.labelOf(l10n)}',
+            '${l10n.mobileMoneyHeroPayment}${operator.label}',
             style: ArenaText.h3,
           ),
           const SizedBox(height: 2),
@@ -295,13 +305,13 @@ class _Hero extends StatelessWidget {
 
 class _MerchantCodeCard extends StatelessWidget {
   const _MerchantCodeCard({
-    required this.method,
+    required this.operator,
     required this.code,
     required this.onCopy,
     required this.onDial,
   });
 
-  final PaymentMethod method;
+  final PaymentOperator operator;
   final String code;
   final VoidCallback onCopy;
   final VoidCallback onDial;
@@ -312,10 +322,10 @@ class _MerchantCodeCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.lg),
       decoration: BoxDecoration(
-        color: method.brandColor.withValues(alpha: 0.10),
+        color: operator.brandColor.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(ArenaRadius.lg),
         border: Border.all(
-          color: method.brandColor.withValues(alpha: 0.35),
+          color: operator.brandColor.withValues(alpha: 0.35),
           width: 1.2,
         ),
       ),
@@ -346,7 +356,7 @@ class _MerchantCodeCard extends StatelessWidget {
               textAlign: TextAlign.center,
               style: ArenaText.mono.copyWith(
                 fontSize: 22,
-                color: method.brandColor,
+                color: operator.brandColor,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.5,
               ),
@@ -373,7 +383,7 @@ class _MerchantCodeCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            l10n.mobileMoneyDialHelp(method.labelOf(l10n)),
+            l10n.mobileMoneyDialHelp(operator.label),
             style: ArenaText.small,
           ),
         ],

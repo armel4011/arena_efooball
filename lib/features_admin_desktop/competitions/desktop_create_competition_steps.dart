@@ -34,12 +34,14 @@ mixin _StepBuilders on ConsumerState<DesktopCreateCompetitionPage> {
   set _customIntervalMode(bool value);
   bool get _thirdPlaceMatch;
   set _thirdPlaceMatch(bool value);
+  String get _countryCode;
+  set _countryCode(String value);
+  List<PaymentDraftCountry> get _paymentCountries;
+  bool get _paymentOptionsLoading;
 
   TextEditingController get _nameCtrl;
   TextEditingController get _descCtrl;
   TextEditingController get _entryFeeCtrl;
-  TextEditingController get _orangeMomoCtrl;
-  TextEditingController get _mtnMomoCtrl;
   TextEditingController get _commissionXafCtrl;
   List<TextEditingController> get _topShareCtrls;
   List<TextEditingController> get _blockShareCtrls;
@@ -595,8 +597,8 @@ mixin _StepBuilders on ConsumerState<DesktopCreateCompetitionPage> {
           title: Text('Compétition gratuite ou payante'),
           content: Text(
             'Frais = 0 → compétition GRATUITE (bypass paiement). Sinon le '
-            'joueur paie en P2P sur les codes marchands, validés '
-            'manuellement par le super-admin.',
+            'joueur paie en P2P : les codes marchands par pays/opérateur se '
+            "configurent à l'étape « Pays ».",
           ),
           severity: InfoBarSeverity.info,
           isLong: true,
@@ -667,31 +669,304 @@ mixin _StepBuilders on ConsumerState<DesktopCreateCompetitionPage> {
           ),
         ],
         if (isPaid) ...[
-          const SizedBox(height: 24),
-          const _SectionTitle('Codes marchands (requis)'),
-          InfoLabel(
-            label: 'Code marchand Orange Money',
-            child: TextBox(
-              controller: _orangeMomoCtrl,
-              placeholder: 'ex. *126*1*001234#',
-              onChanged: (_) => setState(() {}),
-            ),
-          ),
           const SizedBox(height: 16),
-          InfoLabel(
-            label: 'Code marchand MTN MoMo',
-            child: TextBox(
-              controller: _mtnMomoCtrl,
-              placeholder: 'ex. *126*7*009876#',
-              onChanged: (_) => setState(() {}),
+          const InfoBar(
+            title: Text('Codes marchands déplacés'),
+            content: Text(
+              'Les codes de transfert par pays et opérateur se configurent '
+              "désormais à l'étape « Pays ».",
             ),
+            severity: InfoBarSeverity.warning,
+            isLong: true,
           ),
         ],
       ],
     );
   }
 
-  // ─── Étape 4 — Récap ────────────────────────────────────────────────
+  // ─── Étape 4 — Pays + options de paiement ───────────────────────────
+
+  Widget _buildCountryStep() {
+    final isPaid = (double.tryParse(_entryFeeCtrl.text) ?? 0) > 0;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const _SectionTitle('Pays organisateur'),
+        InfoLabel(
+          label: 'Pays organisateur (périmètre admin)',
+          child: ComboBox<String>(
+            value: _countryCode,
+            isExpanded: true,
+            items: [
+              for (final c in kSupportedCountries)
+                ComboBoxItem<String>(
+                  value: c.code,
+                  child: Text('${c.flag}  ${c.name}'),
+                ),
+            ],
+            onChanged: (v) => setState(() => _countryCode = v ?? _countryCode),
+          ),
+        ),
+        const SizedBox(height: 6),
+        const Text(
+          "Sert au scoping admin par pays. N'affecte pas les pays autorisés "
+          'au paiement ci-dessous.',
+          style: TextStyle(fontSize: 12, color: ArenaColors.silver),
+        ),
+        const SizedBox(height: 24),
+        if (!isPaid)
+          const InfoBar(
+            title: Text('Compétition gratuite'),
+            content: Text(
+              'Aucune configuration de paiement nécessaire. Seul le pays '
+              'organisateur est requis.',
+            ),
+            severity: InfoBarSeverity.info,
+            isLong: true,
+          )
+        else if (_paymentOptionsLoading)
+          const Center(child: ProgressRing())
+        else
+          _buildPaymentEditor(),
+      ],
+    );
+  }
+
+  Widget _buildPaymentEditor() {
+    final templateCount =
+        ref.watch(paymentOperatorTemplatesProvider).valueOrNull?.saved.length ??
+            0;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const _SectionTitle('Options de paiement par pays'),
+        const InfoBar(
+          title: Text('Opérateurs libres par pays'),
+          content: Text(
+            'Pour chaque pays autorisé, ajoute un ou plusieurs opérateurs '
+            '(Orange Money, MTN MoMo, Wave…) avec leur code de transfert. Le '
+            'joueur choisit son pays puis un opérateur au moment de payer.',
+          ),
+          severity: InfoBarSeverity.info,
+          isLong: true,
+        ),
+        const SizedBox(height: 16),
+        for (var ci = 0; ci < _paymentCountries.length; ci++) ...[
+          _buildCountryCard(ci, templateCount),
+          const SizedBox(height: 12),
+        ],
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Button(
+            onPressed: _addPaymentCountry,
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(FluentIcons.add, size: 14),
+                SizedBox(width: 6),
+                Text('Ajouter un pays'),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCountryCard(int ci, int templateCount) {
+    final country = _paymentCountries[ci];
+    return Card(
+      backgroundColor: ArenaColors.carbon,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: ComboBox<String>(
+                  value: country.countryCode,
+                  isExpanded: true,
+                  items: [
+                    for (final c in kSupportedCountries)
+                      ComboBoxItem<String>(
+                        value: c.code,
+                        child: Text('${c.flag}  ${c.name}'),
+                      ),
+                  ],
+                  onChanged: (v) => setState(
+                    () => country.countryCode = v ?? country.countryCode,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                icon: const Icon(FluentIcons.delete, color: ArenaColors.neonRed),
+                onPressed: () => setState(
+                  () => _paymentCountries.removeAt(ci).dispose(),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          for (var oi = 0; oi < country.operators.length; oi++) ...[
+            _buildOperatorRow(ci, oi),
+            const SizedBox(height: 12),
+          ],
+          Row(
+            children: [
+              Button(
+                onPressed: () => setState(
+                  () => country.operators.add(PaymentDraftOperator()),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(FluentIcons.add, size: 14),
+                    SizedBox(width: 6),
+                    Text('Opérateur'),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Button(
+                onPressed: templateCount > 0
+                    ? () => _openOperatorTemplates(ci)
+                    : null,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(FluentIcons.library, size: 14),
+                    const SizedBox(width: 6),
+                    Text('Mes opérateurs ($templateCount)'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOperatorRow(int ci, int oi) {
+    final country = _paymentCountries[ci];
+    final op = country.operators[oi];
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Expanded(
+          child: InfoLabel(
+            label: "Nom de l'opérateur",
+            child: TextBox(
+              controller: op.labelCtrl,
+              placeholder: 'ex. Orange Money',
+              onChanged: (_) => setState(() {}),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: InfoLabel(
+            label: 'Code de transfert',
+            child: TextBox(
+              controller: op.codeCtrl,
+              placeholder: 'ex. *126*1*001234#',
+              onChanged: (_) => setState(() {}),
+            ),
+          ),
+        ),
+        const SizedBox(width: 4),
+        IconButton(
+          icon: const Icon(FluentIcons.save, size: 16),
+          onPressed: () => _savePaymentOperatorTemplate(ci, oi),
+        ),
+        if (country.operators.length > 1)
+          IconButton(
+            icon: const Icon(FluentIcons.cancel, color: ArenaColors.neonRed),
+            onPressed: () => setState(
+              () => country.operators.removeAt(oi).dispose(),
+            ),
+          ),
+      ],
+    );
+  }
+
+  void _addPaymentCountry() {
+    setState(() {
+      _paymentCountries.add(
+        PaymentDraftCountry(countryCode: firstUnusedCountry(_paymentCountries)),
+      );
+    });
+  }
+
+  Future<void> _savePaymentOperatorTemplate(int ci, int oi) async {
+    final country = _paymentCountries[ci];
+    final op = country.operators[oi];
+    final label = op.labelCtrl.text.trim();
+    final code = op.codeCtrl.text.trim();
+    if (label.isEmpty || code.isEmpty) return;
+    await ref.read(paymentOperatorTemplatesProvider.notifier).saveTemplate(
+          PaymentOperatorTemplate(
+            countryCode: country.countryCode,
+            operatorLabel: label,
+            transferCode: code,
+          ),
+        );
+  }
+
+  Future<void> _openOperatorTemplates(int ci) async {
+    final saved =
+        ref.read(paymentOperatorTemplatesProvider).valueOrNull?.saved ??
+            const [];
+    if (saved.isEmpty) return;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => ContentDialog(
+        title: const Text('Mes opérateurs'),
+        content: SizedBox(
+          width: 460,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final tpl in saved)
+                ListTile(
+                  title: Text(tpl.operatorLabel),
+                  subtitle: Text('${tpl.countryCode} · ${tpl.transferCode}'),
+                  onPressed: () {
+                    setState(
+                      () => _paymentCountries[ci].operators.add(
+                        PaymentDraftOperator(
+                          label: tpl.operatorLabel,
+                          code: tpl.transferCode,
+                        ),
+                      ),
+                    );
+                    Navigator.of(ctx).pop();
+                  },
+                  trailing: IconButton(
+                    icon: const Icon(FluentIcons.delete),
+                    onPressed: () {
+                      ref
+                          .read(paymentOperatorTemplatesProvider.notifier)
+                          .deleteTemplate(tpl);
+                      Navigator.of(ctx).pop();
+                    },
+                  ),
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          Button(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Fermer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Étape 5 — Récap ────────────────────────────────────────────────
 
   Widget _buildReviewStep() {
     final fee = double.tryParse(_entryFeeCtrl.text) ?? 0;

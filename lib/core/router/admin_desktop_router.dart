@@ -33,6 +33,7 @@ import 'package:arena/features_admin_desktop/super_admin/desktop_revenue_page.da
 import 'package:arena/features_admin_desktop/super_admin/desktop_super_dashboard_page.dart';
 import 'package:arena/features_admin_desktop/super_admin/desktop_tutorial_banners_page.dart';
 import 'package:arena/features_admin_desktop/super_admin/desktop_users_page.dart';
+import 'package:arena/features_shared/admin_sections.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -147,6 +148,12 @@ final adminDesktopRouterProvider = Provider<GoRouter>((ref) {
         return loc == AdminDesktopRoutes.totpVerify
             ? null
             : AdminDesktopRoutes.totpVerify;
+      }
+
+      // VOLET 3 — garde de périmètre par SECTION (défense en profondeur).
+      final section = adminSectionForLocation(loc);
+      if (section != null && !adminCanSection(profile, section)) {
+        return AdminDesktopRoutes.dashboard;
       }
 
       if (AdminDesktopRoutes.unauthenticated.contains(loc)) {

@@ -22,6 +22,8 @@ class PaymentRecord {
     required this.payerMethod,
     required this.payerPhone,
     required this.createdAt,
+    this.operatorLabel,
+    this.countryCode,
     this.validatedAt,
     this.validatedByAdminId,
     this.rejectionReason,
@@ -37,6 +39,8 @@ class PaymentRecord {
       status: row['status'] as String,
       payerMethod: row['payer_method'] as String?,
       payerPhone: row['payer_phone'] as String?,
+      operatorLabel: row['operator_label'] as String?,
+      countryCode: row['country_code'] as String?,
       createdAt: DateTime.parse(row['created_at'] as String),
       validatedAt: row['validated_at'] == null
           ? null
@@ -55,11 +59,18 @@ class PaymentRecord {
   /// `pending` · `awaiting_admin` · `succeeded` · `rejected`.
   final String status;
 
-  /// `MTN_MOMO` ou `ORANGE_MONEY`.
+  /// Slug de l'opérateur (`MTN_MOMO`, `ORANGE_MONEY`, `WAVE`…).
   final String? payerMethod;
 
   /// Numéro Mobile Money utilisé par le joueur pour payer.
   final String? payerPhone;
+
+  /// Libellé libre de l'opérateur saisi par l'admin (ex. "Wave"). Sert à
+  /// réafficher le nom exact dans l'historique.
+  final String? operatorLabel;
+
+  /// Pays du paiement (ISO 3166-1 alpha-2).
+  final String? countryCode;
   final DateTime createdAt;
   final DateTime? validatedAt;
   final String? validatedByAdminId;
@@ -83,6 +94,8 @@ class PaymentRepository {
     required String currency,
     required String payerMethodCode,
     required String payerPhone,
+    required String countryCode,
+    required String operatorLabel,
   }) async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) {
@@ -99,6 +112,8 @@ class PaymentRepository {
           'provider_method': payerMethodCode,
           'payer_method': payerMethodCode,
           'payer_phone': payerPhone,
+          'country_code': countryCode,
+          'operator_label': operatorLabel,
           'status': 'awaiting_admin',
         })
         .select('id')

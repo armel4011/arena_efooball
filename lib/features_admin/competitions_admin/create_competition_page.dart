@@ -5,6 +5,7 @@ import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_competitions_repository.dart';
 import 'package:arena/features_admin/competitions_admin/widgets/competition_form_widgets.dart';
+import 'package:arena/features_admin/competitions_admin/widgets/wizard_step_country.dart';
 import 'package:arena/features_admin/competitions_admin/widgets/wizard_step_fees.dart';
 import 'package:arena/features_admin/competitions_admin/widgets/wizard_step_format.dart';
 import 'package:arena/features_admin/competitions_admin/widgets/wizard_step_infos.dart';
@@ -12,7 +13,8 @@ import 'package:arena/features_admin/competitions_admin/widgets/wizard_step_priz
 import 'package:arena/features_admin/competitions_admin/widgets/wizard_step_review.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/competition_description_templates.dart';
-import 'package:arena/features_shared/payment_codes_templates.dart';
+import 'package:arena/features_shared/payment_operator_templates.dart';
+import 'package:arena/features_shared/payment_option_draft.dart';
 import 'package:arena/features_shared/prize_ranks.dart';
 import 'package:arena/features_shared/prize_templates.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
@@ -20,6 +22,7 @@ import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_stepper.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
+import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -57,9 +60,19 @@ class CreateCompetitionPage extends ConsumerStatefulWidget {
 }
 
 class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
-  static const _stepCount = 5;
+  static const _stepCount = 6;
   int _step = 0;
   bool _submitting = false;
+
+  // Étape « Pays » ───────────────────────────────────────────────────
+  // Pays organisateur (scoping admin) — `competitions.country_code`.
+  String _countryCode = 'CM';
+  // Options de paiement en cours d'édition, groupées par pays. Chaque
+  // opérateur porte ses propres controllers (disposés dans dispose()).
+  final List<PaymentDraftCountry> _paymentCountries = [];
+  // Vrai tant que le préremplissage async des options (mode édition) est en
+  // vol → l'étape Pays affiche un spinner.
+  bool _paymentOptionsLoading = false;
 
   // Form state ──────────────────────────────────────────────────────
   final _nameCtrl = TextEditingController();
@@ -74,8 +87,6 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
   int _maxPlayers = 16;
   DateTime? _startDate;
   final _entryFeeCtrl = TextEditingController(text: '0');
-  final _orangeMomoCtrl = TextEditingController();
-  final _mtnMomoCtrl = TextEditingController();
   String _currency = 'XAF';
   // Commission ARENA en montant absolu (Lot B). `commission_pct` reste
   // calculé en dérivé pour cohérence avec la colonne legacy.
@@ -155,12 +166,13 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
     _format = c.format;
     _maxPlayers = c.maxPlayers;
     _startDate = c.startDate;
+    _countryCode = c.countryCode;
     _entryFeeCtrl.text = c.registrationFee == c.registrationFee.roundToDouble()
         ? c.registrationFee.round().toString()
         : c.registrationFee.toString();
-    _orangeMomoCtrl.text = c.orangeMoneyCode ?? '';
-    _mtnMomoCtrl.text = c.mtnMomoCode ?? '';
     _currency = c.registrationCurrency;
+    // Préremplit l'éditeur d'options de paiement depuis le serveur (async).
+    _loadPaymentOptions(c.id);
     final commissionXaf = c.commissionXaf;
     _commissionXafCtrl.text = commissionXaf == commissionXaf.roundToDouble()
         ? commissionXaf.round().toString()
@@ -215,8 +227,6 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
     _nameCtrl.dispose();
     _descCtrl.dispose();
     _entryFeeCtrl.dispose();
-    _orangeMomoCtrl.dispose();
-    _mtnMomoCtrl.dispose();
     _commissionXafCtrl.dispose();
     _referralQuotaCtrl.dispose();
     _roundIntervalsCtrl.dispose();
@@ -230,7 +240,33 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
     for (final c in _blockShareCtrls) {
       c.dispose();
     }
+    for (final country in _paymentCountries) {
+      country.dispose();
+    }
     super.dispose();
+  }
+
+  /// Charge les options de paiement existantes (mode édition) et reconstruit
+  /// les brouillons groupés par pays. Best-effort : en cas d'échec on laisse
+  /// l'éditeur vide plutôt que de bloquer le wizard.
+  Future<void> _loadPaymentOptions(String competitionId) async {
+    setState(() => _paymentOptionsLoading = true);
+    try {
+      final options = await ref
+          .read(adminCompetitionsRepositoryProvider)
+          .fetchPaymentOptions(competitionId);
+      if (!mounted) return;
+      final drafts = paymentDraftsFromOptions(options);
+      setState(() {
+        _paymentCountries
+          ..clear()
+          ..addAll(drafts);
+        _paymentOptionsLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _paymentOptionsLoading = false);
+    }
   }
 
   bool get _canAdvance {
@@ -243,15 +279,16 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
         // Les montants des récompenses sont libres (y compris 0).
         return true;
       case 3:
+        // Le montant seul est validé ici ; la config paiement (codes) vit
+        // désormais à l'étape « Pays ».
         final fee = double.tryParse(_entryFeeCtrl.text) ?? -1;
-        if (fee < 0) return false;
-        // Compétition payante : on exige les 2 codes marchands (sinon le
-        // joueur tombe sur un P2 vide).
-        if (fee > 0) {
-          if (_orangeMomoCtrl.text.trim().isEmpty) return false;
-          if (_mtnMomoCtrl.text.trim().isEmpty) return false;
-        }
-        return true;
+        return fee >= 0;
+      case 4:
+        // Étape « Pays » : pays organisateur toujours défini (défaut CM). Si
+        // payante, exiger ≥1 pays activé avec chaque opérateur complet.
+        final fee = double.tryParse(_entryFeeCtrl.text) ?? 0;
+        if (fee <= 0) return true;
+        return paymentDraftsValid(_paymentCountries);
       default:
         return true;
     }
@@ -364,22 +401,35 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
                         entryFeeCtrl: _entryFeeCtrl,
                         currency: _currency,
                         commissionXafCtrl: _commissionXafCtrl,
-                        orangeMomoCtrl: _orangeMomoCtrl,
-                        mtnMomoCtrl: _mtnMomoCtrl,
                         referralQuotaCtrl: _referralQuotaCtrl,
                         isEditing: _isEditing,
-                        savedTemplateCount: ref
-                                .watch(paymentCodesTemplatesProvider)
+                        onChanged: () => setState(() {}),
+                        onCurrencyChanged: (c) => setState(() => _currency = c),
+                      ),
+                    if (_step == 4)
+                      WizardStepCountry(
+                        organizerCountry: _countryCode,
+                        onOrganizerChanged: (c) =>
+                            setState(() => _countryCode = c),
+                        isPaid: (double.tryParse(_entryFeeCtrl.text) ?? 0) > 0,
+                        loading: _paymentOptionsLoading,
+                        countries: _paymentCountries,
+                        operatorTemplateCount: ref
+                                .watch(paymentOperatorTemplatesProvider)
                                 .valueOrNull
                                 ?.saved
                                 .length ??
                             0,
+                        onAddCountry: _addPaymentCountry,
+                        onRemoveCountry: _removePaymentCountry,
+                        onCountryCodeChanged: _setPaymentCountryCode,
+                        onAddOperator: _addPaymentOperator,
+                        onRemoveOperator: _removePaymentOperator,
+                        onSaveOperator: _savePaymentOperatorTemplate,
+                        onOpenOperatorTemplates: _openPaymentOperatorTemplates,
                         onChanged: () => setState(() {}),
-                        onCurrencyChanged: (c) => setState(() => _currency = c),
-                        onSaveTemplate: _savePaymentTemplate,
-                        onOpenLibrary: _openPaymentLibrary,
                       ),
-                    if (_step == 4)
+                    if (_step == 5)
                       WizardStepReview(
                         name: _nameCtrl.text.trim(),
                         gameLabel: _game.label,
@@ -537,57 +587,101 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
     );
   }
 
-  // ─── Modèles de codes de paiement (Orange / MTN) ──────────────────
-  Future<void> _savePaymentTemplate() async {
-    final orange = _orangeMomoCtrl.text.trim();
-    final mtn = _mtnMomoCtrl.text.trim();
-    if (orange.isEmpty && mtn.isEmpty) {
+  // ─── Étape « Pays » — édition des options de paiement ─────────────
+  void _addPaymentCountry() {
+    setState(() {
+      _paymentCountries.add(
+        PaymentDraftCountry(
+          countryCode: firstUnusedCountry(_paymentCountries),
+        ),
+      );
+    });
+  }
+
+  void _removePaymentCountry(int countryIndex) {
+    setState(() {
+      _paymentCountries.removeAt(countryIndex).dispose();
+    });
+  }
+
+  void _setPaymentCountryCode(int countryIndex, String code) {
+    setState(() => _paymentCountries[countryIndex].countryCode = code);
+  }
+
+  void _addPaymentOperator(int countryIndex) {
+    setState(() {
+      _paymentCountries[countryIndex].operators.add(PaymentDraftOperator());
+    });
+  }
+
+  void _removePaymentOperator(int countryIndex, int operatorIndex) {
+    setState(() {
+      _paymentCountries[countryIndex]
+          .operators
+          .removeAt(operatorIndex)
+          .dispose();
+    });
+  }
+
+  // ─── Modèles d'opérateurs réutilisables ───────────────────────────
+  Future<void> _savePaymentOperatorTemplate(
+    int countryIndex,
+    int operatorIndex,
+  ) async {
+    final country = _paymentCountries[countryIndex];
+    final op = country.operators[operatorIndex];
+    final label = op.labelCtrl.text.trim();
+    final code = op.codeCtrl.text.trim();
+    final l10n = AppLocalizations.of(context);
+    if (label.isEmpty || code.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Aucun code de paiement à enregistrer.')),
+        SnackBar(content: Text(l10n.countryOperatorEmptyToast)),
       );
       return;
     }
-    final name = await _promptTemplateName();
-    if (name == null || name.trim().isEmpty) return;
-    try {
-      await ref
-          .read(paymentCodesTemplatesProvider.notifier)
-          .saveTemplate(name.trim(), orange, mtn);
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Échec de l'enregistrement : $e")),
-      );
-      return;
-    }
+    await ref.read(paymentOperatorTemplatesProvider.notifier).saveTemplate(
+          PaymentOperatorTemplate(
+            countryCode: country.countryCode,
+            operatorLabel: label,
+            transferCode: code,
+          ),
+        );
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Codes « ${name.trim()} » enregistrés.')),
+      SnackBar(content: Text(l10n.countryOperatorSavedToast)),
     );
   }
 
-  Future<void> _openPaymentLibrary() async {
+  Future<void> _openPaymentOperatorTemplates(int countryIndex) async {
     final saved =
-        ref.read(paymentCodesTemplatesProvider).valueOrNull?.saved ?? const [];
+        ref.read(paymentOperatorTemplatesProvider).valueOrNull?.saved ??
+            const [];
     if (saved.isEmpty) return;
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: ArenaColors.surface,
       isScrollControlled: true,
       builder: (ctx) => _NamedTemplateSheet(
-        title: 'Mes codes de paiement',
-        subtitle: 'Touche un modèle pour pré-remplir Orange Money & MTN MoMo.',
-        items: [for (final t in saved) (name: t.name, preview: t.preview)],
+        title: 'Mes opérateurs',
+        subtitle: "Touche un opérateur pour l'ajouter à ce pays.",
+        items: [
+          for (final t in saved)
+            (name: t.operatorLabel, preview: '${t.countryCode} · ${t.transferCode}'),
+        ],
         onInsert: (i) {
           Navigator.of(ctx).pop();
           setState(() {
-            _orangeMomoCtrl.text = saved[i].orangeCode;
-            _mtnMomoCtrl.text = saved[i].mtnCode;
+            _paymentCountries[countryIndex].operators.add(
+              PaymentDraftOperator(
+                label: saved[i].operatorLabel,
+                code: saved[i].transferCode,
+              ),
+            );
           });
         },
         onDelete: (i) => ref
-            .read(paymentCodesTemplatesProvider.notifier)
-            .deleteTemplate(saved[i].name),
+            .read(paymentOperatorTemplatesProvider.notifier)
+            .deleteTemplate(saved[i]),
       ),
     );
   }
@@ -779,6 +873,8 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
       case 3:
         return 'Frais';
       case 4:
+        return 'Pays';
+      case 5:
         return 'Récap';
       default:
         return '';

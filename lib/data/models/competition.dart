@@ -27,6 +27,12 @@ sealed class Competition with _$Competition {
     @Default(0) int currentPlayers,
     @Default(0) double registrationFee,
     @Default('XAF') String registrationCurrency,
+
+    /// Pays organisateur (ISO alpha-2, ex. `'CM'`). Sert au scoping admin par
+    /// pays (un admin restreint ne gère que les compétitions de son pays).
+    /// ⚠️ DIFFÉRENT des pays d'inscription autorisés (voir
+    /// `CompetitionPaymentOption`). Mappé sur `country_code`.
+    @Default('CM') String countryCode,
     @Default(10) double commissionPct,
     @Default(0) double prizePoolLocal,
     @Default(0) double commissionXaf,

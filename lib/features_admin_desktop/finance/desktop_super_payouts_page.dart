@@ -1,10 +1,14 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/core/utils/arena_error_message.dart';
 import 'package:arena/data/repositories/payout_repository.dart';
+import 'package:arena/features_admin_desktop/shared/desktop_scope_banner.dart';
+import 'package:arena/features_shared/admin_sections.dart';
+import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Au-delà de N jours après réclamation sans versement, on signale un retard.
 const _slaOverdueDays = 3;
@@ -28,6 +32,7 @@ class _DesktopSuperPayoutsPageState
 
   @override
   Widget build(BuildContext context) {
+    final profile = ref.watch(currentProfileProvider).valueOrNull;
     return ScaffoldPage(
       header: PageHeader(
         title: const Text('VERSEMENTS'),
@@ -49,6 +54,8 @@ class _DesktopSuperPayoutsPageState
       content: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (adminHasCountryScope(profile))
+            DesktopScopeBanner(profile: profile),
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
             child: Row(
@@ -151,7 +158,7 @@ class _ToPayList extends ConsumerWidget {
       await _info(context, 'Versement marqué payé · gagnant notifié.');
     } catch (e) {
       if (!context.mounted) return;
-      await _info(context, arenaErrorMessage(e), isError: true);
+      await _info(context, _scopeAwareError(e), isError: true);
     }
   }
 }
@@ -213,9 +220,18 @@ class _ToGenerateList extends ConsumerWidget {
       await _info(context, '$n versement(s) généré(s) — gagnants notifiés.');
     } catch (e) {
       if (!context.mounted) return;
-      await _info(context, arenaErrorMessage(e), isError: true);
+      await _info(context, _scopeAwareError(e), isError: true);
     }
   }
+}
+
+/// Un rejet 42501 des RPC `generate_payouts`/`mark_payout_paid` = action
+/// hors périmètre (pays/section) de l'admin → message dédié.
+String _scopeAwareError(Object e) {
+  if (e is PostgrestException && e.code == '42501') {
+    return 'Action hors de votre périmètre.';
+  }
+  return arenaErrorMessage(e);
 }
 
 // ─── Cartes ──────────────────────────────────────────────────────────

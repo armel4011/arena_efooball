@@ -35,6 +35,12 @@ mixin _$Competition {
   int get currentPlayers => throw _privateConstructorUsedError;
   double get registrationFee => throw _privateConstructorUsedError;
   String get registrationCurrency => throw _privateConstructorUsedError;
+
+  /// Pays organisateur (ISO alpha-2, ex. `'CM'`). Sert au scoping admin par
+  /// pays (un admin restreint ne gère que les compétitions de son pays).
+  /// ⚠️ DIFFÉRENT des pays d'inscription autorisés (voir
+  /// [CompetitionPaymentOption]). Mappé sur `country_code`.
+  String get countryCode => throw _privateConstructorUsedError;
   double get commissionPct => throw _privateConstructorUsedError;
   double get prizePoolLocal => throw _privateConstructorUsedError;
   double get commissionXaf => throw _privateConstructorUsedError;
@@ -156,6 +162,7 @@ abstract class $CompetitionCopyWith<$Res> {
       int currentPlayers,
       double registrationFee,
       String registrationCurrency,
+      String countryCode,
       double commissionPct,
       double prizePoolLocal,
       double commissionXaf,
@@ -214,6 +221,7 @@ class _$CompetitionCopyWithImpl<$Res, $Val extends Competition>
     Object? currentPlayers = null,
     Object? registrationFee = null,
     Object? registrationCurrency = null,
+    Object? countryCode = null,
     Object? commissionPct = null,
     Object? prizePoolLocal = null,
     Object? commissionXaf = null,
@@ -286,6 +294,10 @@ class _$CompetitionCopyWithImpl<$Res, $Val extends Competition>
       registrationCurrency: null == registrationCurrency
           ? _value.registrationCurrency
           : registrationCurrency // ignore: cast_nullable_to_non_nullable
+              as String,
+      countryCode: null == countryCode
+          ? _value.countryCode
+          : countryCode // ignore: cast_nullable_to_non_nullable
               as String,
       commissionPct: null == commissionPct
           ? _value.commissionPct
@@ -434,6 +446,7 @@ abstract class _$$CompetitionImplCopyWith<$Res>
       int currentPlayers,
       double registrationFee,
       String registrationCurrency,
+      String countryCode,
       double commissionPct,
       double prizePoolLocal,
       double commissionXaf,
@@ -490,6 +503,7 @@ class __$$CompetitionImplCopyWithImpl<$Res>
     Object? currentPlayers = null,
     Object? registrationFee = null,
     Object? registrationCurrency = null,
+    Object? countryCode = null,
     Object? commissionPct = null,
     Object? prizePoolLocal = null,
     Object? commissionXaf = null,
@@ -562,6 +576,10 @@ class __$$CompetitionImplCopyWithImpl<$Res>
       registrationCurrency: null == registrationCurrency
           ? _value.registrationCurrency
           : registrationCurrency // ignore: cast_nullable_to_non_nullable
+              as String,
+      countryCode: null == countryCode
+          ? _value.countryCode
+          : countryCode // ignore: cast_nullable_to_non_nullable
               as String,
       commissionPct: null == commissionPct
           ? _value.commissionPct
@@ -705,6 +723,7 @@ class _$CompetitionImpl extends _Competition {
       this.currentPlayers = 0,
       this.registrationFee = 0,
       this.registrationCurrency = 'XAF',
+      this.countryCode = 'CM',
       this.commissionPct = 10,
       this.prizePoolLocal = 0,
       this.commissionXaf = 0,
@@ -774,6 +793,14 @@ class _$CompetitionImpl extends _Competition {
   @override
   @JsonKey()
   final String registrationCurrency;
+
+  /// Pays organisateur (ISO alpha-2, ex. `'CM'`). Sert au scoping admin par
+  /// pays (un admin restreint ne gère que les compétitions de son pays).
+  /// ⚠️ DIFFÉRENT des pays d'inscription autorisés (voir
+  /// [CompetitionPaymentOption]). Mappé sur `country_code`.
+  @override
+  @JsonKey()
+  final String countryCode;
   @override
   @JsonKey()
   final double commissionPct;
@@ -943,7 +970,7 @@ class _$CompetitionImpl extends _Competition {
 
   @override
   String toString() {
-    return 'Competition(id: $id, name: $name, game: $game, format: $format, startDate: $startDate, status: $status, maxPlayers: $maxPlayers, currentPlayers: $currentPlayers, registrationFee: $registrationFee, registrationCurrency: $registrationCurrency, commissionPct: $commissionPct, prizePoolLocal: $prizePoolLocal, commissionXaf: $commissionXaf, sponsorBonusLocal: $sponsorBonusLocal, description: $description, bannerUrl: $bannerUrl, registrationOpensAt: $registrationOpensAt, registrationClosesAt: $registrationClosesAt, endDate: $endDate, prizePoolCurrency: $prizePoolCurrency, createdBy: $createdBy, createdAt: $createdAt, updatedAt: $updatedAt, orangeMoneyCode: $orangeMoneyCode, mtnMomoCode: $mtnMomoCode, prizeDistribution: $prizeDistribution, matchIntervalMinutes: $matchIntervalMinutes, autoGenerateBracket: $autoGenerateBracket, thirdPlaceMatch: $thirdPlaceMatch, referralQuota: $referralQuota, referralActivityMode: $referralActivityMode, roundIntervals: $roundIntervals, formatConfig: $formatConfig, androidStoreUrl: $androidStoreUrl, iosStoreUrl: $iosStoreUrl, lastBracketError: $lastBracketError, lastBracketErrorAt: $lastBracketErrorAt, isPinned: $isPinned, pinnedAt: $pinnedAt, completedAt: $completedAt, archivedAt: $archivedAt)';
+    return 'Competition(id: $id, name: $name, game: $game, format: $format, startDate: $startDate, status: $status, maxPlayers: $maxPlayers, currentPlayers: $currentPlayers, registrationFee: $registrationFee, registrationCurrency: $registrationCurrency, countryCode: $countryCode, commissionPct: $commissionPct, prizePoolLocal: $prizePoolLocal, commissionXaf: $commissionXaf, sponsorBonusLocal: $sponsorBonusLocal, description: $description, bannerUrl: $bannerUrl, registrationOpensAt: $registrationOpensAt, registrationClosesAt: $registrationClosesAt, endDate: $endDate, prizePoolCurrency: $prizePoolCurrency, createdBy: $createdBy, createdAt: $createdAt, updatedAt: $updatedAt, orangeMoneyCode: $orangeMoneyCode, mtnMomoCode: $mtnMomoCode, prizeDistribution: $prizeDistribution, matchIntervalMinutes: $matchIntervalMinutes, autoGenerateBracket: $autoGenerateBracket, thirdPlaceMatch: $thirdPlaceMatch, referralQuota: $referralQuota, referralActivityMode: $referralActivityMode, roundIntervals: $roundIntervals, formatConfig: $formatConfig, androidStoreUrl: $androidStoreUrl, iosStoreUrl: $iosStoreUrl, lastBracketError: $lastBracketError, lastBracketErrorAt: $lastBracketErrorAt, isPinned: $isPinned, pinnedAt: $pinnedAt, completedAt: $completedAt, archivedAt: $archivedAt)';
   }
 
   @override
@@ -966,6 +993,8 @@ class _$CompetitionImpl extends _Competition {
                 other.registrationFee == registrationFee) &&
             (identical(other.registrationCurrency, registrationCurrency) ||
                 other.registrationCurrency == registrationCurrency) &&
+            (identical(other.countryCode, countryCode) ||
+                other.countryCode == countryCode) &&
             (identical(other.commissionPct, commissionPct) ||
                 other.commissionPct == commissionPct) &&
             (identical(other.prizePoolLocal, prizePoolLocal) ||
@@ -1043,6 +1072,7 @@ class _$CompetitionImpl extends _Competition {
         currentPlayers,
         registrationFee,
         registrationCurrency,
+        countryCode,
         commissionPct,
         prizePoolLocal,
         commissionXaf,
@@ -1104,6 +1134,7 @@ abstract class _Competition extends Competition {
       final int currentPlayers,
       final double registrationFee,
       final String registrationCurrency,
+      final String countryCode,
       final double commissionPct,
       final double prizePoolLocal,
       final double commissionXaf,
@@ -1165,6 +1196,13 @@ abstract class _Competition extends Competition {
   double get registrationFee;
   @override
   String get registrationCurrency;
+
+  /// Pays organisateur (ISO alpha-2, ex. `'CM'`). Sert au scoping admin par
+  /// pays (un admin restreint ne gère que les compétitions de son pays).
+  /// ⚠️ DIFFÉRENT des pays d'inscription autorisés (voir
+  /// [CompetitionPaymentOption]). Mappé sur `country_code`.
+  @override
+  String get countryCode;
   @override
   double get commissionPct;
   @override

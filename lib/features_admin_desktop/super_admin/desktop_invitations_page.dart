@@ -1,8 +1,10 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/core/utils/arena_error_message.dart';
+import 'package:arena/core/utils/supported_countries.dart';
 import 'package:arena/data/models/invitation_code.dart';
 import 'package:arena/data/models/user_role.dart';
 import 'package:arena/data/repositories/admin/admin_invitations_repository.dart';
+import 'package:arena/features_shared/admin_sections.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter/services.dart';
@@ -47,6 +49,10 @@ class _DesktopInvitationsPageState
   _Expiration _expiration = _Expiration.thirtyDays;
   final _emailController = TextEditingController();
 
+  // VOLET 3 — périmètre facultatif (vide = aucune restriction).
+  final Set<String> _countries = <String>{};
+  final Set<String> _sections = <String>{};
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -63,9 +69,16 @@ class _DesktopInvitationsPageState
             role: _role,
             targetEmail: email.isEmpty ? null : email,
             expiresAt: _expiration.deadline,
+            allowedCountryCodes:
+                _countries.isEmpty ? null : _countries.toList(),
+            allowedSections: _sections.isEmpty ? null : _sections.toList(),
           );
       ref.invalidate(adminInvitationsProvider);
       _emailController.clear();
+      setState(() {
+        _countries.clear();
+        _sections.clear();
+      });
       if (!mounted) return;
       await _showResult(context, 'Code généré.', isError: false);
     } catch (e) {
@@ -101,8 +114,20 @@ class _DesktopInvitationsPageState
             role: _role,
             expiration: _expiration,
             emailController: _emailController,
+            selectedCountries: _countries,
+            selectedSections: _sections,
             onRoleChanged: (r) => setState(() => _role = r),
             onExpirationChanged: (e) => setState(() => _expiration = e),
+            onToggleCountry: (code) => setState(() {
+              _countries.contains(code)
+                  ? _countries.remove(code)
+                  : _countries.add(code);
+            }),
+            onToggleSection: (key) => setState(() {
+              _sections.contains(key)
+                  ? _sections.remove(key)
+                  : _sections.add(key);
+            }),
             onSubmit: _generate,
           ),
           const SizedBox(height: 32),
@@ -148,16 +173,24 @@ class _GenerateCard extends StatelessWidget {
     required this.role,
     required this.expiration,
     required this.emailController,
+    required this.selectedCountries,
+    required this.selectedSections,
     required this.onRoleChanged,
     required this.onExpirationChanged,
+    required this.onToggleCountry,
+    required this.onToggleSection,
     required this.onSubmit,
   });
 
   final UserRole role;
   final _Expiration expiration;
   final TextEditingController emailController;
+  final Set<String> selectedCountries;
+  final Set<String> selectedSections;
   final ValueChanged<UserRole> onRoleChanged;
   final ValueChanged<_Expiration> onExpirationChanged;
+  final ValueChanged<String> onToggleCountry;
+  final ValueChanged<String> onToggleSection;
   final Future<void> Function() onSubmit;
 
   @override
@@ -203,6 +236,53 @@ class _GenerateCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
+          Text('RESTRICTIONS (optionnel)', style: _sectionStyle),
+          const SizedBox(height: 4),
+          Text(
+            'Limite ce futur admin à certains pays et/ou sections. '
+            'Laisse vide pour un accès complet.',
+            style: GoogleFonts.spaceGrotesk(
+              color: ArenaColors.silver,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 12),
+          InfoLabel(
+            label: selectedCountries.isEmpty
+                ? 'Pays autorisés · Tous les pays'
+                : 'Pays autorisés',
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final c in kSupportedCountries)
+                  _ScopeChip(
+                    label: '${c.flag} ${c.code}',
+                    selected: selectedCountries.contains(c.code),
+                    onTap: () => onToggleCountry(c.code),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          InfoLabel(
+            label: selectedSections.isEmpty
+                ? 'Sections autorisées · Toutes les sections'
+                : 'Sections autorisées',
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final s in kAdminSections)
+                  _ScopeChip(
+                    label: s.labelFr,
+                    selected: selectedSections.contains(s.key),
+                    onTap: () => onToggleSection(s.key),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
           FilledButton(
             onPressed: () async => onSubmit(),
             child: const Padding(
@@ -218,6 +298,45 @@ class _GenerateCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Puce sélectionnable (pays / section) du périmètre d'invitation (desktop).
+class _ScopeChip extends StatelessWidget {
+  const _ScopeChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = selected ? ArenaColors.signalBlue : ArenaColors.border;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected
+              ? ArenaColors.signalBlue.withValues(alpha: 0.18)
+              : ArenaColors.surface,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: accent),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.spaceGrotesk(
+            color: selected ? ArenaColors.bone : ArenaColors.silver,
+            fontSize: 12,
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+          ),
+        ),
       ),
     );
   }

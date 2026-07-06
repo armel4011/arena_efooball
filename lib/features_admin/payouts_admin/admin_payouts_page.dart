@@ -4,7 +4,9 @@ import 'package:arena/data/models/payout.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_payouts_repository.dart';
 import 'package:arena/features_admin/auth_admin/widgets/totp_gate.dart';
+import 'package:arena/features_shared/admin_sections.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
+import 'package:arena/features_shared/widgets/admin_scope_banner.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
@@ -43,6 +45,7 @@ class _AdminPayoutsPageState extends ConsumerState<AdminPayoutsPage> {
   @override
   Widget build(BuildContext context) {
     final payouts = ref.watch(adminPendingPayoutsProvider);
+    final profile = ref.watch(currentProfileProvider).valueOrNull;
 
     return Scaffold(
       appBar: const ArenaAppBar(title: 'PAYOUTS ⚠'),
@@ -61,6 +64,10 @@ class _AdminPayoutsPageState extends ConsumerState<AdminPayoutsPage> {
             data: (list) => ListView(
               padding: const EdgeInsets.all(ArenaSpacing.lg),
               children: [
+                if (adminHasCountryScope(profile)) ...[
+                  AdminScopeBanner(profile: profile),
+                  const SizedBox(height: ArenaSpacing.md),
+                ],
                 _Summary(
                   mode: _mode,
                   onModeChanged: (m) => setState(() => _mode = m),

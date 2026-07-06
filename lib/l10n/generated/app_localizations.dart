@@ -5997,6 +5997,204 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'ÉTAPE'**
   String get matchStepWord;
+
+  /// No description provided for @paymentOptionsMissing.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le paiement n\'est pas encore configuré pour cette compétition. Contacte l\'organisateur.'**
+  String get paymentOptionsMissing;
+
+  /// No description provided for @countryPickTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisis ton pays'**
+  String get countryPickTitle;
+
+  /// No description provided for @countryPickSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sélectionne le pays depuis lequel tu vas payer.'**
+  String get countryPickSubtitle;
+
+  /// No description provided for @countryPickConfirm.
+  ///
+  /// In fr, this message translates to:
+  /// **'CONTINUER'**
+  String get countryPickConfirm;
+
+  /// No description provided for @countryPickCancel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get countryPickCancel;
+
+  /// No description provided for @countryStepTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pays'**
+  String get countryStepTitle;
+
+  /// No description provided for @countryOrganizerLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pays organisateur'**
+  String get countryOrganizerLabel;
+
+  /// No description provided for @countryOrganizerHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sert au périmètre admin par pays. N\'affecte pas les pays autorisés au paiement.'**
+  String get countryOrganizerHint;
+
+  /// No description provided for @countryPaymentSectionTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Options de paiement par pays'**
+  String get countryPaymentSectionTitle;
+
+  /// No description provided for @countryPaymentSectionHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pour chaque pays autorisé, ajoute un ou plusieurs opérateurs (Orange Money, MTN MoMo, Wave…) avec leur code de transfert. Le joueur choisit son pays puis un opérateur au moment de payer.'**
+  String get countryPaymentSectionHint;
+
+  /// No description provided for @countryFreeNote.
+  ///
+  /// In fr, this message translates to:
+  /// **'Compétition gratuite — aucune configuration de paiement nécessaire. Seul le pays organisateur est requis.'**
+  String get countryFreeNote;
+
+  /// No description provided for @countryOperatorNameLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom de l\'opérateur'**
+  String get countryOperatorNameLabel;
+
+  /// No description provided for @countryOperatorNameHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'ex. Orange Money'**
+  String get countryOperatorNameHint;
+
+  /// No description provided for @countryTransferCodeLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Code de transfert'**
+  String get countryTransferCodeLabel;
+
+  /// No description provided for @countryTransferCodeHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'ex. *126*1*001234#'**
+  String get countryTransferCodeHint;
+
+  /// No description provided for @countryAddOperator.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter un opérateur'**
+  String get countryAddOperator;
+
+  /// No description provided for @countryRemoveOperator.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer l\'opérateur'**
+  String get countryRemoveOperator;
+
+  /// No description provided for @countryAddCountry.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter un pays'**
+  String get countryAddCountry;
+
+  /// No description provided for @countryRemoveCountry.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer ce pays'**
+  String get countryRemoveCountry;
+
+  /// No description provided for @countryChooseCountry.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisir un pays'**
+  String get countryChooseCountry;
+
+  /// No description provided for @countrySaveOperator.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer cet opérateur'**
+  String get countrySaveOperator;
+
+  /// No description provided for @countryOperatorTemplatesButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mes opérateurs ({count})'**
+  String countryOperatorTemplatesButton(int count);
+
+  /// No description provided for @countryOperatorSavedToast.
+  ///
+  /// In fr, this message translates to:
+  /// **'Opérateur enregistré comme modèle.'**
+  String get countryOperatorSavedToast;
+
+  /// No description provided for @countryOperatorEmptyToast.
+  ///
+  /// In fr, this message translates to:
+  /// **'Renseigne le nom et le code de l\'opérateur avant d\'enregistrer.'**
+  String get countryOperatorEmptyToast;
+
+  /// No description provided for @countryValidationNeedOne.
+  ///
+  /// In fr, this message translates to:
+  /// **'Active au moins un pays et complète chaque opérateur (nom + code).'**
+  String get countryValidationNeedOne;
+
+  /// Section title for the optional country/section scope of an admin invitation code.
+  ///
+  /// In fr, this message translates to:
+  /// **'RESTRICTIONS (optionnel)'**
+  String get adminScopeRestrictionsTitle;
+
+  /// No description provided for @adminScopeRestrictionsHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Limite ce futur admin à certains pays et/ou sections. Laisse vide pour un accès complet.'**
+  String get adminScopeRestrictionsHint;
+
+  /// No description provided for @adminScopeCountriesLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pays autorisés'**
+  String get adminScopeCountriesLabel;
+
+  /// No description provided for @adminScopeSectionsLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sections autorisées'**
+  String get adminScopeSectionsLabel;
+
+  /// No description provided for @adminScopeAllCountries.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tous les pays'**
+  String get adminScopeAllCountries;
+
+  /// No description provided for @adminScopeAllSections.
+  ///
+  /// In fr, this message translates to:
+  /// **'Toutes les sections'**
+  String get adminScopeAllSections;
+
+  /// Banner shown to a scoped admin on the payouts screens.
+  ///
+  /// In fr, this message translates to:
+  /// **'Périmètre : {countries}'**
+  String adminScopePerimeterBanner(String countries);
+
+  /// No description provided for @adminScopeOutOfPerimeter.
+  ///
+  /// In fr, this message translates to:
+  /// **'Action hors de votre périmètre.'**
+  String get adminScopeOutOfPerimeter;
 }
 
 class _AppLocalizationsDelegate
