@@ -131,7 +131,10 @@ create policy "payouts_select"
   );
 
 -- -----------------------------------------------------------------------------
--- 4. RPC generate_payouts : gate section 'payouts' + pays de la compétition.
+-- 4. RPC generate_payouts : corps AUTORITAIRE durci (cap cagnotte déclarée +
+--    garde classement + alerte subvention, cf. 20260624140000/20260625130000)
+--    + country_code sur les lignes + gate scope (section 'payouts' + pays).
+--    ⚠️ On repart du corps durci pour NE PAS régresser les gardes d'intégrité.
 -- -----------------------------------------------------------------------------
 create or replace function public.generate_payouts(p_competition_id uuid)
 returns integer
@@ -140,17 +143,21 @@ security definer
 set search_path = public, pg_temp
 as $$
 declare
-  v_status   public.competition_status;
-  v_pool     numeric;
-  v_dist     jsonb;
-  v_currency text;
-  v_name     text;
-  v_country  text;
-  v_n        integer;
-  i          integer;
-  v_amount   numeric;
-  v_user     uuid;
-  v_count    integer := 0;
+  v_status     public.competition_status;
+  v_pool       numeric;
+  v_dist       jsonb;
+  v_currency   text;
+  v_name       text;
+  v_country    text;
+  v_n          integer;
+  i            integer;
+  v_amount     numeric;
+  v_user       uuid;
+  v_count      integer := 0;
+  v_had_prize  boolean := false;
+  v_collected  numeric := 0;
+  v_paid_total numeric := 0;
+  v_dist_total numeric := 0;
 begin
   if not public.is_super_admin() then
     raise exception 'Reserve au super-admin' using errcode = '42501';
@@ -177,6 +184,7 @@ begin
       using errcode = '42501';
   end if;
 
+  -- Idempotence : ne pas regenerer si des payouts existent deja.
   if exists (select 1 from public.payouts where competition_id = p_competition_id) then
     return 0;
   end if;
@@ -184,16 +192,42 @@ begin
     return 0;
   end if;
 
+  -- Cohérence budget : des prix sont prévus mais aucune cagnotte n'est déclarée
+  -- (prize_pool_local <= 0) → refus (rend le cap P1.1 infaillible).
+  select coalesce(sum(
+           case when coalesce(nullif(val, '')::numeric, 0) > 0
+                then nullif(val, '')::numeric else 0 end), 0)
+    into v_dist_total
+    from jsonb_array_elements_text(v_dist) as e(val);
+  if v_dist_total > 0 and coalesce(v_pool, 0) <= 0 then
+    raise exception 'Cagnotte non declaree (prize_pool_local = 0) alors que des prix sont prevus. Renseigne la cagnotte de la competition avant de generer les versements.'
+      using errcode = '23514';
+  end if;
+
+  -- P1 : recettes encaissées (status terminal 'succeeded').
+  select coalesce(sum(amount_local), 0) into v_collected
+    from public.payments
+    where competition_id = p_competition_id and status = 'succeeded';
+
   v_n := jsonb_array_length(v_dist);
   i := 1;
   while i <= v_n loop
     v_amount := coalesce((v_dist->>(i - 1))::numeric, 0);
     if v_amount > 0 then
+      v_had_prize := true;
       select player_id into v_user
         from public.competition_registrations
         where competition_id = p_competition_id and final_rank = i
         limit 1;
       if v_user is not null then
+        v_paid_total := v_paid_total + v_amount;
+        -- P1.1 : cap dur — ne jamais verser plus que la cagnotte déclarée.
+        if v_pool is not null and v_pool > 0 and v_paid_total > v_pool then
+          raise exception 'Versements (%) superieurs a la cagnotte declaree (% %). Verifie la repartition des gains.',
+            v_paid_total, v_pool, v_currency
+            using errcode = '23514';
+        end if;
+
         insert into public.payouts
           (user_id, competition_id, amount_local, currency, status, rank,
            payout_provider, country_code)
@@ -207,12 +241,28 @@ begin
             || ' a « ' || v_name || ' ». Reclame tes gains dans l''app pour '
             || 'recevoir ton versement Mobile Money.',
           jsonb_build_object('competition_id', p_competition_id, 'rank', i,
-                             'amount_local', v_amount));
+                             'amount_local', v_amount, 'route', '/payments/history'));
         v_count := v_count + 1;
       end if;
     end if;
     i := i + 1;
   end loop;
+
+  -- Garde anti-echec-silencieux : des prix prevus mais aucun joueur classe.
+  if v_count = 0 and v_had_prize then
+    raise exception 'Aucun joueur classe pour les rangs recompenses. Publie d''abord le classement final, puis genere les versements.'
+      using errcode = 'P0002';
+  end if;
+
+  -- P1.2 : alerte non-bloquante — la plateforme subventionne (payouts > recettes).
+  if v_paid_total > v_collected then
+    insert into public.admin_audit_log
+      (admin_id, action, target_type, target_id, after_state)
+    values (
+      auth.uid(), 'payout_pool_subsidy', 'competition', p_competition_id,
+      jsonb_build_object('paid_total', v_paid_total, 'collected_fees', v_collected,
+                         'currency', v_currency, 'payouts_count', v_count));
+  end if;
 
   return v_count;
 end;
@@ -279,7 +329,7 @@ begin
   values (v_user, 'payout_paid', 'Versement effectue',
     'Ton gain de ' || v_amount::text || ' ' || v_currency || ' pour « ' || v_name
       || ' » a ete verse sur ton numero Mobile Money.',
-    jsonb_build_object('payout_id', p_payout_id));
+    jsonb_build_object('payout_id', p_payout_id, 'route', '/payments/history'));
 end;
 $$;
 
