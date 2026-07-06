@@ -75,6 +75,7 @@ insert into reintegration_requests(id,user_id,message,status) values
    'Je demande ma reintegration svp merci','pending');
 
 create temp table _r(test text primary key, result text) on commit drop;
+grant all on _r to authenticated;
 
 -- ════════════════════════════════════════════════════════════════════
 -- Acte 1 — ADMIN SIMPLE (7a…001)
