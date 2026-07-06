@@ -63,9 +63,11 @@ insert into matches(id,competition_id,status,player1_id,player2_id,winner_id,sco
    '7a7a7a7a-0000-0000-0000-0000000000a1','7a7a7a7a-0000-0000-0000-0000000000a2','7a7a7a7a-0000-0000-0000-0000000000a1',3,1);
 
 -- Registrations classées (final_rank posé) dans les 2 comps clôturées.
-insert into competition_registrations(id,competition_id,player_id,status,final_rank) values
-  ('7d7d7d7d-0000-0000-0000-000000000001','7b7b7b7b-0000-0000-0000-000000000003','7a7a7a7a-0000-0000-0000-0000000000a1','confirmed',2),
-  ('7d7d7d7d-0000-0000-0000-000000000002','7b7b7b7b-0000-0000-0000-000000000004','7a7a7a7a-0000-0000-0000-0000000000a1','confirmed',2);
+-- NB : competition_registrations a une PK composite (competition_id, player_id),
+-- pas de colonne `id`.
+insert into competition_registrations(competition_id,player_id,status,final_rank) values
+  ('7b7b7b7b-0000-0000-0000-000000000003','7a7a7a7a-0000-0000-0000-0000000000a1','confirmed',2),
+  ('7b7b7b7b-0000-0000-0000-000000000004','7a7a7a7a-0000-0000-0000-0000000000a1','confirmed',2);
 
 -- Requête de réintégration en attente pour le banni à vie.
 insert into reintegration_requests(id,user_id,message,status) values
@@ -111,7 +113,8 @@ end $$;
 -- (4) Écraser final_rank sur une comp À PRIX CLÔTURÉE → BLOQUÉ.
 do $$ begin
   update public.competition_registrations set final_rank=1
-   where id='7d7d7d7d-0000-0000-0000-000000000001';
+   where competition_id='7b7b7b7b-0000-0000-0000-000000000003'
+     and player_id='7a7a7a7a-0000-0000-0000-0000000000a1';
   insert into _r values ('prize_finalrank_admin','allowed');
 exception when others then
   insert into _r values ('prize_finalrank_admin','blocked');
@@ -120,7 +123,8 @@ end $$;
 -- (5) Écraser final_rank sur une comp SANS prix clôturée → AUTORISÉ.
 do $$ begin
   update public.competition_registrations set final_rank=1
-   where id='7d7d7d7d-0000-0000-0000-000000000002';
+   where competition_id='7b7b7b7b-0000-0000-0000-000000000004'
+     and player_id='7a7a7a7a-0000-0000-0000-0000000000a1';
   insert into _r values ('free_finalrank_admin','allowed');
 exception when others then
   insert into _r values ('free_finalrank_admin','blocked');
@@ -150,7 +154,8 @@ end $$;
 -- (8) Super-admin écrase final_rank à prix clôturée → AUTORISÉ.
 do $$ begin
   update public.competition_registrations set final_rank=1
-   where id='7d7d7d7d-0000-0000-0000-000000000001';
+   where competition_id='7b7b7b7b-0000-0000-0000-000000000003'
+     and player_id='7a7a7a7a-0000-0000-0000-0000000000a1';
   insert into _r values ('prize_finalrank_superadmin','allowed');
 exception when others then
   insert into _r values ('prize_finalrank_superadmin','blocked');
