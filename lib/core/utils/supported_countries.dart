@@ -24,16 +24,23 @@ class SupportedCountry {
 }
 
 const List<SupportedCountry> kSupportedCountries = <SupportedCountry>[
+  // ─── CEMAC (Afrique centrale, zone XAF) — les 6 États membres ───────────
   SupportedCountry('CM', 'Cameroun', '🇨🇲', '+237'),
+  SupportedCountry('GA', 'Gabon', '🇬🇦', '+241'),
+  SupportedCountry('TD', 'Tchad', '🇹🇩', '+235'),
+  SupportedCountry('CF', 'Centrafrique', '🇨🇫', '+236'),
+  SupportedCountry('CG', 'Congo', '🇨🇬', '+242'),
+  SupportedCountry('GQ', 'Guinée équatoriale', '🇬🇶', '+240'),
+  // ─── UEMOA (Afrique de l'Ouest, zone XOF) — les 8 États membres ─────────
   SupportedCountry('SN', 'Sénégal', '🇸🇳', '+221'),
   SupportedCountry('CI', "Côte d'Ivoire", '🇨🇮', '+225'),
-  SupportedCountry('GA', 'Gabon', '🇬🇦', '+241'),
   SupportedCountry('BJ', 'Bénin', '🇧🇯', '+229'),
-  SupportedCountry('TG', 'Togo', '🇹🇬', '+228'),
   SupportedCountry('BF', 'Burkina Faso', '🇧🇫', '+226'),
   SupportedCountry('ML', 'Mali', '🇲🇱', '+223'),
   SupportedCountry('NE', 'Niger', '🇳🇪', '+227'),
-  SupportedCountry('TD', 'Tchad', '🇹🇩', '+235'),
+  SupportedCountry('TG', 'Togo', '🇹🇬', '+228'),
+  SupportedCountry('GW', 'Guinée-Bissau', '🇬🇼', '+245'),
+  // ─── Autres pays supportés ──────────────────────────────────────────────
   SupportedCountry('GN', 'Guinée', '🇬🇳', '+224'),
   SupportedCountry('CD', 'RD Congo', '🇨🇩', '+243'),
   SupportedCountry('MG', 'Madagascar', '🇲🇬', '+261'),
