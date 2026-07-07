@@ -73,30 +73,59 @@ void main() {
   });
 
   group('validate', () {
-    test('status succeeded + admin + validated_at, cible le paiement',
-        () async {
-      final from = stub('payments', null);
-      await repo.validate(paymentId: 'pay1', adminId: 'a1');
+    test(
+        'status succeeded + admin + validated_at, filtre id + awaiting_admin, '
+        'retourne true si une ligne est affectée', () async {
+      // Idempotence : l'UPDATE ne cible qu'un paiement encore awaiting_admin,
+      // puis .select('id') renvoie la/les ligne(s) affectée(s).
+      final from = stub('payments', [
+        {'id': 'pay1'},
+      ]);
+      final applied = await repo.validate(paymentId: 'pay1', adminId: 'a1');
+      expect(applied, isTrue);
       final v = from.updatedValues!;
       expect(v['status'], 'succeeded');
       expect(v['validated_by_admin_id'], 'a1');
       expect(v['validated_at'], isA<String>());
       expect(from.filters.any((f) => f == 'eq:id=pay1'), isTrue);
+      expect(from.filters.any((f) => f == 'eq:status=awaiting_admin'), isTrue);
+    });
+
+    test('retourne false si aucune ligne affectée (paiement déjà traité)',
+        () async {
+      stub('payments', <Map<String, dynamic>>[]);
+      final applied = await repo.validate(paymentId: 'pay1', adminId: 'a1');
+      expect(applied, isFalse);
     });
   });
 
   group('reject', () {
-    test('status rejected + justification', () async {
-      final from = stub('payments', null);
-      await repo.reject(
+    test('status rejected + justification, filtre awaiting_admin, retourne true',
+        () async {
+      final from = stub('payments', [
+        {'id': 'pay1'},
+      ]);
+      final applied = await repo.reject(
         paymentId: 'pay1',
         adminId: 'a1',
         reason: 'preuve illisible',
       );
+      expect(applied, isTrue);
       final v = from.updatedValues!;
       expect(v['status'], 'rejected');
       expect(v['rejection_reason'], 'preuve illisible');
       expect(v['validated_by_admin_id'], 'a1');
+      expect(from.filters.any((f) => f == 'eq:status=awaiting_admin'), isTrue);
+    });
+
+    test("retourne false si le paiement n'est plus awaiting_admin", () async {
+      stub('payments', <Map<String, dynamic>>[]);
+      final applied = await repo.reject(
+        paymentId: 'pay1',
+        adminId: 'a1',
+        reason: 'x',
+      );
+      expect(applied, isFalse);
     });
   });
 
