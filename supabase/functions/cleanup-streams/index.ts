@@ -17,6 +17,11 @@
 //      preuve). On efface les blobs et on remet `streams.url`/`storage_path`
 //      à null (l'historique de la row reste).
 //
+//   2b. **Purge les PREUVES anti-triche uploadées à la demande** — blobs
+//      `match-recordings` référencés par une ligne `native_recorder` sans
+//      `ended_at` mais avec `expires_at` échu (~J+30, posé par proof-verify).
+//      Purge objet par objet (chaque joueur a sa propre échéance).
+//
 //   3. **Purge les PREUVES utilisateur à J+30** — screenshots/vidéos de
 //      litige `match-proofs/{matchId}/...` (matchs completed > 30j). Pièces
 //      de litige, conservées plus longtemps que les captures anti-triche.
@@ -232,6 +237,68 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
 
   // ─────────────────────────────────────────────────────────────────
+  // 2b) Preuves anti-triche uploadées À LA DEMANDE (proof-verify) — purge à
+  //     l'échéance de LEUR rétention `expires_at` (~J+30). Ces lignes
+  //     `native_recorder` n'ont JAMAIS de `ended_at` (audit 2026-07-07) : la
+  //     section 2 (basée sur ended_at) ne les attrapait pas → blob retenu à
+  //     vie. On purge OBJET PAR OBJET (via storage_path) car chaque joueur a
+  //     sa propre échéance — on ne supprime pas tout le dossier du match, ce
+  //     qui effacerait la preuve encore valide d'un co-joueur. Litiges ouverts
+  //     exclus.
+  // ─────────────────────────────────────────────────────────────────
+  const nowIso = new Date().toISOString();
+  const { data: expiredRows, error: expErr } = await sb
+    .from("streams")
+    .select("id, match_id, storage_path")
+    .eq("is_public", false)
+    .eq("is_active", false)
+    .lt("expires_at", nowIso)
+    .not("storage_path", "is", null)
+    .limit(200);
+  if (expErr) {
+    console.error("expired_proofs query failed:", expErr.message);
+  }
+
+  let expiredProofsDeleted = 0;
+  if (expiredRows && expiredRows.length > 0) {
+    const expMatchIds = [
+      ...new Set(expiredRows.map((r) => r.match_id as string)),
+    ];
+    const { data: expDisputes, error: expDispErr } = await sb
+      .from("disputes")
+      .select("match_id")
+      .in("match_id", expMatchIds)
+      .in("status", OPEN_DISPUTE_STATUS);
+    if (expDispErr) {
+      console.error("expired_proofs disputes query failed:", expDispErr.message);
+    }
+    const expBlocked = new Set(
+      (expDisputes ?? []).map((d) => d.match_id as string),
+    );
+    for (const row of expiredRows.slice(0, 50)) {
+      if (expBlocked.has(row.match_id as string)) continue;
+      const path = row.storage_path as string;
+      const { error: rmErr } = await sb.storage
+        .from("match-recordings")
+        .remove([path]);
+      if (rmErr) {
+        purgeErrors.push({
+          matchId: row.match_id as string,
+          bucket: "match-recordings",
+          msg: rmErr.message,
+        });
+        continue;
+      }
+      expiredProofsDeleted += 1;
+      // Lien mort une fois le blob supprimé → on nettoie la row (historique gardé).
+      await sb
+        .from("streams")
+        .update({ url: null, storage_path: null })
+        .eq("id", row.id);
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────
   // 3) Preuves utilisateur (match-proofs) — rétention J+30 (matchs
   //    completed). Pièces de litige, gardées plus longtemps.
   // ─────────────────────────────────────────────────────────────────
@@ -265,6 +332,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     streamsClosed,
     recordingMatchesPurged: recordingMatchIds.length,
     recordingsDeleted,
+    expiredProofsDeleted,
     proofsPurgedMatches: (oldMatches ?? []).length,
     proofsDeleted,
     purgeErrors,

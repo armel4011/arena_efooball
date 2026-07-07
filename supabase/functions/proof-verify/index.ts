@@ -154,6 +154,14 @@ Deno.serve(async (req) => {
     );
   }
   if (blob.size > MAX_VERIFY_BYTES) {
+    // Trop volumineux pour un hash en mémoire (Web Crypto ne streame pas).
+    // On SUPPRIME l'objet : sinon il reste orphelin dans le bucket (jamais
+    // vérifié → pas d'expires_at posé → jamais purgé par cleanup-streams).
+    // L'admin bascule en revue manuelle (le commitment reste engagé).
+    const { error: rmErr } = await sb.storage.from(BUCKET).remove([objectPath]);
+    if (rmErr) {
+      console.error("oversized_proof_cleanup_failed:", rmErr.message);
+    }
     return jsonResponse({ error: "object_too_large" }, 413);
   }
 
