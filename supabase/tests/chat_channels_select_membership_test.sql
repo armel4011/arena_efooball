@@ -50,6 +50,7 @@ insert into chat_channels(id,type,competition_id) values
   ('90909090-0000-0000-0000-000000000004','competition_broadcast','9d9d9d9d-0000-0000-0000-000000000001');
 
 create temp table _r(test text primary key, result int) on commit drop;
+grant all on _r to authenticated;
 
 set local role authenticated;
 
