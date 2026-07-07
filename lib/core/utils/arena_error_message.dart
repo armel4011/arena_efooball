@@ -20,7 +20,19 @@ String arenaErrorMessage(Object error) {
   if (error is PostgrestException) {
     if (error.code == '23505') return 'Cette valeur est déjà utilisée.';
     if (error.code == '23503') return 'Référence invalide.';
-    if (error.code == '42501') return "Vous n'avez pas la permission.";
+    if (error.code == '42501') {
+      // Nos gardes serveur « réservé au super-admin » (audit 2026-07-07 : verdict
+      // de match à cagnotte, classement final d'une compétition à prix, actions
+      // /super) lèvent un message FR explicite. On le surface pour qu'un admin
+      // SIMPLE comprenne qu'il doit escalader, au lieu du générique. Les 42501
+      // BRUTS de Postgres (« permission denied », « violates row-level security »)
+      // restent masqués derrière le message générique (techniques, en anglais).
+      final lower = error.message.toLowerCase();
+      if (lower.contains('super-admin') || lower.contains('super_admin')) {
+        return error.message;
+      }
+      return "Vous n'avez pas la permission.";
+    }
     if (error.code == 'PGRST301') return 'Session expirée. Reconnectez-vous.';
     return error.message;
   }
