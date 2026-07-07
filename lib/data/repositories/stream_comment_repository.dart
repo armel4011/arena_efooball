@@ -70,11 +70,17 @@ final streamCommentsProvider = StreamProvider.family
 
   // 1. Fetch initial.
   var buffer = await repo.fetchRecent(matchId);
-  yield List.unmodifiable(buffer);
 
-  // 2. Subscribe aux INSERT sur ce match_id. Le channel name est
-  // unique par matchId pour ne pas mélanger les flux quand on
-  // change de live.
+  // 2. Controller de sortie. On POUSSE la buffer depuis le callback realtime
+  // (émission immédiate à chaque nouveau commentaire) plutôt que de la
+  // re-émettre toutes les 400 ms via un Timer.periodic : plus de polling
+  // permanent tant qu'un live est regardé, et 0 latence sur les nouveaux
+  // messages.
+  final controller = StreamController<List<StreamComment>>();
+  ref.onDispose(controller.close);
+
+  // 3. Subscribe aux INSERT sur ce match_id. Le channel name est unique par
+  // matchId pour ne pas mélanger les flux quand on change de live.
   final channel = client
       .channel('stream_comments_$matchId')
       .onPostgresChanges(
@@ -88,11 +94,11 @@ final streamCommentsProvider = StreamProvider.family
         ),
         callback: (payload) {
           try {
-            final row = payload.newRecord;
             buffer = List.unmodifiable([
               ...buffer,
-              StreamComment.fromJson(row),
+              StreamComment.fromJson(payload.newRecord),
             ]);
+            if (!controller.isClosed) controller.add(buffer);
           } catch (e, st) {
             // payload mal formé — on ignore plutôt que crasher le stream
             // listener et perdre les messages suivants ; mais on remonte
@@ -114,18 +120,7 @@ final streamCommentsProvider = StreamProvider.family
     client.removeChannel(channel);
   });
 
-  // 3. Re-emit la buffer à chaque modification. On suit le
-  // pattern Riverpod : un controller interne re-yield à chaque
-  // tick triggered par le callback realtime.
-  final controller = StreamController<List<StreamComment>>();
-  ref.onDispose(controller.close);
-
-  final timer = Timer.periodic(const Duration(milliseconds: 400), (_) {
-    if (!controller.isClosed) {
-      controller.add(buffer);
-    }
-  });
-  ref.onDispose(timer.cancel);
-
+  // 4. État initial, puis chaque mise à jour poussée par le callback.
+  yield List.unmodifiable(buffer);
   yield* controller.stream;
 });
