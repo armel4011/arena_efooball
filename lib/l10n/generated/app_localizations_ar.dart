@@ -1855,6 +1855,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get paymentHistoryClaimPhoneRequired => 'الرقم مطلوب.';
 
   @override
+  String get paymentHistoryClaimOperatorHint =>
+      'المشغّل (مثال: Wave، MTN MoMo، Orange Money)';
+
+  @override
+  String get paymentHistoryClaimOperatorRequired => 'المشغّل مطلوب.';
+
+  @override
   String get paymentHistoryEmptyPayments => 'لا مدفوعات حتى الآن.';
 
   @override

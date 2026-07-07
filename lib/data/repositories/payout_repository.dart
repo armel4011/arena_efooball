@@ -62,7 +62,9 @@ class PayoutRecord {
   final int? rank;
   final String? payeePhone;
 
-  /// `MTN_MOMO` ou `ORANGE_MONEY`.
+  /// Opérateur de retrait choisi par le gagnant (LIBRE, multi-pays : ex.
+  /// « Wave », « MTN MoMo », « Orange Money »). Les anciens versements portent
+  /// encore les codes hérités `MTN_MOMO` / `ORANGE_MONEY`.
   final String? payeeMethod;
   final DateTime? claimedAt;
   final DateTime? validatedAt;

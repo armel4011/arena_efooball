@@ -609,6 +609,8 @@
   "paymentHistoryClaimPhoneHint": "Numéro Mobile Money (ex. +237 6XX XX XX XX)",
   "paymentHistoryClaimConfirm": "CONFIRMER",
   "paymentHistoryClaimPhoneRequired": "Numéro requis.",
+  "paymentHistoryClaimOperatorHint": "Opérateur (ex. Wave, MTN MoMo, Orange Money)",
+  "paymentHistoryClaimOperatorRequired": "Opérateur requis.",
   "paymentHistoryEmptyPayments": "Aucun paiement pour le moment.",
   "paymentHistoryNetBalanceLabel": "SOLDE NET",
   "paymentHistoryTxTitle": "Inscription compétition",

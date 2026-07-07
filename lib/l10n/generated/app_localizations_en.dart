@@ -1863,6 +1863,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paymentHistoryClaimPhoneRequired => 'Number required.';
 
   @override
+  String get paymentHistoryClaimOperatorHint =>
+      'Operator (e.g. Wave, MTN MoMo, Orange Money)';
+
+  @override
+  String get paymentHistoryClaimOperatorRequired => 'Operator required.';
+
+  @override
   String get paymentHistoryEmptyPayments => 'No payments yet.';
 
   @override

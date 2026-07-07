@@ -3604,6 +3604,18 @@ abstract class AppLocalizations {
   /// **'Numéro requis.'**
   String get paymentHistoryClaimPhoneRequired;
 
+  /// No description provided for @paymentHistoryClaimOperatorHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Opérateur (ex. Wave, MTN MoMo, Orange Money)'**
+  String get paymentHistoryClaimOperatorHint;
+
+  /// No description provided for @paymentHistoryClaimOperatorRequired.
+  ///
+  /// In fr, this message translates to:
+  /// **'Opérateur requis.'**
+  String get paymentHistoryClaimOperatorRequired;
+
   /// No description provided for @paymentHistoryEmptyPayments.
   ///
   /// In fr, this message translates to:
