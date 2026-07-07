@@ -264,11 +264,14 @@ class _ClaimSheet extends StatefulWidget {
 
 class _ClaimSheetState extends State<_ClaimSheet> {
   final _phone = TextEditingController();
-  String _method = 'MTN_MOMO';
+  // Opérateur LIBRE (multi-pays) : le gagnant saisit son opérateur Mobile Money
+  // (ex. « Wave », « MTN MoMo », « Orange Money ») — plus de choix figé MTN/Orange.
+  final _operator = TextEditingController();
 
   @override
   void dispose() {
     _phone.dispose();
+    _operator.dispose();
     super.dispose();
   }
 
@@ -293,24 +296,13 @@ class _ClaimSheetState extends State<_ClaimSheet> {
             style: ArenaText.bodyMuted,
           ),
           const SizedBox(height: ArenaSpacing.md),
-          Row(
-            children: [
-              Expanded(
-                child: _MethodChip(
-                  label: l10n.paymentHistoryClaimMethodMtn,
-                  selected: _method == 'MTN_MOMO',
-                  onTap: () => setState(() => _method = 'MTN_MOMO'),
-                ),
-              ),
-              const SizedBox(width: ArenaSpacing.sm),
-              Expanded(
-                child: _MethodChip(
-                  label: l10n.paymentHistoryClaimMethodOrange,
-                  selected: _method == 'ORANGE_MONEY',
-                  onTap: () => setState(() => _method = 'ORANGE_MONEY'),
-                ),
-              ),
-            ],
+          TextField(
+            controller: _operator,
+            textCapitalization: TextCapitalization.words,
+            style: ArenaText.body,
+            decoration: InputDecoration(
+              hintText: l10n.paymentHistoryClaimOperatorHint,
+            ),
           ),
           const SizedBox(height: ArenaSpacing.md),
           TextField(
@@ -326,56 +318,26 @@ class _ClaimSheetState extends State<_ClaimSheet> {
             label: l10n.paymentHistoryClaimConfirm,
             fullWidth: true,
             onPressed: () {
+              final operator = _operator.text.trim();
               final phone = _phone.text.trim();
+              if (operator.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(l10n.paymentHistoryClaimOperatorRequired),
+                  ),
+                );
+                return;
+              }
               if (phone.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text(l10n.paymentHistoryClaimPhoneRequired)),
                 );
                 return;
               }
-              Navigator.of(context).pop((phone: phone, method: _method));
+              Navigator.of(context).pop((phone: phone, method: operator));
             },
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _MethodChip extends StatelessWidget {
-  const _MethodChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(ArenaRadius.md),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: ArenaSpacing.sm),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: selected
-              ? ArenaColors.signalBlue.withValues(alpha: 0.15)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(ArenaRadius.md),
-          border: Border.all(
-            color: selected ? ArenaColors.signalBlue : ArenaColors.silverDim,
-          ),
-        ),
-        child: Text(
-          label,
-          style: ArenaText.button.copyWith(
-            color: selected ? ArenaColors.bone : ArenaColors.silver,
-          ),
-        ),
       ),
     );
   }

@@ -589,6 +589,8 @@
   "paymentHistoryClaimPhoneHint": "Mobile Money number (e.g. +237 6XX XX XX XX)",
   "paymentHistoryClaimConfirm": "CONFIRM",
   "paymentHistoryClaimPhoneRequired": "Number required.",
+  "paymentHistoryClaimOperatorHint": "Operator (e.g. Wave, MTN MoMo, Orange Money)",
+  "paymentHistoryClaimOperatorRequired": "Operator required.",
   "paymentHistoryEmptyPayments": "No payments yet.",
   "paymentHistoryNetBalanceLabel": "NET BALANCE",
   "paymentHistoryTxTitle": "Competition registration",

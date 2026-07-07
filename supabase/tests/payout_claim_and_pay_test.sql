@@ -3,8 +3,8 @@
 -- ════════════════════════════════════════════════════════════════════
 -- Étapes finales du versement, jusqu'ici sans test serveur :
 --   claim_payout(payout, phone, method) : le GAGNANT saisit son numéro de
---     retrait. Owner-only, statut 'pending_admin_validation', méthode ∈
---     {MTN_MOMO, ORANGE_MONEY}, numéro requis.
+--     retrait. Owner-only, statut 'pending_admin_validation', opérateur LIBRE
+--     (multi-pays, non vide) requis, numéro requis.
 --   mark_payout_paid(payout) : le SUPER-ADMIN marque payé (après virement réel).
 --     Super-admin only, exige un numéro réclamé, refuse le double-paiement.
 -- Couvre autorisation, validation d'entrée, transitions d'état, idempotence,
@@ -12,7 +12,7 @@
 -- ════════════════════════════════════════════════════════════════════
 
 begin;
-select plan(16);
+select plan(17);
 
 alter table public.notifications disable trigger trg_notifications_dispatch;
 
@@ -50,10 +50,10 @@ select throws_ok(
 
 set local request.jwt.claims = '{"sub":"7e7e7e7e-0000-0000-0000-0000000000a1"}';
 select throws_ok(
-  $$ select public.claim_payout('70707070-0000-0000-0000-0000000000A0','650111222','PAYPAL') $$,
-  '22023', null, 'claim : méthode de retrait invalide rejetée');
+  $$ select public.claim_payout('70707070-0000-0000-0000-0000000000A0','650111222','   ') $$,
+  '22023', null, 'claim : opérateur de retrait vide rejeté');
 select throws_ok(
-  $$ select public.claim_payout('70707070-0000-0000-0000-0000000000A0','   ','MTN_MOMO') $$,
+  $$ select public.claim_payout('70707070-0000-0000-0000-0000000000A0','   ','Wave') $$,
   '22023', null, 'claim : numéro de retrait vide rejeté');
 
 set local request.jwt.claims = '{"sub":"7e7e7e7e-0000-0000-0000-0000000000a2"}';
@@ -61,14 +61,17 @@ select throws_ok(
   $$ select public.claim_payout('70707070-0000-0000-0000-0000000000B0','650111222','MTN_MOMO') $$,
   '42501', null, 'claim : un versement déjà payé n''est plus réclamable');
 
--- Réclamation valide par le gagnant.
+-- Réclamation valide par le gagnant, via un opérateur LIBRE (multi-pays).
 set local request.jwt.claims = '{"sub":"7e7e7e7e-0000-0000-0000-0000000000a1"}';
 select lives_ok(
-  $$ select public.claim_payout('70707070-0000-0000-0000-0000000000A0','650111222','MTN_MOMO') $$,
-  'claim : réclamation valide par le gagnant acceptée');
+  $$ select public.claim_payout('70707070-0000-0000-0000-0000000000A0','650111222','Wave') $$,
+  'claim : réclamation valide via un opérateur libre (Wave) acceptée');
 select is(
   (select payee_phone from payouts where id='70707070-0000-0000-0000-0000000000A0'),
   '650111222', 'claim : numéro de retrait enregistré');
+select is(
+  (select payee_method from payouts where id='70707070-0000-0000-0000-0000000000A0'),
+  'Wave', 'claim : opérateur libre enregistré tel quel');
 select is(
   (select claimed_at is not null from payouts where id='70707070-0000-0000-0000-0000000000A0'),
   true, 'claim : claimed_at horodaté');

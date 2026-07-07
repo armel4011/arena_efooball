@@ -589,6 +589,8 @@
   "paymentHistoryClaimPhoneHint": "رقم Mobile Money (مثال: +237 6XX XX XX XX)",
   "paymentHistoryClaimConfirm": "تأكيد",
   "paymentHistoryClaimPhoneRequired": "الرقم مطلوب.",
+  "paymentHistoryClaimOperatorHint": "المشغّل (مثال: Wave، MTN MoMo، Orange Money)",
+  "paymentHistoryClaimOperatorRequired": "المشغّل مطلوب.",
   "paymentHistoryEmptyPayments": "لا مدفوعات حتى الآن.",
   "paymentHistoryNetBalanceLabel": "الرصيد الصافي",
   "paymentHistoryTxTitle": "التسجيل في البطولة",
