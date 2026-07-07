@@ -59,8 +59,9 @@ insert into chat_channels(id,type,friendship_id) values
   ('8e8e8e8e-0000-0000-0000-000000000002','friend','8d8d8d8d-0000-0000-0000-000000000001');
 insert into chat_channels(id,type,support_user_id) values
   ('8e8e8e8e-0000-0000-0000-000000000003','admin_user','8a8a8a8a-0000-0000-0000-0000000000c1');
-insert into chat_channels(id,type) values
-  ('8e8e8e8e-0000-0000-0000-000000000004','competition_broadcast');
+-- competition_broadcast exige competition_id (chat_channels_coherence_check).
+insert into chat_channels(id,type,competition_id) values
+  ('8e8e8e8e-0000-0000-0000-000000000004','competition_broadcast','8b8b8b8b-0000-0000-0000-000000000001');
 
 create temp table _r(test text primary key, result text) on commit drop;
 grant all on _r to authenticated;
