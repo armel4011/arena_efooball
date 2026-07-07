@@ -102,7 +102,7 @@ class _SuperAdminPaymentsValidationPageState
     );
     if (ok != true || !mounted) return;
     try {
-      await traceAsync(
+      final applied = await traceAsync(
         'admin.payment.validate',
         'p2p manual ${row.payment.amountLocal} ${row.payment.currency}',
         () => ref.read(adminPaymentsRepositoryProvider).validate(
@@ -110,6 +110,18 @@ class _SuperAdminPaymentsValidationPageState
               adminId: adminId,
             ),
       );
+      if (!applied) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              "Ce paiement n'est plus en attente (déjà traité). "
+              'Actualisez la liste.',
+            ),
+          ),
+        );
+        return;
+      }
       await ref.read(adminAuditLogRepositoryProvider).record(
         adminId: adminId,
         action: 'payment_validated',
@@ -186,11 +198,23 @@ class _SuperAdminPaymentsValidationPageState
     WidgetsBinding.instance.addPostFrameCallback((_) => reasonCtrl.dispose());
     if (reason == null || !mounted) return;
     try {
-      await ref.read(adminPaymentsRepositoryProvider).reject(
+      final applied = await ref.read(adminPaymentsRepositoryProvider).reject(
             paymentId: row.payment.id,
             adminId: adminId,
             reason: reason,
           );
+      if (!applied) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              "Ce paiement n'est plus en attente (déjà traité). "
+              'Actualisez la liste.',
+            ),
+          ),
+        );
+        return;
+      }
       await ref.read(adminAuditLogRepositoryProvider).record(
         adminId: adminId,
         action: 'payment_rejected',

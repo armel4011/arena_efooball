@@ -99,29 +99,49 @@ class AdminPaymentsRepository {
 
   /// Valide un paiement. Le trigger DB `on_payment_validated`
   /// insère/upsert la registration en confirmed.
-  Future<void> validate({
+  ///
+  /// Idempotent : l'UPDATE est filtré `status = 'awaiting_admin'` (doublé par
+  /// la RLS `payments_admin_update`), donc un paiement déjà clos (validé,
+  /// rejeté, en remboursement) n'est PAS ré-écrit. Renvoie `false` si aucune
+  /// ligne n'a été affectée (liste périmée / paiement déjà traité ailleurs).
+  Future<bool> validate({
     required String paymentId,
     required String adminId,
   }) async {
-    await _client.from(_table).update({
-      'status': 'succeeded',
-      'validated_by_admin_id': adminId,
-      'validated_at': DateTime.now().toUtc().toIso8601String(),
-    }).eq('id', paymentId);
+    final rows = await _client
+        .from(_table)
+        .update({
+          'status': 'succeeded',
+          'validated_by_admin_id': adminId,
+          'validated_at': DateTime.now().toUtc().toIso8601String(),
+        })
+        .eq('id', paymentId)
+        .eq('status', 'awaiting_admin')
+        .select('id');
+    return rows.isNotEmpty;
   }
 
   /// Refuse un paiement avec justification (affichée au joueur sur P5).
-  Future<void> reject({
+  ///
+  /// Idempotent : voir [validate]. Renvoie `false` si le paiement n'était plus
+  /// `awaiting_admin`.
+  Future<bool> reject({
     required String paymentId,
     required String adminId,
     required String reason,
   }) async {
-    await _client.from(_table).update({
-      'status': 'rejected',
-      'validated_by_admin_id': adminId,
-      'validated_at': DateTime.now().toUtc().toIso8601String(),
-      'rejection_reason': reason,
-    }).eq('id', paymentId);
+    final rows = await _client
+        .from(_table)
+        .update({
+          'status': 'rejected',
+          'validated_by_admin_id': adminId,
+          'validated_at': DateTime.now().toUtc().toIso8601String(),
+          'rejection_reason': reason,
+        })
+        .eq('id', paymentId)
+        .eq('status', 'awaiting_admin')
+        .select('id');
+    return rows.isNotEmpty;
   }
 
   /// Marque un paiement `refund_pending` comme `refunded` (après le virement
