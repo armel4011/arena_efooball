@@ -187,11 +187,32 @@ class _VerdictButtons extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final p1 = match.score1 ?? 0;
     final p2 = match.score2 ?? 0;
+    // Verrou serveur (audit 2026-07-07) : re-arbitrer un match à cagnotte déjà
+    // décidé est réservé au super-admin. On désactive les CTA verdict pour un
+    // admin simple (parité app mobile).
+    final isSuperAdmin =
+        ref.watch(currentProfileProvider).valueOrNull?.isSuperAdmin ?? false;
+    final competition =
+        ref.watch(competitionByIdProvider(match.competitionId)).valueOrNull;
+    final verdictLocked = competition != null &&
+        matchResultLockedForAdmin(
+          isSuperAdmin: isSuperAdmin,
+          competition: competition,
+          match: match,
+        );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (verdictLocked) ...[
+          InfoBar(
+            title: const Text('Réservé au super-admin'),
+            content: const Text(superAdminOnlyHint),
+            severity: InfoBarSeverity.warning,
+          ),
+          const SizedBox(height: 8),
+        ],
         FilledButton(
-          onPressed: match.player1Id == null
+          onPressed: verdictLocked || match.player1Id == null
               ? null
               : () => _commit(
                     context,
@@ -204,7 +225,7 @@ class _VerdictButtons extends ConsumerWidget {
         ),
         const SizedBox(height: 8),
         FilledButton(
-          onPressed: match.player2Id == null
+          onPressed: verdictLocked || match.player2Id == null
               ? null
               : () => _commit(
                     context,
