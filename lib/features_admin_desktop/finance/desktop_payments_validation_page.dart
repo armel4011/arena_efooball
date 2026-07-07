@@ -260,10 +260,21 @@ class _PendingCard extends ConsumerWidget {
     );
     if (!totpOk || !context.mounted) return;
     try {
-      await ref.read(adminPaymentsRepositoryProvider).validate(
+      final applied = await ref.read(adminPaymentsRepositoryProvider).validate(
             paymentId: row.payment.id,
             adminId: adminId,
           );
+      if (!applied) {
+        ref.invalidate(adminPendingPaymentsProvider);
+        if (!context.mounted) return;
+        await _showResult(
+          context,
+          "Ce paiement n'est plus en attente (déjà traité). "
+          'Liste actualisée.',
+          isError: true,
+        );
+        return;
+      }
       await ref.read(adminAuditLogRepositoryProvider).record(
         adminId: adminId,
         action: 'payment_validated',
@@ -300,11 +311,22 @@ class _PendingCard extends ConsumerWidget {
     );
     if (!totpOk || !context.mounted) return;
     try {
-      await ref.read(adminPaymentsRepositoryProvider).reject(
+      final applied = await ref.read(adminPaymentsRepositoryProvider).reject(
             paymentId: row.payment.id,
             adminId: adminId,
             reason: reason,
           );
+      if (!applied) {
+        ref.invalidate(adminPendingPaymentsProvider);
+        if (!context.mounted) return;
+        await _showResult(
+          context,
+          "Ce paiement n'est plus en attente (déjà traité). "
+          'Liste actualisée.',
+          isError: true,
+        );
+        return;
+      }
       await ref.read(adminAuditLogRepositoryProvider).record(
         adminId: adminId,
         action: 'payment_rejected',
