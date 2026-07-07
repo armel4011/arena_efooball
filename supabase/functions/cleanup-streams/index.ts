@@ -26,6 +26,11 @@
 //      litige `match-proofs/{matchId}/...` (matchs completed > 30j). Pièces
 //      de litige, conservées plus longtemps que les captures anti-triche.
 //
+//   4. **Balaye les BLOBS ORPHELINS** — objets `match-recordings/{matchId}/`
+//      qu'aucune ligne `streams` ne référence (proof-verify jamais appelé),
+//      pour des matchs terminaux anciens (>30j), hors litige. Conservateur :
+//      on ne purge que si AUCUN blob du match n'est encore référencé.
+//
 // Auth : webhook secret partagé (même que cleanup-deleted-accounts).
 // =============================================================================
 
@@ -328,11 +333,71 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
   }
 
+  // ─────────────────────────────────────────────────────────────────
+  // 4) BLOBS ORPHELINS (audit 2026-07-07) : objets match-recordings/{matchId}/
+  //    qu'AUCUNE row streams ne référence (storage_path/url) — ex. blob uploadé
+  //    sans que proof-verify soit jamais appelé (ni ended_at ni expires_at). On
+  //    purge par dossier de match, UNIQUEMENT pour un match TERMINAL et ancien
+  //    (> J+30), hors litige ouvert, ET si AUCUN blob n'est encore référencé
+  //    pour ce match (sinon on laisse les sections 2/2b faire — jamais de
+  //    suppression d'une preuve encore référencée). Batch borné (100 dossiers
+  //    listés, 30 purges max/run) : le rattrapage se fait sur plusieurs passes.
+  // ─────────────────────────────────────────────────────────────────
+  let orphanBlobsDeleted = 0;
+  const { data: recDirs, error: recDirsErr } = await sb.storage
+    .from("match-recordings")
+    .list("", { limit: 100 });
+  if (recDirsErr) {
+    console.error("orphan_sweep list failed:", recDirsErr.message);
+  } else if (recDirs) {
+    let processed = 0;
+    for (const dir of recDirs) {
+      if (processed >= 30) break;
+      if (dir.id !== null) continue; // fichier au niveau racine, pas un dossier
+      const matchId = dir.name;
+      const { data: mrow } = await sb
+        .from("matches")
+        .select("status, finished_at")
+        .eq("id", matchId)
+        .maybeSingle();
+      if (!mrow) continue; // match inconnu → on ne devine pas (conservateur)
+      const st = mrow.status as string;
+      if (st !== "completed" && st !== "cancelled" && st !== "forfeited") {
+        continue;
+      }
+      const fin = mrow.finished_at as string | null;
+      if (!fin || fin >= thirtyDaysAgo) continue;
+      processed += 1;
+      // Un blob est-il ENCORE référencé pour ce match ? (géré par sections 2/2b)
+      const { data: refRows } = await sb
+        .from("streams")
+        .select("id")
+        .eq("match_id", matchId)
+        .or("storage_path.not.is.null,url.not.is.null")
+        .limit(1);
+      if (refRows && refRows.length > 0) continue;
+      // Litige ouvert → on garde la preuve.
+      const { data: disp } = await sb
+        .from("disputes")
+        .select("id")
+        .eq("match_id", matchId)
+        .in("status", OPEN_DISPUTE_STATUS)
+        .limit(1);
+      if (disp && disp.length > 0) continue;
+      const r3 = await purgeMatchStorage(sb, "match-recordings", matchId);
+      orphanBlobsDeleted += r3.deleted;
+      if (r3.error) {
+        purgeErrors.push({ matchId, bucket: "match-recordings", msg: r3.error });
+      }
+    }
+  }
+
   return jsonResponse({
     streamsClosed,
     recordingMatchesPurged: recordingMatchIds.length,
     recordingsDeleted,
     expiredProofsDeleted,
+    orphanBlobsDeleted,
     proofsPurgedMatches: (oldMatches ?? []).length,
     proofsDeleted,
     purgeErrors,
