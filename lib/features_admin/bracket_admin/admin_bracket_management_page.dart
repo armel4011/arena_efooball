@@ -10,6 +10,7 @@ import 'package:arena/data/repositories/admin/admin_matches_repository.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
 import 'package:arena/data/repositories/match_repository.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
+import 'package:arena/features_shared/admin_result_gate.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
