@@ -13,6 +13,18 @@ class _RankingTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final async =
         ref.watch(adminCompetitionRegistrantsProvider(competitionId));
+    // Verrou serveur (audit 2026-07-07) : sur une compétition à prix CLÔTURÉE,
+    // seul le super-admin modifie le classement final. On désactive la saisie
+    // pour un admin simple (parité avec l'app mobile).
+    final isSuperAdmin =
+        ref.watch(currentProfileProvider).valueOrNull?.isSuperAdmin ?? false;
+    final competition =
+        ref.watch(competitionByIdProvider(competitionId)).valueOrNull;
+    final finalRankLocked = competition != null &&
+        finalRankLockedForAdmin(
+          isSuperAdmin: isSuperAdmin,
+          competition: competition,
+        );
     return async.when(
       loading: () => const Center(child: ProgressRing()),
       error: (e, _) => Padding(
@@ -120,12 +132,14 @@ class _RankingTab extends ConsumerWidget {
                                     child: Text('Rang $n'),
                                   ),
                               ],
-                              onChanged: (rank) => _setRank(
-                                context,
-                                ref,
-                                r.playerId,
-                                rank,
-                              ),
+                              onChanged: finalRankLocked
+                                  ? null
+                                  : (rank) => _setRank(
+                                        context,
+                                        ref,
+                                        r.playerId,
+                                        rank,
+                                      ),
                             ),
                           ),
                         ],

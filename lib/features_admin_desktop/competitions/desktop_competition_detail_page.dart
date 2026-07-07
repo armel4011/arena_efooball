@@ -9,6 +9,7 @@ import 'package:arena/data/repositories/admin/admin_competitions_repository.dart
 import 'package:arena/data/repositories/competition_repository.dart';
 import 'package:arena/features_admin_desktop/competitions/desktop_competition_visuals.dart';
 import 'package:arena/features_admin_desktop/matches/desktop_matches_list_page.dart';
+import 'package:arena/features_shared/admin_result_gate.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

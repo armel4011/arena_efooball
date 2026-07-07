@@ -12,6 +12,7 @@ import 'package:arena/data/repositories/competition_repository.dart';
 import 'package:arena/data/repositories/match_repository.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:arena/features_admin_desktop/competitions/desktop_competition_visuals.dart';
+import 'package:arena/features_shared/admin_result_gate.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 // ArenaBracketTree est un widget Flutter pur (importe flutter/material)
 // mais se compose dans un arbre Fluent sans problème : on l'enrobe ici.
@@ -406,6 +407,31 @@ class _BracketView extends ConsumerWidget {
         builder: (ctx) => ContentDialog(
           title: Text('Match M-${match.id.substring(0, 6)}'),
           content: const Text('Match validé — actions clôturées.'),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Fermer'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+    // Verrou serveur (audit 2026-07-07) : re-arbitrer un match à cagnotte déjà
+    // décidé (vainqueur posé / terminal) est réservé au super-admin. On bloque
+    // pour un admin simple avant d'ouvrir le dialog (parité app mobile).
+    final isSuperAdmin =
+        ref.read(currentProfileProvider).valueOrNull?.isSuperAdmin ?? false;
+    if (matchResultLockedForAdmin(
+      isSuperAdmin: isSuperAdmin,
+      competition: competition,
+      match: match,
+    )) {
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => ContentDialog(
+          title: const Text('Réservé au super-admin'),
+          content: const Text(superAdminOnlyHint),
           actions: [
             FilledButton(
               onPressed: () => Navigator.of(ctx).pop(),
