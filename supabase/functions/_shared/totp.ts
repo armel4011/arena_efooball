@@ -120,34 +120,49 @@ async function hotp(secretBytes: Uint8Array, counter: bigint): Promise<string> {
 }
 
 /**
- * Vérifie un code TOTP 6 chiffres avec une fenêtre de ±1 step (30 s)
- * pour compenser un léger drift d'horloge.
+ * Vérifie un code TOTP 6 chiffres avec une fenêtre de ±1 step (30 s) et
+ * retourne le STEP (compteur HOTP) qui a matché, ou `null` si invalide.
  *
- * Retourne `true` si valide, sinon `false`. Ne *jette pas* — l'appelant
- * mappe une 401 / message UI.
+ * Le step permet à l'appelant d'implémenter l'ANTI-REJEU : persister le
+ * dernier step accepté par admin et refuser tout step ≤ ce dernier (sinon un
+ * même code 6 chiffres capté peut être rejoué pendant ~90 s dans sa fenêtre).
+ * Ne *jette pas*.
+ */
+export async function verifyTotpStep(params: {
+  secretBase32: string;
+  code: string;
+  windowSteps?: number;
+}): Promise<bigint | null> {
+  const window = params.windowSteps ?? 1;
+  const cleanCode = params.code.trim();
+  if (!/^\d{6}$/.test(cleanCode)) return null;
+  let secretBytes: Uint8Array;
+  try {
+    secretBytes = base32ToBytes(params.secretBase32);
+  } catch (_) {
+    return null;
+  }
+  const step = BigInt(Math.floor(Date.now() / 1000 / 30));
+  for (let offset = -window; offset <= window; offset++) {
+    const s = step + BigInt(offset);
+    const candidate = await hotp(secretBytes, s);
+    // Comparaison constant-time (codes 6 chars, mais on garde la
+    // discipline pour éviter une éventuelle attaque par timing).
+    if (timingSafeEqual(candidate, cleanCode)) return s;
+  }
+  return null;
+}
+
+/**
+ * Variante booléenne de [verifyTotpStep] — `true` si valide. Conservée pour les
+ * flux où l'anti-rejeu n'est pas requis (ex. finalisation de setup one-shot).
  */
 export async function verifyTotp(params: {
   secretBase32: string;
   code: string;
   windowSteps?: number;
 }): Promise<boolean> {
-  const window = params.windowSteps ?? 1;
-  const cleanCode = params.code.trim();
-  if (!/^\d{6}$/.test(cleanCode)) return false;
-  let secretBytes: Uint8Array;
-  try {
-    secretBytes = base32ToBytes(params.secretBase32);
-  } catch (_) {
-    return false;
-  }
-  const step = BigInt(Math.floor(Date.now() / 1000 / 30));
-  for (let offset = -window; offset <= window; offset++) {
-    const candidate = await hotp(secretBytes, step + BigInt(offset));
-    // Comparaison constant-time (codes 6 chars, mais on garde la
-    // discipline pour éviter une éventuelle attaque par timing).
-    if (timingSafeEqual(candidate, cleanCode)) return true;
-  }
-  return false;
+  return (await verifyTotpStep(params)) !== null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
