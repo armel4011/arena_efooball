@@ -22,7 +22,7 @@
 // =============================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.108.2";
-import { consumeBackupCodeHashed, verifyTotp } from "../_shared/totp.ts";
+import { consumeBackupCodeHashed, verifyTotpStep } from "../_shared/totp.ts";
 import {
   checkTotpLock,
   lockedBody,
@@ -127,11 +127,17 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   let method: "totp" | "backup";
   if (isTotp) {
-    const ok = await verifyTotp({
+    const step = await verifyTotpStep({
       secretBase32: profile.totp_secret,
       code,
     });
-    if (!ok) {
+    // Anti-rejeu (audit 2026-07-07) : un step déjà consommé (<= dernier accepté)
+    // est refusé comme un code invalide, même si le HOTP correspond encore dans
+    // la fenêtre ±1 → un code capté ne peut plus être rejoué.
+    const lastStep = profile.last_totp_step != null
+      ? BigInt(profile.last_totp_step)
+      : -1n;
+    if (step === null || step <= lastStep) {
       const failure = await recordTotpFailure(service, user.id);
       if (failure.locked) {
         return jsonResponse(lockedBody(failure), 429);
@@ -140,6 +146,17 @@ Deno.serve(async (req: Request): Promise<Response> => {
         error: "invalid_code",
         attempts_remaining: failure.attemptsRemaining,
       }, 401);
+    }
+    // Grave le step consommé (bloque le rejeu de ce code et des antérieurs).
+    const { error: stepErr } = await service
+      .from("profiles")
+      .update({ last_totp_step: Number(step) })
+      .eq("id", user.id);
+    if (stepErr) {
+      return jsonResponse(
+        { error: "totp_step_persist_failed", detail: safeDetail(stepErr.message, "admin-verify-totp") },
+        500,
+      );
     }
     method = "totp";
   } else {

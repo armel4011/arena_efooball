@@ -23,7 +23,7 @@
 // =============================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.108.2";
-import { consumeBackupCodeHashed, verifyTotp } from "../_shared/totp.ts";
+import { consumeBackupCodeHashed, verifyTotpStep } from "../_shared/totp.ts";
 import { safeDetail } from "../_shared/errors.ts";
 import {
   checkTotpLock,
@@ -103,7 +103,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   const { data: profile, error: profileErr } = await service
     .from("profiles")
-    .select("id, role, totp_secret, totp_enabled, backup_codes")
+    .select("id, role, totp_secret, totp_enabled, backup_codes, last_totp_step")
     .eq("id", user.id)
     .maybeSingle();
   if (profileErr || !profile) {
@@ -124,11 +124,17 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
 
   if (isTotp) {
-    const ok = await verifyTotp({
+    const step = await verifyTotpStep({
       secretBase32: profile.totp_secret,
       code,
     });
-    if (!ok) {
+    // Anti-rejeu (audit 2026-07-07) : step déjà consommé (<= dernier accepté)
+    // refusé comme invalide. Compteur last_totp_step partagé avec
+    // admin-verify-totp → un code utilisé au login ne peut pas être rejoué ici.
+    const lastStep = profile.last_totp_step != null
+      ? BigInt(profile.last_totp_step)
+      : -1n;
+    if (step === null || step <= lastStep) {
       const failure = await recordTotpFailure(service, user.id);
       if (failure.locked) {
         return jsonResponse(lockedBody(failure), 429);
@@ -137,6 +143,16 @@ Deno.serve(async (req: Request): Promise<Response> => {
         error: "invalid_code",
         attempts_remaining: failure.attemptsRemaining,
       }, 401);
+    }
+    const { error: stepErr } = await service
+      .from("profiles")
+      .update({ last_totp_step: Number(step) })
+      .eq("id", user.id);
+    if (stepErr) {
+      return jsonResponse(
+        { error: "totp_step_persist_failed", detail: safeDetail(stepErr.message, "admin-stepup-totp") },
+        500,
+      );
     }
     await recordTotpSuccess(service, user.id);
     return jsonResponse({ ok: true, method: "totp" });

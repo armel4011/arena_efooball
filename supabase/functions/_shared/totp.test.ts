@@ -13,6 +13,7 @@ import {
   hashBackupCodes,
   otpauthUri,
   verifyTotp,
+  verifyTotpStep,
 } from "./totp.ts";
 
 // Secret RFC 6238 "12345678901234567890" (20 octets ASCII) en base32.
@@ -57,6 +58,25 @@ Deno.test("otpauthUri → URI otpauth valide et paramétrée", () => {
 Deno.test("verifyTotp → accepte le code RFC 6238 (t=59s, step 1)", async () => {
   await withFrozenTime(59, async () => {
     assert(await verifyTotp({ secretBase32: RFC_SECRET, code: "287082" }));
+  });
+});
+
+Deno.test("verifyTotpStep → renvoie le step matché (anti-rejeu)", async () => {
+  // t=59s → floor(59/30)=1 ; le code RFC 287082 correspond au step 1.
+  await withFrozenTime(59, async () => {
+    assertEquals(
+      await verifyTotpStep({ secretBase32: RFC_SECRET, code: "287082" }),
+      1n,
+    );
+  });
+});
+
+Deno.test("verifyTotpStep → null sur code invalide", async () => {
+  await withFrozenTime(59, async () => {
+    assertEquals(
+      await verifyTotpStep({ secretBase32: RFC_SECRET, code: "000000" }),
+      null,
+    );
   });
 });
 
