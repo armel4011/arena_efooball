@@ -40,12 +40,36 @@ void main() {
       expect(arenaErrorMessage(e), 'Cette valeur est déjà utilisée.');
     });
 
-    test('PostgrestException 42501 → message permission', () {
+    test('PostgrestException 42501 générique → message permission', () {
       const e = PostgrestException(
         message: 'permission denied',
         code: '42501',
       );
       expect(arenaErrorMessage(e), "Vous n'avez pas la permission.");
+    });
+
+    test('PostgrestException 42501 RLS brut → message générique (pas de fuite)',
+        () {
+      const e = PostgrestException(
+        message: 'new row violates row-level security policy for table "payments"',
+        code: '42501',
+      );
+      expect(arenaErrorMessage(e), "Vous n'avez pas la permission.");
+    });
+
+    test(
+        'PostgrestException 42501 garde « super-admin » → message serveur '
+        "surfacé (l'admin comprend qu'il doit escalader)", () {
+      const e = PostgrestException(
+        message: "Modification interdite : inverser le vainqueur d'un match a "
+            'cagnotte est reserve au super-admin (via resolve_dispute)',
+        code: '42501',
+      );
+      expect(
+        arenaErrorMessage(e),
+        "Modification interdite : inverser le vainqueur d'un match a cagnotte "
+        'est reserve au super-admin (via resolve_dispute)',
+      );
     });
 
     test('PostgrestException code unknown → fallback sur `message`', () {
