@@ -11,7 +11,7 @@
 -- ════════════════════════════════════════════════════════════════════
 
 begin;
-select plan(5);
+select plan(7);
 
 -- ─── Fixtures ───────────────────────────────────────────────────────
 insert into auth.users(id) values
@@ -24,7 +24,11 @@ insert into profiles(id,username,email,country_code,referral_code,role,is_active
   ('6c6c6c6c-0000-0000-0000-000000000003','del_pl','dpl@ci.invalid','CI','DPL','player',true);
 
 insert into competitions(id,name,game,format,status,start_date,max_players,registration_fee,registration_currency,prize_distribution) values
-  ('6d6d6d6d-0000-0000-0000-000000000001','DELME','efootball','single_elimination','completed',now()-interval '1 day',4,1000,'XAF','[0,0,0,0]'::jsonb);
+  ('6d6d6d6d-0000-0000-0000-000000000001','DELME','efootball','single_elimination','completed',now()-interval '1 day',4,1000,'XAF','[0,0,0,0]'::jsonb),
+  -- DELME2 : compétition annulée avec un remboursement DÛ (refund_pending).
+  ('6d6d6d6d-0000-0000-0000-000000000002','DELME2','efootball','single_elimination','cancelled',now()-interval '1 day',4,1000,'XAF','[0,0,0,0]'::jsonb);
+insert into payments(id,user_id,competition_id,amount_local,currency,provider,status) values
+  ('6e6e6e6e-0000-0000-0000-000000000001','6c6c6c6c-0000-0000-0000-000000000003','6d6d6d6d-0000-0000-0000-000000000002',1000,'XAF','mobile_money_manual','refund_pending');
 
 select has_function('public', 'delete_competition_cascade', array['uuid']);
 
@@ -45,11 +49,20 @@ select is(
   (select count(*)::int from competitions where id='6d6d6d6d-0000-0000-0000-000000000001'),
   1, 'la compétition survit aux tentatives non-super-admin');
 
--- ─── Un super-admin peut supprimer ──────────────────────────────────
+-- ─── Un super-admin ne peut PAS supprimer s'il reste des refund_pending ──
 set local request.jwt.claims = '{"sub":"6c6c6c6c-0000-0000-0000-000000000001"}';
+select throws_ok(
+  $$ select public.delete_competition_cascade('6d6d6d6d-0000-0000-0000-000000000002') $$,
+  '42501', null,
+  'suppression bloquée tant qu''un remboursement (refund_pending) est dû');
+select is(
+  (select count(*)::int from competitions where id='6d6d6d6d-0000-0000-0000-000000000002'),
+  1, 'la compétition avec remboursement dû survit à la tentative de suppression');
+
+-- ─── Un super-admin peut supprimer (sans remboursement dû) ──────────
 select lives_ok(
   $$ select public.delete_competition_cascade('6d6d6d6d-0000-0000-0000-000000000001') $$,
-  'un super-admin peut supprimer la compétition');
+  'un super-admin peut supprimer la compétition sans remboursement dû');
 
 select * from finish();
 rollback;
