@@ -1,8 +1,10 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/admin/admin_competitions_repository.dart';
+import 'package:arena/data/repositories/competition_repository.dart';
 import 'package:arena/data/repositories/payout_repository.dart';
 import 'package:arena/features_admin/competitions_admin/widgets/admin_competition_registrants_tab.dart'
     show registrantAvatarColor;
+import 'package:arena/features_shared/admin_result_gate.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/prize_ranks.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
@@ -23,6 +25,16 @@ class AdminCompetitionRankingTab extends ConsumerWidget {
     final async = ref.watch(adminCompetitionRegistrantsProvider(competitionId));
     final isSuperAdmin =
         ref.watch(currentProfileProvider).valueOrNull?.isSuperAdmin ?? false;
+    // Verrou serveur (audit 2026-07-07) : sur une compétition à prix CLÔTURÉE,
+    // seul le super-admin peut modifier le classement final. On désactive la
+    // saisie pour un admin simple plutôt que de le laisser échouer (42501).
+    final competition =
+        ref.watch(competitionByIdProvider(competitionId)).valueOrNull;
+    final finalRankLocked = competition != null &&
+        finalRankLockedForAdmin(
+          isSuperAdmin: isSuperAdmin,
+          competition: competition,
+        );
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -109,6 +121,7 @@ class AdminCompetitionRankingTab extends ConsumerWidget {
                 competitionId: competitionId,
                 registrant: sorted[i - 1],
                 participantCount: list.length,
+                locked: finalRankLocked,
               );
             },
           );
@@ -223,11 +236,15 @@ class _RankingRow extends ConsumerWidget {
     required this.competitionId,
     required this.registrant,
     required this.participantCount,
+    this.locked = false,
   });
 
   final String competitionId;
   final AdminCompetitionRegistrant registrant;
   final int participantCount;
+
+  /// Saisie du rang désactivée (compétition à prix clôturée, admin simple).
+  final bool locked;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -267,24 +284,30 @@ class _RankingRow extends ConsumerWidget {
             ),
           ),
           const SizedBox(width: ArenaSpacing.sm),
-          DropdownButton<int?>(
-            value: rank,
-            hint: Text('Rang', style: ArenaText.bodyMuted),
-            dropdownColor: ArenaColors.carbon,
-            underline: const SizedBox.shrink(),
-            style: ArenaText.body,
-            items: [
-              DropdownMenuItem<int?>(
-                child: Text('—', style: ArenaText.bodyMuted),
-              ),
-              for (var n = 1; n <= participantCount; n++)
+          if (locked)
+            const Tooltip(
+              message: superAdminOnlyHint,
+              child: Icon(Icons.lock_outline, color: ArenaColors.silver),
+            )
+          else
+            DropdownButton<int?>(
+              value: rank,
+              hint: Text('Rang', style: ArenaText.bodyMuted),
+              dropdownColor: ArenaColors.carbon,
+              underline: const SizedBox.shrink(),
+              style: ArenaText.body,
+              items: [
                 DropdownMenuItem<int?>(
-                  value: n,
-                  child: Text('Rang $n', style: ArenaText.body),
+                  child: Text('—', style: ArenaText.bodyMuted),
                 ),
-            ],
-            onChanged: (value) => _setRank(context, ref, value),
-          ),
+                for (var n = 1; n <= participantCount; n++)
+                  DropdownMenuItem<int?>(
+                    value: n,
+                    child: Text('Rang $n', style: ArenaText.body),
+                  ),
+              ],
+              onChanged: (value) => _setRank(context, ref, value),
+            ),
         ],
       ),
     );

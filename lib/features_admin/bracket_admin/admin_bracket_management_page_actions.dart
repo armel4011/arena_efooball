@@ -90,16 +90,43 @@ class _AdminMatchActions extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final homeId = _homePlayerId;
     final isStreamed = match.isStreamed;
+    // Verrou serveur (audit 2026-07-07) : re-arbitrer un match à cagnotte déjà
+    // décidé est réservé au super-admin. On désactive le CTA pour un admin
+    // simple (la 1re saisie d'un match non décidé reste permise).
+    final isSuperAdmin =
+        ref.watch(currentProfileProvider).valueOrNull?.isSuperAdmin ?? false;
+    final competition =
+        ref.watch(competitionByIdProvider(match.competitionId)).valueOrNull;
+    final verdictLocked = competition != null &&
+        matchResultLockedForAdmin(
+          isSuperAdmin: isSuperAdmin,
+          competition: competition,
+          match: match,
+        );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (verdictLocked) ...[
+          Row(
+            children: [
+              const Icon(Icons.lock_outline,
+                  size: 16, color: ArenaColors.silver),
+              const SizedBox(width: ArenaSpacing.xs),
+              Expanded(
+                child: Text(superAdminOnlyHint, style: ArenaText.small),
+              ),
+            ],
+          ),
+          const SizedBox(height: ArenaSpacing.sm),
+        ],
         Row(
           children: [
             Expanded(
               child: ArenaButton(
                 label: '✅ VALIDER SCORE',
                 fullWidth: true,
-                onPressed: () => _openVerdictDialog(context, ref),
+                onPressed:
+                    verdictLocked ? null : () => _openVerdictDialog(context, ref),
               ),
             ),
             const SizedBox(width: ArenaSpacing.sm),
@@ -234,6 +261,23 @@ class _AdminMatchActions extends ConsumerWidget {
   }
 
   Future<void> _openVerdictDialog(BuildContext context, WidgetRef ref) async {
+    // Garde serveur (audit 2026-07-07) : re-arbitrer un match à cagnotte déjà
+    // décidé est réservé au super-admin — on bloque avant d'ouvrir le dialog.
+    final isSuperAdmin =
+        ref.read(currentProfileProvider).valueOrNull?.isSuperAdmin ?? false;
+    final competition =
+        ref.read(competitionByIdProvider(match.competitionId)).valueOrNull;
+    if (competition != null &&
+        matchResultLockedForAdmin(
+          isSuperAdmin: isSuperAdmin,
+          competition: competition,
+          match: match,
+        )) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text(superAdminOnlyHint)),
+      );
+      return;
+    }
     final p1Ctrl = TextEditingController(text: '${match.score1 ?? 0}');
     final p2Ctrl = TextEditingController(text: '${match.score2 ?? 0}');
     final result = await showDialog<(int, int)?>(
@@ -425,6 +469,23 @@ class _MatchRow extends ConsumerWidget {
   }
 
   Future<void> _openVerdictDialog(BuildContext context, WidgetRef ref) async {
+    // Garde serveur (audit 2026-07-07) : re-arbitrer un match à cagnotte déjà
+    // décidé est réservé au super-admin — on bloque avant d'ouvrir le dialog.
+    final isSuperAdmin =
+        ref.read(currentProfileProvider).valueOrNull?.isSuperAdmin ?? false;
+    final competition =
+        ref.read(competitionByIdProvider(match.competitionId)).valueOrNull;
+    if (competition != null &&
+        matchResultLockedForAdmin(
+          isSuperAdmin: isSuperAdmin,
+          competition: competition,
+          match: match,
+        )) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text(superAdminOnlyHint)),
+      );
+      return;
+    }
     final p1Ctrl = TextEditingController(text: '${match.score1 ?? 0}');
     final p2Ctrl = TextEditingController(text: '${match.score2 ?? 0}');
     final result = await showDialog<(int, int)?>(
