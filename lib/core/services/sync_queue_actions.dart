@@ -295,6 +295,80 @@ class ProofCommitmentAction extends SyncAction {
   }
 }
 
+/// Rapporte au serveur que la capture anti-triche N'A PAS PU démarrer
+/// (permission refusée / échec device) — P1 #5. Transporte quelques octets, donc
+/// passe en 2G comme le commit. L'EF `anticheat-commit` matérialise la trace
+/// (`capture_status='unavailable'`) SANS jamais écraser un commitment déjà
+/// engagé → un rapport tardif est inoffensif, et le rejeu est idempotent.
+class ProofUnavailableAction extends SyncAction {
+  const ProofUnavailableAction({
+    required super.id,
+    required super.createdAt,
+    required this.matchId,
+    required this.reason,
+    super.attempts = 0,
+  });
+
+  factory ProofUnavailableAction.fromPayload({
+    required String id,
+    required DateTime createdAt,
+    required Map<String, dynamic> payload,
+  }) =>
+      ProofUnavailableAction(
+        id: id,
+        createdAt: createdAt,
+        matchId: payload['match_id'] as String,
+        reason: payload['reason'] as String?,
+      );
+
+  static const _type = 'anticheat.unavailable';
+  final String matchId;
+
+  /// Raison courte (permission_denied, start_failed, …) — trace de triage admin.
+  final String? reason;
+
+  @override
+  String get type => _type;
+
+  @override
+  Map<String, dynamic> get payload => {
+        'match_id': matchId,
+        if (reason != null) 'reason': reason,
+      };
+
+  @override
+  SyncAction copyWithAttempts(int attempts) => ProofUnavailableAction(
+        id: id,
+        createdAt: createdAt,
+        matchId: matchId,
+        reason: reason,
+        attempts: attempts,
+      );
+
+  @override
+  Future<bool> execute(SupabaseClient client) async {
+    try {
+      await client.functions.invoke(
+        'anticheat-commit',
+        body: {
+          'matchId': matchId,
+          'captureStatus': 'unavailable',
+          if (reason != null) 'captureNote': reason,
+        },
+      );
+      return true;
+    } on FunctionException catch (e, st) {
+      // 4xx (hors 401) = définitif → drop (même politique que le commit).
+      if (isTerminalCommitStatus(e.status)) return true;
+      unawaited(reportError(e, st, context: 'SyncQueue.anticheatUnavailable'));
+      return false;
+    } catch (e, st) {
+      unawaited(reportError(e, st, context: 'SyncQueue.anticheatUnavailable'));
+      return false;
+    }
+  }
+}
+
 /// Upload-on-claim (Phase 3) : sur réclamation admin, le joueur livre le
 /// fichier de capture engagé, puis l'EF `proof-verify` re-hashe l'objet et le
 /// compare au commitment. Resumable via la sync queue (gros fichier + réseau

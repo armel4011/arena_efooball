@@ -7,6 +7,7 @@ import 'package:arena/core/services/livekit_capture_service.dart';
 import 'package:arena/core/services/match_recording_coordinator.dart';
 import 'package:arena/core/services/native_lifecycle_events.dart';
 import 'package:arena/core/services/permissions_service.dart';
+import 'package:arena/core/services/proof_commitment_service.dart';
 import 'package:arena/core/services/recording_overlay_controller.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/arena_match.dart';
@@ -215,6 +216,7 @@ class _MatchRecordingLifecycleState
     final permissions = ref.read(permissionsServiceProvider);
     final bundle = await permissions.requestRecordingBundle();
     if (!bundle.allGranted) {
+      _reportCaptureUnavailable('permission_denied');
       if (mounted) {
         setState(() => _startError = _bundleErrorMessage(bundle));
       }
@@ -227,6 +229,7 @@ class _MatchRecordingLifecycleState
     // but bails silently on denial, which hides the failure.
     final overlay = await permissions.requestOverlay();
     if (!overlay.isGranted) {
+      _reportCaptureUnavailable('overlay_denied');
       if (mounted) {
         setState(() => _startError = _overlayErrorMessage(overlay));
       }
@@ -240,10 +243,25 @@ class _MatchRecordingLifecycleState
         opponentId: opp,
       );
     } catch (e) {
+      _reportCaptureUnavailable('start_failed');
       if (mounted) {
         setState(() => _startError = e.toString());
       }
     }
+  }
+
+  /// Signale au serveur (best-effort) que la capture n'a pas pu démarrer, pour
+  /// que l'absence de preuve soit TRACÉE côté serveur (P1 #5) au lieu d'être
+  /// indiscernable d'un échec réseau. Ne bloque jamais le flux de match.
+  void _reportCaptureUnavailable(String reason) {
+    final selfId = widget.selfId;
+    if (selfId == null) return;
+    unawaited(
+      ref.read(proofCommitmentServiceProvider).reportUnavailableForMatch(
+            matchId: widget.match.id,
+            reason: reason,
+          ),
+    );
   }
 
   /// Démarre la capture anti-triche via LiveKit (publish-only). Pas
@@ -255,6 +273,7 @@ class _MatchRecordingLifecycleState
     final permissions = ref.read(permissionsServiceProvider);
     final notif = await permissions.requestNotifications();
     if (!notif.isGranted) {
+      _reportCaptureUnavailable('permission_denied');
       if (mounted) {
         setState(() => _startError = _notifErrorMessage(notif));
       }
@@ -272,6 +291,7 @@ class _MatchRecordingLifecycleState
           .read(liveKitCaptureServiceProvider)
           .start(matchId: widget.match.id);
     } catch (e) {
+      _reportCaptureUnavailable('start_failed');
       if (mounted) {
         setState(() => _startError = e.toString());
       }
