@@ -23,6 +23,7 @@ import 'package:intl/intl.dart';
 
 part 'desktop_create_competition_widgets.dart';
 part 'desktop_create_competition_steps.dart';
+part 'desktop_create_competition_steps_b.dart';
 part 'desktop_create_competition_logic.dart';
 
 // `prizeBlocks` (blocs de récompenses) est partagé avec le wizard mobile via
@@ -54,7 +55,7 @@ class DesktopCreateCompetitionPage extends ConsumerStatefulWidget {
 
 class _DesktopCreateCompetitionPageState
     extends ConsumerState<DesktopCreateCompetitionPage>
-    with _SubmitAndCompute, _StepBuilders {
+    with _SubmitAndCompute, _StepBuilders, _StepBuildersB {
   static const _stepCount = 6;
   int _step = 0;
   @override
@@ -375,5 +376,4 @@ class _DesktopCreateCompetitionPageState
         return _buildReviewStep();
     }
   }
-
 }
