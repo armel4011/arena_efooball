@@ -92,7 +92,9 @@ exception when others then
   insert into _r values ('prize_invert_admin','blocked');
 end $$;
 
--- (2) 1re saisie d'un résultat sur un match À PRIX (winner null) → AUTORISÉ.
+-- (2) 1re saisie d'un résultat sur un match À PRIX (winner null) → BLOQUÉ depuis
+-- le ré-audit 2026-07-09 (frontière fermée : tout résultat d'un match à prix par
+-- un non-super-admin passe par le super-admin via resolve_dispute).
 do $$ begin
   update public.matches
      set winner_id='7a7a7a7a-0000-0000-0000-0000000000a1', score1=2, score2=0, status='completed'
@@ -174,8 +176,8 @@ reset role;
 -- ─── Assertions ─────────────────────────────────────────────────────
 select is((select result from _r where test='prize_invert_admin'),        'blocked',
   'admin simple ne peut PAS inverser un vainqueur d''un match à cagnotte');
-select is((select result from _r where test='prize_first_entry_admin'),   'allowed',
-  'admin simple peut faire la 1re saisie d''un résultat (comp à prix)');
+select is((select result from _r where test='prize_first_entry_admin'),   'blocked',
+  'admin simple NE PEUT PLUS saisir un résultat de match à prix (ré-audit 2026-07-09 : super-admin only)');
 select is((select result from _r where test='free_invert_admin'),         'allowed',
   'admin simple peut arbitrer librement un match SANS prix (inchangé)');
 select is((select result from _r where test='prize_finalrank_admin'),     'blocked',
