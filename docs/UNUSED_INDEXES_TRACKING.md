@@ -1,5 +1,24 @@
 # Unused Indexes — Tracking (audit 2026-05-23)
 
+## MAJ 2026-07-09 — re-check advisor + pg_stat
+
+Re-run `get_advisors(performance)` + `pg_stat_user_indexes` : **~60 index à
+`idx_scan = 0`, mais les stats restent BIAISÉES** — même des index certainement
+utilisés (`profiles_username_key`, `payments_idempotency_key_key`) sont à 0
+(compteurs remis à zéro / trafic quasi nul). → `idx_scan = 0` **n'est pas** un
+signal de suppression fiable. On **maintient la règle** : purge usage-based
+seulement après ≥ 2026-07-22, et re-vérifier que le trafic prod est réel
+(des index cœur ont un scan > 0) avant de dropper.
+
+**Action prise 2026-07-09 (indépendante des stats)** : migration
+`20260709140000_drop_redundant_indexes.sql` retire 3 **doublons exacts** (index
+non-unique portant le même jeu de colonnes qu'un index de contrainte UNIQUE) :
+`idx_bracket_nodes_phase`, `idx_draughts_moves_game_ply`, `idx_phases_competition`.
+Sûr : l'index unique dessert les mêmes lookups. NE PAS confondre avec la purge
+usage-based ci-dessous, toujours en attente.
+
+
+
 L'advisor performance Supabase signale **26 indexes jamais utilisés**.
 Ils sont conservés pour l'instant : le projet est en pré-production /
 phase d'ouverture publique, donc la stats `pg_stat_user_indexes` est
