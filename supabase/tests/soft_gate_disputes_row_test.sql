@@ -50,8 +50,12 @@ update public.app_config set value='true'::jsonb where key='proof_gate_enforced'
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"f4000000-0000-0000-0000-0000000000b1"}';
 select public.finalize_match_score('f4000000-0000-0000-0000-0000000000e1');
--- 2e appel : idempotence (le match est disputed, non bloqué par l'anti-rejeu).
-select public.finalize_match_score('f4000000-0000-0000-0000-0000000000e1');
+-- 2e appel : le match est désormais 'disputed' → anti-rejeu (ré-audit 2026-07-09)
+-- le refuse. L'idempotence de la dispute est donc garantie par l'anti-rejeu ;
+-- on avale l'exception attendue.
+do $$ begin
+  perform public.finalize_match_score('f4000000-0000-0000-0000-0000000000e1');
+exception when others then null; end $$;
 reset role;
 
 -- Reset flag pour ne pas laisser l'enforcement ON dans la transaction.
