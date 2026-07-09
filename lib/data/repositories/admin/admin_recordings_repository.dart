@@ -11,6 +11,7 @@ class AdminRecording {
     required this.matchId,
     required this.provider,
     required this.competitionName,
+    required this.countryCode,
     required this.game,
     required this.playerUsername,
     required this.opponentUsername,
@@ -29,6 +30,7 @@ class AdminRecording {
       matchId: j['match_id'] as String,
       provider: (j['provider'] as String?) ?? 'native_recorder',
       competitionName: j['competition_name'] as String?,
+      countryCode: j['country_code'] as String?,
       game: j['game'] as String?,
       playerUsername: j['player_username'] as String?,
       opponentUsername: j['opponent_username'] as String?,
@@ -44,6 +46,10 @@ class AdminRecording {
   final String matchId;
   final String provider;
   final String? competitionName;
+
+  /// Pays organisateur de la compétition (ISO-2). Sert au cloisonnement admin
+  /// côté serveur (RPC/RLS) ; affiché + recherchable côté UI.
+  final String? countryCode;
   final String? game;
   final String? playerUsername;
   final String? opponentUsername;
@@ -70,6 +76,7 @@ class AdminRecording {
   /// Texte de recherche client-side (compétition + joueurs).
   String get searchHaystack => [
         competitionName ?? '',
+        countryCode ?? '',
         playerUsername ?? '',
         opponentUsername ?? '',
       ].join(' ').toLowerCase();

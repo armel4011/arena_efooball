@@ -83,7 +83,7 @@ class _AdminRecordingsPageState extends ConsumerState<AdminRecordingsPage> {
                   style: ArenaText.body.copyWith(color: ArenaColors.bone),
                   onChanged: (v) => setState(() => _query = v.trim().toLowerCase()),
                   decoration: InputDecoration(
-                    hintText: 'Filtrer par compétition ou joueur…',
+                    hintText: 'Filtrer par compétition, pays ou joueur…',
                     hintStyle:
                         ArenaText.body.copyWith(color: ArenaColors.silver),
                     prefixIcon:
@@ -216,6 +216,14 @@ class _RecordingTile extends StatelessWidget {
                         label: rec.isLiveKit ? 'LiveKit' : 'Natif',
                         variant: ArenaBadgeVariant.neutral,
                       ),
+                      if (rec.countryCode != null &&
+                          rec.countryCode!.isNotEmpty) ...[
+                        const SizedBox(width: ArenaSpacing.xs),
+                        ArenaBadge(
+                          label: rec.countryCode!,
+                          variant: ArenaBadgeVariant.neutral,
+                        ),
+                      ],
                     ],
                   ),
                   const SizedBox(height: ArenaSpacing.xs),
