@@ -1,28 +1,25 @@
 -- =============================================================================
--- ARENA — Audit 2026-07-09 F2 : subvention plateforme bornée (payouts ≤ recettes
---         + subvention explicitement autorisée)
+-- ARENA — Audit 2026-07-09 F2 : subvention plateforme — déclaration + trace
 -- =============================================================================
 -- Constat : generate_payouts capait au prize_pool_local DÉCLARÉ mais ne
--- réconciliait PAS avec les frais ENCAISSÉS — un pool déclaré > recettes faisait
--- verser la plateforme de sa poche, avec pour seul garde-fou une alerte audit
--- non-bloquante (payout_pool_subsidy). Rien ne distinguait une subvention voulue
--- (tournoi promo) d'un détournement.
+-- réconciliait pas avec les frais ENCAISSÉS ; la subvention (pool > recettes)
+-- n'était qu'une alerte audit non-bloquante.
 --
--- Décision produit (« champ subvention explicite ») :
---   * Nouvelle colonne competitions.authorized_subsidy_local (défaut 0). C'est le
---     montant que la plateforme accepte EXPLICITEMENT de subventionner au-delà
---     des frais encaissés. Réservée au super-admin (guard financier F3 + pas de
---     grant UPDATE client ; posée via la RPC set_competition_subsidy).
---   * generate_payouts BLOQUE désormais si
---       total_versé > frais_encaissés + subvention_autorisée
---     (au lieu de la simple alerte). La trace audit reste quand une subvention
---     autorisée est effectivement consommée.
+-- Décision produit v2 (« trace seule ») : on NE bloque PAS. Rationale : depuis
+-- F3 (20260709170000), prize_pool_local est déjà réservé au super-admin — la
+-- cagnotte déclarée EST donc une autorisation explicite de dépense, et le cap au
+-- pool existe déjà. Le modèle « cagnotte financée par la plateforme » (tournois
+-- promo, pool > frais) est un cas NORMAL qu'il ne faut pas casser. On ajoute :
+--   * un champ competitions.authorized_subsidy_local (super-admin) pour DÉCLARER
+--     explicitement le montant de subvention attendu (reporting / réconciliation) ;
+--   * une trace audit ENRICHIE (paid_total, collected_fees, authorized_subsidy)
+--     quand la plateforme subventionne — sans jamais bloquer la génération.
 --
--- ⚠️ competitions a des GRANTS COLONNE (piège C-1) → la nouvelle colonne exige un
--- `grant select` explicite, sinon les lectures `select *` cassent (42501). PAS de
--- grant UPDATE (la colonne se pose uniquement via la RPC DEFINER super-admin).
+-- ⚠️ competitions a des GRANTS COLONNE (piège C-1) → grant SELECT explicite sur la
+-- nouvelle colonne (sinon `select *` casse). PAS de grant UPDATE (posée via la RPC
+-- DEFINER super-admin).
 -- =============================================================================
--- Depends on: 20260706100400 (generate_payouts, admin_can_*), 20260709170000
+-- Depends on: 20260706100400 (generate_payouts), 20260709170000
 --   (guard_competitions_financial_columns F3), 20260505100005 (is_super_admin).
 -- =============================================================================
 
@@ -34,10 +31,10 @@ alter table public.competitions
 grant select (authorized_subsidy_local) on public.competitions to authenticated, anon;
 
 comment on column public.competitions.authorized_subsidy_local is
-  'Audit 2026-07-09 F2 : montant que la plateforme accepte de subventionner '
-  'au-delà des frais encaissés (tournoi promo). Défaut 0. Super-admin only '
-  '(guard financier + RPC set_competition_subsidy). generate_payouts refuse '
-  'toute subvention au-delà de ce plafond.';
+  'Audit 2026-07-09 F2 : subvention plateforme DÉCLARÉE (au-delà des frais '
+  'encaissés) pour un tournoi promo. Défaut 0. Super-admin only (guard financier '
+  '+ RPC set_competition_subsidy). Non bloquant : sert au reporting et à la '
+  'réconciliation dans la trace audit payout_pool_subsidy.';
 
 -- ─── 2. Guard financier F3 : figer aussi authorized_subsidy_local ───────────
 create or replace function public.guard_competitions_financial_columns()
@@ -62,7 +59,7 @@ begin
 end;
 $$;
 
--- ─── 3. RPC super-admin pour poser la subvention ────────────────────────────
+-- ─── 3. RPC super-admin pour déclarer la subvention ─────────────────────────
 create or replace function public.set_competition_subsidy(
   p_competition_id uuid,
   p_amount numeric
@@ -92,13 +89,14 @@ revoke execute on function public.set_competition_subsidy(uuid, numeric) from an
 grant execute on function public.set_competition_subsidy(uuid, numeric) to authenticated;
 
 comment on function public.set_competition_subsidy(uuid, numeric) is
-  'Audit 2026-07-09 F2 : pose competitions.authorized_subsidy_local (super-admin '
-  'only). Autorise explicitement une subvention plateforme au-delà des frais '
-  'encaissés pour un tournoi promo. DEFINER → contourne les grants colonne.';
+  'Audit 2026-07-09 F2 : déclare competitions.authorized_subsidy_local (super-admin '
+  'only) — montant de subvention plateforme attendu pour un tournoi promo. Non '
+  'bloquant (reporting/réconciliation). DEFINER → contourne les grants colonne.';
 
--- ─── 4. generate_payouts : cap dur sur recettes + subvention autorisée ──────
+-- ─── 4. generate_payouts : trace enrichie (NON bloquante) ───────────────────
 -- Corps repris verbatim de 20260706100400 ; seuls le SELECT (ajout de
--- authorized_subsidy_local) et le bloc final « P1.2 alerte » (→ refus F2) changent.
+-- authorized_subsidy_local) et le bloc de trace final changent — AUCUN nouveau
+-- blocage (le cap au pool déclaré, déjà super-admin-only via F3, reste la borne).
 create or replace function public.generate_payouts(p_competition_id uuid)
 returns integer
 language plpgsql
@@ -185,7 +183,7 @@ begin
         limit 1;
       if v_user is not null then
         v_paid_total := v_paid_total + v_amount;
-        -- Cap dur : ne jamais verser plus que la cagnotte déclarée.
+        -- Cap dur : ne jamais verser plus que la cagnotte déclarée (super-admin).
         if v_pool is not null and v_pool > 0 and v_paid_total > v_pool then
           raise exception 'Versements (%) superieurs a la cagnotte declaree (% %). Verifie la repartition des gains.',
             v_paid_total, v_pool, v_currency
@@ -218,21 +216,16 @@ begin
       using errcode = 'P0002';
   end if;
 
-  -- F2 : la plateforme ne peut subventionner (versements > frais encaissés) que
-  -- dans la limite EXPLICITEMENT autorisée. Au-delà → refus (rollback total).
-  if v_paid_total > v_collected + coalesce(v_authorized_subsidy, 0) then
-    raise exception 'Versements (% %) depassent les frais encaisses (%) + la subvention autorisee (%). Declare une subvention (set_competition_subsidy) ou corrige la repartition.',
-      v_paid_total, v_currency, v_collected, coalesce(v_authorized_subsidy, 0)
-      using errcode = '23514';
-  end if;
-
-  -- Trace : subvention autorisée effectivement consommée (payouts > recettes).
+  -- F2 : trace ENRICHIE (non bloquante) quand la plateforme subventionne
+  -- (versements > frais encaissés). Compare la subvention réelle (paid - collected)
+  -- à la subvention DÉCLARÉE (authorized_subsidy_local) pour la réconciliation.
   if v_paid_total > v_collected then
     insert into public.admin_audit_log
       (admin_id, action, target_type, target_id, after_state)
     values (
       auth.uid(), 'payout_pool_subsidy', 'competition', p_competition_id,
       jsonb_build_object('paid_total', v_paid_total, 'collected_fees', v_collected,
+                         'actual_subsidy', v_paid_total - v_collected,
                          'authorized_subsidy', coalesce(v_authorized_subsidy, 0),
                          'currency', v_currency, 'payouts_count', v_count));
   end if;
