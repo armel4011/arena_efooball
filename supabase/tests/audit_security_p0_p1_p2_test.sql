@@ -87,9 +87,11 @@ do $$ begin
   insert into _r values ('p1_forge_proof','allowed');
 exception when others then insert into _r values ('p1_forge_proof','blocked'); end $$;
 
--- (6) joueur bascule is_public (non figé) → AUTORISÉ
+-- (6) joueur modifie une colonne NON figée (is_active) → AUTORISÉ. NB : is_public
+-- reste false (la policy streams_update exige is_public=false côté joueur ; ce
+-- n'est pas le guard qui bloquerait un passage à true, mais la RLS).
 do $$ begin
-  update public.streams set is_public=true where id='5ec00000-0000-0000-0000-0000000000f1';
+  update public.streams set is_active=true where id='5ec00000-0000-0000-0000-0000000000f1';
   insert into _r values ('p1_benign_update','allowed');
 exception when others then insert into _r values ('p1_benign_update','blocked'); end $$;
 
@@ -128,7 +130,7 @@ select is((select result from _r where test='p0_admin_ban'), 'allowed',
 select is((select result from _r where test='p1_forge_proof'), 'blocked',
   'P1 : joueur NE PEUT PAS forger proof_committed_at/sha256/hash_verified');
 select is((select result from _r where test='p1_benign_update'), 'allowed',
-  'P1 : joueur peut toujours modifier is_public (non figé)');
+  'P1 : joueur peut modifier une colonne non figée (is_active) — guard non sur-bloquant');
 select is(
   (select has_function_privilege('authenticated','public.generate_single_elim_bracket(uuid)','execute')::text),
   'false', 'P2a : generate_single_elim_bracket non exécutable par authenticated');
