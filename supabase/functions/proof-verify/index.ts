@@ -38,9 +38,12 @@ const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 const BUCKET = "match-recordings";
 
 // Garde-fou mémoire : le proxy 360p est censé être petit (~50 Mo pour 25 min).
-// On hashe en mémoire (Web Crypto ne streame pas) ; au-delà de cette borne on
-// refuse pour ne pas saturer l'EF — l'admin bascule alors en revue manuelle.
-const MAX_VERIFY_BYTES = 200 * 1024 * 1024;
+// On hashe EN MÉMOIRE (Web Crypto ne streame pas) : le Blob téléchargé + son
+// arrayBuffer coexistent → ~2× la taille. Une Edge Function plafonne à ~256 Mo,
+// donc 200 Mo faisait OOM (l'isolate était tué au lieu de renvoyer 413). On borne
+// à 64 Mo (marge confortable sur le proxy 360p ciblé) ; au-delà → 413 et l'admin
+// bascule en revue manuelle (le commitment reste engagé). Audit 2026-07-09 P2.
+const MAX_VERIFY_BYTES = 64 * 1024 * 1024;
 
 // Rétention prolongée d'une pièce de litige uploadée à la demande (vs J+1 des
 // captures de routine purgées par cleanup-streams).
@@ -110,7 +113,7 @@ Deno.serve(async (req) => {
   const { data: stream, error: selErr } = await sb
     .from("streams")
     .select(
-      "id, match_id, player_id, proof_sha256, proof_uploaded_at, proof_hash_verified",
+      "id, match_id, player_id, proof_sha256, proof_claimed_at, proof_uploaded_at, proof_hash_verified",
     )
     .eq("id", streamId)
     .maybeSingle();
@@ -128,6 +131,12 @@ Deno.serve(async (req) => {
   }
   if (!stream.proof_sha256) {
     return jsonResponse({ error: "no_commitment" }, 409);
+  }
+  // Ne vérifier QUE ce qu'un admin a réellement réclamé (réduit la surface de
+  // re-hash concurrent : une preuve non réclamée n'a pas à être hashée à la
+  // demande). Audit 2026-07-09 P3.
+  if (!stream.proof_claimed_at) {
+    return jsonResponse({ error: "not_claimed" }, 409);
   }
   // Anti-traversée : l'objet doit être dans le dossier du (match, joueur).
   if (!objectPathBelongsTo(objectPath, stream.match_id, stream.player_id)) {
