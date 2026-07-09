@@ -17,13 +17,15 @@ select plan(9);
 insert into auth.users(id) values
   ('5ec00000-0000-0000-0000-0000000000a0'),  -- super-admin
   ('5ec00000-0000-0000-0000-0000000000c0'),  -- admin restreint CM
-  ('5ec00000-0000-0000-0000-0000000000b1'),  -- player1
-  ('5ec00000-0000-0000-0000-0000000000b2');  -- player2
+  ('5ec00000-0000-0000-0000-0000000000b1'),  -- player1 (sujet du test forge P1)
+  ('5ec00000-0000-0000-0000-0000000000b2'),  -- player2
+  ('5ec00000-0000-0000-0000-0000000000b3');  -- cible dédiée du test « super-admin change un role »
 insert into profiles(id,username,email,country_code,referral_code,role,is_active,permanent_ban,admin_allowed_countries) values
   ('5ec00000-0000-0000-0000-0000000000a0','se_sa','sesa@ci.invalid','CM','SESA','super_admin',true,false,null),
   ('5ec00000-0000-0000-0000-0000000000c0','se_cm','secm@ci.invalid','CM','SECM','admin',true,false,array['CM']),
   ('5ec00000-0000-0000-0000-0000000000b1','se_p1','sep1@ci.invalid','CM','SEP1','player',true,false,null),
-  ('5ec00000-0000-0000-0000-0000000000b2','se_p2','sep2@ci.invalid','CM','SEP2','player',true,false,null);
+  ('5ec00000-0000-0000-0000-0000000000b2','se_p2','sep2@ci.invalid','CM','SEP2','player',true,false,null),
+  ('5ec00000-0000-0000-0000-0000000000b3','se_p3','sep3@ci.invalid','CM','SEP3','player',true,false,null);
 
 insert into competitions(id,name,game,format,status,start_date,max_players,registration_fee,registration_currency,country_code) values
   ('5ec00000-0000-0000-0000-0000000000d1','SECOMP_CM','efootball','single_elimination','ongoing',now()-interval '1 hour',4,0,'XAF','CM'),
@@ -64,10 +66,12 @@ do $$ begin
   insert into _r values ('p0_admin_ban','allowed');
 exception when others then insert into _r values ('p0_admin_ban','blocked'); end $$;
 
--- (3) super-admin change un role → AUTORISÉ
+-- (3) super-admin change un role → AUTORISÉ. Cible b3 (dédiée) pour ne pas
+-- promouvoir p1, qui doit rester NON-admin pour le test de forge P1 (un admin
+-- est légitimement exempté du guard streams).
 set local request.jwt.claims = '{"sub":"5ec00000-0000-0000-0000-0000000000a0"}';
 do $$ begin
-  update public.profiles set role='admin' where id='5ec00000-0000-0000-0000-0000000000b1';
+  update public.profiles set role='admin' where id='5ec00000-0000-0000-0000-0000000000b3';
   insert into _r values ('p0_superadmin_role','allowed');
 exception when others then insert into _r values ('p0_superadmin_role','blocked'); end $$;
 
