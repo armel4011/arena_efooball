@@ -116,27 +116,12 @@ class _EmptyStateState extends ConsumerState<_EmptyState> {
     setState(() => _generating = true);
 
     try {
-      switch (widget.competition.format) {
-        case TournamentFormat.singleElimination:
-          await repo.generateSingleElim(
-            competitionId: widget.competition.id,
-            playerIds: players,
-            thirdPlace: widget.competition.thirdPlaceMatch,
-          );
-        case TournamentFormat.roundRobin:
-          await repo.generateRoundRobinTournament(
-            competitionId: widget.competition.id,
-            playerIds: players,
-          );
-        case TournamentFormat.groupsThenKnockout:
-          await repo.generateGroupsKnockoutTournament(
-            competitionId: widget.competition.id,
-            playerIds: players,
-            groupCount: extra!.groupCount,
-            qualifiersPerGroup: extra.qualifiers,
-            thirdPlace: widget.competition.thirdPlaceMatch,
-          );
-      }
+      await generateBracketFor(
+        repo: repo,
+        competition: widget.competition,
+        playerIds: players,
+        groups: extra ?? GroupsConfig.empty,
+      );
       await ref.read(adminAuditLogRepositoryProvider).record(
         adminId: adminId,
         action: 'bracket_generated',
@@ -157,13 +142,13 @@ class _EmptyStateState extends ConsumerState<_EmptyState> {
     }
   }
 
-  Future<_GroupsConfig?> _maybeAskGroupsConfig() async {
+  Future<GroupsConfig?> _maybeAskGroupsConfig() async {
     if (widget.competition.format != TournamentFormat.groupsThenKnockout) {
-      return _GroupsConfig.empty;
+      return GroupsConfig.empty;
     }
     final groupsCtrl = TextEditingController(text: '4');
     final qualCtrl = TextEditingController(text: '2');
-    final out = await showDialog<_GroupsConfig>(
+    final out = await showDialog<GroupsConfig>(
       context: context,
       builder: (c) => AlertDialog(
         backgroundColor: ArenaColors.carbon,
@@ -196,7 +181,7 @@ class _EmptyStateState extends ConsumerState<_EmptyState> {
               final g = int.tryParse(groupsCtrl.text) ?? 0;
               final q = int.tryParse(qualCtrl.text) ?? 0;
               if (g < 2 || q < 1) return;
-              Navigator.of(c).pop(_GroupsConfig(g, q));
+              Navigator.of(c).pop(GroupsConfig(g, q));
             },
             child: const Text('OK'),
           ),
@@ -209,11 +194,4 @@ class _EmptyStateState extends ConsumerState<_EmptyState> {
     });
     return out;
   }
-}
-
-class _GroupsConfig {
-  const _GroupsConfig(this.groupCount, this.qualifiers);
-  final int groupCount;
-  final int qualifiers;
-  static const empty = _GroupsConfig(0, 0);
 }

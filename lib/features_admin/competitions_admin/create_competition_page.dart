@@ -4,13 +4,13 @@ import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_competitions_repository.dart';
-import 'package:arena/features_admin/competitions_admin/widgets/competition_form_widgets.dart';
 import 'package:arena/features_admin/competitions_admin/widgets/wizard_step_country.dart';
 import 'package:arena/features_admin/competitions_admin/widgets/wizard_step_fees.dart';
 import 'package:arena/features_admin/competitions_admin/widgets/wizard_step_format.dart';
 import 'package:arena/features_admin/competitions_admin/widgets/wizard_step_infos.dart';
 import 'package:arena/features_admin/competitions_admin/widgets/wizard_step_prizes.dart';
 import 'package:arena/features_admin/competitions_admin/widgets/wizard_step_review.dart';
+import 'package:arena/features_shared/admin/competition_draft.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/competition_description_templates.dart';
 import 'package:arena/features_shared/payment_operator_templates.dart';
@@ -269,30 +269,14 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
     }
   }
 
-  bool get _canAdvance {
-    switch (_step) {
-      case 0:
-        return _nameCtrl.text.trim().length >= 3 && _startDate != null;
-      case 1:
-        return _maxPlayers >= 2;
-      case 2:
-        // Les montants des récompenses sont libres (y compris 0).
-        return true;
-      case 3:
-        // Le montant seul est validé ici ; la config paiement (codes) vit
-        // désormais à l'étape « Pays ».
-        final fee = double.tryParse(_entryFeeCtrl.text) ?? -1;
-        return fee >= 0;
-      case 4:
-        // Étape « Pays » : pays organisateur toujours défini (défaut CM). Si
-        // payante, exiger ≥1 pays activé avec chaque opérateur complet.
-        final fee = double.tryParse(_entryFeeCtrl.text) ?? 0;
-        if (fee <= 0) return true;
-        return paymentDraftsValid(_paymentCountries);
-      default:
-        return true;
-    }
-  }
+  bool get _canAdvance => canAdvanceCompetitionStep(
+        step: _step,
+        name: _nameCtrl.text,
+        startDate: _startDate,
+        maxPlayers: _maxPlayers,
+        entryFeeText: _entryFeeCtrl.text,
+        paymentCountries: _paymentCountries,
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -758,40 +742,21 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
   /// Construit la liste plate des **montants** par place : places
   /// individuelles 1-4 puis chaque bloc actif déplié (même montant
   /// répété sur toutes ses places).
-  List<int> _prizeDistribution() {
-    if (_noReward) return const [];
-    final raw = <int>[];
-    final topCount = _rewardedCount < 4 ? _rewardedCount : 4;
-    for (var i = 0; i < topCount; i++) {
-      raw.add(int.tryParse(_topShareCtrls[i].text) ?? 0);
-    }
-    for (var b = 0; b < prizeBlocks.length; b++) {
-      final block = prizeBlocks[b];
-      if (_rewardedCount < block.lastRank) break;
-      final perPlace = int.tryParse(_blockShareCtrls[b].text) ?? 0;
-      for (var k = 0; k < block.size; k++) {
-        raw.add(perPlace);
-      }
-    }
-    return raw;
-  }
+  List<int> _prizeDistribution() => computePrizeDistribution(
+        noReward: _noReward,
+        rewardedCount: _rewardedCount,
+        topShareTexts: _topShareCtrls.map((c) => c.text).toList(),
+        blockShareTexts: _blockShareCtrls.map((c) => c.text).toList(),
+      );
 
   /// Somme des montants : places individuelles + (montant de bloc × sa
   /// taille). C'est la cagnotte totale distribuée.
-  int _shareTotal() {
-    if (_noReward) return 0;
-    var total = 0;
-    final topCount = _rewardedCount < 4 ? _rewardedCount : 4;
-    for (var i = 0; i < topCount; i++) {
-      total += int.tryParse(_topShareCtrls[i].text) ?? 0;
-    }
-    for (var b = 0; b < prizeBlocks.length; b++) {
-      final block = prizeBlocks[b];
-      if (_rewardedCount < block.lastRank) break;
-      total += (int.tryParse(_blockShareCtrls[b].text) ?? 0) * block.size;
-    }
-    return total;
-  }
+  int _shareTotal() => computeShareTotal(
+        noReward: _noReward,
+        rewardedCount: _rewardedCount,
+        topShareTexts: _topShareCtrls.map((c) => c.text).toList(),
+        blockShareTexts: _blockShareCtrls.map((c) => c.text).toList(),
+      );
 
   /// Cagnotte à persister dans `prize_pool_local` : la somme des
   /// montants de récompense saisis.
@@ -806,31 +771,15 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
 
   /// Lot A.2 — Parse `_roundIntervalsCtrl` CSV → `List<int>?`. Vide ou
   /// malformé → null (utilise l'intervalle global).
-  List<int>? _roundIntervals() {
-    final raw = _roundIntervalsCtrl.text.trim();
-    if (raw.isEmpty) return null;
-    final parts =
-        raw.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty);
-    final ints = <int>[];
-    for (final p in parts) {
-      final n = int.tryParse(p);
-      if (n == null || n <= 0) return null; // invalid → fallback
-      ints.add(n);
-    }
-    return ints.isEmpty ? null : ints;
-  }
+  List<int>? _roundIntervals() =>
+      parseRoundIntervals(_roundIntervalsCtrl.text);
 
   /// Lot F.1 — Config groupes pour groups_then_knockout.
-  Map<String, dynamic> _formatConfig() {
-    if (_format != TournamentFormat.groupsThenKnockout) {
-      return const <String, dynamic>{};
-    }
-    return <String, dynamic>{
-      'group_count': int.tryParse(_groupCountCtrl.text.trim()) ?? 4,
-      'qualifiers_per_group':
-          int.tryParse(_qualifiersPerGroupCtrl.text.trim()) ?? 2,
-    };
-  }
+  Map<String, dynamic> _formatConfig() => buildFormatConfig(
+        format: _format,
+        groupCountText: _groupCountCtrl.text,
+        qualifiersText: _qualifiersPerGroupCtrl.text,
+      );
 
   Future<void> _pickStartDate() async {
     final now = DateTime.now();

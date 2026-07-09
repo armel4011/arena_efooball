@@ -535,10 +535,10 @@ mixin _StepBuilders on ConsumerState<DesktopCreateCompetitionPage> {
           ),
           const SizedBox(height: 12),
         ],
-        for (var b = 0; b < _prizeBlocks.length; b++)
-          if (_rewardedCount >= _prizeBlocks[b].lastRank) ...[
+        for (var b = 0; b < prizeBlocks.length; b++)
+          if (_rewardedCount >= prizeBlocks[b].lastRank) ...[
             InfoLabel(
-              label: '🏅 ${_prizeBlocks[b].label} — par place',
+              label: '🏅 ${prizeBlocks[b].label} — par place',
               child: _amountBox(_blockShareCtrls[b], 'Montant par place'),
             ),
             const SizedBox(height: 12),

@@ -1,5 +1,6 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/admin/super_admin_dashboard_repository.dart';
+import 'package:arena/features_shared/admin/admin_formatters.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
@@ -192,7 +193,7 @@ class _MarginCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final value = kpisAsync.maybeWhen(
-      data: (k) => _moneyShort(k.margin30dXaf),
+      data: (k) => adminMoneyShort(k.margin30dXaf),
       orElse: () => '—',
     );
     return Container(
@@ -694,14 +695,4 @@ class _ErrorTile extends StatelessWidget {
 String _intLabel(int n) {
   if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}K';
   return '$n';
-}
-
-String _moneyShort(double xaf) {
-  if (xaf.abs() >= 1000000) {
-    return '${(xaf / 1000000).toStringAsFixed(1)}M';
-  }
-  if (xaf.abs() >= 1000) {
-    return '${(xaf / 1000).toStringAsFixed(1)}K';
-  }
-  return xaf.round().toString();
 }
