@@ -79,7 +79,7 @@ class _DesktopRecordingsPageState extends ConsumerState<DesktopRecordingsPage> {
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
             child: TextBox(
-              placeholder: 'Filtrer par compétition ou joueur…',
+              placeholder: 'Filtrer par compétition, pays ou joueur…',
               prefix: const Padding(
                 padding: EdgeInsets.only(left: 8),
                 child: Icon(FluentIcons.search),
@@ -170,6 +170,11 @@ class _RecordingCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     _tag(rec.isLiveKit ? 'LiveKit' : 'Natif', ArenaColors.signalBlue),
+                    if (rec.countryCode != null &&
+                        rec.countryCode!.isNotEmpty) ...[
+                      const SizedBox(width: 6),
+                      _tag(rec.countryCode!, ArenaColors.silver),
+                    ],
                     if (rec.hasOpenDispute) ...[
                       const SizedBox(width: 6),
                       _tag('LITIGE', ArenaColors.warning),
