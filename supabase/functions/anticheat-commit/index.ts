@@ -8,6 +8,12 @@
 // sur cet engagement, JAMAIS sur l'upload vidéo lourd (qui n'a lieu que sur
 // litige, à la demande de l'admin — cf. proof-verify).
 //
+// ⚠️ LIMITE (P1 #4, cf. docs/anticheat-threat-model.md) : le hash est calculé
+// sur un device NON FIABLE — un APK repackagé peut engager le hash d'une vidéo
+// retouchée. Le commitment est donc une DÉTERRENCE forte (write-once + horodaté
+// serveur), pas une preuve infalsifiable. La preuve infalsifiable = tier egress
+// (capture serveur LiveKit). Risque résiduel du tier natif assumé et documenté.
+//
 // Pourquoi côté serveur :
 //   * `proof_committed_at` est estampillé par le SERVEUR (now()) → un client ne
 //     peut pas antidater son engagement avec son horloge locale.
@@ -16,13 +22,19 @@
 //     re-commit avec un hash DIFFÉRENT est refusé (409) — sinon un tricheur
 //     pourrait, après coup, ré-engager le hash d'une vidéo trafiquée.
 //
-// Entrées (POST JSON) :
-//   { matchId, proofSha256, proofBytes, proofDurationSeconds? }
-//   proofDurationSeconds est OPTIONNEL (métadonnée litige, coûteuse à calculer
-//   côté client sur un gros MP4) — si absent/null, la colonne reste null.
+// Entrées (POST JSON) — DEUX modes :
+//   A) COMMIT : { matchId, proofSha256, proofBytes, proofDurationSeconds? }
+//      proofDurationSeconds est OPTIONNEL (métadonnée litige, coûteuse à calculer
+//      côté client sur un gros MP4) — si absent/null, la colonne reste null.
+//      Marque capture_status='committed'.
+//   B) INDISPONIBLE (P1 #5) : { matchId, captureStatus: 'unavailable', captureNote? }
+//      Le client n'a PAS pu capturer (permission refusée / échec device). On
+//      matérialise la TRACE (capture_status='unavailable' + raison) pour que
+//      l'admin distingue « joueur ne pouvait pas filmer » d'une capture
+//      silencieusement absente. N'écrase JAMAIS un commitment déjà engagé.
 //
 // Sorties :
-//   { ok: true, streamId, committedAt, idempotent? }
+//   { ok: true, streamId, committedAt?, captureStatus?, idempotent? }
 //
 // Autorisation :
 //   * JWT Supabase valide (Authorization: Bearer …).
@@ -85,6 +97,8 @@ Deno.serve(async (req) => {
     proofSha256?: unknown;
     proofBytes?: unknown;
     proofDurationSeconds?: unknown;
+    captureStatus?: unknown;
+    captureNote?: unknown;
   };
   try {
     body = await req.json();
@@ -93,6 +107,11 @@ Deno.serve(async (req) => {
   }
 
   const matchId = typeof body.matchId === "string" ? body.matchId : null;
+  if (!matchId) return jsonResponse({ error: "matchId_required" }, 400);
+
+  // Mode B — rapport « capture indisponible » (P1 #5). On ne valide PAS de hash.
+  const isUnavailable = body.captureStatus === "unavailable";
+
   const sha256 = normalizeSha256(body.proofSha256);
   const bytes = body.proofBytes;
   // Durée optionnelle : null/absent accepté ; si fourni, doit être > 0.
@@ -100,12 +119,19 @@ Deno.serve(async (req) => {
   const duration = durationRaw === undefined || durationRaw === null
     ? null
     : durationRaw;
+  // Raison libre du mode B, bornée pour éviter tout abus de stockage.
+  const captureNote = typeof body.captureNote === "string"
+    ? body.captureNote.trim().slice(0, 200) || null
+    : null;
 
-  if (!matchId) return jsonResponse({ error: "matchId_required" }, 400);
-  if (!sha256) return jsonResponse({ error: "invalid_sha256" }, 400);
-  if (!isPositiveInt(bytes)) return jsonResponse({ error: "invalid_bytes" }, 400);
-  if (duration !== null && !isPositiveInt(duration)) {
-    return jsonResponse({ error: "invalid_duration" }, 400);
+  if (!isUnavailable) {
+    if (!sha256) return jsonResponse({ error: "invalid_sha256" }, 400);
+    if (!isPositiveInt(bytes)) {
+      return jsonResponse({ error: "invalid_bytes" }, 400);
+    }
+    if (duration !== null && !isPositiveInt(duration)) {
+      return jsonResponse({ error: "invalid_duration" }, 400);
+    }
   }
 
   // Écritures via service-role : estampille serveur + write-once, indépendamment
@@ -137,7 +163,7 @@ Deno.serve(async (req) => {
   // crée une — le commit est le plancher de preuve, il ne dépend pas du provider.
   const { data: existing, error: selErr } = await sb
     .from("streams")
-    .select("id, proof_sha256, proof_committed_at")
+    .select("id, proof_sha256, proof_committed_at, capture_status")
     .eq("match_id", matchId)
     .eq("player_id", userId)
     .eq("provider", "native_recorder")
@@ -149,6 +175,60 @@ Deno.serve(async (req) => {
       { error: "stream_lookup_failed", detail: safeDetail(selErr.message, "anticheat-commit") },
       500,
     );
+  }
+
+  // ─── Mode B : rapport « capture indisponible » ────────────────────────────
+  // Trace-seule. N'écrase JAMAIS un commitment déjà engagé (le commit est un
+  // signal plus fort). Idempotent : re-rapporter unavailable est un no-op.
+  if (isUnavailable) {
+    if (existing?.proof_sha256) {
+      // Déjà committé → on ignore le rapport d'indisponibilité (incohérent).
+      return jsonResponse({
+        ok: true,
+        streamId: existing.id,
+        captureStatus: "committed",
+        idempotent: true,
+      });
+    }
+    const trace = { capture_status: "unavailable", capture_note: captureNote };
+    if (existing) {
+      const { error: updErr } = await sb
+        .from("streams").update(trace).eq("id", existing.id);
+      if (updErr) {
+        return jsonResponse(
+          { error: "commit_failed", detail: safeDetail(updErr.message, "anticheat-commit") },
+          500,
+        );
+      }
+      return jsonResponse({
+        ok: true,
+        streamId: existing.id,
+        captureStatus: "unavailable",
+      });
+    }
+    const { data: insUnavail, error: insUnavailErr } = await sb
+      .from("streams")
+      .insert({
+        match_id: matchId,
+        player_id: userId,
+        provider: "native_recorder",
+        is_public: false,
+        is_active: false,
+        ...trace,
+      })
+      .select("id")
+      .single();
+    if (insUnavailErr) {
+      return jsonResponse(
+        { error: "commit_failed", detail: safeDetail(insUnavailErr.message, "anticheat-commit") },
+        500,
+      );
+    }
+    return jsonResponse({
+      ok: true,
+      streamId: insUnavail.id,
+      captureStatus: "unavailable",
+    });
   }
 
   const committedAt = new Date().toISOString();
@@ -173,6 +253,7 @@ Deno.serve(async (req) => {
     proof_bytes: bytes,
     proof_duration_seconds: duration,
     proof_committed_at: committedAt,
+    capture_status: "committed",
   };
 
   if (existing) {

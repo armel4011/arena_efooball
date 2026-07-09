@@ -98,6 +98,31 @@ void main() {
       expect(back.type, 'competition.register_free');
     });
 
+    test('anticheat.unavailable round-trip', () {
+      final a = ProofUnavailableAction(
+        id: 'id4',
+        createdAt: epoch,
+        matchId: 'm1',
+        reason: 'permission_denied',
+      );
+      final back = SyncAction.fromJson(a.toJson())! as ProofUnavailableAction;
+      expect(back.matchId, 'm1');
+      expect(back.reason, 'permission_denied');
+      expect(back.type, 'anticheat.unavailable');
+    });
+
+    test('anticheat.unavailable round-trip sans raison', () {
+      final a = ProofUnavailableAction(
+        id: 'id5',
+        createdAt: epoch,
+        matchId: 'm2',
+        reason: null,
+      );
+      final back = SyncAction.fromJson(a.toJson())! as ProofUnavailableAction;
+      expect(back.matchId, 'm2');
+      expect(back.reason, isNull);
+    });
+
     test('attempts préservé au décodage', () {
       final json = SendChatMessageAction(
         id: 'id',

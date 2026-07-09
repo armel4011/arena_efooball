@@ -94,6 +94,35 @@ class ProofCommitmentService {
       unawaited(reportError(e, st, context: 'ProofCommitment.commitForMatch'));
     }
   }
+
+  /// Signale au serveur que la capture anti-triche N'A PAS PU démarrer pour
+  /// [matchId] (permission refusée / échec device) — P1 #5. Best-effort : c'est
+  /// la TRACE qui distingue « le joueur ne pouvait pas filmer » d'une capture
+  /// silencieusement absente. Ne lève jamais, ne bloque pas le flux de match.
+  /// L'EF n'écrase jamais un commitment déjà engagé.
+  Future<void> reportUnavailableForMatch({
+    required String matchId,
+    required String reason,
+  }) async {
+    try {
+      final action = ProofUnavailableAction(
+        id: generateUuidV4(),
+        createdAt: DateTime.now().toUtc(),
+        matchId: matchId,
+        reason: reason,
+      );
+      final queue = _ref.read(syncQueueServiceProvider).valueOrNull;
+      if (queue == null) {
+        await action.execute(_ref.read(supabaseClientProvider));
+        return;
+      }
+      await queue.enqueue(action);
+    } catch (e, st) {
+      unawaited(
+        reportError(e, st, context: 'ProofCommitment.reportUnavailable'),
+      );
+    }
+  }
 }
 
 final proofCommitmentServiceProvider = Provider<ProofCommitmentService>(

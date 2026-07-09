@@ -109,6 +109,12 @@ sealed class SyncAction {
           createdAt: createdAt,
           payload: payload,
         );
+      case ProofUnavailableAction._type:
+        action = ProofUnavailableAction.fromPayload(
+          id: id,
+          createdAt: createdAt,
+          payload: payload,
+        );
       case ProofUploadAction._type:
         action = ProofUploadAction.fromPayload(
           id: id,
