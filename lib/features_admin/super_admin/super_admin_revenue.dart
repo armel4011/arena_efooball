@@ -1,5 +1,6 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/admin/super_admin_dashboard_repository.dart';
+import 'package:arena/features_shared/admin/admin_formatters.dart';
 import 'package:arena/features_shared/excel_csv.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
@@ -269,13 +270,13 @@ class _RevenueHero extends StatelessWidget {
             Text('Revenus période', style: ArenaText.bodyMuted),
             const SizedBox(height: 4),
             Text(
-              '${_money(b.collectedXaf)} XAF',
+              '${adminMoney(b.collectedXaf)} XAF',
               style: ArenaText.bigNumber
                   .copyWith(color: ArenaColors.statusOk, fontSize: 30),
             ),
             const SizedBox(height: 2),
             Text(
-              'Marge nette : ${_money(b.marginXaf)} XAF',
+              'Marge nette : ${adminMoney(b.marginXaf)} XAF',
               style: ArenaText.bodyMuted,
             ),
           ],
@@ -311,16 +312,24 @@ class _BreakdownCard extends StatelessWidget {
         final rows = <(String, String, _RowKind)>[
           (
             'Frais inscriptions collectés',
-            _money(b.collectedXaf),
+            adminMoney(b.collectedXaf),
             _RowKind.neutral
           ),
-          ('— Payouts versés', '-${_money(b.payoutsXaf)}', _RowKind.negative),
           (
-            '— Frais processeur (V1 : 0)',
-            '-${_money(b.processorFeesXaf)}',
+            '— Payouts versés',
+            '-${adminMoney(b.payoutsXaf)}',
             _RowKind.negative
           ),
-          ('= MARGE NETTE', '${_money(b.marginXaf)} XAF', _RowKind.positive),
+          (
+            '— Frais processeur (V1 : 0)',
+            '-${adminMoney(b.processorFeesXaf)}',
+            _RowKind.negative
+          ),
+          (
+            '= MARGE NETTE',
+            '${adminMoney(b.marginXaf)} XAF',
+            _RowKind.positive
+          ),
         ];
         return Container(
           decoration: BoxDecoration(
@@ -503,7 +512,7 @@ class _CompetitionsTable extends StatelessWidget {
                       Expanded(
                         flex: 2,
                         child: Text(
-                          _money(r.revenueXaf),
+                          adminMoney(r.revenueXaf),
                           textAlign: TextAlign.right,
                           style: ArenaText.mono,
                         ),
@@ -511,7 +520,7 @@ class _CompetitionsTable extends StatelessWidget {
                       Expanded(
                         flex: 2,
                         child: Text(
-                          _money(r.commissionXaf),
+                          adminMoney(r.commissionXaf),
                           textAlign: TextAlign.right,
                           style: ArenaText.mono
                               .copyWith(color: ArenaColors.statusOk),
@@ -534,9 +543,4 @@ class _CompetitionsTable extends StatelessWidget {
       ),
     );
   }
-}
-
-String _money(double xaf) {
-  final fmt = NumberFormat('#,###', 'fr_FR');
-  return fmt.format(xaf.round());
 }

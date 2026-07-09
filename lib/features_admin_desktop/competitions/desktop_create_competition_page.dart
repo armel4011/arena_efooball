@@ -8,6 +8,7 @@ import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_competitions_repository.dart';
 import 'package:arena/features_admin_desktop/competitions/desktop_competition_visuals.dart';
+import 'package:arena/features_shared/admin/competition_draft.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/competition_description_templates.dart';
 import 'package:arena/features_shared/payment_operator_templates.dart';
@@ -24,15 +25,8 @@ part 'desktop_create_competition_widgets.dart';
 part 'desktop_create_competition_steps.dart';
 part 'desktop_create_competition_logic.dart';
 
-/// Blocs de récompenses au-delà du top 4 : (libellé, taille, dernier
-/// rang). Identique au wizard mobile.
-const List<({String label, int size, int lastRank})> _prizeBlocks = [
-  (label: '5ème – 8ème', size: 4, lastRank: 8),
-  (label: '9ème – 16ème', size: 8, lastRank: 16),
-  (label: '17ème – 32ème', size: 16, lastRank: 32),
-  (label: '33ème – 64ème', size: 32, lastRank: 64),
-  (label: '65ème – 128ème', size: 64, lastRank: 128),
-];
+// `prizeBlocks` (blocs de récompenses) est partagé avec le wizard mobile via
+// `features_shared/admin/competition_draft.dart` (source unique).
 
 // V1.0 : paiement d'inscription disponible UNIQUEMENT au Cameroun (XAF).
 // XOF / USD (autres pays) reviendront dans une version ultérieure.
@@ -102,10 +96,10 @@ class _DesktopCreateCompetitionPageState
     TextEditingController(text: '15'),
     TextEditingController(text: '10'),
   ];
-  // Dimensionné sur `_prizeBlocks` pour suivre l'ajout d'un palier (65-128).
+  // Dimensionné sur `prizeBlocks` pour suivre l'ajout d'un palier (65-128).
   @override
   final List<TextEditingController> _blockShareCtrls = List.generate(
-    _prizeBlocks.length,
+    prizeBlocks.length,
     (_) => TextEditingController(text: '0'),
   );
   @override
@@ -188,8 +182,8 @@ class _DesktopCreateCompetitionPageState
     for (var i = 0; i < topCount && i < dist.length; i++) {
       _topShareCtrls[i].text = dist[i].toString();
     }
-    for (var b = 0; b < _prizeBlocks.length; b++) {
-      final block = _prizeBlocks[b];
+    for (var b = 0; b < prizeBlocks.length; b++) {
+      final block = prizeBlocks[b];
       if (_rewardedCount < block.lastRank) break;
       final firstIndex = block.lastRank - block.size;
       if (firstIndex < dist.length) {
@@ -253,25 +247,14 @@ class _DesktopCreateCompetitionPageState
     }
   }
 
-  bool get _canAdvance {
-    switch (_step) {
-      case 0:
-        return _nameCtrl.text.trim().length >= 3 && _startDate != null;
-      case 1:
-        return _maxPlayers >= 2;
-      case 2:
-        return true;
-      case 3:
-        final fee = double.tryParse(_entryFeeCtrl.text) ?? -1;
-        return fee >= 0;
-      case 4:
-        final fee = double.tryParse(_entryFeeCtrl.text) ?? 0;
-        if (fee <= 0) return true;
-        return paymentDraftsValid(_paymentCountries);
-      default:
-        return true;
-    }
-  }
+  bool get _canAdvance => canAdvanceCompetitionStep(
+        step: _step,
+        name: _nameCtrl.text,
+        startDate: _startDate,
+        maxPlayers: _maxPlayers,
+        entryFeeText: _entryFeeCtrl.text,
+        paymentCountries: _paymentCountries,
+      );
 
   static const _stepTitles = [
     'Infos',

@@ -2,6 +2,7 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/core/utils/arena_error_message.dart';
 import 'package:arena/data/repositories/payout_repository.dart';
 import 'package:arena/features_admin_desktop/shared/desktop_scope_banner.dart';
+import 'package:arena/features_shared/admin/admin_formatters.dart';
 import 'package:arena/features_shared/admin_sections.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:fluent_ui/fluent_ui.dart';
@@ -145,7 +146,7 @@ class _ToPayList extends ConsumerWidget {
     final ok = await _confirm(
       context,
       title: 'Confirmer le versement ?',
-      body: 'Confirme avoir versé ${_money(payout.amountLocal)} '
+      body: 'Confirme avoir versé ${adminMoney(payout.amountLocal)} '
           '${payout.currency} sur le ${_methodLabel(payout.payeeMethod)} '
           '${payout.payeePhone ?? "—"}.',
       confirmLabel: 'Marquer payé',
@@ -284,7 +285,7 @@ class _PayoutCard extends StatelessWidget {
           const SizedBox(height: 12),
           _kv(
             'Montant',
-            '${_money(payout.amountLocal)} ${payout.currency}',
+            '${adminMoney(payout.amountLocal)} ${payout.currency}',
             emphasize: true,
           ),
           if (payout.rank != null) _kv('Rang', '${payout.rank}'),
@@ -347,7 +348,7 @@ class _CompetitionToSettleCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Cagnotte : ${_money(comp.prizePoolLocal)} ${comp.currency}',
+            'Cagnotte : ${adminMoney(comp.prizePoolLocal)} ${comp.currency}',
             style: GoogleFonts.spaceGrotesk(
               color: ArenaColors.silver,
               fontSize: 12,
@@ -498,8 +499,6 @@ Future<void> _info(
     ),
   );
 }
-
-String _money(double xaf) => NumberFormat('#,###', 'fr').format(xaf.round());
 
 String _shortId(String id) =>
     id.length <= 8 ? id : id.substring(0, 8).toUpperCase();

@@ -14,59 +14,20 @@ extension _CreateCompetitionSubmit on _CreateCompetitionPageState {
       return;
     }
 
-    final fee = double.tryParse(_entryFeeCtrl.text) ?? 0;
-    final pool = _computedPool();
-    final commissionXaf = _commissionXaf();
-    // commission_pct dérivée pour compat de la colonne legacy
-    final derivedCommissionPct =
-        pool > 0 ? (commissionXaf / pool * 100).clamp(0, 100) : 0;
+    final draft = _buildDraft();
 
     if (_isEditing) {
-      await _submitEdit(
-        adminId,
-        pool,
-        commissionXaf,
-        derivedCommissionPct.toDouble(),
-      );
+      await _submitEdit(adminId, draft);
       return;
     }
 
     try {
       final created = await traceAsync(
         'admin.competition.create',
-        _isEditing ? 'edit existing' : 'new from wizard',
-        () => ref.read(adminCompetitionsRepositoryProvider).create({
-          'name': _nameCtrl.text.trim(),
-          'game': _game.value,
-          'format': _format.value,
-          'status': _publishNow ? 'registration_open' : 'draft',
-          'description':
-              _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
-          'start_date': _startDate!.toUtc().toIso8601String(),
-          'max_players': _maxPlayers,
-          'registration_fee': fee,
-          'registration_currency': _currency,
-          'country_code': _countryCode,
-          'commission_xaf': commissionXaf,
-          'commission_pct': derivedCommissionPct,
-          'prize_pool_local': pool,
-          'prize_pool_currency': _currency,
-          'prize_distribution': _prizeDistribution(),
-          'created_by': adminId,
-          'auto_generate_bracket': _autoGenerateBracket,
-          'match_interval_minutes': _matchIntervalMinutes,
-          'third_place_match': _thirdPlaceMatch,
-          'referral_quota': _referralQuota(),
-          'referral_activity_mode': 'any',
-          'round_intervals': _roundIntervals(),
-          'format_config': _formatConfig(),
-          'android_store_url': _androidStoreUrlCtrl.text.trim().isEmpty
-              ? null
-              : _androidStoreUrlCtrl.text.trim(),
-          'ios_store_url': _iosStoreUrlCtrl.text.trim().isEmpty
-              ? null
-              : _iosStoreUrlCtrl.text.trim(),
-        }),
+        'new from wizard',
+        () => ref
+            .read(adminCompetitionsRepositoryProvider)
+            .create(buildCreateCompetitionPayload(draft, createdBy: adminId)),
       );
       // Options de paiement (pays × opérateur × code) — écrites séparément via
       // la RPC dédiée APRÈS l'INSERT (non-atomique avec, acceptable). Vide si
@@ -107,40 +68,54 @@ extension _CreateCompetitionSubmit on _CreateCompetitionPageState {
     }
   }
 
+  /// Assemble le [CompetitionDraft] depuis les controllers/state du wizard.
+  /// La construction des payloads (create/update) est ensuite factorisée dans
+  /// `competition_draft.dart` (partagée avec le wizard desktop).
+  CompetitionDraft _buildDraft() {
+    final fee = double.tryParse(_entryFeeCtrl.text) ?? 0;
+    final pool = _computedPool();
+    final commissionXaf = _commissionXaf();
+    // commission_pct dérivée pour compat de la colonne legacy.
+    final derivedCommissionPct =
+        pool > 0 ? (commissionXaf / pool * 100).clamp(0, 100) : 0;
+    return CompetitionDraft(
+      name: _nameCtrl.text.trim(),
+      game: _game,
+      format: _format,
+      publishNow: _publishNow,
+      description: _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
+      startDate: _startDate!,
+      maxPlayers: _maxPlayers,
+      fee: fee,
+      currency: _currency,
+      countryCode: _countryCode,
+      commissionXaf: commissionXaf,
+      commissionPct: derivedCommissionPct.toDouble(),
+      pool: pool,
+      prizeDistribution: _prizeDistribution(),
+      autoGenerateBracket: _autoGenerateBracket,
+      matchIntervalMinutes: _matchIntervalMinutes,
+      thirdPlaceMatch: _thirdPlaceMatch,
+      referralQuota: _referralQuota(),
+      roundIntervals: _roundIntervals(),
+      formatConfig: _formatConfig(),
+      androidStoreUrl: _androidStoreUrlCtrl.text.trim().isEmpty
+          ? null
+          : _androidStoreUrlCtrl.text.trim(),
+      iosStoreUrl: _iosStoreUrlCtrl.text.trim().isEmpty
+          ? null
+          : _iosStoreUrlCtrl.text.trim(),
+    );
+  }
+
   /// Branche édition : ne pousse que les champs « sûrs ». Jeu, format,
   /// capacité, frais et devise restent ceux d'origine.
-  Future<void> _submitEdit(
-    String adminId,
-    double pool,
-    double commissionXaf,
-    double derivedCommissionPct,
-  ) async {
+  Future<void> _submitEdit(String adminId, CompetitionDraft draft) async {
     final id = widget.editing!.id;
     try {
-      await ref.read(adminCompetitionsRepositoryProvider).update(id, {
-        'name': _nameCtrl.text.trim(),
-        'description':
-            _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
-        'start_date': _startDate!.toUtc().toIso8601String(),
-        'country_code': _countryCode,
-        'commission_xaf': commissionXaf,
-        'commission_pct': derivedCommissionPct,
-        'prize_pool_local': pool,
-        'prize_distribution': _prizeDistribution(),
-        'auto_generate_bracket': _autoGenerateBracket,
-        'match_interval_minutes': _matchIntervalMinutes,
-        'third_place_match': _thirdPlaceMatch,
-        'referral_quota': _referralQuota(),
-        'referral_activity_mode': 'any',
-        'round_intervals': _roundIntervals(),
-        'format_config': _formatConfig(),
-        'android_store_url': _androidStoreUrlCtrl.text.trim().isEmpty
-            ? null
-            : _androidStoreUrlCtrl.text.trim(),
-        'ios_store_url': _iosStoreUrlCtrl.text.trim().isEmpty
-            ? null
-            : _iosStoreUrlCtrl.text.trim(),
-      });
+      await ref
+          .read(adminCompetitionsRepositoryProvider)
+          .update(id, buildUpdateCompetitionPayload(draft));
       // Remplace-tout transactionnel des options de paiement.
       await ref.read(adminCompetitionsRepositoryProvider).setPaymentOptions(
             id,
@@ -152,8 +127,8 @@ extension _CreateCompetitionSubmit on _CreateCompetitionPageState {
         targetType: 'competition',
         targetId: id,
         afterState: {
-          'name': _nameCtrl.text.trim(),
-          'commission_xaf': commissionXaf,
+          'name': draft.name,
+          'commission_xaf': draft.commissionXaf,
         },
       );
       if (!mounted) return;

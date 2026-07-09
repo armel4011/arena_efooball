@@ -5,12 +5,12 @@ import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_payouts_repository.dart';
 import 'package:arena/features_admin_desktop/shared/desktop_scope_banner.dart';
 import 'package:arena/features_admin_desktop/shared/desktop_totp_gate.dart';
+import 'package:arena/features_shared/admin/admin_formatters.dart';
 import 'package:arena/features_shared/admin_sections.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
 
 /// Finance · Payouts (desktop) — file des payouts en attente de
 /// validation, avec un tableau par carte, statuts colorés et actions
@@ -57,34 +57,34 @@ class DesktopPayoutsPage extends ConsumerWidget {
     AsyncValue<List<Payout>> payoutsAsync,
   ) {
     return payoutsAsync.when(
-        loading: () => const Center(child: ProgressRing()),
-        error: (e, _) => Padding(
-          padding: const EdgeInsets.all(24),
-          child: InfoBar(
-            title: const Text('Impossible de charger les payouts'),
-            content: Text('$e'),
-            severity: InfoBarSeverity.error,
-          ),
+      loading: () => const Center(child: ProgressRing()),
+      error: (e, _) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: InfoBar(
+          title: const Text('Impossible de charger les payouts'),
+          content: Text('$e'),
+          severity: InfoBarSeverity.error,
         ),
-        data: (list) {
-          if (list.isEmpty) {
-            return const _EmptyState(
-              message: 'Aucun payout en attente de validation.',
-            );
-          }
-          return ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            children: [
-              _SummaryCard(payouts: list),
-              const SizedBox(height: 16),
-              for (final payout in list) ...[
-                _PayoutCard(payout: payout),
-                const SizedBox(height: 12),
-              ],
-              const SizedBox(height: 24),
-            ],
+      ),
+      data: (list) {
+        if (list.isEmpty) {
+          return const _EmptyState(
+            message: 'Aucun payout en attente de validation.',
           );
-        },
+        }
+        return ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          children: [
+            _SummaryCard(payouts: list),
+            const SizedBox(height: 16),
+            for (final payout in list) ...[
+              _PayoutCard(payout: payout),
+              const SizedBox(height: 12),
+            ],
+            const SizedBox(height: 24),
+          ],
+        );
+      },
     );
   }
 }
@@ -117,7 +117,7 @@ class _SummaryCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${_money(total)} XAF',
+                  '${adminMoney(total)} XAF',
                   style: GoogleFonts.bebasNeue(
                     color: ArenaColors.neonRed,
                     fontSize: 32,
@@ -187,7 +187,7 @@ class _PayoutCard extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '${_money(payout.amountLocal)} ${payout.currency}',
+                    '${adminMoney(payout.amountLocal)} ${payout.currency}',
                     style: GoogleFonts.spaceGrotesk(
                       color: allOk ? ArenaColors.statusOk : ArenaColors.bone,
                       fontSize: 16,
@@ -255,7 +255,7 @@ class _PayoutCard extends ConsumerWidget {
                   onPressed: () => _validate(context, ref),
                   child: Text(
                     allOk
-                        ? 'Valider · ${_money(payout.amountLocal)} '
+                        ? 'Valider · ${adminMoney(payout.amountLocal)} '
                             '${payout.currency}'
                         : 'Valider (revue manuelle)',
                   ),
@@ -281,7 +281,7 @@ class _PayoutCard extends ConsumerWidget {
       context,
       ref,
       reason: 'Valider un payout · ${payout.currency} '
-          '${_money(payout.amountLocal)}',
+          '${adminMoney(payout.amountLocal)}',
     );
     if (!totpOk || !context.mounted) return;
     try {
@@ -479,8 +479,6 @@ Future<void> _showResult(
     ),
   );
 }
-
-String _money(double xaf) => NumberFormat('#,###', 'fr').format(xaf.round());
 
 String _shortId(String id) =>
     id.length <= 8 ? id : id.substring(0, 8).toUpperCase();

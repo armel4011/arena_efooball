@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/admin/super_admin_dashboard_repository.dart';
+import 'package:arena/features_shared/admin/admin_formatters.dart';
 import 'package:arena/features_shared/excel_csv.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -228,7 +229,7 @@ class _RevenueHero extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              '${_money(b.collectedXaf)} XAF',
+              '${adminMoney(b.collectedXaf)} XAF',
               style: GoogleFonts.bebasNeue(
                 color: ArenaColors.statusOk,
                 fontSize: 32,
@@ -237,7 +238,7 @@ class _RevenueHero extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              'Marge nette : ${_money(b.marginXaf)} XAF '
+              'Marge nette : ${adminMoney(b.marginXaf)} XAF '
               '(${b.marginPct.toStringAsFixed(1)}%)',
               style: GoogleFonts.spaceGrotesk(
                 color: ArenaColors.silver,
@@ -395,16 +396,24 @@ class _BreakdownCard extends StatelessWidget {
         final rows = <(String, String, _RowKind)>[
           (
             'Frais inscriptions collectés',
-            _money(b.collectedXaf),
+            adminMoney(b.collectedXaf),
             _RowKind.neutral
           ),
-          ('— Payouts versés', '-${_money(b.payoutsXaf)}', _RowKind.negative),
           (
-            '— Frais processeur',
-            '-${_money(b.processorFeesXaf)}',
+            '— Payouts versés',
+            '-${adminMoney(b.payoutsXaf)}',
             _RowKind.negative
           ),
-          ('= Marge nette', '${_money(b.marginXaf)} XAF', _RowKind.positive),
+          (
+            '— Frais processeur',
+            '-${adminMoney(b.processorFeesXaf)}',
+            _RowKind.negative
+          ),
+          (
+            '= Marge nette',
+            '${adminMoney(b.marginXaf)} XAF',
+            _RowKind.positive
+          ),
         ];
         return Card(
           backgroundColor: ArenaColors.carbon,
@@ -534,9 +543,10 @@ class _CompetitionsTable extends StatelessWidget {
                         ),
                       ),
                       _numCell('${r.registeredCount}', ArenaColors.bone),
-                      _numCell(_money(r.revenueXaf), ArenaColors.bone, flex: 2),
+                      _numCell(adminMoney(r.revenueXaf), ArenaColors.bone,
+                          flex: 2),
                       _numCell(
-                        _money(r.commissionXaf),
+                        adminMoney(r.commissionXaf),
                         ArenaColors.statusOk,
                         flex: 2,
                       ),
@@ -560,7 +570,8 @@ class _CompetitionsTable extends StatelessWidget {
     return Row(
       children: [
         Expanded(flex: 3, child: Text('COMPÉTITION', style: s())),
-        Expanded(child: Text('INSCRITS', textAlign: TextAlign.right, style: s())),
+        Expanded(
+            child: Text('INSCRITS', textAlign: TextAlign.right, style: s())),
         Expanded(
           flex: 2,
           child: Text('REVENU', textAlign: TextAlign.right, style: s()),
@@ -606,5 +617,3 @@ Future<void> _showResult(
     ),
   );
 }
-
-String _money(double xaf) => NumberFormat('#,###', 'fr').format(xaf.round());

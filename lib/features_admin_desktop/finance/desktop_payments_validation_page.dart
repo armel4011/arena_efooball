@@ -3,6 +3,7 @@ import 'package:arena/core/utils/arena_error_message.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_payments_repository.dart';
 import 'package:arena/features_admin_desktop/shared/desktop_totp_gate.dart';
+import 'package:arena/features_shared/admin/admin_formatters.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -190,7 +191,7 @@ class _PendingCard extends ConsumerWidget {
           const SizedBox(height: 12),
           _kv(
             'Montant',
-            '${_money(payment.amountLocal)} ${payment.currency}',
+            '${adminMoney(payment.amountLocal)} ${payment.currency}',
             emphasize: true,
           ),
           _kv('Méthode', _methodLabel(payment.payerMethod)),
@@ -235,7 +236,7 @@ class _PendingCard extends ConsumerWidget {
         title: const Text('Valider le paiement ?'),
         content: Text(
           'Vérifiez sur votre compte ${_methodLabel(row.payment.payerMethod)} '
-          'avoir bien reçu ${_money(row.payment.amountLocal)} '
+          'avoir bien reçu ${adminMoney(row.payment.amountLocal)} '
           '${row.payment.currency} depuis le numéro '
           '${row.payment.payerPhone ?? "—"}.',
         ),
@@ -256,7 +257,7 @@ class _PendingCard extends ConsumerWidget {
       context,
       ref,
       reason: 'Valider un paiement P2P · '
-          '${_money(row.payment.amountLocal)} ${row.payment.currency}',
+          '${adminMoney(row.payment.amountLocal)} ${row.payment.currency}',
     );
     if (!totpOk || !context.mounted) return;
     try {
@@ -503,7 +504,7 @@ class _RefundCard extends ConsumerWidget {
           const SizedBox(height: 12),
           _refundKv(
             'À rembourser',
-            '${_money(payment.amountLocal)} ${payment.currency}',
+            '${adminMoney(payment.amountLocal)} ${payment.currency}',
             emphasize: true,
           ),
           _refundKv('Méthode', _methodLabel(payment.payerMethod)),
@@ -526,7 +527,7 @@ class _RefundCard extends ConsumerWidget {
       builder: (ctx) => ContentDialog(
         title: const Text('Marquer remboursé ?'),
         content: Text(
-          'Confirme avoir reversé ${_money(row.payment.amountLocal)} '
+          'Confirme avoir reversé ${adminMoney(row.payment.amountLocal)} '
           '${row.payment.currency} à ${row.username} sur le '
           '${_methodLabel(row.payment.payerMethod)} '
           '${row.payment.payerPhone ?? "—"} (compétition annulée).',
@@ -548,7 +549,7 @@ class _RefundCard extends ConsumerWidget {
       context,
       ref,
       reason: 'Marquer un remboursement · '
-          '${_money(row.payment.amountLocal)} ${row.payment.currency}',
+          '${adminMoney(row.payment.amountLocal)} ${row.payment.currency}',
     );
     if (!totpOk || !context.mounted) return;
     try {
@@ -701,7 +702,7 @@ class _HistoryCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            '${row.competitionName} · ${_money(payment.amountLocal)} '
+            '${row.competitionName} · ${adminMoney(payment.amountLocal)} '
             '${payment.currency} · ${_methodLabel(payment.payerMethod)}',
             style: GoogleFonts.spaceGrotesk(
               color: ArenaColors.silver,
@@ -757,8 +758,6 @@ Future<void> _showResult(
     ),
   );
 }
-
-String _money(double xaf) => NumberFormat('#,###', 'fr').format(xaf.round());
 
 String _shortId(String id) =>
     id.length <= 8 ? id.toUpperCase() : id.substring(0, 8).toUpperCase();

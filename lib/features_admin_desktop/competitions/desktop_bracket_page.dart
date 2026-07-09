@@ -12,6 +12,7 @@ import 'package:arena/data/repositories/competition_repository.dart';
 import 'package:arena/data/repositories/match_repository.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:arena/features_admin_desktop/competitions/desktop_competition_visuals.dart';
+import 'package:arena/features_shared/admin/bracket_orchestration.dart';
 import 'package:arena/features_shared/admin_result_gate.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 // ArenaBracketTree est un widget Flutter pur (importe flutter/material)
@@ -39,8 +40,7 @@ class DesktopBracketPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final compAsync = ref.watch(competitionByIdProvider(competitionId));
-    final matchesAsync =
-        ref.watch(competitionMatchesProvider(competitionId));
+    final matchesAsync = ref.watch(competitionMatchesProvider(competitionId));
 
     return ScaffoldPage(
       header: const PageHeader(title: Text('GESTION DU BRACKET')),
@@ -83,8 +83,7 @@ class _EmptyBracketState extends ConsumerStatefulWidget {
   final Competition competition;
 
   @override
-  ConsumerState<_EmptyBracketState> createState() =>
-      _EmptyBracketStateState();
+  ConsumerState<_EmptyBracketState> createState() => _EmptyBracketStateState();
 }
 
 class _EmptyBracketStateState extends ConsumerState<_EmptyBracketState> {
@@ -188,7 +187,7 @@ class _EmptyBracketStateState extends ConsumerState<_EmptyBracketState> {
       return;
     }
 
-    _GroupsConfig? groupsConfig = _GroupsConfig.empty;
+    GroupsConfig? groupsConfig = GroupsConfig.empty;
     if (comp.format == TournamentFormat.groupsThenKnockout) {
       groupsConfig = await _askGroupsConfig();
       if (!mounted || groupsConfig == null) return;
@@ -202,27 +201,12 @@ class _EmptyBracketStateState extends ConsumerState<_EmptyBracketState> {
     });
 
     try {
-      switch (comp.format) {
-        case TournamentFormat.singleElimination:
-          await repo.generateSingleElim(
-            competitionId: comp.id,
-            playerIds: players,
-            thirdPlace: comp.thirdPlaceMatch,
-          );
-        case TournamentFormat.roundRobin:
-          await repo.generateRoundRobinTournament(
-            competitionId: comp.id,
-            playerIds: players,
-          );
-        case TournamentFormat.groupsThenKnockout:
-          await repo.generateGroupsKnockoutTournament(
-            competitionId: comp.id,
-            playerIds: players,
-            groupCount: groupsConfig.groupCount,
-            qualifiersPerGroup: groupsConfig.qualifiers,
-            thirdPlace: comp.thirdPlaceMatch,
-          );
-      }
+      await generateBracketFor(
+        repo: repo,
+        competition: comp,
+        playerIds: players,
+        groups: groupsConfig,
+      );
       await ref.read(adminAuditLogRepositoryProvider).record(
         adminId: adminId,
         action: 'bracket_generated',
@@ -263,10 +247,10 @@ class _EmptyBracketStateState extends ConsumerState<_EmptyBracketState> {
     );
   }
 
-  Future<_GroupsConfig?> _askGroupsConfig() async {
+  Future<GroupsConfig?> _askGroupsConfig() async {
     final groupsCtrl = TextEditingController(text: '4');
     final qualCtrl = TextEditingController(text: '2');
-    final out = await showDialog<_GroupsConfig>(
+    final out = await showDialog<GroupsConfig>(
       context: context,
       builder: (ctx) => ContentDialog(
         title: const Text('Configuration des poules'),
@@ -301,7 +285,7 @@ class _EmptyBracketStateState extends ConsumerState<_EmptyBracketState> {
               final g = int.tryParse(groupsCtrl.text) ?? 0;
               final q = int.tryParse(qualCtrl.text) ?? 0;
               if (g < 2 || q < 1) return;
-              Navigator.of(ctx).pop(_GroupsConfig(g, q));
+              Navigator.of(ctx).pop(GroupsConfig(g, q));
             },
             child: const Text('OK'),
           ),
@@ -312,15 +296,6 @@ class _EmptyBracketStateState extends ConsumerState<_EmptyBracketState> {
     qualCtrl.dispose();
     return out;
   }
-}
-
-class _GroupsConfig {
-  const _GroupsConfig(this.groupCount, this.qualifiers);
-
-  final int groupCount;
-  final int qualifiers;
-
-  static const empty = _GroupsConfig(0, 0);
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -335,8 +310,7 @@ class _BracketView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final showTree =
-        competition.format == TournamentFormat.singleElimination;
+    final showTree = competition.format == TournamentFormat.singleElimination;
 
     final players = <String>{
       for (final m in matches) ...[
@@ -371,16 +345,14 @@ class _BracketView extends ConsumerWidget {
             child: ArenaBracketTree(
               matches: matches,
               usernamesByPlayerId: usernames,
-              onTapMatch: (m) =>
-                  _showMatchActions(context, ref, m, usernames),
+              onTapMatch: (m) => _showMatchActions(context, ref, m, usernames),
             ),
           )
         else
           _RoundsList(
             matches: matches,
             usernames: usernames,
-            onTapMatch: (m) =>
-                _showMatchActions(context, ref, m, usernames),
+            onTapMatch: (m) => _showMatchActions(context, ref, m, usernames),
           ),
         const SizedBox(height: 16),
         const InfoBar(
@@ -519,8 +491,7 @@ class _MatchCard extends StatelessWidget {
       builder: (context, states) {
         final hovered = states.isHovered;
         return Card(
-          backgroundColor:
-              hovered ? ArenaColors.carbon2 : ArenaColors.carbon,
+          backgroundColor: hovered ? ArenaColors.carbon2 : ArenaColors.carbon,
           padding: const EdgeInsets.all(14),
           child: Row(
             children: [

@@ -1,5 +1,6 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/features_admin/competitions_admin/widgets/competition_form_widgets.dart';
+import 'package:arena/features_shared/admin/competition_draft.dart' show prizeBlocks;
 import 'package:flutter/material.dart';
 
 /// Étape 3 du wizard — répartition des récompenses : nombre de récompensés,

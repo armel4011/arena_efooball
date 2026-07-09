@@ -63,86 +63,34 @@ mixin _SubmitAndCompute on ConsumerState<DesktopCreateCompetitionPage> {
       return;
     }
 
-    final fee = double.tryParse(_entryFeeCtrl.text) ?? 0;
-    final pool = _computedPool();
-    final commissionXaf = _commissionXaf();
-    final derivedCommissionPct =
-        pool > 0 ? (commissionXaf / pool * 100).clamp(0, 100) : 0;
+    final draft = _buildDraft();
+    final repo = ref.read(adminCompetitionsRepositoryProvider);
 
     try {
       if (_isEditing) {
-        await ref.read(adminCompetitionsRepositoryProvider).update(
-              widget.editing!.id,
-              {
-                'name': _nameCtrl.text.trim(),
-                'description': _descCtrl.text.trim().isEmpty
-                    ? null
-                    : _descCtrl.text.trim(),
-                'start_date': _startDate!.toUtc().toIso8601String(),
-                'country_code': _countryCode,
-                'commission_xaf': commissionXaf,
-                'commission_pct': derivedCommissionPct,
-                'prize_pool_local': pool,
-                'prize_distribution': _prizeDistribution(),
-                'auto_generate_bracket': _autoGenerateBracket,
-                'match_interval_minutes': _matchIntervalMinutes,
-                'third_place_match': _thirdPlaceMatch,
-                'referral_quota': _referralQuota(),
-                'referral_activity_mode': 'any',
-                'round_intervals': _roundIntervals(),
-                'format_config': _formatConfig(),
-                'android_store_url': _emptyToNull(_androidStoreUrlCtrl.text),
-                'ios_store_url': _emptyToNull(_iosStoreUrlCtrl.text),
-              },
-            );
-        await ref.read(adminCompetitionsRepositoryProvider).setPaymentOptions(
-              widget.editing!.id,
-              paymentOptionsFromDrafts(_paymentCountries),
-            );
+        final id = widget.editing!.id;
+        await repo.update(id, buildUpdateCompetitionPayload(draft));
+        await repo.setPaymentOptions(
+          id,
+          paymentOptionsFromDrafts(_paymentCountries),
+        );
         await ref.read(adminAuditLogRepositoryProvider).record(
           adminId: adminId,
           action: 'competition_updated',
           targetType: 'competition',
-          targetId: widget.editing!.id,
+          targetId: id,
           afterState: {
-            'name': _nameCtrl.text.trim(),
-            'commission_xaf': commissionXaf,
+            'name': draft.name,
+            'commission_xaf': draft.commissionXaf,
           },
         );
       } else {
-        final created =
-            await ref.read(adminCompetitionsRepositoryProvider).create({
-          'name': _nameCtrl.text.trim(),
-          'game': _game.value,
-          'format': _format.value,
-          'status': _publishNow ? 'registration_open' : 'draft',
-          'description':
-              _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
-          'start_date': _startDate!.toUtc().toIso8601String(),
-          'max_players': _maxPlayers,
-          'registration_fee': fee,
-          'registration_currency': _currency,
-          'country_code': _countryCode,
-          'commission_xaf': commissionXaf,
-          'commission_pct': derivedCommissionPct,
-          'prize_pool_local': pool,
-          'prize_pool_currency': _currency,
-          'prize_distribution': _prizeDistribution(),
-          'created_by': adminId,
-          'auto_generate_bracket': _autoGenerateBracket,
-          'match_interval_minutes': _matchIntervalMinutes,
-          'third_place_match': _thirdPlaceMatch,
-          'referral_quota': _referralQuota(),
-          'referral_activity_mode': 'any',
-          'round_intervals': _roundIntervals(),
-          'format_config': _formatConfig(),
-          'android_store_url': _emptyToNull(_androidStoreUrlCtrl.text),
-          'ios_store_url': _emptyToNull(_iosStoreUrlCtrl.text),
-        });
-        await ref.read(adminCompetitionsRepositoryProvider).setPaymentOptions(
-              created.id,
-              paymentOptionsFromDrafts(_paymentCountries),
-            );
+        final created = await repo
+            .create(buildCreateCompetitionPayload(draft, createdBy: adminId));
+        await repo.setPaymentOptions(
+          created.id,
+          paymentOptionsFromDrafts(_paymentCountries),
+        );
         await ref.read(adminAuditLogRepositoryProvider).record(
           adminId: adminId,
           action: 'competition_created',
@@ -167,40 +115,59 @@ mixin _SubmitAndCompute on ConsumerState<DesktopCreateCompetitionPage> {
     }
   }
 
+  /// Assemble le [CompetitionDraft] depuis les controllers/state du wizard
+  /// desktop. Les payloads (create/update) sont factorisés dans
+  /// `competition_draft.dart` (partagés avec le wizard mobile).
+  CompetitionDraft _buildDraft() {
+    final fee = double.tryParse(_entryFeeCtrl.text) ?? 0;
+    final pool = _computedPool();
+    final commissionXaf = _commissionXaf();
+    final derivedCommissionPct =
+        pool > 0 ? (commissionXaf / pool * 100).clamp(0, 100) : 0;
+    return CompetitionDraft(
+      name: _nameCtrl.text.trim(),
+      game: _game,
+      format: _format,
+      publishNow: _publishNow,
+      description: _emptyToNull(_descCtrl.text),
+      startDate: _startDate!,
+      maxPlayers: _maxPlayers,
+      fee: fee,
+      currency: _currency,
+      countryCode: _countryCode,
+      commissionXaf: commissionXaf,
+      commissionPct: derivedCommissionPct.toDouble(),
+      pool: pool,
+      prizeDistribution: _prizeDistribution(),
+      autoGenerateBracket: _autoGenerateBracket,
+      matchIntervalMinutes: _matchIntervalMinutes,
+      thirdPlaceMatch: _thirdPlaceMatch,
+      referralQuota: _referralQuota(),
+      roundIntervals: _roundIntervals(),
+      formatConfig: _formatConfig(),
+      androidStoreUrl: _emptyToNull(_androidStoreUrlCtrl.text),
+      iosStoreUrl: _emptyToNull(_iosStoreUrlCtrl.text),
+    );
+  }
+
   // ─── Calculs (identiques au wizard mobile) ──────────────────────────
 
   String? _emptyToNull(String s) => s.trim().isEmpty ? null : s.trim();
 
-  List<int> _prizeDistribution() {
-    final raw = <int>[];
-    final topCount = _rewardedCount < 4 ? _rewardedCount : 4;
-    for (var i = 0; i < topCount; i++) {
-      raw.add(int.tryParse(_topShareCtrls[i].text) ?? 0);
-    }
-    for (var b = 0; b < _prizeBlocks.length; b++) {
-      final block = _prizeBlocks[b];
-      if (_rewardedCount < block.lastRank) break;
-      final perPlace = int.tryParse(_blockShareCtrls[b].text) ?? 0;
-      for (var k = 0; k < block.size; k++) {
-        raw.add(perPlace);
-      }
-    }
-    return raw;
-  }
+  // Le desktop n'a pas de toggle « sans récompense » → noReward: false.
+  List<int> _prizeDistribution() => computePrizeDistribution(
+        noReward: false,
+        rewardedCount: _rewardedCount,
+        topShareTexts: _topShareCtrls.map((c) => c.text).toList(),
+        blockShareTexts: _blockShareCtrls.map((c) => c.text).toList(),
+      );
 
-  int _shareTotal() {
-    var total = 0;
-    final topCount = _rewardedCount < 4 ? _rewardedCount : 4;
-    for (var i = 0; i < topCount; i++) {
-      total += int.tryParse(_topShareCtrls[i].text) ?? 0;
-    }
-    for (var b = 0; b < _prizeBlocks.length; b++) {
-      final block = _prizeBlocks[b];
-      if (_rewardedCount < block.lastRank) break;
-      total += (int.tryParse(_blockShareCtrls[b].text) ?? 0) * block.size;
-    }
-    return total;
-  }
+  int _shareTotal() => computeShareTotal(
+        noReward: false,
+        rewardedCount: _rewardedCount,
+        topShareTexts: _topShareCtrls.map((c) => c.text).toList(),
+        blockShareTexts: _blockShareCtrls.map((c) => c.text).toList(),
+      );
 
   double _computedPool() => _shareTotal().toDouble();
 
@@ -209,28 +176,11 @@ mixin _SubmitAndCompute on ConsumerState<DesktopCreateCompetitionPage> {
 
   int _referralQuota() => int.tryParse(_referralQuotaCtrl.text.trim()) ?? 0;
 
-  List<int>? _roundIntervals() {
-    final raw = _roundIntervalsCtrl.text.trim();
-    if (raw.isEmpty) return null;
-    final parts =
-        raw.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty);
-    final ints = <int>[];
-    for (final p in parts) {
-      final n = int.tryParse(p);
-      if (n == null || n <= 0) return null;
-      ints.add(n);
-    }
-    return ints.isEmpty ? null : ints;
-  }
+  List<int>? _roundIntervals() => parseRoundIntervals(_roundIntervalsCtrl.text);
 
-  Map<String, dynamic> _formatConfig() {
-    if (_format != TournamentFormat.groupsThenKnockout) {
-      return const <String, dynamic>{};
-    }
-    return <String, dynamic>{
-      'group_count': int.tryParse(_groupCountCtrl.text.trim()) ?? 4,
-      'qualifiers_per_group':
-          int.tryParse(_qualifiersPerGroupCtrl.text.trim()) ?? 2,
-    };
-  }
+  Map<String, dynamic> _formatConfig() => buildFormatConfig(
+        format: _format,
+        groupCountText: _groupCountCtrl.text,
+        qualifiersText: _qualifiersPerGroupCtrl.text,
+      );
 }

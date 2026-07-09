@@ -1,5 +1,6 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/admin/super_admin_dashboard_repository.dart';
+import 'package:arena/features_shared/admin/admin_formatters.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -99,7 +100,7 @@ class DesktopSuperDashboardPage extends ConsumerWidget {
                       width: cardWidth,
                       icon: FluentIcons.money,
                       label: 'Marge ARENA (30j)',
-                      value: '${_moneyShort(kpis.margin30dXaf)} XAF',
+                      value: '${adminMoneyShort(kpis.margin30dXaf)} XAF',
                       accent: ArenaColors.statusOk,
                     ),
                     _KpiCard(
@@ -120,14 +121,14 @@ class DesktopSuperDashboardPage extends ConsumerWidget {
                       width: cardWidth,
                       icon: FluentIcons.money,
                       label: 'Revenu cumulé',
-                      value: '${_moneyShort(kpis.totalRevenueXaf)} XAF',
+                      value: '${adminMoneyShort(kpis.totalRevenueXaf)} XAF',
                       accent: ArenaColors.signalBlue,
                     ),
                     _KpiCard(
                       width: cardWidth,
                       icon: FluentIcons.bank,
                       label: 'Payouts cumulés',
-                      value: '${_moneyShort(kpis.totalPayoutsXaf)} XAF',
+                      value: '${adminMoneyShort(kpis.totalPayoutsXaf)} XAF',
                       accent: ArenaColors.statusWarn,
                     ),
                   ],
@@ -305,9 +306,8 @@ class _TopPlayers extends StatelessWidget {
                       Text(
                         '${players[i].wins} V',
                         style: GoogleFonts.spaceGrotesk(
-                          color: i == 0
-                              ? ArenaColors.tierGold
-                              : ArenaColors.bone,
+                          color:
+                              i == 0 ? ArenaColors.tierGold : ArenaColors.bone,
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
                         ),
@@ -595,10 +595,4 @@ final TextStyle _sectionStyle = GoogleFonts.bebasNeue(
 String _intLabel(int n) {
   if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}K';
   return '$n';
-}
-
-String _moneyShort(double xaf) {
-  if (xaf.abs() >= 1000000) return '${(xaf / 1000000).toStringAsFixed(1)}M';
-  if (xaf.abs() >= 1000) return '${(xaf / 1000).toStringAsFixed(1)}K';
-  return xaf.round().toString();
 }
