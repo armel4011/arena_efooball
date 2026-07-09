@@ -127,7 +127,11 @@ void main() {
   // (_ScopeChip) + desktop (_ScopeChip) + bandeau « Périmètre » mobile
   // (admin_scope_banner). check_colors.sh --strict = 0 régression (aucun vrai
   // `Colors.*` ajouté ; tous des tokens ArenaColors matchés par le regex).
-  const colorsDotBaseline = 2449; // occurrences de `Colors.`
+  // 2449 → 2467 le 2026-07-10 : +18 `ArenaColors.*` de la carte « Coût egress
+  // mesuré » anti-triche (P4 volet B) — mobile (_CostObservabilityCard /
+  // _CostSummaryBody / _CostRow / _WindowChip) + desktop. 1 seul vrai Colors.*
+  // (Colors.transparent de la puce fenêtre) ; le reste = tokens ArenaColors.
+  const colorsDotBaseline = 2467; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.
@@ -155,7 +159,11 @@ void main() {
   // sélectionnable pays/section (_ScopeChip) de la page desktop des invitations
   // (VOLET 3). Même convention Fluent que le reste du desktop. À migrer vers
   // ArenaText à terme.
-  const googleFontsBaseline = 212; // occurrences de `GoogleFonts.`
+  // 212 → 220 le 2026-07-10 : +8 `GoogleFonts.spaceGrotesk` de la carte « Coût
+  // egress mesuré » anti-triche (P4 volet B) desktop (desktop_anticheat_page :
+  // _CostObservabilityCard / _CostSummaryBody / _CostRow). Convention Fluent.
+  // À migrer vers ArenaText à terme.
+  const googleFontsBaseline = 220; // occurrences de `GoogleFonts.`
 
   final colorsDotRe = RegExp(r'Colors\.');
   final colorHexRe = RegExp(r'Color\(0x');

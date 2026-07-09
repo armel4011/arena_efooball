@@ -134,6 +134,8 @@ class _SuperAdminAntiCheatState extends ConsumerState<SuperAdminAntiCheat> {
                     ),
                     const SizedBox(height: ArenaSpacing.xl),
                     const _TieringThresholdsCard(),
+                    const SizedBox(height: ArenaSpacing.xl),
+                    const _CostObservabilityCard(),
                   ],
                 ),
         ),
@@ -293,6 +295,231 @@ class _TieringThresholdsCardState
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// Observabilité coût egress (P4 volet B) : chiffre le coût du tiering à partir
+/// des décisions réelles (`match_anticheat_plans`) plutôt que d'une projection.
+/// Vide tant que le provider natif est actif (aucun plan livekit créé).
+class _CostObservabilityCard extends ConsumerStatefulWidget {
+  const _CostObservabilityCard();
+
+  @override
+  ConsumerState<_CostObservabilityCard> createState() =>
+      _CostObservabilityCardState();
+}
+
+class _CostObservabilityCardState
+    extends ConsumerState<_CostObservabilityCard> {
+  AnticheatCostWindow _window = AnticheatCostWindow.last30d;
+
+  @override
+  Widget build(BuildContext context) {
+    final async = ref.watch(antiCheatCostSummaryProvider(_window));
+    return ArenaCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'COÛT EGRESS MESURÉ',
+            style: ArenaText.body.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Chiffré depuis les décisions réelles de tiering. « Économie » = '
+            "ce qu'aurait coûté l'egress des 2 pistes de chaque match sans "
+            'le tiering + egress unique. Vide tant que le provider natif est '
+            'actif (aucun egress).',
+            style: ArenaText.small.copyWith(color: ArenaColors.silver),
+          ),
+          const SizedBox(height: ArenaSpacing.md),
+          Row(
+            children: [
+              _WindowChip(
+                label: '30 jours',
+                selected: _window == AnticheatCostWindow.last30d,
+                onTap: () =>
+                    setState(() => _window = AnticheatCostWindow.last30d),
+              ),
+              const SizedBox(width: ArenaSpacing.sm),
+              _WindowChip(
+                label: 'Tout',
+                selected: _window == AnticheatCostWindow.allTime,
+                onTap: () =>
+                    setState(() => _window = AnticheatCostWindow.allTime),
+              ),
+            ],
+          ),
+          const SizedBox(height: ArenaSpacing.md),
+          async.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: ArenaSpacing.md),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (e, _) => Text(
+              'Chargement impossible.',
+              style: ArenaText.small.copyWith(color: ArenaColors.neonRed),
+            ),
+            data: (s) => _CostSummaryBody(summary: s),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Corps chiffré du résumé de coût, partagé (contenu neutre plateforme).
+class _CostSummaryBody extends StatelessWidget {
+  const _CostSummaryBody({required this.summary});
+
+  final AnticheatCostSummary summary;
+
+  static String _usd(num v) => '\$${v.toStringAsFixed(v < 10 ? 3 : 2)}';
+
+  @override
+  Widget build(BuildContext context) {
+    final s = summary;
+    if (s.decided == 0) {
+      return Text(
+        "Aucun plan de tiering figé sur la période — système d'egress "
+        'dormant.',
+        style: ArenaText.small.copyWith(color: ArenaColors.silver),
+      );
+    }
+    final pct = (s.livekitFraction * 100).toStringAsFixed(1);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _CostRow(label: 'Matchs décidés', value: '${s.decided}'),
+        _CostRow(
+          label: 'Egressés (LiveKit)',
+          value: '${s.livekit}  ($pct %)',
+        ),
+        _CostRow(label: 'Natif seul (hash)', value: '${s.nativeOnly}'),
+        const Divider(height: ArenaSpacing.lg),
+        _CostRow(
+          label: 'Coût egress réel estimé',
+          value: _usd(s.actualCostUsd),
+          strong: true,
+        ),
+        _CostRow(
+          label: 'Sans tiering (2 pistes/match)',
+          value: _usd(s.baselineCostUsd),
+        ),
+        _CostRow(
+          label: 'Économie',
+          value:
+              '${_usd(s.savingsUsd)}  (−${s.savingsPct.toStringAsFixed(0)} %)',
+          strong: true,
+          highlight: true,
+        ),
+        if (s.livekit > 0) ...[
+          const SizedBox(height: ArenaSpacing.md),
+          Text(
+            'RAISONS DES EGRESS',
+            style: ArenaText.small.copyWith(
+              color: ArenaColors.silver,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          _CostRow(label: 'Cagnotte élevée', value: '${s.prize}'),
+          _CostRow(label: 'Sous surveillance', value: '${s.surveillance}'),
+          _CostRow(label: 'Litige sur le match', value: '${s.dispute}'),
+          _CostRow(label: 'Échantillon aléatoire', value: '${s.random}'),
+        ],
+        const SizedBox(height: ArenaSpacing.sm),
+        Text(
+          'Coût unitaire modélisé : ${_usd(s.costPerEgressUsd)} / egress '
+          '(≈ 12 min, 1 piste).',
+          style: ArenaText.small.copyWith(color: ArenaColors.silver),
+        ),
+      ],
+    );
+  }
+}
+
+class _CostRow extends StatelessWidget {
+  const _CostRow({
+    required this.label,
+    required this.value,
+    this.strong = false,
+    this.highlight = false,
+  });
+
+  final String label;
+  final String value;
+  final bool strong;
+  final bool highlight;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = highlight ? ArenaColors.iceCyan : null;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: ArenaText.small.copyWith(
+                color: ArenaColors.silver,
+              ),
+            ),
+          ),
+          const SizedBox(width: ArenaSpacing.md),
+          Text(
+            value,
+            style: (strong ? ArenaText.body : ArenaText.small).copyWith(
+              fontWeight: strong ? FontWeight.w700 : FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WindowChip extends StatelessWidget {
+  const _WindowChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: ArenaSpacing.md,
+          vertical: ArenaSpacing.sm,
+        ),
+        decoration: BoxDecoration(
+          color: selected
+              ? ArenaColors.iceCyan.withValues(alpha: 0.15)
+              : Colors.transparent,
+          border: Border.all(
+            color: selected ? ArenaColors.iceCyan : ArenaColors.silver,
+          ),
+          borderRadius: BorderRadius.circular(ArenaRadius.sm),
+        ),
+        child: Text(
+          label,
+          style: ArenaText.small.copyWith(
+            color: selected ? ArenaColors.iceCyan : ArenaColors.silver,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
     );
   }

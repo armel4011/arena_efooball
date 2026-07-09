@@ -125,6 +125,8 @@ class _DesktopAntiCheatPageState extends ConsumerState<DesktopAntiCheatPage> {
                   ),
                   const SizedBox(height: 28),
                   const _TieringThresholdsCard(),
+                  const SizedBox(height: 28),
+                  const _CostObservabilityCard(),
                 ],
               ),
             ),
@@ -294,6 +296,193 @@ class _TieringThresholdsCardState
           FilledButton(
             onPressed: _saving ? null : _save,
             child: Text(_saving ? 'ENREGISTREMENT…' : 'ENREGISTRER LES SEUILS'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Observabilité coût egress (P4 volet B, équivalent Fluent) : chiffre le coût
+/// du tiering depuis les décisions réelles (`match_anticheat_plans`).
+class _CostObservabilityCard extends ConsumerStatefulWidget {
+  const _CostObservabilityCard();
+
+  @override
+  ConsumerState<_CostObservabilityCard> createState() =>
+      _CostObservabilityCardState();
+}
+
+class _CostObservabilityCardState
+    extends ConsumerState<_CostObservabilityCard> {
+  AnticheatCostWindow _window = AnticheatCostWindow.last30d;
+
+  @override
+  Widget build(BuildContext context) {
+    final async = ref.watch(antiCheatCostSummaryProvider(_window));
+    return Card(
+      backgroundColor: ArenaColors.carbon,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'COÛT EGRESS MESURÉ',
+            style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Chiffré depuis les décisions réelles de tiering. « Économie » = '
+            "ce qu'aurait coûté l'egress des 2 pistes de chaque match sans "
+            'le tiering. Vide tant que le provider natif est actif.',
+            style: GoogleFonts.spaceGrotesk(
+              color: ArenaColors.silver,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ComboBox<AnticheatCostWindow>(
+            value: _window,
+            items: const [
+              ComboBoxItem(
+                value: AnticheatCostWindow.last30d,
+                child: Text('30 jours'),
+              ),
+              ComboBoxItem(
+                value: AnticheatCostWindow.allTime,
+                child: Text('Tout'),
+              ),
+            ],
+            onChanged: (w) {
+              if (w != null) setState(() => _window = w);
+            },
+          ),
+          const SizedBox(height: 16),
+          async.when(
+            loading: () => const Center(child: ProgressRing()),
+            error: (e, _) => Text(
+              'Chargement impossible.',
+              style: GoogleFonts.spaceGrotesk(color: ArenaColors.neonRed),
+            ),
+            data: (s) => _CostSummaryBody(summary: s),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CostSummaryBody extends StatelessWidget {
+  const _CostSummaryBody({required this.summary});
+
+  final AnticheatCostSummary summary;
+
+  static String _usd(num v) => '\$${v.toStringAsFixed(v < 10 ? 3 : 2)}';
+
+  @override
+  Widget build(BuildContext context) {
+    final s = summary;
+    if (s.decided == 0) {
+      return Text(
+        "Aucun plan de tiering figé sur la période — système d'egress "
+        'dormant.',
+        style: GoogleFonts.spaceGrotesk(
+          color: ArenaColors.silver,
+          fontSize: 12,
+        ),
+      );
+    }
+    final pct = (s.livekitFraction * 100).toStringAsFixed(1);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _CostRow(label: 'Matchs décidés', value: '${s.decided}'),
+        _CostRow(label: 'Egressés (LiveKit)', value: '${s.livekit}  ($pct %)'),
+        _CostRow(label: 'Natif seul (hash)', value: '${s.nativeOnly}'),
+        const Divider(),
+        _CostRow(
+          label: 'Coût egress réel estimé',
+          value: _usd(s.actualCostUsd),
+          strong: true,
+        ),
+        _CostRow(
+          label: 'Sans tiering (2 pistes/match)',
+          value: _usd(s.baselineCostUsd),
+        ),
+        _CostRow(
+          label: 'Économie',
+          value:
+              '${_usd(s.savingsUsd)}  (−${s.savingsPct.toStringAsFixed(0)} %)',
+          strong: true,
+          highlight: true,
+        ),
+        if (s.livekit > 0) ...[
+          const SizedBox(height: 12),
+          Text(
+            'RAISONS DES EGRESS',
+            style: GoogleFonts.spaceGrotesk(
+              color: ArenaColors.silver,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          _CostRow(label: 'Cagnotte élevée', value: '${s.prize}'),
+          _CostRow(label: 'Sous surveillance', value: '${s.surveillance}'),
+          _CostRow(label: 'Litige sur le match', value: '${s.dispute}'),
+          _CostRow(label: 'Échantillon aléatoire', value: '${s.random}'),
+        ],
+        const SizedBox(height: 8),
+        Text(
+          'Coût unitaire modélisé : ${_usd(s.costPerEgressUsd)} / egress '
+          '(≈ 12 min, 1 piste).',
+          style: GoogleFonts.spaceGrotesk(
+            color: ArenaColors.silver,
+            fontSize: 11,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CostRow extends StatelessWidget {
+  const _CostRow({
+    required this.label,
+    required this.value,
+    this.strong = false,
+    this.highlight = false,
+  });
+
+  final String label;
+  final String value;
+  final bool strong;
+  final bool highlight;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: GoogleFonts.spaceGrotesk(
+                color: ArenaColors.silver,
+                fontSize: 12,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            value,
+            style: GoogleFonts.spaceGrotesk(
+              fontWeight: strong ? FontWeight.w700 : FontWeight.w600,
+              fontSize: strong ? 14 : 12,
+              color: highlight ? ArenaColors.iceCyan : null,
+            ),
           ),
         ],
       ),
