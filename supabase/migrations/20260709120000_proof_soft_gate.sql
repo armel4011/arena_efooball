@@ -62,6 +62,25 @@ comment on column public.streams.capture_note is
   'Raison libre quand capture_status = unavailable (permission_denied, '
   'start_failed, …). Métadonnée de triage admin.';
 
+-- ─── 1b. Nouveau type d'event `proof_missing` (trou de preuve) ──────────────
+-- finalize_match_score journalise ce type ; il DOIT être ajouté à la contrainte
+-- CHECK de match_events.type (sinon violation à la finalisation, en prod aussi).
+-- Drop+recreate idempotent, liste complète (8 types d'origine + proof_missing).
+alter table public.match_events
+  drop constraint if exists match_events_type_check;
+alter table public.match_events
+  add constraint match_events_type_check check (type in (
+    'match_started',
+    'goal',
+    'score_submitted',
+    'score_validated',
+    'score_disputed',
+    'forfeit',
+    'admin_adjustment',
+    'match_finished',
+    'proof_missing'
+  ));
+
 -- ─── 2. Flag d'enforcement (défaut OFF : trace seule tant que non activé) ────
 insert into public.app_config (key, value, description)
 values (
