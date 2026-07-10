@@ -1,8 +1,11 @@
 import 'package:arena/core/router/user_router.dart';
+import 'package:arena/core/services/payment_proof_uploader.dart';
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/core/utils/arena_error_message.dart';
 import 'package:arena/data/repositories/payment_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:arena/features_shared/widgets/arena_image_viewer.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_user/payments/payment_failed_page.dart';
 import 'package:arena/features_user/payments/payment_method.dart';
@@ -144,6 +147,8 @@ class _PaymentProcessingPageState extends ConsumerState<PaymentProcessingPage> {
                 maskedPhone: widget.maskedPhone,
                 paymentId: widget.paymentId,
               ),
+              const SizedBox(height: ArenaSpacing.lg),
+              _PaymentProofSection(paymentId: widget.paymentId),
               const SizedBox(height: ArenaSpacing.lg),
               Container(
                 padding: const EdgeInsets.all(ArenaSpacing.md),
@@ -292,4 +297,154 @@ String _formatXaf(int amount) {
     buf.write(s[i]);
   }
   return buf.toString();
+}
+
+/// Bloc « capture d'inscription » : le joueur joint une capture d'écran de son
+/// paiement P2P pour aider le super-admin à valider. Upload dans le bucket
+/// privé `payment-proofs` puis enregistrement de la clé via `attach_payment_proof`.
+class _PaymentProofSection extends ConsumerStatefulWidget {
+  const _PaymentProofSection({required this.paymentId});
+
+  final String paymentId;
+
+  @override
+  ConsumerState<_PaymentProofSection> createState() =>
+      _PaymentProofSectionState();
+}
+
+class _PaymentProofSectionState extends ConsumerState<_PaymentProofSection> {
+  bool _busy = false;
+  String? _error;
+
+  Future<void> _addProof(String userId) async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final uploader = ref.read(paymentProofUploaderProvider);
+      final picked = await uploader.pick();
+      if (picked == null) {
+        if (mounted) setState(() => _busy = false);
+        return; // annulé
+      }
+      final path = await uploader.upload(
+        paymentId: widget.paymentId,
+        userId: userId,
+        proof: picked,
+      );
+      await ref.read(paymentRepositoryProvider).attachProof(
+            paymentId: widget.paymentId,
+            proofPath: path,
+          );
+      messenger.showSnackBar(
+        const SnackBar(content: Text("Capture envoyée à l'admin.")),
+      );
+    } catch (e) {
+      if (mounted) setState(() => _error = arenaErrorMessage(e));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final rec = ref.watch(paymentByIdProvider(widget.paymentId)).valueOrNull;
+    if (rec == null) return const SizedBox.shrink();
+    final hasProof = rec.hasProof;
+    return Container(
+      padding: const EdgeInsets.all(ArenaSpacing.lg),
+      decoration: BoxDecoration(
+        color: ArenaColors.carbon,
+        borderRadius: BorderRadius.circular(ArenaRadius.lg),
+        border: Border.all(color: ArenaColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Capture de votre inscription',
+            style: ArenaText.body.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            "Joignez une capture d'écran de votre paiement Mobile Money : "
+            'elle aide le super-admin à valider votre inscription plus vite.',
+            style: ArenaText.small.copyWith(color: ArenaColors.silver),
+          ),
+          const SizedBox(height: ArenaSpacing.md),
+          if (hasProof) ...[
+            _ProofThumbnail(proofPath: rec.proofPath!),
+            const SizedBox(height: ArenaSpacing.sm),
+          ],
+          if (_error != null) ...[
+            Text(
+              _error!,
+              style: ArenaText.small.copyWith(color: ArenaColors.neonRed),
+            ),
+            const SizedBox(height: ArenaSpacing.sm),
+          ],
+          ArenaButton(
+            label: _busy
+                ? 'ENVOI…'
+                : hasProof
+                    ? 'REMPLACER LA CAPTURE'
+                    : 'AJOUTER MA CAPTURE',
+            variant: ArenaButtonVariant.secondary,
+            fullWidth: true,
+            isLoading: _busy,
+            onPressed: _busy ? null : () => _addProof(rec.userId),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Vignette cliquable de la capture jointe (URL signée à la demande).
+class _ProofThumbnail extends ConsumerWidget {
+  const _ProofThumbnail({required this.proofPath});
+
+  final String proofPath;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final urlFuture =
+        ref.watch(paymentRepositoryProvider).signedProofUrl(proofPath);
+    return FutureBuilder<String?>(
+      future: urlFuture,
+      builder: (context, snap) {
+        final url = snap.data;
+        if (url == null) {
+          return const SizedBox(
+            height: 120,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        return GestureDetector(
+          onTap: () => ArenaImageViewer.show(
+            context,
+            imageUrl: url,
+            caption: "Capture d'inscription",
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(ArenaRadius.md),
+            child: Image.network(
+              url,
+              height: 140,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(
+                height: 140,
+                color: ArenaColors.void_,
+                alignment: Alignment.center,
+                child: const Icon(Icons.broken_image, color: ArenaColors.silver),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 }

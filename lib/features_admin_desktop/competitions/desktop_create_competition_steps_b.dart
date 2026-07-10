@@ -390,6 +390,17 @@ mixin _StepBuildersB
             ),
           ),
         ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: InfoLabel(
+            label: 'Numéro à payer (CEMAC)',
+            child: TextBox(
+              controller: op.numberCtrl,
+              placeholder: 'optionnel',
+              onChanged: (_) => setState(() {}),
+            ),
+          ),
+        ),
         const SizedBox(width: 4),
         IconButton(
           icon: const Icon(FluentIcons.save, size: 16),

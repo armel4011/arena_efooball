@@ -96,7 +96,10 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
     final route = notif.route;
     if (!mounted) return;
     if (route != null) {
-      context.go(route);
+      // `push` (et non `go`) : empile la cible au-dessus de la liste de notifs
+      // — le back revient à la liste puis à l'accueil, au lieu de fermer l'app
+      // (les routes sont de 1er niveau ; `go` viderait la pile). Cf. bug retour.
+      unawaited(context.push(route));
     }
   }
 }

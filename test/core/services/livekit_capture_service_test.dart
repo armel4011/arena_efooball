@@ -106,6 +106,9 @@ class _FakeOverlay implements RecordingOverlayController {
   void setLiveAvailable(bool value) {}
 
   @override
+  void setDisplayedRoomCode(String? code) {}
+
+  @override
   Duration totalDuration = const Duration(minutes: 25);
 
   @override

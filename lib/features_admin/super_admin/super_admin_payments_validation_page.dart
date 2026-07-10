@@ -7,6 +7,7 @@ import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
+import 'package:arena/features_shared/widgets/arena_image_viewer.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -553,6 +554,10 @@ class _PendingCard extends StatelessWidget {
               ],
             ),
           ),
+          if (p.hasProof) ...[
+            const SizedBox(height: ArenaSpacing.sm),
+            _PaymentProofPreview(proofPath: p.proofPath!),
+          ],
           const SizedBox(height: ArenaSpacing.sm),
           Row(
             children: [
@@ -729,4 +734,71 @@ String _xaf(double amount) {
     buf.write(s[i]);
   }
   return buf.toString();
+}
+
+/// Vignette cliquable de la capture d'inscription jointe par le joueur (URL
+/// signée à la demande — bucket `payment-proofs` privé). Tap → plein écran.
+class _PaymentProofPreview extends ConsumerWidget {
+  const _PaymentProofPreview({required this.proofPath});
+
+  final String proofPath;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final urlFuture =
+        ref.watch(adminPaymentsRepositoryProvider).signedProofUrl(proofPath);
+    return FutureBuilder<String?>(
+      future: urlFuture,
+      builder: (context, snap) {
+        final url = snap.data;
+        if (url == null) {
+          return const SizedBox(
+            height: 60,
+            child: Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          );
+        }
+        return GestureDetector(
+          onTap: () => ArenaImageViewer.show(
+            context,
+            imageUrl: url,
+            caption: "Capture d'inscription",
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "📎 Capture d'inscription (appuyez pour agrandir)",
+                style: ArenaText.small.copyWith(color: ArenaColors.silver),
+              ),
+              const SizedBox(height: 4),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(ArenaRadius.md),
+                child: Image.network(
+                  url,
+                  height: 120,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    height: 120,
+                    color: ArenaColors.void_,
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.broken_image,
+                      color: ArenaColors.silver,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 }

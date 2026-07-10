@@ -338,6 +338,18 @@ class _OperatorRow extends StatelessWidget {
           hint: l10n.countryTransferCodeHint,
           onChanged: (_) => onChanged(),
         ),
+        const SizedBox(height: ArenaSpacing.xs),
+        Text(
+          'Numéro à payer (optionnel — zone CEMAC)',
+          style: ArenaText.inputLabel,
+        ),
+        const SizedBox(height: ArenaSpacing.xs),
+        ArenaTextField(
+          controller: operator.numberCtrl,
+          hint: 'Ex. 6 78 45 12 42',
+          keyboardType: TextInputType.phone,
+          onChanged: (_) => onChanged(),
+        ),
       ],
     );
   }

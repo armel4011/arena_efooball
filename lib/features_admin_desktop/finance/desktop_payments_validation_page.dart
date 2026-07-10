@@ -204,6 +204,10 @@ class _PendingCard extends ConsumerWidget {
             'Référence',
             'ARENA-${_shortId(payment.id)}',
           ),
+          if (payment.hasProof) ...[
+            const SizedBox(height: 12),
+            _DesktopProofPreview(proofPath: payment.proofPath!),
+          ],
           const SizedBox(height: 16),
           Row(
             children: [
@@ -761,3 +765,74 @@ Future<void> _showResult(
 
 String _shortId(String id) =>
     id.length <= 8 ? id.toUpperCase() : id.substring(0, 8).toUpperCase();
+
+/// Vignette de la capture d'inscription (bucket privé `payment-proofs`, URL
+/// signée à la demande). Tap → aperçu plein cadre dans un ContentDialog.
+class _DesktopProofPreview extends ConsumerWidget {
+  const _DesktopProofPreview({required this.proofPath});
+
+  final String proofPath;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final urlFuture =
+        ref.watch(adminPaymentsRepositoryProvider).signedProofUrl(proofPath);
+    return FutureBuilder<String?>(
+      future: urlFuture,
+      builder: (context, snap) {
+        final url = snap.data;
+        if (url == null) {
+          return const SizedBox(height: 40, child: Center(child: ProgressRing()));
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Capture d'inscription (cliquer pour agrandir)",
+              style: GoogleFonts.spaceGrotesk(
+                color: ArenaColors.silver,
+                fontSize: 11,
+              ),
+            ),
+            const SizedBox(height: 4),
+            GestureDetector(
+              onTap: () => _showFull(context, url),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  url,
+                  height: 120,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    height: 120,
+                    color: ArenaColors.void_,
+                    alignment: Alignment.center,
+                    child: const Icon(FluentIcons.photo_error, size: 24),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showFull(BuildContext context, String url) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => ContentDialog(
+        constraints: const BoxConstraints(maxWidth: 720),
+        title: const Text("Capture d'inscription"),
+        content: Image.network(url, fit: BoxFit.contain),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Fermer'),
+          ),
+        ],
+      ),
+    );
+  }
+}

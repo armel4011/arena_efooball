@@ -153,6 +153,16 @@ class AdminPaymentsRepository {
       params: {'p_payment_id': paymentId},
     );
   }
+
+  /// URL signée (1 h) de la capture d'inscription jointe par le joueur — le
+  /// bucket `payment-proofs` est privé (lecture admin via RLS). `null` si pas
+  /// de capture.
+  Future<String?> signedProofUrl(String? proofPath) async {
+    if (proofPath == null || proofPath.isEmpty) return null;
+    return _client.storage
+        .from('payment-proofs')
+        .createSignedUrl(proofPath, 3600);
+  }
 }
 
 final adminPaymentsRepositoryProvider =
