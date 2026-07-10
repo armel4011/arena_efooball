@@ -29,7 +29,6 @@ alter table public.matches disable trigger trg_matches_finalize_competition;
 alter table public.matches disable trigger trg_matches_increment_stats;
 alter table public.matches disable trigger trg_matches_recalc_group_standings;
 alter table public.matches disable trigger z_auto_schedule_next_round_on_match_complete;
-alter table public.matches disable trigger trg_matches_auto_publish_final;
 alter table public.matches disable trigger trg_notify_match_room_activated_upd;
 
 -- ─── Fixtures (superuser : bypass RLS) ──────────────────────────────
