@@ -137,7 +137,10 @@ void main() {
   // 2471 → 2482 le 2026-07-10 : +11 des vignettes « capture d'inscription »
   // (user payment_processing + admin mobile/desktop) — tokens ArenaColors
   // (silver/void_/carbon/border) sur les previews signés + broken-image.
-  const colorsDotBaseline = 2482; // occurrences de `Colors.`
+  // 2482 → 2498 le 2026-07-10 : +16 des widgets paiement CEMAC (numéro à copier,
+  // étapes, card tuto) dans mobile_money_details_page — tokens ArenaColors +
+  // 1 seul vrai Colors.white (icône play de la card tuto).
+  const colorsDotBaseline = 2498; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.

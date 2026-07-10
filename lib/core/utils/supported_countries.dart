@@ -46,6 +46,17 @@ const List<SupportedCountry> kSupportedCountries = <SupportedCountry>[
   SupportedCountry('MG', 'Madagascar', '🇲🇬', '+261'),
 ];
 
+/// Les 6 États de la zone CEMAC (Afrique centrale, franc CFA BEAC / XAF).
+/// Sert à n'activer le flux de paiement CEMAC (numéro à copier + étapes +
+/// tuto) que pour ces pays.
+const Set<String> kCemacCountryCodes = {'CM', 'GA', 'TD', 'CF', 'CG', 'GQ'};
+
+/// `true` si [countryCode] (ISO alpha-2, casse indifférente) est un pays CEMAC.
+bool isCemacCountry(String? countryCode) {
+  if (countryCode == null || countryCode.isEmpty) return false;
+  return kCemacCountryCodes.contains(countryCode.toUpperCase());
+}
+
 /// Retourne l'indicatif E.164 du pays (ex: `'CI'` → `'+225'`). Fallback
 /// sur le 1er pays de la liste si le code est inconnu (évite un crash
 /// si la DB contient un code legacy non listé).

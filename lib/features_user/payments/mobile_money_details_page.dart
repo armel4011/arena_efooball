@@ -66,6 +66,18 @@ class _MobileMoneyDetailsPageState
   /// Code de transfert de l'opérateur (peut être vide si non configuré).
   String get _transferCode => widget.operator.transferCode ?? '';
 
+  /// Flux CEMAC : numéro destinataire copiable + étapes + tuto, activé
+  /// uniquement pour les pays de la zone CEMAC.
+  bool get _isCemac => isCemacCountry(widget.operator.countryCode);
+
+  /// Numéro destinataire à copier (zone CEMAC), vide si non configuré.
+  String get _paymentNumber => widget.operator.paymentNumber ?? '';
+
+  /// URL du tutoriel vidéo de paiement (placeholder en dur — à remplacer par
+  /// un champ config admin ultérieurement).
+  static const _paymentTutorialUrl =
+      'https://www.youtube.com/results?search_query=arena+paiement+mobile+money';
+
   /// Nom du pays affiché (drapeau + nom) — repli sur le code brut.
   String get _countryDisplay {
     final match = kSupportedCountries
@@ -102,6 +114,15 @@ class _MobileMoneyDetailsPageState
                   .animate()
                   .fadeIn(duration: ArenaDurations.medium),
               const SizedBox(height: ArenaSpacing.lg),
+              // CEMAC : le numéro destinataire vient AVANT le code à exécuter —
+              // l'utilisateur le copie pour le saisir dans le menu de l'opérateur.
+              if (_isCemac && _paymentNumber.isNotEmpty) ...[
+                _PaymentNumberCard(
+                  number: _paymentNumber,
+                  onCopy: () => _copyNumber(context),
+                ),
+                const SizedBox(height: ArenaSpacing.lg),
+              ],
               if (!hasCode) ...[
                 const _MissingCodeBanner(),
                 const SizedBox(height: ArenaSpacing.md),
@@ -112,6 +133,16 @@ class _MobileMoneyDetailsPageState
                   onCopy: () => _copyCode(context),
                   onDial: () => _dialPayment(context),
                 ),
+              // CEMAC : le code n'est qu'une étape — on guide la suite (choix du
+              // pays destinataire + saisie du numéro copié) + un tuto vidéo.
+              if (_isCemac) ...[
+                const SizedBox(height: ArenaSpacing.lg),
+                _CemacStepsCard(hasNumber: _paymentNumber.isNotEmpty),
+                const SizedBox(height: ArenaSpacing.md),
+                _PaymentTutorialCard(
+                  onTap: () => _openTutorial(context),
+                ),
+              ],
               const SizedBox(height: ArenaSpacing.lg),
               Text(
                 l10n.mobileMoneyCountryLabel,
@@ -196,6 +227,24 @@ class _MobileMoneyDetailsPageState
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(l10n.mobileMoneyCodeCopied)),
     );
+  }
+
+  Future<void> _copyNumber(BuildContext context) async {
+    await Clipboard.setData(ClipboardData(text: _paymentNumber));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Numéro copié.')),
+    );
+  }
+
+  Future<void> _openTutorial(BuildContext context) async {
+    final uri = Uri.parse(_paymentTutorialUrl);
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Impossible d'ouvrir le tutoriel.")),
+      );
+    }
   }
 
   Future<void> _dialPayment(BuildContext context) async {
@@ -486,4 +535,191 @@ String _formatXaf(int amount) {
     buf.write(s[i]);
   }
   return buf.toString();
+}
+
+/// CEMAC — carte du NUMÉRO destinataire à copier (présentée AVANT le code).
+/// L'utilisateur le colle dans le menu Mobile Money après avoir exécuté le code.
+class _PaymentNumberCard extends StatelessWidget {
+  const _PaymentNumberCard({required this.number, required this.onCopy});
+
+  final String number;
+  final VoidCallback onCopy;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(ArenaSpacing.lg),
+      decoration: BoxDecoration(
+        color: ArenaColors.iceCyan.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(ArenaRadius.lg),
+        border: Border.all(
+          color: ArenaColors.iceCyan.withValues(alpha: 0.35),
+          width: 1.2,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text('💳', style: TextStyle(fontSize: 20)),
+              const SizedBox(width: 6),
+              Text('Numéro à payer', style: ArenaText.h3),
+            ],
+          ),
+          const SizedBox(height: ArenaSpacing.xs),
+          Text(
+            'Copiez ce numéro : vous devrez le saisir dans le menu de '
+            "l'opérateur après avoir exécuté le code ci-dessous.",
+            style: ArenaText.small.copyWith(color: ArenaColors.silver),
+          ),
+          const SizedBox(height: ArenaSpacing.sm),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(
+              horizontal: ArenaSpacing.md,
+              vertical: ArenaSpacing.md,
+            ),
+            decoration: BoxDecoration(
+              color: ArenaColors.carbon,
+              borderRadius: BorderRadius.circular(ArenaRadius.md),
+              border: Border.all(color: ArenaColors.borderHi),
+            ),
+            child: SelectableText(
+              number,
+              textAlign: TextAlign.center,
+              style: ArenaText.mono.copyWith(
+                fontSize: 22,
+                color: ArenaColors.iceCyan,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.5,
+              ),
+            ),
+          ),
+          const SizedBox(height: ArenaSpacing.sm),
+          ArenaButton(
+            label: 'COPIER LE NUMÉRO',
+            variant: ArenaButtonVariant.secondary,
+            fullWidth: true,
+            onPressed: onCopy,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// CEMAC — étapes textuelles guidant la suite du paiement (le code n'ouvre que
+/// le menu de l'opérateur ; le choix du pays + la saisie du numéro s'y font).
+class _CemacStepsCard extends StatelessWidget {
+  const _CemacStepsCard({required this.hasNumber});
+
+  final bool hasNumber;
+
+  @override
+  Widget build(BuildContext context) {
+    final steps = <String>[
+      'Exécutez le code ci-dessus (il ouvre le menu Mobile Money).',
+      'Sélectionnez le pays de destination : Cameroun.',
+      if (hasNumber)
+        'Saisissez le numéro copié plus haut comme destinataire.'
+      else
+        "Saisissez le numéro destinataire communiqué par l'organisateur.",
+      'Confirmez le montant, puis validez avec votre code secret.',
+    ];
+    return Container(
+      padding: const EdgeInsets.all(ArenaSpacing.lg),
+      decoration: BoxDecoration(
+        color: ArenaColors.carbon,
+        borderRadius: BorderRadius.circular(ArenaRadius.lg),
+        border: Border.all(color: ArenaColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Étapes du paiement', style: ArenaText.h3),
+          const SizedBox(height: ArenaSpacing.sm),
+          for (var i = 0; i < steps.length; i++)
+            Padding(
+              padding: const EdgeInsets.only(bottom: ArenaSpacing.xs),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 22,
+                    height: 22,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: ArenaColors.iceCyan.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      '${i + 1}',
+                      style: ArenaText.small.copyWith(
+                        color: ArenaColors.iceCyan,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: ArenaSpacing.sm),
+                  Expanded(child: Text(steps[i], style: ArenaText.body)),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// CEMAC — petite card renvoyant vers une vidéo tutoriel de paiement.
+class _PaymentTutorialCard extends StatelessWidget {
+  const _PaymentTutorialCard({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(ArenaSpacing.md),
+        decoration: BoxDecoration(
+          color: ArenaColors.carbon,
+          borderRadius: BorderRadius.circular(ArenaRadius.lg),
+          border: Border.all(color: ArenaColors.neonRed.withValues(alpha: 0.4)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: ArenaColors.neonRed,
+                borderRadius: BorderRadius.circular(ArenaRadius.sm),
+              ),
+              child: const Icon(Icons.play_arrow_rounded, color: Colors.white),
+            ),
+            const SizedBox(width: ArenaSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Voir le tutoriel vidéo',
+                    style: ArenaText.body.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  Text(
+                    'Comment payer étape par étape',
+                    style: ArenaText.small.copyWith(color: ArenaColors.silver),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: ArenaColors.silver),
+          ],
+        ),
+      ),
+    );
+  }
 }

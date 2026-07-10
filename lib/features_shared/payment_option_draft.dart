@@ -10,19 +10,23 @@ import 'package:flutter/widgets.dart';
 /// pendant l'édition, groupés par pays. Partagées entre le wizard mobile
 /// (`WizardStepCountry`) et le wizard desktop (`_buildCountryStep`).
 
-/// Un opérateur en cours d'édition : nom libre (Orange Money, Wave…) + son
-/// code de transfert Mobile Money.
+/// Un opérateur en cours d'édition : nom libre (Orange Money, Wave…), son
+/// code de transfert Mobile Money, et un numéro destinataire optionnel
+/// (à copier par le joueur — utilisé pour la zone CEMAC).
 class PaymentDraftOperator {
-  PaymentDraftOperator({String label = '', String code = ''})
+  PaymentDraftOperator({String label = '', String code = '', String number = ''})
       : labelCtrl = TextEditingController(text: label),
-        codeCtrl = TextEditingController(text: code);
+        codeCtrl = TextEditingController(text: code),
+        numberCtrl = TextEditingController(text: number);
 
   final TextEditingController labelCtrl;
   final TextEditingController codeCtrl;
+  final TextEditingController numberCtrl;
 
   void dispose() {
     labelCtrl.dispose();
     codeCtrl.dispose();
+    numberCtrl.dispose();
   }
 }
 
@@ -61,7 +65,11 @@ List<PaymentDraftCountry> paymentDraftsFromOptions(
       );
     });
     group.operators.add(
-      PaymentDraftOperator(label: o.operatorLabel, code: o.transferCode),
+      PaymentDraftOperator(
+        label: o.operatorLabel,
+        code: o.transferCode,
+        number: o.paymentNumber ?? '',
+      ),
     );
   }
   return [for (final code in order) byCountry[code]!];
@@ -81,6 +89,7 @@ List<CompetitionPaymentOption> paymentOptionsFromDrafts(
       final label = op.labelCtrl.text.trim();
       final code = op.codeCtrl.text.trim();
       if (label.isEmpty || code.isEmpty) continue;
+      final number = op.numberCtrl.text.trim();
       out.add(
         CompetitionPaymentOption(
           id: '',
@@ -89,6 +98,7 @@ List<CompetitionPaymentOption> paymentOptionsFromDrafts(
           operatorLabel: label,
           transferCode: code,
           dialCode: dialCodeFor(country.countryCode),
+          paymentNumber: number.isEmpty ? null : number,
           sortOrder: sort++,
         ),
       );

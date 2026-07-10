@@ -22,6 +22,7 @@ class PaymentOperator {
     required this.countryCode,
     this.transferCode,
     this.dialCode,
+    this.paymentNumber,
   });
 
   /// Reconstruit un opérateur depuis une option de paiement compétition.
@@ -32,6 +33,7 @@ class PaymentOperator {
       transferCode: o.transferCode,
       countryCode: o.countryCode,
       dialCode: o.dialCode,
+      paymentNumber: o.paymentNumber,
     );
   }
 
@@ -64,6 +66,9 @@ class PaymentOperator {
 
   /// Indicatif E.164 (ex. `+237`). Repli sur `dialCodeFor(countryCode)`.
   final String? dialCode;
+
+  /// Numéro destinataire du paiement (à copier par le joueur, zone CEMAC).
+  final String? paymentNumber;
 
   /// Initiales dérivées du label (1–3 lettres majuscules) pour le logo.
   String get badge {

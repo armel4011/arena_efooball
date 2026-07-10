@@ -70,4 +70,24 @@ void main() {
       expect(stripDialCode('   ', 'CM'), '');
     });
   });
+
+  group('isCemacCountry', () {
+    test('les 6 États CEMAC → true (casse indifférente)', () {
+      for (final code in const ['CM', 'GA', 'TD', 'CF', 'CG', 'GQ']) {
+        expect(isCemacCountry(code), isTrue, reason: code);
+        expect(isCemacCountry(code.toLowerCase()), isTrue, reason: code);
+      }
+    });
+
+    test('hors CEMAC (UEMOA / autres) → false', () {
+      for (final code in const ['SN', 'CI', 'CD', 'GN', 'FR']) {
+        expect(isCemacCountry(code), isFalse, reason: code);
+      }
+    });
+
+    test('null / vide → false', () {
+      expect(isCemacCountry(null), isFalse);
+      expect(isCemacCountry(''), isFalse);
+    });
+  });
 }

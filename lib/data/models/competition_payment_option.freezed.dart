@@ -30,6 +30,10 @@ mixin _$CompetitionPaymentOption {
   /// Indicatif E.164 du pays (ex. `'+237'`) — pré-remplit le champ numéro
   /// côté joueur (P2). Peut être null (repli sur `dialCodeFor(countryCode)`).
   String? get dialCode => throw _privateConstructorUsedError;
+
+  /// Numéro destinataire du paiement Mobile Money (à copier par le joueur,
+  /// zone CEMAC). Distinct du code USSD (`transferCode`). Optionnel.
+  String? get paymentNumber => throw _privateConstructorUsedError;
   int get sortOrder => throw _privateConstructorUsedError;
   DateTime? get createdAt => throw _privateConstructorUsedError;
 
@@ -56,6 +60,7 @@ abstract class $CompetitionPaymentOptionCopyWith<$Res> {
       String operatorLabel,
       String transferCode,
       String? dialCode,
+      String? paymentNumber,
       int sortOrder,
       DateTime? createdAt});
 }
@@ -82,6 +87,7 @@ class _$CompetitionPaymentOptionCopyWithImpl<$Res,
     Object? operatorLabel = null,
     Object? transferCode = null,
     Object? dialCode = freezed,
+    Object? paymentNumber = freezed,
     Object? sortOrder = null,
     Object? createdAt = freezed,
   }) {
@@ -109,6 +115,10 @@ class _$CompetitionPaymentOptionCopyWithImpl<$Res,
       dialCode: freezed == dialCode
           ? _value.dialCode
           : dialCode // ignore: cast_nullable_to_non_nullable
+              as String?,
+      paymentNumber: freezed == paymentNumber
+          ? _value.paymentNumber
+          : paymentNumber // ignore: cast_nullable_to_non_nullable
               as String?,
       sortOrder: null == sortOrder
           ? _value.sortOrder
@@ -138,6 +148,7 @@ abstract class _$$CompetitionPaymentOptionImplCopyWith<$Res>
       String operatorLabel,
       String transferCode,
       String? dialCode,
+      String? paymentNumber,
       int sortOrder,
       DateTime? createdAt});
 }
@@ -163,6 +174,7 @@ class __$$CompetitionPaymentOptionImplCopyWithImpl<$Res>
     Object? operatorLabel = null,
     Object? transferCode = null,
     Object? dialCode = freezed,
+    Object? paymentNumber = freezed,
     Object? sortOrder = null,
     Object? createdAt = freezed,
   }) {
@@ -191,6 +203,10 @@ class __$$CompetitionPaymentOptionImplCopyWithImpl<$Res>
           ? _value.dialCode
           : dialCode // ignore: cast_nullable_to_non_nullable
               as String?,
+      paymentNumber: freezed == paymentNumber
+          ? _value.paymentNumber
+          : paymentNumber // ignore: cast_nullable_to_non_nullable
+              as String?,
       sortOrder: null == sortOrder
           ? _value.sortOrder
           : sortOrder // ignore: cast_nullable_to_non_nullable
@@ -213,6 +229,7 @@ class _$CompetitionPaymentOptionImpl extends _CompetitionPaymentOption {
       required this.operatorLabel,
       required this.transferCode,
       this.dialCode,
+      this.paymentNumber,
       this.sortOrder = 0,
       this.createdAt})
       : super._();
@@ -235,6 +252,11 @@ class _$CompetitionPaymentOptionImpl extends _CompetitionPaymentOption {
   /// côté joueur (P2). Peut être null (repli sur `dialCodeFor(countryCode)`).
   @override
   final String? dialCode;
+
+  /// Numéro destinataire du paiement Mobile Money (à copier par le joueur,
+  /// zone CEMAC). Distinct du code USSD (`transferCode`). Optionnel.
+  @override
+  final String? paymentNumber;
   @override
   @JsonKey()
   final int sortOrder;
@@ -243,7 +265,7 @@ class _$CompetitionPaymentOptionImpl extends _CompetitionPaymentOption {
 
   @override
   String toString() {
-    return 'CompetitionPaymentOption(id: $id, competitionId: $competitionId, countryCode: $countryCode, operatorLabel: $operatorLabel, transferCode: $transferCode, dialCode: $dialCode, sortOrder: $sortOrder, createdAt: $createdAt)';
+    return 'CompetitionPaymentOption(id: $id, competitionId: $competitionId, countryCode: $countryCode, operatorLabel: $operatorLabel, transferCode: $transferCode, dialCode: $dialCode, paymentNumber: $paymentNumber, sortOrder: $sortOrder, createdAt: $createdAt)';
   }
 
   @override
@@ -262,6 +284,8 @@ class _$CompetitionPaymentOptionImpl extends _CompetitionPaymentOption {
                 other.transferCode == transferCode) &&
             (identical(other.dialCode, dialCode) ||
                 other.dialCode == dialCode) &&
+            (identical(other.paymentNumber, paymentNumber) ||
+                other.paymentNumber == paymentNumber) &&
             (identical(other.sortOrder, sortOrder) ||
                 other.sortOrder == sortOrder) &&
             (identical(other.createdAt, createdAt) ||
@@ -270,8 +294,17 @@ class _$CompetitionPaymentOptionImpl extends _CompetitionPaymentOption {
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, id, competitionId, countryCode,
-      operatorLabel, transferCode, dialCode, sortOrder, createdAt);
+  int get hashCode => Object.hash(
+      runtimeType,
+      id,
+      competitionId,
+      countryCode,
+      operatorLabel,
+      transferCode,
+      dialCode,
+      paymentNumber,
+      sortOrder,
+      createdAt);
 
   /// Create a copy of CompetitionPaymentOption
   /// with the given fields replaced by the non-null parameter values.
@@ -298,6 +331,7 @@ abstract class _CompetitionPaymentOption extends CompetitionPaymentOption {
       required final String operatorLabel,
       required final String transferCode,
       final String? dialCode,
+      final String? paymentNumber,
       final int sortOrder,
       final DateTime? createdAt}) = _$CompetitionPaymentOptionImpl;
   const _CompetitionPaymentOption._() : super._();
@@ -320,6 +354,11 @@ abstract class _CompetitionPaymentOption extends CompetitionPaymentOption {
   /// côté joueur (P2). Peut être null (repli sur `dialCodeFor(countryCode)`).
   @override
   String? get dialCode;
+
+  /// Numéro destinataire du paiement Mobile Money (à copier par le joueur,
+  /// zone CEMAC). Distinct du code USSD (`transferCode`). Optionnel.
+  @override
+  String? get paymentNumber;
   @override
   int get sortOrder;
   @override

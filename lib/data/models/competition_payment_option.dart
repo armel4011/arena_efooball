@@ -22,6 +22,10 @@ sealed class CompetitionPaymentOption with _$CompetitionPaymentOption {
     /// Indicatif E.164 du pays (ex. `'+237'`) — pré-remplit le champ numéro
     /// côté joueur (P2). Peut être null (repli sur `dialCodeFor(countryCode)`).
     String? dialCode,
+
+    /// Numéro destinataire du paiement Mobile Money (à copier par le joueur,
+    /// zone CEMAC). Distinct du code USSD (`transferCode`). Optionnel.
+    String? paymentNumber,
     @Default(0) int sortOrder,
     DateTime? createdAt,
   }) = _CompetitionPaymentOption;
@@ -38,6 +42,8 @@ sealed class CompetitionPaymentOption with _$CompetitionPaymentOption {
         'operator_label': operatorLabel,
         'transfer_code': transferCode,
         if (dialCode != null && dialCode!.isNotEmpty) 'dial_code': dialCode,
+        if (paymentNumber != null && paymentNumber!.isNotEmpty)
+          'payment_number': paymentNumber,
         'sort_order': sortOrder,
       };
 }
