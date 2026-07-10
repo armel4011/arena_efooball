@@ -132,11 +132,26 @@ void main() {
   });
 
   group('flagDisputed', () {
-    test('passe le match en disputed', () async {
-      final from = stub('matches', null);
+    test('délègue à flag_score_dispute (litige matérialisé atomiquement)',
+        () async {
+      when(
+        () => client.rpc<void>(
+          'flag_score_dispute',
+          params: any(named: 'params'),
+        ),
+      ).thenAnswer((_) => FakeQueryChain<void>(Future<void>.value()));
+
       await repo.flagDisputed('m1');
-      expect(from.updatedValues!['status'], 'disputed');
-      expect(from.filters.any((f) => f == 'eq:id=m1'), isTrue);
+
+      verify(
+        () => client.rpc<void>(
+          'flag_score_dispute',
+          params: {'p_match_id': 'm1'},
+        ),
+      ).called(1);
+      // Plus d'UPDATE direct de matches.status : la RPC crée aussi la ligne
+      // disputes pour la file d'arbitrage admin.
+      verifyNever(() => client.from('matches'));
     });
   });
 

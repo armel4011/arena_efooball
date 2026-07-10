@@ -20,7 +20,6 @@ alter table public.matches disable trigger trg_matches_finalize_competition;
 alter table public.matches disable trigger trg_matches_increment_stats;
 alter table public.matches disable trigger trg_matches_recalc_group_standings;
 alter table public.matches disable trigger z_auto_schedule_next_round_on_match_complete;
-alter table public.matches disable trigger trg_matches_auto_publish_final;
 alter table public.matches disable trigger trg_notify_match_room_activated_upd;
 
 -- ─── Fixtures ───────────────────────────────────────────────────────
@@ -113,13 +112,17 @@ select is(
   (select count(*)::text from pg_indexes where schemaname='public'
    and indexname='uniq_payouts_competition_rank'), '1',
   'P3 : index unique (competition_id, rank) présent sur payouts');
--- anti-rejeu 'disputed' : la liste anti-rejeu de finalize_match_score doit
--- contenir la séquence complète (…forfeited', 'disputed) — spécifique au fix,
--- pas au simple routage vers disputed.
+-- anti-rejeu 'disputed' ASSOUPLI (fix 2026-07-11, migration 20260711120100) :
+-- finalize_match_score ne bloque plus TOUT match disputed (ça empêchait un
+-- désaccord de score corrigé de se refermer). Il ne bloque que les litiges sous
+-- revue FORMELLE (bot_review/admin_review) ; le simple désaccord ('open') reste
+-- re-finalisable → auto-fermeture quand les scores concordent.
 select is(
-  (select (pg_get_functiondef(oid) ilike '%''forfeited'', ''disputed''%')::text from pg_proc
+  (select (pg_get_functiondef(oid) ilike '%''bot_review'', ''admin_review''%'
+           and pg_get_functiondef(oid) not ilike '%''forfeited'', ''disputed''%')::text
+   from pg_proc
    where proname='finalize_match_score' and pronamespace='public'::regnamespace),
-  'true', 'P2 : finalize_match_score inclut disputed dans l''anti-rejeu');
+  'true', 'P2 : finalize_match_score ne bloque disputed que sous revue formelle');
 
 select * from finish();
 rollback;

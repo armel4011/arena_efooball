@@ -220,10 +220,16 @@ class MatchRepository {
     );
   }
 
-  /// Two players posted disagreeing scores → flip to `disputed`. The
-  /// admin / arbitration bot (PHASE 12.5) will resolve from there.
+  /// Two players posted disagreeing scores → open a dispute. Via the atomic
+  /// `flag_score_dispute` RPC : flips the match to `disputed` AND materialises a
+  /// `disputes` row (idempotent) so the litige surfaces in the admin arbitration
+  /// queue. If both players later agree on a score, `finalize_match_score`
+  /// auto-closes that dispute; otherwise the admin resolves it (`resolve_dispute`).
   Future<void> flagDisputed(String matchId) async {
-    await _client.from(_table).update({'status': 'disputed'}).eq('id', matchId);
+    await _client.rpc<void>(
+      'flag_score_dispute',
+      params: {'p_match_id': matchId},
+    );
   }
 
   /// Declares a forfeit by the current player via the `forfeit_match` RPC

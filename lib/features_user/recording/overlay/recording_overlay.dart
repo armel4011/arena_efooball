@@ -523,7 +523,10 @@ class _RecordingOverlayButtonState extends State<RecordingOverlayButton> {
           // d'enregistrer, ouvre la saisie du code room. Masqué en mode simple
           // (LiveKit egress n'a pas de bouton flottant de code).
           _MiniButton(
-            visible: _expanded && !_tick.isSimple,
+            // HOME uniquement : ouvre la saisie pour ENVOYER le code. Côté AWAY
+            // (roomCode reçu), la clé devient l'AFFICHAGE du code — pastille
+            // « 🔑 + code » rendue ci-dessous, pas ce bouton d'envoi.
+            visible: _expanded && !_tick.isSimple && _tick.roomCode == null,
             offset: const Offset(-_miniRadius * 0.707, _miniRadius * 0.707),
             icon: Icons.vpn_key,
             color: ArenaColors.gameEfoot,
@@ -632,17 +635,25 @@ class _RecordingOverlayButtonState extends State<RecordingOverlayButton> {
               ),
             ),
           ),
-          // Code de salle partagé par l'hôte (côté AWAY) : affiché en haut du
-          // bouton flottant pour que le joueur le lise et le tape dans le jeu.
-          // Le presse-papier est impossible depuis l'overlay (MIUI) → design =
-          // lecture + saisie manuelle. Se met à jour si l'hôte change le code
-          // (le main repropage `roomCode` dans chaque tick).
+          // Code de salle reçu de l'hôte (côté AWAY) : PORTÉ PAR LA CLÉ du
+          // bouton flottant — pastille « 🔑 + code » ancrée sous le cluster,
+          // visible quand le bouton est déployé (elle remplace, côté AWAY, le
+          // bouton clé d'envoi réservé au HOME). Le presse-papier est impossible
+          // depuis l'overlay (MIUI) → lecture + saisie manuelle. Se met à jour
+          // si l'hôte change le code (le main repropage `roomCode` dans chaque
+          // tick).
           if (_tick.roomCode != null)
             Positioned(
-              top: 0,
+              bottom: 0,
               left: 0,
               right: 0,
-              child: Center(child: _RoomCodeChip(code: _tick.roomCode!)),
+              child: IgnorePointer(
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 160),
+                  opacity: _expanded ? 1 : 0,
+                  child: Center(child: _RoomCodeKey(code: _tick.roomCode!)),
+                ),
+              ),
             ),
         ],
       ),
@@ -650,10 +661,11 @@ class _RecordingOverlayButtonState extends State<RecordingOverlayButton> {
   }
 }
 
-/// Puce compacte affichant le code de salle sur le bouton overlay (côté AWAY).
+/// Pastille « clé » affichant le code de salle reçu par l'AWAY, portée par le
+/// bouton overlay (icône clé + code sur une ligne, cf. maquette « 🔑 4F7K2 »).
 /// TextStyle natif : l'isolate overlay n'a pas GoogleFonts (cf. le chrono).
-class _RoomCodeChip extends StatelessWidget {
-  const _RoomCodeChip({required this.code});
+class _RoomCodeKey extends StatelessWidget {
+  const _RoomCodeKey({required this.code});
 
   final String code;
 
@@ -661,33 +673,28 @@ class _RoomCodeChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       constraints: const BoxConstraints(maxWidth: 200),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.82),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: ArenaColors.iceCyan, width: 1.5),
       ),
-      child: Column(
+      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text(
-            'CODE SALLE',
-            style: TextStyle(
-              color: ArenaColors.iceCyan,
-              fontWeight: FontWeight.w700,
-              fontSize: 8,
-              letterSpacing: 0.5,
-            ),
-          ),
-          Text(
-            code,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w800,
-              fontSize: 14,
-              letterSpacing: 1,
+          const Icon(Icons.vpn_key, color: ArenaColors.iceCyan, size: 13),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              code,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+                fontSize: 14,
+                letterSpacing: 1,
+              ),
             ),
           ),
         ],
