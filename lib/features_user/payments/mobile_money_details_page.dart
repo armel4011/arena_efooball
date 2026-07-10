@@ -698,7 +698,7 @@ class _PaymentTutorialCard extends StatelessWidget {
                 color: ArenaColors.neonRed,
                 borderRadius: BorderRadius.circular(ArenaRadius.sm),
               ),
-              child: const Icon(Icons.play_arrow_rounded, color: Colors.white),
+              child: const Icon(Icons.play_arrow_rounded, color: ArenaColors.bone),
             ),
             const SizedBox(width: ArenaSpacing.md),
             Expanded(
