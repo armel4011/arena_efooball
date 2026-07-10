@@ -134,7 +134,10 @@ void main() {
   // 2467 → 2471 le 2026-07-10 : +4 de la puce « CODE SALLE » du bouton overlay
   // (_RoomCodeChip) — Colors.black/white NATIFS obligatoires (isolate overlay
   // sans thème, comme le chrono) + tokens ArenaColors.iceCyan.
-  const colorsDotBaseline = 2471; // occurrences de `Colors.`
+  // 2471 → 2482 le 2026-07-10 : +11 des vignettes « capture d'inscription »
+  // (user payment_processing + admin mobile/desktop) — tokens ArenaColors
+  // (silver/void_/carbon/border) sur les previews signés + broken-image.
+  const colorsDotBaseline = 2482; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.
@@ -166,7 +169,9 @@ void main() {
   // egress mesuré » anti-triche (P4 volet B) desktop (desktop_anticheat_page :
   // _CostObservabilityCard / _CostSummaryBody / _CostRow). Convention Fluent.
   // À migrer vers ArenaText à terme.
-  const googleFontsBaseline = 220; // occurrences de `GoogleFonts.`
+  // 220 → 221 le 2026-07-10 : +1 `GoogleFonts.spaceGrotesk` de la vignette
+  // « capture d'inscription » du paiement desktop (_DesktopProofPreview).
+  const googleFontsBaseline = 221; // occurrences de `GoogleFonts.`
 
   final colorsDotRe = RegExp(r'Colors\.');
   final colorHexRe = RegExp(r'Color\(0x');

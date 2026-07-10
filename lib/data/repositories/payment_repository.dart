@@ -27,6 +27,7 @@ class PaymentRecord {
     this.validatedAt,
     this.validatedByAdminId,
     this.rejectionReason,
+    this.proofPath,
   });
 
   factory PaymentRecord.fromJson(Map<String, dynamic> row) {
@@ -47,6 +48,7 @@ class PaymentRecord {
           : DateTime.parse(row['validated_at'] as String),
       validatedByAdminId: row['validated_by_admin_id'] as String?,
       rejectionReason: row['rejection_reason'] as String?,
+      proofPath: row['proof_path'] as String?,
     );
   }
 
@@ -75,6 +77,12 @@ class PaymentRecord {
   final DateTime? validatedAt;
   final String? validatedByAdminId;
   final String? rejectionReason;
+
+  /// Clé storage (bucket `payment-proofs`) de la capture jointe par le joueur,
+  /// ou `null` s'il n'en a pas fournie.
+  final String? proofPath;
+
+  bool get hasProof => proofPath != null && proofPath!.isNotEmpty;
 }
 
 class PaymentRepository {
@@ -129,6 +137,28 @@ class PaymentRepository {
         .stream(primaryKey: ['id'])
         .eq('id', paymentId)
         .map((rows) => rows.isEmpty ? null : PaymentRecord.fromJson(rows.first));
+  }
+
+  /// Enregistre la clé storage de la capture d'inscription sur son propre
+  /// paiement `awaiting_admin` (RPC `attach_payment_proof`, écriture ciblée
+  /// serveur — le client n'écrit pas `payments` directement).
+  Future<void> attachProof({
+    required String paymentId,
+    required String proofPath,
+  }) async {
+    await _client.rpc<void>(
+      'attach_payment_proof',
+      params: {'p_payment_id': paymentId, 'p_proof_path': proofPath},
+    );
+  }
+
+  /// URL signée (1 h) de la capture jointe — pour la prévisualisation côté
+  /// joueur (le bucket est privé). Renvoie `null` si pas de capture.
+  Future<String?> signedProofUrl(String? proofPath) async {
+    if (proofPath == null || proofPath.isEmpty) return null;
+    return _client.storage
+        .from('payment-proofs')
+        .createSignedUrl(proofPath, 3600);
   }
 
   /// Cancel la transaction côté joueur — utilisé sur P3 si l'utilisateur
