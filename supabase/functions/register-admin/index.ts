@@ -21,7 +21,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.108.2";
 import {
-  clientIp,
+  rateLimitKey,
   isInvitationExpired,
   normalizeCode,
   validateRegisterFields,
@@ -130,7 +130,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
   //    sur `invitation_codes` → un attaquant verrouillé n'obtient aucun signal
   //    sur l'existence/état d'un code. Fail-open : si le backend est indispo on
   //    laisse passer (un admin légitime ne doit pas être bloqué par une panne).
-  const ip = clientIp(req);
+  // Clé de rate-limit = email cible (non-spoofable) plutôt que l'IP seule —
+  // le header x-forwarded-for est partiellement contrôlé par le client.
+  const ip = rateLimitKey(email, req);
   try {
     const { data: lock } = await service.rpc("register_admin_check_lock", {
       p_ip: ip,

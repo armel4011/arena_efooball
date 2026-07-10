@@ -39,12 +39,26 @@ export function normalizeEmail(input: unknown): string {
   return typeof input === "string" ? input.trim().toLowerCase() : "";
 }
 
-/** IP de l'appelant derrière le proxy Supabase. `x-forwarded-for` peut
- *  contenir "client, proxy1, proxy2" — on garde la première entrée. */
+/** IP de l'appelant derrière le proxy Supabase. `x-forwarded-for` a la forme
+ *  "clientSpoofable, …, ipRéelle" : la gateway Supabase APPENDE l'IP réelle de
+ *  la connexion à DROITE. Les entrées de gauche sont fournies par le client et
+ *  donc falsifiables → on prend la DERNIÈRE entrée (non spoofable). */
 export function clientIp(req: Request): string {
   const fwd = req.headers.get("x-forwarded-for") ?? "";
-  const first = fwd.split(",")[0]?.trim();
-  return first && first.length > 0 ? first : "unknown";
+  const parts = fwd.split(",").map((p) => p.trim()).filter((p) => p.length > 0);
+  const real = parts[parts.length - 1];
+  return real && real.length > 0 ? real : "unknown";
+}
+
+/** Clé de rate-limit anti-énumération de codes. On privilégie l'EMAIL cible —
+ *  dimension d'identité stable et non-spoofable : c'est un champ requis et
+ *  validé, l'attaquant doit s'y engager — plutôt que l'IP seule (header XFF
+ *  partiellement contrôlé par le client). Fallback IP réelle si email absent.
+ *  La colonne `admin_register_attempts.ip` n'est qu'une clé texte : y stocker
+ *  "email:…" / "ip:…" est transparent pour les RPC de lock. */
+export function rateLimitKey(email: string, req: Request): string {
+  const e = normalizeEmail(email);
+  return e ? `email:${e}` : `ip:${clientIp(req)}`;
 }
 
 export interface RegisterFields {

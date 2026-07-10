@@ -8,6 +8,7 @@ import {
   isValidCodeFormat,
   normalizeCode,
   normalizeEmail,
+  rateLimitKey,
   validateAdminPassword,
   validateRegisterFields,
 } from "./logic.ts";
@@ -59,15 +60,31 @@ Deno.test("normalizeEmail", () => {
   assertEquals(normalizeEmail(undefined), "");
 });
 
-Deno.test("clientIp : première entrée de x-forwarded-for", () => {
+Deno.test("clientIp : DERNIÈRE entrée de x-forwarded-for (IP réelle, non-spoofable)", () => {
   const mk = (xff: string | null) =>
     new Request("https://x.invalid", {
       headers: xff === null ? {} : { "x-forwarded-for": xff },
     });
-  assertEquals(clientIp(mk("1.2.3.4, 10.0.0.1, 10.0.0.2")), "1.2.3.4");
+  // Entrées de gauche spoofables par le client, IP réelle appendée à droite.
+  assertEquals(clientIp(mk("1.2.3.4, 10.0.0.1, 10.0.0.2")), "10.0.0.2");
   assertEquals(clientIp(mk("  5.6.7.8  ")), "5.6.7.8");
   assertEquals(clientIp(mk("")), "unknown");
   assertEquals(clientIp(mk(null)), "unknown");
+});
+
+Deno.test("rateLimitKey : privilégie l'email, fallback IP réelle", () => {
+  const mk = (xff: string | null) =>
+    new Request("https://x.invalid", {
+      headers: xff === null ? {} : { "x-forwarded-for": xff },
+    });
+  // Email présent → clé email normalisée (indépendante du XFF spoofable).
+  assertEquals(
+    rateLimitKey("  Foo@Bar.COM ", mk("1.1.1.1, 9.9.9.9")),
+    "email:foo@bar.com",
+  );
+  // Email absent → fallback sur l'IP réelle (dernière entrée XFF).
+  assertEquals(rateLimitKey("", mk("1.1.1.1, 9.9.9.9")), "ip:9.9.9.9");
+  assertEquals(rateLimitKey("", mk(null)), "ip:unknown");
 });
 
 Deno.test("validateRegisterFields : valide → null", () => {
