@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:arena/core/services/proof_archive.dart';
 import 'package:arena/core/services/proof_file_store.dart';
 import 'package:arena/core/services/proof_transcoder.dart';
 import 'package:arena/core/services/sync_queue_service.dart';
@@ -66,11 +67,21 @@ class ProofCommitmentService {
 
       final sha = await sha256OfFile(file);
 
-      // Mémorise OÙ se trouve le fichier hashé (le proxy si dispo) : la
+      // RÉTENTION DURABLE (volet C) : copie le fichier hashé du cache purgeable
+      // vers le dossier applicatif persistant. La copie préserve les octets →
+      // le SHA-256 reste celui du commitment. Garde-fou : si la copie échoue,
+      // on retombe sur le chemin d'origine (comportement cache antérieur).
+      final durable = await _ref.read(proofArchiveProvider).persist(
+            matchId: matchId,
+            sourcePath: proofPath,
+          );
+      final storedPath = durable ?? proofPath;
+
+      // Mémorise OÙ se trouve le fichier hashé (proxy archivé si dispo) : la
       // réclamation admin peut arriver bien après le match (cf. ProofFileStore).
       await _ref.read(proofFileStoreProvider).put(
             matchId: matchId,
-            filePath: proofPath,
+            filePath: storedPath,
             playerId: playerId,
           );
 

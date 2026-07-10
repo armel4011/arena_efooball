@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:arena/core/services/proof_archive.dart';
 import 'package:arena/core/services/proof_file_store.dart';
 import 'package:arena/core/services/sync_queue_service.dart';
 import 'package:arena/core/utils/error_reporter.dart';
@@ -63,7 +64,12 @@ class ProofClaimService {
   /// Rattrape les preuves réclamées non encore livrées pour [userId] : utile
   /// quand la notif FCM est arrivée app fermée. Lit les lignes `streams` de soi
   /// avec un commitment, réclamées (`proof_claimed_at`), pas encore uploadées.
+  ///
+  /// En profite pour purger les preuves archivées + entrées locales périmées
+  /// (au-delà de la fenêtre de litige, cf. `ProofArchive.retention`) : maintient
+  /// le dossier applicatif borné sans cron dédié.
   Future<void> reconcilePendingClaims(String userId) async {
+    unawaited(_purgeExpiredProofs());
     try {
       final rows = await _ref
           .read(supabaseClientProvider)
@@ -82,6 +88,19 @@ class ProofClaimService {
       }
     } catch (e, st) {
       unawaited(reportError(e, st, context: 'ProofClaim.reconcile'));
+    }
+  }
+
+  /// Purge les preuves (fichiers archivés + entrées locales) plus vieilles que
+  /// la fenêtre de rétention. Best-effort, ne lève jamais.
+  Future<void> _purgeExpiredProofs() async {
+    try {
+      await _ref.read(proofArchiveProvider).purgeExpired();
+      await _ref
+          .read(proofFileStoreProvider)
+          .purgeOlderThan(ProofArchive.retention);
+    } catch (e, st) {
+      unawaited(reportError(e, st, context: 'ProofClaim.purgeExpired'));
     }
   }
 }
