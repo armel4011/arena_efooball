@@ -432,8 +432,10 @@ class ProofUploadAction extends SyncAction {
   Future<bool> execute(SupabaseClient client) async {
     final file = File(filePath);
     if (!file.existsSync()) {
-      // Fichier purgé (cache OS) avant la réclamation : on ne peut plus livrer.
-      // Drop définitif — l'admin verra une preuve réclamée jamais livrée.
+      // Preuve introuvable avant la réclamation : on ne peut plus livrer.
+      // Depuis le volet C le proxy est archivé en dossier persistant (survit à
+      // la purge cache OS), donc ce cas se limite aux entrées legacy / purge
+      // J+30 dépassée. Drop définitif — l'admin verra une preuve non livrée.
       if (kDebugMode) {
         debugPrint('[sync] proof upload: fichier absent $filePath — drop');
       }
