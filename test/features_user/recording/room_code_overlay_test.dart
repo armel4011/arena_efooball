@@ -173,5 +173,30 @@ void main() {
       expect(find.byType(TextField), findsNothing);
       expect(find.text('00:03'), findsOneWidget);
     });
+
+    testWidgets(
+        'roomCode reçu (AWAY) → code porté par la clé, plus de puce « CODE SALLE »',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: RecordingOverlayButton(
+              tick: const OverlayTick(
+                elapsedSeconds: 5,
+                isWarning: false,
+                roomCode: 'ABC12',
+              ),
+              onSubmitCode: (_) {},
+              onFieldFocusChange: (_) async {},
+            ),
+          ),
+        ),
+      );
+
+      // Le code est rendu dans la pastille « clé » (AnimatedOpacity le garde
+      // dans l'arbre même replié). L'ancienne étiquette de la puce a disparu.
+      expect(find.text('ABC12'), findsOneWidget);
+      expect(find.text('CODE SALLE'), findsNothing);
+    });
   });
 }

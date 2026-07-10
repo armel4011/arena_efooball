@@ -33,6 +33,9 @@ sealed class Dispute with _$Dispute {
   factory Dispute.fromJson(Map<String, dynamic> json) =>
       _$DisputeFromJson(json);
 
-  bool get isOpen => status == 'open' || status == 'escalated';
+  // Ouvert = tout sauf résolu/annulé. Couvre 'open', 'escalated' MAIS AUSSI
+  // 'bot_review' / 'admin_review' (litiges soft-gate preuve F4) qui étaient
+  // auparavant exclus → invisibles dans la file d'arbitrage admin.
+  bool get isOpen => !isResolved;
   bool get isResolved => status == 'resolved' || status == 'cancelled';
 }

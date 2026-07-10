@@ -131,8 +131,10 @@ void main() {
   // mesuré » anti-triche (P4 volet B) — mobile (_CostObservabilityCard /
   // _CostSummaryBody / _CostRow / _WindowChip) + desktop. 1 seul vrai Colors.*
   // (Colors.transparent de la puce fenêtre) ; le reste = tokens ArenaColors.
-  // 2467 → 2471 le 2026-07-10 : +4 de la puce « CODE SALLE » du bouton overlay
-  // (_RoomCodeChip) — Colors.black/white NATIFS obligatoires (isolate overlay
+  // 2467 → 2471 le 2026-07-10 : +4 du code room porté par la clé du bouton
+  // overlay (_RoomCodeChip, renommé _RoomCodeKey le 2026-07-10 — code déplacé
+  // de la puce flottante haute vers une pastille « 🔑 + code » sous le cluster ;
+  // décompte inchangé) — Colors.black/white NATIFS obligatoires (isolate overlay
   // sans thème, comme le chrono) + tokens ArenaColors.iceCyan.
   // 2471 → 2482 le 2026-07-10 : +11 des vignettes « capture d'inscription »
   // (user payment_processing + admin mobile/desktop) — tokens ArenaColors
