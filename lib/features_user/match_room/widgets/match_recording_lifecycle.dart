@@ -93,7 +93,10 @@ class _MatchRecordingLifecycleState
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeReact());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _maybeReact();
+      _pushRoomCodeToOverlay();
+    });
   }
 
   @override
@@ -108,6 +111,21 @@ class _MatchRecordingLifecycleState
     if (old.match.status != widget.match.status || wasJoined != _selfJoined) {
       _maybeReact();
     }
+    // L'hôte a renseigné / modifié le code de salle (realtime) → le rafraîchir
+    // sur le bouton overlay de l'adversaire.
+    if (old.match.roomCode != widget.match.roomCode) {
+      _pushRoomCodeToOverlay();
+    }
+  }
+
+  /// Pousse le code de salle vers le bouton flottant overlay CÔTÉ AWAY : le
+  /// joueur voit le code (partagé par l'hôte) et sa mise à jour sans rouvrir
+  /// l'app. No-op côté hôte (il l'a lui-même saisi) et hors capture native.
+  void _pushRoomCodeToOverlay() {
+    if (!_isAndroidNative || !_isPlayer) return;
+    final isHome = widget.match.homePlayerId == widget.selfId;
+    final code = isHome ? null : widget.match.roomCode;
+    ref.read(recordingOverlayControllerProvider).setDisplayedRoomCode(code);
   }
 
   Future<void> _maybeReact() async {

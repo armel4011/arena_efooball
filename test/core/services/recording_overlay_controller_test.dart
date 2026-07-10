@@ -306,6 +306,52 @@ void main() {
     });
   });
 
+  group('code de salle affiché (AWAY)', () {
+    bool tickRoomCode(Object d, String code) =>
+        d is Map && d['roomCode'] == code;
+
+    test('setDisplayedRoomCode pousse un tick portant le code', () async {
+      await controller.start();
+      platform.sharedData.clear();
+      controller.setDisplayedRoomCode('ABC123');
+      expect(platform.sharedData.any((d) => tickRoomCode(d, 'ABC123')), isTrue);
+    });
+
+    test('le code est repropagé dans les ticks suivants (persistance)',
+        () async {
+      await controller.start();
+      controller.setDisplayedRoomCode('XYZ789');
+      platform.sharedData.clear();
+      // Un autre push (setLiveAvailable) émet un tick immédiat qui DOIT encore
+      // porter le code mémorisé (sinon il disparaîtrait du bouton).
+      controller.setLiveAvailable(true);
+      expect(platform.sharedData.any((d) => tickRoomCode(d, 'XYZ789')), isTrue);
+    });
+
+    test('mise à jour du code : le nouveau code remplace l’ancien', () async {
+      await controller.start();
+      controller.setDisplayedRoomCode('OLD111');
+      platform.sharedData.clear();
+      controller.setDisplayedRoomCode('NEW222');
+      expect(platform.sharedData.any((d) => tickRoomCode(d, 'NEW222')), isTrue);
+      expect(platform.sharedData.any((d) => tickRoomCode(d, 'OLD111')), isFalse);
+    });
+
+    test('code vide/null → aucune clé roomCode dans le tick', () async {
+      await controller.start();
+      controller.setDisplayedRoomCode('ABC123');
+      platform.sharedData.clear();
+      controller.setDisplayedRoomCode(null);
+      // Le tick immédiat suivant (via setLiveAvailable) ne doit plus porter de
+      // code (clé absente car roomCode null).
+      controller.setLiveAvailable(true);
+      expect(
+        platform.sharedData.any((d) => d is Map && d.containsKey('roomCode')),
+        isFalse,
+      );
+    });
+  });
+
   group('OverlayTick', () {
     test('formatted pads MM:SS', () {
       expect(
@@ -342,6 +388,28 @@ void main() {
       final empty = OverlayTick.fromMap(null);
       expect(empty.elapsedSeconds, 0);
       expect(empty.isWarning, isFalse);
+    });
+
+    test('fromMap lit roomCode (non vide) sinon null', () {
+      final withCode = OverlayTick.fromMap({
+        'type': RecordingOverlayMessages.tickType,
+        'elapsed': 10,
+        'roomCode': 'ABC123',
+      });
+      expect(withCode.roomCode, 'ABC123');
+
+      final noCode = OverlayTick.fromMap({
+        'type': RecordingOverlayMessages.tickType,
+        'elapsed': 10,
+      });
+      expect(noCode.roomCode, isNull);
+
+      final emptyCode = OverlayTick.fromMap({
+        'type': RecordingOverlayMessages.tickType,
+        'elapsed': 10,
+        'roomCode': '',
+      });
+      expect(emptyCode.roomCode, isNull);
     });
   });
 }

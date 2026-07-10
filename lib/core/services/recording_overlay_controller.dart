@@ -68,6 +68,10 @@ class RecordingOverlayController {
   // affiche le champ inline. DOIT être propagé dans CHAQUE tick tant que la
   // saisie est ouverte, sinon le premier tick périodique refermerait le champ.
   bool _codeEntry = false;
+  // Côté AWAY : code de salle partagé par l'hôte, à afficher sur le bouton
+  // d'enregistrement pour que le joueur le tape. Mémorisé ici et repropagé dans
+  // CHAQUE tick (sinon il disparaîtrait au premier tick périodique qui l'omet).
+  String? _displayedRoomCode;
 
   /// Total length of a recording — must match `RecordingService.maxDuration`.
   /// Used by the overlay to flash a warning in the last 30 s.
@@ -109,6 +113,34 @@ class RecordingOverlayController {
           liveAvailable: _liveAvailable,
           simple: _simpleMode,
           codeEntry: _codeEntry,
+          roomCode: _displayedRoomCode,
+        ),
+      ),
+    );
+  }
+
+  /// Met à jour le code de salle affiché sur le bouton (côté AWAY). Appelé par
+  /// `MatchRecordingLifecycle` quand le realtime `matchByIdProvider` détecte que
+  /// l'hôte a renseigné/modifié `matches.room_code`. Push immédiat (comme
+  /// `setLiveAvailable`) pour ne pas attendre le prochain tick périodique.
+  void setDisplayedRoomCode(String? code) {
+    final normalized = (code != null && code.isNotEmpty) ? code : null;
+    if (_displayedRoomCode == normalized) return;
+    _displayedRoomCode = normalized;
+    final start = _startedAt;
+    if (start == null) return;
+    final elapsed = DateTime.now().difference(start);
+    final remaining = totalDuration - elapsed;
+    unawaited(
+      _platform.shareData(
+        RecordingOverlayMessages.tick(
+          elapsedSeconds: elapsed.inSeconds,
+          warning: remaining <= const Duration(seconds: 30),
+          paused: _pausedElapsed != null,
+          liveAvailable: _liveAvailable,
+          simple: _simpleMode,
+          codeEntry: _codeEntry,
+          roomCode: _displayedRoomCode,
         ),
       ),
     );
@@ -247,6 +279,7 @@ class RecordingOverlayController {
           liveAvailable: _liveAvailable,
           simple: _simpleMode,
           codeEntry: _codeEntry,
+          roomCode: _displayedRoomCode,
         ),
       ),
     );
@@ -280,6 +313,7 @@ class RecordingOverlayController {
     _liveAvailable = false;
     _simpleMode = false;
     _codeEntry = false;
+    _displayedRoomCode = null;
     await _listener?.cancel();
     _listener = null;
     await _portSub?.cancel();
@@ -307,6 +341,7 @@ class RecordingOverlayController {
         paused: true,
         simple: _simpleMode,
         codeEntry: _codeEntry,
+        roomCode: _displayedRoomCode,
       ),
     );
   }
@@ -328,6 +363,7 @@ class RecordingOverlayController {
         warning: totalDuration - paused <= const Duration(seconds: 30),
         simple: _simpleMode,
         codeEntry: _codeEntry,
+        roomCode: _displayedRoomCode,
       ),
     );
   }
@@ -412,6 +448,7 @@ class RecordingOverlayController {
           liveAvailable: _liveAvailable,
           simple: _simpleMode,
           codeEntry: _codeEntry,
+          roomCode: _displayedRoomCode,
         ),
       );
     });

@@ -131,7 +131,10 @@ void main() {
   // mesuré » anti-triche (P4 volet B) — mobile (_CostObservabilityCard /
   // _CostSummaryBody / _CostRow / _WindowChip) + desktop. 1 seul vrai Colors.*
   // (Colors.transparent de la puce fenêtre) ; le reste = tokens ArenaColors.
-  const colorsDotBaseline = 2467; // occurrences de `Colors.`
+  // 2467 → 2471 le 2026-07-10 : +4 de la puce « CODE SALLE » du bouton overlay
+  // (_RoomCodeChip) — Colors.black/white NATIFS obligatoires (isolate overlay
+  // sans thème, comme le chrono) + tokens ArenaColors.iceCyan.
+  const colorsDotBaseline = 2471; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.

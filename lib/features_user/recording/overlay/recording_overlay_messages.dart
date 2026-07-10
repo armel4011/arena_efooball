@@ -112,6 +112,12 @@ abstract final class RecordingOverlayMessages {
   /// chrono continue de tourner derrière ; ce flag DOIT être propagé dans
   /// TOUS les ticks tant que la saisie est ouverte, sinon le premier tick
   /// périodique qui l'omet refermerait le champ.
+  ///
+  /// `roomCode` : côté AWAY (adversaire), le code de salle partagé par l'hôte,
+  /// affiché sur le bouton d'enregistrement pour que le joueur le tape sans
+  /// rouvrir l'app. `null`/vide = pas encore de code. Comme `codeEntry`, il DOIT
+  /// être propagé dans TOUS les ticks (le contrôleur le mémorise et le renvoie
+  /// à chaque tick) sinon il disparaîtrait au premier tick périodique qui l'omet.
   static Map<String, dynamic> tick({
     required int elapsedSeconds,
     required bool warning,
@@ -119,6 +125,7 @@ abstract final class RecordingOverlayMessages {
     bool liveAvailable = false,
     bool simple = false,
     bool codeEntry = false,
+    String? roomCode,
   }) {
     final type = paused
         ? pausedType
@@ -131,6 +138,7 @@ abstract final class RecordingOverlayMessages {
       'liveAvailable': liveAvailable,
       'simple': simple,
       'codeEntry': codeEntry,
+      if (roomCode != null && roomCode.isNotEmpty) 'roomCode': roomCode,
     };
   }
 }
@@ -145,6 +153,7 @@ class OverlayTick {
     this.isLiveAvailable = false,
     this.isSimple = false,
     this.isCodeEntry = false,
+    this.roomCode,
   });
 
   factory OverlayTick.fromMap(Object? raw) {
@@ -156,6 +165,7 @@ class OverlayTick {
     final liveAvailable = raw['liveAvailable'];
     final simple = raw['simple'];
     final codeEntry = raw['codeEntry'];
+    final roomCode = raw['roomCode'];
     return OverlayTick(
       elapsedSeconds: elapsed is int ? elapsed : 0,
       isWarning: type == RecordingOverlayMessages.warnType,
@@ -163,6 +173,7 @@ class OverlayTick {
       isLiveAvailable: liveAvailable == true,
       isSimple: simple == true,
       isCodeEntry: codeEntry == true,
+      roomCode: roomCode is String && roomCode.isNotEmpty ? roomCode : null,
     );
   }
 
@@ -170,6 +181,10 @@ class OverlayTick {
   final bool isWarning;
   final bool isPaused;
   final bool isLiveAvailable;
+
+  /// Côté AWAY : le code de salle partagé par l'hôte (affiché sur le bouton),
+  /// ou `null` s'il n'est pas encore disponible.
+  final String? roomCode;
 
   /// Le bouton d'enregistrement affiche le champ de saisie du code room
   /// inline (nouveau flux : le HOME envoie son code depuis le bouton rouge).
