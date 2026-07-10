@@ -53,6 +53,9 @@ class _AdminDisputesPageState extends ConsumerState<AdminDisputesPage> {
   Widget build(BuildContext context) {
     final dispute = ref.watch(adminDisputeByMatchProvider(widget.matchId));
     final match = ref.watch(matchByIdProvider(widget.matchId));
+    // Scores DÉCLARÉS par chaque joueur (matches.score1/2 sont NULL en litige).
+    final submissions =
+        ref.watch(matchSubmittedScoresProvider(widget.matchId));
 
     return Scaffold(
       appBar: ArenaAppBar(
@@ -100,7 +103,10 @@ class _AdminDisputesPageState extends ConsumerState<AdminDisputesPage> {
                     Text('Erreur : $e', style: ArenaText.bodyMuted),
                 data: (m) => m == null
                     ? Text('Match introuvable.', style: ArenaText.bodyMuted)
-                    : _ScoresCard(match: m),
+                    : _ScoresCard(
+                        match: m,
+                        submissions: submissions.valueOrNull ?? const {},
+                      ),
               ),
               const SizedBox(height: ArenaSpacing.lg),
               Text(
@@ -190,8 +196,11 @@ class _DisputeHeader extends StatelessWidget {
 }
 
 class _ScoresCard extends StatelessWidget {
-  const _ScoresCard({required this.match});
+  const _ScoresCard({required this.match, this.submissions = const {}});
   final ArenaMatch match;
+
+  /// Scoreline déclaré par chaque joueur (`player_id → SubmittedScore`).
+  final Map<String, SubmittedScore> submissions;
 
   @override
   Widget build(BuildContext context) {
@@ -206,9 +215,9 @@ class _ScoresCard extends StatelessWidget {
           _Row(
             initial: _initialFor(match.player1Id),
             color: ArenaAvatarColor.orange,
-            label: 'Joueur 1 (HOME)',
+            label: 'Joueur 1 (HOME) · a déclaré',
             teamName: match.player1TeamName,
-            score: '${match.score1 ?? '?'}',
+            score: _declaredFor(match.player1Id, fallback: match.score1),
             scoreColor: ArenaColors.gameDraughts,
           ),
           const Divider(
@@ -219,14 +228,23 @@ class _ScoresCard extends StatelessWidget {
           _Row(
             initial: _initialFor(match.player2Id),
             color: ArenaAvatarColor.red,
-            label: 'Joueur 2 (AWAY)',
+            label: 'Joueur 2 (AWAY) · a déclaré',
             teamName: match.player2TeamName,
-            score: '${match.score2 ?? '?'}',
+            score: _declaredFor(match.player2Id, fallback: match.score2),
             scoreColor: ArenaColors.neonRed,
           ),
         ],
       ),
     );
+  }
+
+  /// Scoreline complet « s1-s2 » déclaré par [playerId] (source de vérité en
+  /// litige) ; repli sur le score final agréé [fallback] ; « — » si aucun.
+  String _declaredFor(String? playerId, {int? fallback}) {
+    final sub = playerId == null ? null : submissions[playerId];
+    if (sub != null) return sub.label;
+    if (fallback != null) return '$fallback';
+    return '—';
   }
 
   static String _initialFor(String? id) =>

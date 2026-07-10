@@ -125,6 +125,68 @@ void main() {
     });
   });
 
+  group('fetchSubmittedScores', () {
+    Map<String, dynamic> scoreRow({
+      required String createdBy,
+      required int score1,
+      required int score2,
+      bool viaPen = false,
+      int? pen1,
+      int? pen2,
+      String createdAt = '2026-07-11T10:00:00Z',
+    }) =>
+        {
+          'payload': <String, dynamic>{
+            'score1': score1,
+            'score2': score2,
+            if (viaPen) 'via_penalties': true,
+            if (pen1 != null) 'penalty1': pen1,
+            if (pen2 != null) 'penalty2': pen2,
+          },
+          'created_by': createdBy,
+          'created_at': createdAt,
+        };
+
+    test('map player_id → score déclaré (divergence visible en litige)',
+        () async {
+      final from = stubFrom(client, 'match_events', [
+        scoreRow(createdBy: 'p1', score1: 2, score2: 1),
+        scoreRow(createdBy: 'p2', score1: 1, score2: 2),
+      ]);
+      final subs = await repo.fetchSubmittedScores('m1');
+      expect(subs['p1']!.label, '2-1');
+      expect(subs['p2']!.label, '1-2');
+      expect(from.filters.any((f) => f == 'eq:type=score_submitted'), isTrue);
+      expect(from.filters.any((f) => f == 'eq:match_id=m1'), isTrue);
+    });
+
+    test('ne garde que la soumission la plus récente par joueur', () async {
+      // rows triés desc côté serveur → 1re occurrence d'un joueur = plus récente.
+      stubFrom(client, 'match_events', [
+        scoreRow(createdBy: 'p1', score1: 3, score2: 0),
+        scoreRow(createdBy: 'p1', score1: 2, score2: 1),
+      ]);
+      final subs = await repo.fetchSubmittedScores('m1');
+      expect(subs, hasLength(1));
+      expect(subs['p1']!.label, '3-0');
+    });
+
+    test('formate les tirs au but', () async {
+      stubFrom(client, 'match_events', [
+        scoreRow(
+          createdBy: 'p1',
+          score1: 2,
+          score2: 2,
+          viaPen: true,
+          pen1: 5,
+          pen2: 4,
+        ),
+      ]);
+      final subs = await repo.fetchSubmittedScores('m1');
+      expect(subs['p1']!.label, '2-2 (tab 5-4)');
+    });
+  });
+
   group('resolve', () {
     test('update status/resolution + resolved_at/by, cible le litige',
         () async {
