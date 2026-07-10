@@ -68,16 +68,6 @@ function jsonResponse(body: Record<string, unknown>, status = 200): Response {
   });
 }
 
-/** Supprime un objet trop volumineux / non vérifiable pour ne pas le laisser
- *  orphelin dans le bucket (jamais vérifié → pas d'expires_at → jamais purgé). */
-async function removeOversized(
-  sb: ReturnType<typeof createClient>,
-  objectPath: string,
-): Promise<void> {
-  const { error } = await sb.storage.from(BUCKET).remove([objectPath]);
-  if (error) console.error("oversized_proof_cleanup_failed:", error.message);
-}
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -160,6 +150,13 @@ Deno.serve(async (req) => {
     });
   }
 
+  // Supprime l'objet non vérifiable (trop volumineux) pour ne pas le laisser
+  // orphelin dans le bucket (jamais vérifié → pas d'expires_at → jamais purgé).
+  const removeOversized = async (): Promise<void> => {
+    const { error } = await sb.storage.from(BUCKET).remove([objectPath]);
+    if (error) console.error("oversized_proof_cleanup_failed:", error.message);
+  };
+
   // Streamer l'objet uploadé (endpoint storage, service-role) et le re-hasher
   // EN FLUX : la mémoire reste bornée quelle que soit la taille (plus de
   // download()+arrayBuffer() qui bufferisaient 2× le fichier → OOM).
@@ -180,7 +177,7 @@ Deno.serve(async (req) => {
   const declared = Number(res.headers.get("content-length") ?? "0");
   if (Number.isFinite(declared) && declared > MAX_VERIFY_BYTES) {
     await res.body.cancel();
-    await removeOversized(sb, objectPath);
+    await removeOversized();
     return jsonResponse({ error: "object_too_large" }, 413);
   }
 
@@ -190,7 +187,7 @@ Deno.serve(async (req) => {
     computed = await sha256HexOfStream(limitBytes(res.body, MAX_VERIFY_BYTES));
   } catch (e) {
     if (e instanceof ByteCapExceededError) {
-      await removeOversized(sb, objectPath);
+      await removeOversized();
       return jsonResponse({ error: "object_too_large" }, 413);
     }
     return jsonResponse(

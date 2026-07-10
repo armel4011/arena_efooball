@@ -92,6 +92,24 @@ export function limitBytes(
   );
 }
 
+/** Itère un `ReadableStream` en `AsyncGenerator` de chunks. `@std/crypto`
+ *  accepte un `AsyncIterable<BufferSource>` mais pas un `ReadableStream` brut
+ *  (son type ne l'expose pas comme async-iterable) — d'où ce pont. */
+async function* readChunks(
+  stream: ReadableStream<Uint8Array>,
+): AsyncGenerator<Uint8Array> {
+  const reader = stream.getReader();
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value) yield value;
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+
 /** SHA-256 (hex minuscules) calculé EN FLUX sur un flux de chunks — mémoire
  *  CONSTANTE : ne bufferise JAMAIS tout le fichier, contrairement à
  *  `crypto.subtle.digest` de Web Crypto qui exige le buffer complet (2× la
@@ -100,7 +118,7 @@ export function limitBytes(
 export async function sha256HexOfStream(
   stream: ReadableStream<Uint8Array>,
 ): Promise<string> {
-  const digest = await stdCrypto.subtle.digest("SHA-256", stream);
+  const digest = await stdCrypto.subtle.digest("SHA-256", readChunks(stream));
   return Array.from(new Uint8Array(digest))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
