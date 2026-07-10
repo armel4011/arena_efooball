@@ -290,7 +290,21 @@ class NotificationService {
   void _navigate(String route) {
     if (route.isEmpty) return;
     try {
-      _router.go(route);
+      // Empile la cible AU-DESSUS de l'accueil au lieu de `go()` qui remplace
+      // toute la pile : les routes de notif sont de 1er niveau (frères de `/`),
+      // donc un `go()` laissait la pile sans Home dessous → le back système
+      // fermait l'app. On reconstruit d'abord la base `/` puis on empile la
+      // cible : le retour revient alors à l'accueil. Cf. bug retour notif.
+      // `/` = accueil user (UserRoutes.home) ; littéral pour éviter d'importer
+      // le routeur dans le service.
+      const home = '/';
+      if (route == home) {
+        _router.go(home);
+      } else {
+        _router
+          ..go(home)
+          ..push(route);
+      }
     } catch (e, st) {
       unawaited(reportError(e, st, context: 'NotificationService._navigate'));
     }
