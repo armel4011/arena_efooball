@@ -458,6 +458,12 @@ verify_jwt = true
 [functions."reset-totp"]
 verify_jwt = true
 
+[functions."anticheat-commit"]
+verify_jwt = true
+
+[functions."proof-verify"]
+verify_jwt = true
+
 # ─── Webhooks / crons / flux pré-auth (pas de JWT user) ─────────────────────
 
 [functions.dispatch_notification]
