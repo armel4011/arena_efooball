@@ -54,6 +54,9 @@ class _DesktopDisputesPageState extends ConsumerState<DesktopDisputesPage> {
     final disputeAsync =
         ref.watch(adminDisputeByMatchProvider(widget.matchId));
     final matchAsync = ref.watch(matchByIdProvider(widget.matchId));
+    // Scores DÉCLARÉS par chaque joueur (matches.score1/2 sont NULL en litige).
+    final submissions =
+        ref.watch(matchSubmittedScoresProvider(widget.matchId));
 
     return ScaffoldPage(
       header: PageHeader(
@@ -130,7 +133,10 @@ class _DesktopDisputesPageState extends ConsumerState<DesktopDisputesPage> {
                     title: Text('Match introuvable'),
                     content: Text('Ce match n’existe pas ou plus.'),
                   )
-                : _ScoresCard(match: match),
+                : _ScoresCard(
+                    match: match,
+                    submissions: submissions.valueOrNull ?? const {},
+                  ),
           ),
           const SizedBox(height: 24),
           Text(
@@ -249,9 +255,12 @@ class _DisputeHeader extends StatelessWidget {
 }
 
 class _ScoresCard extends StatelessWidget {
-  const _ScoresCard({required this.match});
+  const _ScoresCard({required this.match, this.submissions = const {}});
 
   final ArenaMatch match;
+
+  /// Scoreline déclaré par chaque joueur (`player_id → SubmittedScore`).
+  final Map<String, SubmittedScore> submissions;
 
   @override
   Widget build(BuildContext context) {
@@ -261,20 +270,29 @@ class _ScoresCard extends StatelessWidget {
       child: Column(
         children: [
           _scoreRow(
-            label: 'Joueur 1 (HOME)',
-            score: '${match.score1 ?? '?'}',
+            label: 'Joueur 1 (HOME) · a déclaré',
+            score: _declaredFor(match.player1Id, fallback: match.score1),
             color: ArenaColors.gameDraughts,
             border: true,
           ),
           _scoreRow(
-            label: 'Joueur 2 (AWAY)',
-            score: '${match.score2 ?? '?'}',
+            label: 'Joueur 2 (AWAY) · a déclaré',
+            score: _declaredFor(match.player2Id, fallback: match.score2),
             color: ArenaColors.neonRed,
             border: false,
           ),
         ],
       ),
     );
+  }
+
+  /// Scoreline complet « s1-s2 » déclaré par [playerId] (source de vérité en
+  /// litige) ; repli sur le score final agréé [fallback] ; « — » si aucun.
+  String _declaredFor(String? playerId, {int? fallback}) {
+    final sub = playerId == null ? null : submissions[playerId];
+    if (sub != null) return sub.label;
+    if (fallback != null) return '$fallback';
+    return '—';
   }
 
   Widget _scoreRow({

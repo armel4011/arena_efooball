@@ -98,6 +98,45 @@ class AdminDisputesRepository {
     return out;
   }
 
+  /// Dernier score SOUMIS par chaque joueur (map `player_id → SubmittedScore`),
+  /// lu depuis les events `score_submitted` de `match_events`. C'est la source
+  /// de vérité pour l'admin en litige : `matches.score1/2` sont NULL tant que le
+  /// match n'est pas validé, donc seule cette lecture révèle ce que chaque
+  /// joueur a réellement déclaré (et leur divergence). Plus récent par joueur.
+  Future<Map<String, SubmittedScore>> fetchSubmittedScores(
+    String matchId,
+  ) async {
+    final rows = await _client
+        .from(_eventsTable)
+        .select('payload, created_by, created_at')
+        .eq('match_id', matchId)
+        .eq('type', 'score_submitted')
+        .order('created_at', ascending: false);
+    final out = <String, SubmittedScore>{};
+    for (final row in rows as List<dynamic>) {
+      final map = row as Map<String, dynamic>;
+      final playerId = map['created_by'] as String?;
+      // rows triés desc → la première occurrence d'un joueur est sa plus récente.
+      if (playerId == null || out.containsKey(playerId)) continue;
+      final payload = map['payload'];
+      if (payload is! Map<String, dynamic>) continue;
+      final s1 = (payload['score1'] as num?)?.toInt();
+      final s2 = (payload['score2'] as num?)?.toInt();
+      if (s1 == null || s2 == null) continue;
+      out[playerId] = SubmittedScore(
+        score1: s1,
+        score2: s2,
+        viaPenalties: payload['via_penalties'] == true,
+        penalty1: (payload['penalty1'] as num?)?.toInt(),
+        penalty2: (payload['penalty2'] as num?)?.toInt(),
+        createdAt: map['created_at'] == null
+            ? null
+            : DateTime.tryParse(map['created_at'] as String),
+      );
+    }
+    return out;
+  }
+
   /// Signs a private `match-proofs` storage [path] for read (default 1h),
   /// mirroring the chat-media convention (`ChatRepository.signedMediaUrl`).
   Future<String> signedProofUrl(
@@ -256,6 +295,44 @@ final adminOpenDisputesProvider =
 final adminDisputeByMatchProvider =
     FutureProvider.family.autoDispose<Dispute?, String>((ref, matchId) {
   return ref.watch(adminDisputesRepositoryProvider).getByMatchId(matchId);
+});
+
+/// Le scoreline qu'un joueur A DÉCLARÉ (payload d'un event `score_submitted`).
+class SubmittedScore {
+  const SubmittedScore({
+    required this.score1,
+    required this.score2,
+    this.viaPenalties = false,
+    this.penalty1,
+    this.penalty2,
+    this.createdAt,
+  });
+
+  final int score1;
+  final int score2;
+  final bool viaPenalties;
+  final int? penalty1;
+  final int? penalty2;
+  final DateTime? createdAt;
+
+  /// « 2-1 » ou « 2-2 (tab 5-4) » pour les tirs au but.
+  String get label {
+    final base = '$score1-$score2';
+    if (viaPenalties && penalty1 != null && penalty2 != null) {
+      return '$base (tab $penalty1-$penalty2)';
+    }
+    return base;
+  }
+}
+
+/// Score déclaré par CHAQUE joueur (map `player_id → SubmittedScore`) — alimente
+/// la carte des scores de l'écran litige. Source de vérité quand
+/// `matches.score1/2` sont NULL (litige non tranché).
+final matchSubmittedScoresProvider = FutureProvider.family
+    .autoDispose<Map<String, SubmittedScore>, String>((ref, matchId) {
+  return ref
+      .watch(adminDisputesRepositoryProvider)
+      .fetchSubmittedScores(matchId);
 });
 
 /// A proof paired with a freshly-signed read URL, ready for display.
