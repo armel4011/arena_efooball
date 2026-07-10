@@ -23,11 +23,17 @@ class _ProofsSection extends ConsumerWidget {
         if (list.isEmpty) {
           return Text('Aucune preuve soumise', style: ArenaText.bodyMuted);
         }
+        final match = ref.watch(matchByIdProvider(matchId)).valueOrNull;
         return Wrap(
           spacing: ArenaSpacing.sm,
           runSpacing: ArenaSpacing.sm,
           children: [
-            for (final p in list) _ProofTile(proof: p),
+            for (final p in list)
+              _ProofTile(
+                proof: p,
+                homeId: match?.player1Id,
+                awayId: match?.player2Id,
+              ),
           ],
         );
       },
@@ -36,14 +42,40 @@ class _ProofsSection extends ConsumerWidget {
 }
 
 class _ProofTile extends StatelessWidget {
-  const _ProofTile({required this.proof});
+  const _ProofTile({required this.proof, this.homeId, this.awayId});
 
   final SignedDisputeProof proof;
+  final String? homeId;
+  final String? awayId;
 
   static const double _size = 96;
 
   @override
   Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _thumb(context),
+        const SizedBox(height: 3),
+        SizedBox(
+          width: _size,
+          child: Text(
+            _disputePlayerRoleShort(
+              proof.playerId,
+              homeId: homeId,
+              awayId: awayId,
+            ),
+            style: ArenaText.small.copyWith(color: ArenaColors.silver),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _thumb(BuildContext context) {
     if (proof.isVideo) {
       return InkWell(
         onTap: () => _openVideo(context),
@@ -221,11 +253,17 @@ class _RecordingsSection extends ConsumerWidget {
             style: ArenaText.bodyMuted,
           );
         }
+        final match = ref.watch(matchByIdProvider(matchId)).valueOrNull;
         return Wrap(
           spacing: ArenaSpacing.sm,
           runSpacing: ArenaSpacing.sm,
           children: [
-            for (final r in list) _RecordingTile(recording: r),
+            for (final r in list)
+              _RecordingTile(
+                recording: r,
+                homeId: match?.player1Id,
+                awayId: match?.player2Id,
+              ),
           ],
         );
       },
@@ -234,43 +272,65 @@ class _RecordingsSection extends ConsumerWidget {
 }
 
 class _RecordingTile extends StatelessWidget {
-  const _RecordingTile({required this.recording});
+  const _RecordingTile({required this.recording, this.homeId, this.awayId});
 
   final SignedMatchRecording recording;
+  final String? homeId;
+  final String? awayId;
 
   static const double _size = 96;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () => _openVideo(context),
-      borderRadius: BorderRadius.circular(ArenaRadius.md),
-      child: Container(
-        width: _size,
-        height: _size,
-        padding: const EdgeInsets.all(ArenaSpacing.xs),
-        decoration: BoxDecoration(
-          color: ArenaColors.carbon,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        InkWell(
+          onTap: () => _openVideo(context),
           borderRadius: BorderRadius.circular(ArenaRadius.md),
-          border: Border.all(color: ArenaColors.border),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.play_circle_outline,
-              color: ArenaColors.neonRed,
-              size: 30,
+          child: Container(
+            width: _size,
+            height: _size,
+            padding: const EdgeInsets.all(ArenaSpacing.xs),
+            decoration: BoxDecoration(
+              color: ArenaColors.carbon,
+              borderRadius: BorderRadius.circular(ArenaRadius.md),
+              border: Border.all(color: ArenaColors.border),
             ),
-            const SizedBox(height: ArenaSpacing.xs),
-            Text(
-              recording.isLiveKit ? 'LiveKit' : 'Natif',
-              style: ArenaText.bodyMuted,
-              textAlign: TextAlign.center,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.play_circle_outline,
+                  color: ArenaColors.neonRed,
+                  size: 30,
+                ),
+                const SizedBox(height: ArenaSpacing.xs),
+                Text(
+                  recording.isLiveKit ? 'LiveKit' : 'Natif',
+                  style: ArenaText.bodyMuted,
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
-          ],
+          ),
         ),
-      ),
+        const SizedBox(height: 3),
+        SizedBox(
+          width: _size,
+          child: Text(
+            _disputePlayerRoleShort(
+              recording.playerId,
+              homeId: homeId,
+              awayId: awayId,
+            ),
+            style: ArenaText.small.copyWith(color: ArenaColors.silver),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
     );
   }
 

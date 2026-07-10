@@ -28,12 +28,18 @@ class _ProofCommitmentsSection extends ConsumerWidget {
             style: ArenaText.bodyMuted,
           );
         }
+        final match = ref.watch(matchByIdProvider(matchId)).valueOrNull;
         return Column(
           children: [
             for (final s in list)
               Padding(
                 padding: const EdgeInsets.only(bottom: ArenaSpacing.sm),
-                child: _ProofCommitmentTile(matchId: matchId, stream: s),
+                child: _ProofCommitmentTile(
+                  matchId: matchId,
+                  stream: s,
+                  homeId: match?.player1Id,
+                  awayId: match?.player2Id,
+                ),
               ),
           ],
         );
@@ -43,10 +49,17 @@ class _ProofCommitmentsSection extends ConsumerWidget {
 }
 
 class _ProofCommitmentTile extends ConsumerStatefulWidget {
-  const _ProofCommitmentTile({required this.matchId, required this.stream});
+  const _ProofCommitmentTile({
+    required this.matchId,
+    required this.stream,
+    this.homeId,
+    this.awayId,
+  });
 
   final String matchId;
   final MatchStream stream;
+  final String? homeId;
+  final String? awayId;
 
   @override
   ConsumerState<_ProofCommitmentTile> createState() =>
@@ -70,10 +83,11 @@ class _ProofCommitmentTileState extends ConsumerState<_ProofCommitmentTile> {
     final s = widget.stream;
     final status = s.proofStatus;
     final (color, icon) = _decorFor(status);
-    final pid = s.playerId;
-    final who = pid.isEmpty
-        ? '?'
-        : pid.substring(0, pid.length < 6 ? pid.length : 6).toUpperCase();
+    final who = _disputePlayerRole(
+      s.playerId,
+      homeId: widget.homeId,
+      awayId: widget.awayId,
+    );
 
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.md),
@@ -90,7 +104,10 @@ class _ProofCommitmentTileState extends ConsumerState<_ProofCommitmentTile> {
               Icon(icon, color: color, size: 18),
               const SizedBox(width: ArenaSpacing.sm),
               Expanded(
-                child: Text('Joueur $who', style: ArenaText.body),
+                child: Text(
+                  who,
+                  style: ArenaText.body.copyWith(fontWeight: FontWeight.w700),
+                ),
               ),
               Text(
                 status.label,

@@ -31,12 +31,18 @@ class _ProofCommitmentsSection extends ConsumerWidget {
             ),
           );
         }
+        final match = ref.watch(matchByIdProvider(matchId)).valueOrNull;
         return Column(
           children: [
             for (final s in list)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
-                child: _ProofCommitmentTile(matchId: matchId, stream: s),
+                child: _ProofCommitmentTile(
+                  matchId: matchId,
+                  stream: s,
+                  homeId: match?.player1Id,
+                  awayId: match?.player2Id,
+                ),
               ),
           ],
         );
@@ -46,10 +52,17 @@ class _ProofCommitmentsSection extends ConsumerWidget {
 }
 
 class _ProofCommitmentTile extends ConsumerStatefulWidget {
-  const _ProofCommitmentTile({required this.matchId, required this.stream});
+  const _ProofCommitmentTile({
+    required this.matchId,
+    required this.stream,
+    this.homeId,
+    this.awayId,
+  });
 
   final String matchId;
   final MatchStream stream;
+  final String? homeId;
+  final String? awayId;
 
   @override
   ConsumerState<_ProofCommitmentTile> createState() =>
@@ -73,10 +86,11 @@ class _ProofCommitmentTileState extends ConsumerState<_ProofCommitmentTile> {
     final s = widget.stream;
     final status = s.proofStatus;
     final (color, icon) = _decorFor(status);
-    final pid = s.playerId;
-    final who = pid.isEmpty
-        ? '?'
-        : pid.substring(0, pid.length < 6 ? pid.length : 6).toUpperCase();
+    final who = _disputePlayerRole(
+      s.playerId,
+      homeId: widget.homeId,
+      awayId: widget.awayId,
+    );
 
     return Card(
       backgroundColor: ArenaColors.carbon,
@@ -87,7 +101,7 @@ class _ProofCommitmentTileState extends ConsumerState<_ProofCommitmentTile> {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Joueur $who',
+              who,
               style: GoogleFonts.spaceGrotesk(
                 color: ArenaColors.bone,
                 fontSize: 14,
@@ -204,9 +218,9 @@ class _VerdictButtons extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (verdictLocked) ...[
-          InfoBar(
-            title: const Text('Réservé au super-admin'),
-            content: const Text(superAdminOnlyHint),
+          const InfoBar(
+            title: Text('Réservé au super-admin'),
+            content: Text(superAdminOnlyHint),
             severity: InfoBarSeverity.warning,
           ),
           const SizedBox(height: 8),

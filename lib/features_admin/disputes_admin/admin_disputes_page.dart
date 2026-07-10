@@ -195,6 +195,35 @@ class _DisputeHeader extends StatelessWidget {
   }
 }
 
+/// Rôle d'un joueur pour l'affichage des preuves : « Domicile » (player1/HOME),
+/// « Extérieur » (player2/AWAY), sinon un fallback court sur l'id. Permet à
+/// l'admin de savoir à QUI appartient chaque preuve / enregistrement.
+String _disputePlayerRole(String? playerId, {String? homeId, String? awayId}) {
+  if (playerId == null || playerId.isEmpty) return 'Joueur ?';
+  if (homeId != null && homeId.isNotEmpty && playerId == homeId) {
+    return 'Domicile (HOME)';
+  }
+  if (awayId != null && awayId.isNotEmpty && playerId == awayId) {
+    return 'Extérieur (AWAY)';
+  }
+  final n = playerId.length < 6 ? playerId.length : 6;
+  return 'Joueur ${playerId.substring(0, n).toUpperCase()}';
+}
+
+/// Variante compacte (« Domicile » / « Extérieur ») pour les légendes de
+/// vignettes étroites.
+String _disputePlayerRoleShort(
+  String? playerId, {
+  String? homeId,
+  String? awayId,
+}) {
+  if (playerId != null && playerId.isNotEmpty) {
+    if (playerId == homeId) return 'Domicile';
+    if (playerId == awayId) return 'Extérieur';
+  }
+  return _disputePlayerRole(playerId, homeId: homeId, awayId: awayId);
+}
+
 class _ScoresCard extends StatelessWidget {
   const _ScoresCard({required this.match, this.submissions = const {}});
   final ArenaMatch match;
