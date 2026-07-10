@@ -29,7 +29,12 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.108.2";
 import { safeDetail } from "../_shared/errors.ts";
-import { objectPathBelongsTo } from "../_shared/anticheat.ts";
+import {
+  ByteCapExceededError,
+  limitBytes,
+  objectPathBelongsTo,
+  sha256HexOfStream,
+} from "../_shared/anticheat.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
@@ -37,13 +42,14 @@ const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
 const BUCKET = "match-recordings";
 
-// Garde-fou mémoire : le proxy 360p est censé être petit (~50 Mo pour 25 min).
-// On hashe EN MÉMOIRE (Web Crypto ne streame pas) : le Blob téléchargé + son
-// arrayBuffer coexistent → ~2× la taille. Une Edge Function plafonne à ~256 Mo,
-// donc 200 Mo faisait OOM (l'isolate était tué au lieu de renvoyer 413). On borne
-// à 64 Mo (marge confortable sur le proxy 360p ciblé) ; au-delà → 413 et l'admin
-// bascule en revue manuelle (le commitment reste engagé). Audit 2026-07-09 P2.
-const MAX_VERIFY_BYTES = 64 * 1024 * 1024;
+// Plafond de vérification. Depuis le passage au hash EN FLUX (cf.
+// sha256HexOfStream + streaming de l'objet ci-dessous), la mémoire est CONSTANTE
+// quelle que soit la taille — ce cap n'est donc plus une limite mémoire (l'OOM
+// de l'audit 2026-07-09 P2, dû à download()+arrayBuffer() qui bufferisaient 2× le
+// fichier, est éliminé). Il ne reste qu'un garde-fou CPU/abus, relevé à 256 Mo
+// pour couvrir aussi le fallback 540p (~112 Mo/25 min) qui, à 64 Mo, était forcé
+// en revue manuelle. Au-delà → 413, l'objet est purgé, l'admin passe en manuel.
+const MAX_VERIFY_BYTES = 256 * 1024 * 1024;
 
 // Rétention prolongée d'une pièce de litige uploadée à la demande (vs J+1 des
 // captures de routine purgées par cleanup-streams).
@@ -62,12 +68,14 @@ function jsonResponse(body: Record<string, unknown>, status = 200): Response {
   });
 }
 
-/** SHA-256 hex (minuscules) d'un buffer. */
-async function sha256Hex(buf: ArrayBuffer): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", buf);
-  return Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+/** Supprime un objet trop volumineux / non vérifiable pour ne pas le laisser
+ *  orphelin dans le bucket (jamais vérifié → pas d'expires_at → jamais purgé). */
+async function removeOversized(
+  sb: ReturnType<typeof createClient>,
+  objectPath: string,
+): Promise<void> {
+  const { error } = await sb.storage.from(BUCKET).remove([objectPath]);
+  if (error) console.error("oversized_proof_cleanup_failed:", error.message);
 }
 
 Deno.serve(async (req) => {
@@ -152,30 +160,45 @@ Deno.serve(async (req) => {
     });
   }
 
-  // Télécharger l'objet uploadé et le re-hasher.
-  const { data: blob, error: dlErr } = await sb.storage
-    .from(BUCKET)
-    .download(objectPath);
-  if (dlErr || !blob) {
+  // Streamer l'objet uploadé (endpoint storage, service-role) et le re-hasher
+  // EN FLUX : la mémoire reste bornée quelle que soit la taille (plus de
+  // download()+arrayBuffer() qui bufferisaient 2× le fichier → OOM).
+  const encodedPath = objectPath.split("/").map(encodeURIComponent).join("/");
+  const objectUrl = `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${encodedPath}`;
+  const res = await fetch(objectUrl, {
+    headers: { Authorization: `Bearer ${SERVICE_KEY}`, apikey: SERVICE_KEY },
+  });
+  if (!res.ok || !res.body) {
+    await res.body?.cancel();
     return jsonResponse(
-      { error: "object_not_found", detail: safeDetail(dlErr?.message, "proof-verify") },
+      { error: "object_not_found", detail: safeDetail(`status ${res.status}`, "proof-verify") },
       404,
     );
   }
-  if (blob.size > MAX_VERIFY_BYTES) {
-    // Trop volumineux pour un hash en mémoire (Web Crypto ne streame pas).
-    // On SUPPRIME l'objet : sinon il reste orphelin dans le bucket (jamais
-    // vérifié → pas d'expires_at posé → jamais purgé par cleanup-streams).
-    // L'admin bascule en revue manuelle (le commitment reste engagé).
-    const { error: rmErr } = await sb.storage.from(BUCKET).remove([objectPath]);
-    if (rmErr) {
-      console.error("oversized_proof_cleanup_failed:", rmErr.message);
-    }
+
+  // Rejet précoce sur la taille annoncée (économise le stream si déjà hors cap).
+  const declared = Number(res.headers.get("content-length") ?? "0");
+  if (Number.isFinite(declared) && declared > MAX_VERIFY_BYTES) {
+    await res.body.cancel();
+    await removeOversized(sb, objectPath);
     return jsonResponse({ error: "object_too_large" }, 413);
   }
 
-  const verified = (await sha256Hex(await blob.arrayBuffer())) ===
-    stream.proof_sha256;
+  let computed: string;
+  try {
+    // `limitBytes` coupe DUR au plafond même si le Content-Length ment/absente.
+    computed = await sha256HexOfStream(limitBytes(res.body, MAX_VERIFY_BYTES));
+  } catch (e) {
+    if (e instanceof ByteCapExceededError) {
+      await removeOversized(sb, objectPath);
+      return jsonResponse({ error: "object_too_large" }, 413);
+    }
+    return jsonResponse(
+      { error: "hash_failed", detail: safeDetail((e as Error)?.message, "proof-verify") },
+      500,
+    );
+  }
+  const verified = computed === stream.proof_sha256;
 
   const expiresAt = new Date(
     Date.now() + DISPUTE_RETENTION_DAYS * 24 * 60 * 60 * 1000,

@@ -15,6 +15,8 @@
 // testables unitairement).
 // =============================================================================
 
+import { crypto as stdCrypto } from "jsr:@std/crypto@1";
+
 /** `true` si `s` est un digest SHA-256 hexadécimal canonique : 64 [0-9a-f]. */
 export function isSha256Hex(s: unknown): s is string {
   return typeof s === "string" && /^[0-9a-f]{64}$/.test(s);
@@ -56,6 +58,52 @@ export function objectPathBelongsTo(
     return false;
   }
   return path.startsWith(objectPrefixFor(matchId, playerId));
+}
+
+/** Levée par [limitBytes] quand le flux dépasse le plafond d'octets — l'appelant
+ *  la distingue d'une vraie erreur de hash pour renvoyer 413 (trop volumineux). */
+export class ByteCapExceededError extends Error {
+  constructor() {
+    super("byte_cap_exceeded");
+    this.name = "ByteCapExceededError";
+  }
+}
+
+/** Enveloppe un flux d'octets d'un plafond DUR : dès que le cumul dépasse
+ *  `maxBytes`, le flux dérivé est mis en erreur ([ByteCapExceededError]). Sert
+ *  de garde-fou CPU/abus même si le `Content-Length` est absent ou mensonger —
+ *  la mémoire, elle, reste bornée par le hash en flux ci-dessous. */
+export function limitBytes(
+  source: ReadableStream<Uint8Array>,
+  maxBytes: number,
+): ReadableStream<Uint8Array> {
+  let total = 0;
+  return source.pipeThrough(
+    new TransformStream<Uint8Array, Uint8Array>({
+      transform(chunk, controller) {
+        total += chunk.byteLength;
+        if (total > maxBytes) {
+          controller.error(new ByteCapExceededError());
+          return;
+        }
+        controller.enqueue(chunk);
+      },
+    }),
+  );
+}
+
+/** SHA-256 (hex minuscules) calculé EN FLUX sur un flux de chunks — mémoire
+ *  CONSTANTE : ne bufferise JAMAIS tout le fichier, contrairement à
+ *  `crypto.subtle.digest` de Web Crypto qui exige le buffer complet (2× la
+ *  taille avec le `arrayBuffer()`). C'est ce qui permet de vérifier une preuve
+ *  volumineuse (proxy 360p ou fallback 540p) sans faire OOM l'isolate. */
+export async function sha256HexOfStream(
+  stream: ReadableStream<Uint8Array>,
+): Promise<string> {
+  const digest = await stdCrypto.subtle.digest("SHA-256", stream);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 /** `true` si `userId` est un des deux joueurs assis du match. */

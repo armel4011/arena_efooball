@@ -1,15 +1,37 @@
 // Tests des décisions pures anti-triche (_shared/anticheat.ts).
 // Lancer : deno test --allow-all  (depuis supabase/functions/)
 
-import { assert, assertEquals, assertFalse } from "jsr:@std/assert@1";
 import {
+  assert,
+  assertEquals,
+  assertFalse,
+  assertRejects,
+} from "jsr:@std/assert@1";
+import {
+  ByteCapExceededError,
   isPlayerOfMatch,
   isPositiveInt,
   isSha256Hex,
+  limitBytes,
   normalizeSha256,
   objectPathBelongsTo,
   objectPrefixFor,
+  sha256HexOfStream,
 } from "./anticheat.ts";
+
+/** Flux à partir de chunks (octets) — pour tester le hash EN FLUX sans I/O. */
+function streamOf(...chunks: Uint8Array[]): ReadableStream<Uint8Array> {
+  return new ReadableStream({
+    start(controller) {
+      for (const c of chunks) controller.enqueue(c);
+      controller.close();
+    },
+  });
+}
+
+const enc = (s: string) => new TextEncoder().encode(s);
+// Vecteur connu : SHA-256("abc").
+const ABC_SHA = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
 
 const HASH = "a".repeat(64); // 64 hex valides
 const MATCH = "11111111-1111-1111-1111-111111111111";
@@ -66,6 +88,44 @@ Deno.test("objectPathBelongsTo : seulement le dossier du (match, joueur)", () =>
   );
   assertFalse(objectPathBelongsTo("", MATCH, PLAYER));
   assertFalse(objectPathBelongsTo(null, MATCH, PLAYER));
+});
+
+Deno.test("sha256HexOfStream : vecteur connu 'abc' (chunk unique)", async () => {
+  assertEquals(await sha256HexOfStream(streamOf(enc("abc"))), ABC_SHA);
+});
+
+Deno.test("sha256HexOfStream : incrémental — chunks multiples = même hash", async () => {
+  // Prouve le hash EN FLUX : découper 'abc' en 3 chunks donne le même digest
+  // que le fichier entier (aucune dépendance à la taille des morceaux).
+  const hex = await sha256HexOfStream(streamOf(enc("a"), enc("b"), enc("c")));
+  assertEquals(hex, ABC_SHA);
+});
+
+Deno.test("sha256HexOfStream : flux vide → hash du vide", async () => {
+  assertEquals(
+    await sha256HexOfStream(streamOf()),
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  );
+});
+
+Deno.test("limitBytes : sous le plafond → passe, hash inchangé", async () => {
+  const hex = await sha256HexOfStream(limitBytes(streamOf(enc("abc")), 1024));
+  assertEquals(hex, ABC_SHA);
+});
+
+Deno.test("limitBytes : au-delà du plafond → ByteCapExceededError", async () => {
+  // Plafond 2 octets, 3 octets envoyés → coupure dure pendant le hash.
+  await assertRejects(
+    () => sha256HexOfStream(limitBytes(streamOf(enc("abc")), 2)),
+    ByteCapExceededError,
+  );
+});
+
+Deno.test("limitBytes : coupe même quand un seul chunk dépasse", async () => {
+  await assertRejects(
+    () => sha256HexOfStream(limitBytes(streamOf(enc("abcdef")), 3)),
+    ByteCapExceededError,
+  );
 });
 
 Deno.test("isPlayerOfMatch : p1 ou p2 uniquement", () => {
