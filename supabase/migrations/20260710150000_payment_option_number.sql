@@ -30,14 +30,26 @@ security definer
 set search_path = public, pg_temp
 as $$
 declare
-  v_opt   jsonb;
-  v_count integer := 0;
+  v_opt     jsonb;
+  v_count   integer := 0;
+  v_country text;
 begin
   if not public.is_admin() then
     raise exception 'Reserve aux admins' using errcode = '42501';
   end if;
-  if not exists (select 1 from public.competitions where id = p_competition_id) then
+
+  select country_code into v_country
+    from public.competitions where id = p_competition_id;
+  if v_country is null then
     raise exception 'Competition introuvable' using errcode = 'P0002';
+  end if;
+
+  -- Cloisonnement pays (miroir payouts/recordings) : un admin restreint ne peut
+  -- pas réécrire les codes de collecte (transfer_code) d'une compétition hors de
+  -- son périmètre. super-admin (scope NULL) = autorisé partout.
+  if not public.admin_can_country(auth.uid(), v_country) then
+    raise exception 'Compétition hors de votre perimetre pays'
+      using errcode = '42501';
   end if;
 
   delete from public.competition_payment_options
