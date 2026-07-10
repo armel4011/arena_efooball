@@ -94,16 +94,19 @@ export function limitBytes(
 
 /** Itère un `ReadableStream` en `AsyncGenerator` de chunks. `@std/crypto`
  *  accepte un `AsyncIterable<BufferSource>` mais pas un `ReadableStream` brut
- *  (son type ne l'expose pas comme async-iterable) — d'où ce pont. */
+ *  (son type ne l'expose pas comme async-iterable) — d'où ce pont. La copie
+ *  `new Uint8Array(value)` réadosse le chunk à un `ArrayBuffer` strict (et non
+ *  `ArrayBufferLike`), seul type que `BufferSource` accepte sous TS 5.7+ ; coût
+ *  négligeable (chunks ~64 Ko), la mémoire reste bornée à un chunk à la fois. */
 async function* readChunks(
   stream: ReadableStream<Uint8Array>,
-): AsyncGenerator<Uint8Array> {
+): AsyncGenerator<Uint8Array<ArrayBuffer>> {
   const reader = stream.getReader();
   try {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      if (value) yield value;
+      if (value) yield new Uint8Array(value);
     }
   } finally {
     reader.releaseLock();
