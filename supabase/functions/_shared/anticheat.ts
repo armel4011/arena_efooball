@@ -15,6 +15,8 @@
 // testables unitairement).
 // =============================================================================
 
+import { crypto as stdCrypto } from "jsr:@std/crypto@1";
+
 /** `true` si `s` est un digest SHA-256 hexadécimal canonique : 64 [0-9a-f]. */
 export function isSha256Hex(s: unknown): s is string {
   return typeof s === "string" && /^[0-9a-f]{64}$/.test(s);
@@ -56,6 +58,73 @@ export function objectPathBelongsTo(
     return false;
   }
   return path.startsWith(objectPrefixFor(matchId, playerId));
+}
+
+/** Levée par [limitBytes] quand le flux dépasse le plafond d'octets — l'appelant
+ *  la distingue d'une vraie erreur de hash pour renvoyer 413 (trop volumineux). */
+export class ByteCapExceededError extends Error {
+  constructor() {
+    super("byte_cap_exceeded");
+    this.name = "ByteCapExceededError";
+  }
+}
+
+/** Enveloppe un flux d'octets d'un plafond DUR : dès que le cumul dépasse
+ *  `maxBytes`, le flux dérivé est mis en erreur ([ByteCapExceededError]). Sert
+ *  de garde-fou CPU/abus même si le `Content-Length` est absent ou mensonger —
+ *  la mémoire, elle, reste bornée par le hash en flux ci-dessous. */
+export function limitBytes(
+  source: ReadableStream<Uint8Array>,
+  maxBytes: number,
+): ReadableStream<Uint8Array> {
+  let total = 0;
+  return source.pipeThrough(
+    new TransformStream<Uint8Array, Uint8Array>({
+      transform(chunk, controller) {
+        total += chunk.byteLength;
+        if (total > maxBytes) {
+          controller.error(new ByteCapExceededError());
+          return;
+        }
+        controller.enqueue(chunk);
+      },
+    }),
+  );
+}
+
+/** Itère un `ReadableStream` en `AsyncGenerator` de chunks. `@std/crypto`
+ *  accepte un `AsyncIterable<BufferSource>` mais pas un `ReadableStream` brut
+ *  (son type ne l'expose pas comme async-iterable) — d'où ce pont. La copie
+ *  `new Uint8Array(value)` réadosse le chunk à un `ArrayBuffer` strict (et non
+ *  `ArrayBufferLike`), seul type que `BufferSource` accepte sous TS 5.7+ ; coût
+ *  négligeable (chunks ~64 Ko), la mémoire reste bornée à un chunk à la fois. */
+async function* readChunks(
+  stream: ReadableStream<Uint8Array>,
+): AsyncGenerator<Uint8Array<ArrayBuffer>> {
+  const reader = stream.getReader();
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value) yield new Uint8Array(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+/** SHA-256 (hex minuscules) calculé EN FLUX sur un flux de chunks — mémoire
+ *  CONSTANTE : ne bufferise JAMAIS tout le fichier, contrairement à
+ *  `crypto.subtle.digest` de Web Crypto qui exige le buffer complet (2× la
+ *  taille avec le `arrayBuffer()`). C'est ce qui permet de vérifier une preuve
+ *  volumineuse (proxy 360p ou fallback 540p) sans faire OOM l'isolate. */
+export async function sha256HexOfStream(
+  stream: ReadableStream<Uint8Array>,
+): Promise<string> {
+  const digest = await stdCrypto.subtle.digest("SHA-256", readChunks(stream));
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 /** `true` si `userId` est un des deux joueurs assis du match. */
