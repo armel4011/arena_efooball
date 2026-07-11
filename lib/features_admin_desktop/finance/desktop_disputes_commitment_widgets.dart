@@ -199,8 +199,6 @@ class _VerdictButtons extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final p1 = match.score1 ?? 0;
-    final p2 = match.score2 ?? 0;
     // Verrou serveur (audit 2026-07-07) : re-arbitrer un match à cagnotte déjà
     // décidé est réservé au super-admin. On désactive les CTA verdict pour un
     // admin simple (parité app mobile).
@@ -228,27 +226,15 @@ class _VerdictButtons extends ConsumerWidget {
         FilledButton(
           onPressed: verdictLocked || match.player1Id == null
               ? null
-              : () => _commit(
-                    context,
-                    ref,
-                    winnerId: match.player1Id,
-                    scoreP1: p1,
-                    scoreP2: p2,
-                  ),
-          child: Text('Valider $p1-$p2 (J1 gagne)'),
+              : () => _commit(context, ref, winnerId: match.player1Id),
+          child: const Text('J1 gagne 3-0 (tapis vert)'),
         ),
         const SizedBox(height: 8),
         FilledButton(
           onPressed: verdictLocked || match.player2Id == null
               ? null
-              : () => _commit(
-                    context,
-                    ref,
-                    winnerId: match.player2Id,
-                    scoreP1: p2,
-                    scoreP2: p1,
-                  ),
-          child: Text('Valider $p2-$p1 (J2 gagne)'),
+              : () => _commit(context, ref, winnerId: match.player2Id),
+          child: const Text('J2 gagne 3-0 (tapis vert)'),
         ),
         const SizedBox(height: 8),
         Button(
@@ -263,8 +249,6 @@ class _VerdictButtons extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref, {
     required String? winnerId,
-    required int scoreP1,
-    required int scoreP2,
   }) async {
     final justification = justificationController.text.trim();
     if (justification.isEmpty) {
@@ -275,12 +259,16 @@ class _VerdictButtons extends ConsumerWidget {
       );
       return;
     }
+    // TAPIS VERT : le favorisé gagne 3-0 (parité app mobile / resolve_dispute).
+    final winsP1 = winnerId == match.player1Id;
+    final scoreP1 = winsP1 ? 3 : 0;
+    final scoreP2 = winsP1 ? 0 : 3;
     final adminId = ref.read(currentSessionProvider)?.user.id;
     if (adminId == null) return;
     final totpOk = await showDesktopTotpGate(
       context,
       ref,
-      reason: 'Résoudre le litige · verdict $scoreP1-$scoreP2',
+      reason: 'Résoudre le litige · tapis vert $scoreP1-$scoreP2',
     );
     if (!totpOk || !context.mounted) return;
     try {

@@ -5,16 +5,17 @@
 -- vérifier que ce joueur participe au match → un admin pouvait désigner un
 -- complice (même non-inscrit) vainqueur d'une finale → versement détourné.
 -- Couvre : gate is_admin(), justification obligatoire, validation du vainqueur
--- (∈ {player1, player2}), scores >= 0, le chemin nominal (verdict + litige
--- résolu dans la même transaction), et le durcissement 2026-06-25 (super-admin
--- requis pour arbitrer un match rattaché à une compétition AVEC PRIX).
+-- (∈ {player1, player2}), le TAPIS VERT 3-0 (favorisé gagne d'office, scores
+-- transmis ignorés ; vainqueur obligatoire hors annulation), le chemin nominal
+-- (verdict + litige résolu dans la même transaction), et le durcissement
+-- 2026-06-25 (super-admin requis pour arbitrer un match AVEC PRIX).
 --
 -- Les triggers de cascade bracket/stats/standings sont neutralisés : on teste
 -- la logique propre de resolve_dispute, pas l'avancement du tournoi.
 -- ════════════════════════════════════════════════════════════════════
 
 begin;
-select plan(9);
+select plan(10);
 
 alter table public.matches disable trigger trg_matches_cascade_winner;
 alter table public.matches disable trigger trg_matches_finalize_competition;
@@ -74,23 +75,27 @@ select throws_ok(
        '6d6d6d6d-0000-0000-0000-0000000000a9', 3, 1) $$,
   '22023', null, 'P0 : un vainqueur qui ne joue pas le match est refusé');
 
--- P0 : score négatif → rejet
+-- Tapis vert : arbitrer SANS désigner de vainqueur → rejet
 select throws_ok(
   $$ select public.resolve_dispute('6f6f6f6f-0000-0000-0000-000000000001',
        '60606060-0000-0000-0000-000000000001','verdict', false,
-       '6d6d6d6d-0000-0000-0000-0000000000a1', -1, 1) $$,
-  '22023', null, 'P0 : un score négatif est refusé');
+       null, null, null) $$,
+  '22023', null, 'tapis vert : un vainqueur doit être désigné (hors annulation)');
 
--- ─── Chemin nominal : vainqueur valide ──────────────────────────────
+-- ─── Chemin nominal : vainqueur valide → TAPIS VERT 3-0 ─────────────
+-- On transmet 5-4 : ces scores DOIVENT être ignorés, le favorisé gagne 3-0.
 select lives_ok(
   $$ select public.resolve_dispute('6f6f6f6f-0000-0000-0000-000000000001',
-       '60606060-0000-0000-0000-000000000001','player1 gagne 3-1', false,
-       '6d6d6d6d-0000-0000-0000-0000000000a1', 3, 1) $$,
+       '60606060-0000-0000-0000-000000000001','player1 favorisé', false,
+       '6d6d6d6d-0000-0000-0000-0000000000a1', 5, 4) $$,
   'verdict valide accepté (vainqueur = player1)');
 
 select is(
   (select winner_id from matches where id='6f6f6f6f-0000-0000-0000-000000000001'),
   '6d6d6d6d-0000-0000-0000-0000000000a1'::uuid, 'le vainqueur enregistré est bien player1');
+select is(
+  (select score1 || '-' || score2 from matches where id='6f6f6f6f-0000-0000-0000-000000000001'),
+  '3-0', 'tapis vert : le favorisé (player1) gagne 3-0, scores transmis ignorés');
 select is(
   (select status from matches where id='6f6f6f6f-0000-0000-0000-000000000001')::text,
   'completed', 'le match passe à completed');
