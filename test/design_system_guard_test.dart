@@ -145,7 +145,10 @@ void main() {
   // 2498 → 2502 le 2026-07-11 : +4 `ArenaColors.silver` des légendes de rôle
   // (Domicile/Extérieur) sous les vignettes de preuve, litige admin (mobile +
   // desktop).
-  const colorsDotBaseline = 2502; // occurrences de `Colors.`
+  // 2502 → 2510 le 2026-07-11 : +8 `ArenaColors.*` du dialog de déblocage MIUI
+  // (guide « Démarrage auto » + batterie sans restriction, upload preuve bg) —
+  // carbon/void_/border/signalBlue/silver.
+  const colorsDotBaseline = 2510; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.

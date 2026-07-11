@@ -1,6 +1,7 @@
 package com.arena.arena
 
 import android.app.Activity
+import android.content.ComponentName
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
@@ -9,6 +10,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import android.provider.Settings
 import android.util.Log
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -137,6 +139,15 @@ class MainActivity : FlutterActivity() {
                     }
                     "stopLivekitCaptureFgs" -> {
                         stopLivekitCaptureFgs(result)
+                    }
+                    "isMiui" -> {
+                        result.success(isXiaomiDevice())
+                    }
+                    "openMiuiAutostart" -> {
+                        result.success(openMiuiAutostart())
+                    }
+                    "openMiuiBatterySaver" -> {
+                        result.success(openMiuiBatterySaver())
                     }
                     else -> result.notImplemented()
                 }
@@ -278,6 +289,70 @@ class MainActivity : FlutterActivity() {
             Log.w(TAG, "stopLivekitCaptureFgs failed", e)
         }
         result.success(true)
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // MIUI / Xiaomi — déblocage de l'exécution background (upload preuve)
+    // MIUI tue les apps force-stopped ; sans « Démarrage auto » + batterie
+    // « Sans restriction », le handler FCM background ne se réveille pas.
+    // On guide le joueur vers ces deux écrans (repli page infos de l'app).
+    // ──────────────────────────────────────────────────────────────
+
+    private fun isXiaomiDevice(): Boolean =
+        Build.MANUFACTURER.equals("Xiaomi", ignoreCase = true) ||
+            Build.BRAND.equals("Xiaomi", ignoreCase = true) ||
+            Build.BRAND.equals("Redmi", ignoreCase = true) ||
+            Build.BRAND.equals("POCO", ignoreCase = true)
+
+    /** Écran MIUI « Démarrage auto » (Security center). Repli : page infos app. */
+    private fun openMiuiAutostart(): Boolean {
+        val intent = Intent().apply {
+            component = ComponentName(
+                "com.miui.securitycenter",
+                "com.miui.permcenter.autostart.AutoStartManagementActivity",
+            )
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        return launchOrAppDetails(intent)
+    }
+
+    /** Écran MIUI d'économie de batterie par app (power keeper). Repli : infos. */
+    private fun openMiuiBatterySaver(): Boolean {
+        val intent = Intent().apply {
+            component = ComponentName(
+                "com.miui.powerkeeper",
+                "com.miui.powerkeeper.ui.HiddenAppsConfigActivity",
+            )
+            putExtra("package_name", packageName)
+            putExtra(
+                "package_label",
+                applicationInfo.loadLabel(packageManager).toString(),
+            )
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        return launchOrAppDetails(intent)
+    }
+
+    /** Lance [intent] ; si l'activité MIUI n'existe pas (ROM/version variable),
+     *  repli sur la page système d'infos de l'app. Renvoie true si un écran s'ouvre. */
+    private fun launchOrAppDetails(intent: Intent): Boolean {
+        try {
+            startActivity(intent)
+            return true
+        } catch (_: Exception) {
+            // fall through
+        }
+        return try {
+            startActivity(
+                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.fromParts("package", packageName, null)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                },
+            )
+            true
+        } catch (_: Exception) {
+            false
+        }
     }
 
     // ──────────────────────────────────────────────────────────────
