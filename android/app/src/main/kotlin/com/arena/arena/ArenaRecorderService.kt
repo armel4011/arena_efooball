@@ -34,16 +34,16 @@ import java.io.File
  *   HUD (score, chrono) lisible pour l'arbitrage ; 20 fps suffit à relire un
  *   eFootball / Jeu de Dames.
  *
- * ENCODEUR + FILET DE SÉCURITÉ (seule chose qui diffère selon l'appareil) :
- *   * Xiaomi/MIUI (Build.MANUFACTURER = Xiaomi / marques Redmi, POCO) :
- *     [CodecScreenRecorder] (MediaCodec en CBR) — l'encodeur matériel Qualcomm
- *     des Redmi ignore le `setVideoEncodingBitRate` de MediaRecorder (VBR →
- *     ~820 kbps observé pour une cible de 160). CBR force le débit constant →
- *     poids prédictible. Si l'init MediaCodec échoue (CBR non supporté,
- *     dimensions refusées…), on RETOMBE sur MediaRecorder : une preuve plus
- *     lourde vaut infiniment mieux qu'aucune preuve.
- *   * Autres appareils : MediaRecorder standard, éprouvé — il respecte le
- *     bitrate demandé hors puces QCom, donc pas besoin du chemin MediaCodec.
+ * ENCODEUR + FILET DE SÉCURITÉ (uniforme sur toute la flotte) :
+ *   * PRIMAIRE : [CodecScreenRecorder] (MediaCodec en CBR) sur TOUS les
+ *     appareils. Beaucoup d'encodeurs matériels IGNORENT le
+ *     `setVideoEncodingBitRate` de MediaRecorder (VBR → fichier plusieurs ×
+ *     trop lourd) — pas seulement les Redmi : observé aussi sur un Samsung
+ *     SM8350 (Snapdragon 888), ~147 MB pour une cible 160 kbps. CBR force le
+ *     débit constant → poids prédictible (~30 MB / 25 min).
+ *   * FILET : si l'init MediaCodec échoue (CBR non supporté sur une puce
+ *     ancienne/bas de gamme, dimensions refusées…), on RETOMBE sur
+ *     MediaRecorder — une preuve plus lourde vaut mieux qu'aucune preuve.
  *
  * Lifecycle:
  *   START intent (with MediaProjection result) → setup + start.
@@ -130,7 +130,7 @@ class ArenaRecorderService : Service() {
     private var projection: MediaProjection? = null
     private var virtualDisplay: VirtualDisplay? = null
     private var mediaRecorder: MediaRecorder? = null
-    // Chemin MediaCodec CBR (Xiaomi/MIUI) — alternatif à mediaRecorder.
+    // Chemin MediaCodec CBR (encodeur primaire) — alternatif à mediaRecorder.
     private var codecRecorder: CodecScreenRecorder? = null
     private var outputPath: String? = null
 
@@ -204,13 +204,6 @@ class ArenaRecorderService : Service() {
         // Profil d'encodage ALLÉGÉ, UNIFORME sur toute la flotte :
         //   360p / 160 kbps / 20 fps → ≈30 MB pour 25 min (upload mobile-
         //   friendly). 360p garde le HUD (score, chrono) lisible pour l'arbitrage.
-        // Seul l'ENCODEUR diffère (cf. plus bas) : Xiaomi/MIUI en MediaCodec CBR
-        // (l'encodeur QCom ignore le bitrate MediaRecorder), les autres en
-        // MediaRecorder standard qui, lui, respecte ce bitrate.
-        val xiaomi = Build.MANUFACTURER.equals("Xiaomi", ignoreCase = true) ||
-            Build.BRAND.equals("Xiaomi", ignoreCase = true) ||
-            Build.BRAND.equals("Redmi", ignoreCase = true) ||
-            Build.BRAND.equals("POCO", ignoreCase = true)
         val targetShort = 360
         val videoBitRate = 160_000
         val videoFps = 20
@@ -224,31 +217,35 @@ class ArenaRecorderService : Service() {
         Log.d(
             TAG,
             "recording at ${outW}x${outH} @ ${videoBitRate / 1000}kbps/${videoFps}fps " +
-                "(screen ${realW}x${realH} @ ${density}dpi, xiaomi=$xiaomi)",
+                "(screen ${realW}x${realH} @ ${density}dpi, " +
+                "${Build.MANUFACTURER}/${Build.MODEL})",
         )
 
         val outFile = File(externalCacheDir ?: cacheDir, "$filename.mp4")
         outputPath = outFile.absolutePath
 
         // Encodeur → Surface d'entrée pour le VirtualDisplay.
-        //  - Xiaomi/MIUI : MediaCodec CBR (l'encodeur matériel QCom ignore le
-        //    bitrate de MediaRecorder → fichier ~6× trop lourd). FILET : si
-        //    l'init échoue, on retombe sur MediaRecorder (preuve plus lourde
-        //    mais preuve quand même).
-        //  - Autres : MediaRecorder standard (éprouvé, respecte le bitrate).
+        // PRIMAIRE : MediaCodec CBR sur TOUS les appareils. De nombreux encodeurs
+        // matériels IGNORENT le `setVideoEncodingBitRate` de MediaRecorder (VBR →
+        // fichier plusieurs × trop lourd) — pas seulement les Redmi : observé sur
+        // un Samsung SM8350 (Snapdragon 888), où MediaRecorder à 160 kbps produit
+        // ~147 MB pour 25 min. CBR force le débit constant → poids prédictible
+        // (~30 MB) partout.
+        // FILET : si l'init MediaCodec échoue (CBR non supporté sur une puce
+        // ancienne/bas de gamme, dimensions refusées…), on retombe sur
+        // MediaRecorder — une preuve plus lourde vaut mieux qu'aucune preuve.
         var codecSurface: Surface? = null
-        if (xiaomi) {
-            try {
-                val cr = CodecScreenRecorder()
-                codecSurface = cr.start(outW, outH, videoBitRate, videoFps, outFile.absolutePath)
-                codecRecorder = cr
-            } catch (e: Exception) {
-                Log.w(TAG, "MediaCodec CBR init failed on Xiaomi — fallback MediaRecorder", e)
-                codecRecorder = null
-            }
+        try {
+            val cr = CodecScreenRecorder()
+            codecSurface = cr.start(outW, outH, videoBitRate, videoFps, outFile.absolutePath)
+            codecRecorder = cr
+        } catch (e: Exception) {
+            Log.w(TAG, "MediaCodec CBR init failed — fallback MediaRecorder", e)
+            codecRecorder = null
         }
         val encoderSurface: Surface = codecSurface
             ?: buildMediaRecorder(outW, outH, videoBitRate, videoFps, outFile.absolutePath)
+        Log.d(TAG, "encoder = ${if (codecSurface != null) "MediaCodec CBR" else "MediaRecorder (fallback)"}")
 
         proj.registerCallback(
             object : MediaProjection.Callback() {
@@ -276,8 +273,8 @@ class ArenaRecorderService : Service() {
             null, null
         )
 
-        // MediaRecorder démarre son encodage ici ; MediaCodec (Xiaomi) tourne
-        // déjà (son thread de drain a été lancé dans CodecScreenRecorder.start()).
+        // MediaRecorder (fallback) démarre son encodage ici ; le MediaCodec
+        // primaire tourne déjà (drain lancé dans CodecScreenRecorder.start()).
         mediaRecorder?.start()
         Log.d(TAG, "recording started: ${outFile.absolutePath}")
     }
@@ -285,8 +282,8 @@ class ArenaRecorderService : Service() {
     /**
      * Construit et prépare un [MediaRecorder] H.264 SURFACE selon le profil,
      * le stocke dans [mediaRecorder] et renvoie sa Surface d'entrée. Utilisé sur
-     * les appareils non-Xiaomi ET comme filet de secours si l'init MediaCodec
-     * CBR échoue (cf. [startRecording]).
+     * comme filet de secours si l'init MediaCodec CBR échoue (cf.
+     * [startRecording]).
      */
     private fun buildMediaRecorder(
         outW: Int,
@@ -333,7 +330,7 @@ class ArenaRecorderService : Service() {
         var stopSucceeded = false
         val cr = codecRecorder
         if (cr != null) {
-            // Chemin MediaCodec CBR (Xiaomi) : stop() signale l'EOS, laisse le
+            // Chemin MediaCodec CBR (primaire) : stop() signale l'EOS, laisse le
             // drain écrire le moov, puis relâche codec + muxer.
             stopSucceeded = try {
                 cr.stop()
