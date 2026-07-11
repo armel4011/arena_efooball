@@ -245,7 +245,15 @@ class ArenaRecorderService : Service() {
         }
         val encoderSurface: Surface = codecSurface
             ?: buildMediaRecorder(outW, outH, videoBitRate, videoFps, outFile.absolutePath)
-        Log.d(TAG, "encoder = ${if (codecSurface != null) "MediaCodec CBR" else "MediaRecorder (fallback)"}")
+        Log.d(TAG, "encoder = ${if (codecSurface != null) "MediaCodec" else "MediaRecorder (fallback)"}")
+
+        // Le VirtualDisplay doit rendre AUX dimensions réellement configurées par
+        // l'encodeur : CodecScreenRecorder a pu ajuster outW/outH aux contraintes
+        // de la puce (alignement/bornes). En fallback MediaRecorder, on garde les
+        // dimensions demandées (setVideoSize les a acceptées).
+        val cr = codecRecorder
+        val dispW = if (cr != null && cr.configuredWidth > 0) cr.configuredWidth else outW
+        val dispH = if (cr != null && cr.configuredHeight > 0) cr.configuredHeight else outH
 
         proj.registerCallback(
             object : MediaProjection.Callback() {
@@ -267,7 +275,7 @@ class ArenaRecorderService : Service() {
 
         virtualDisplay = proj.createVirtualDisplay(
             "ArenaRecorder",
-            outW, outH, density,
+            dispW, dispH, density,
             DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
             encoderSurface,
             null, null
