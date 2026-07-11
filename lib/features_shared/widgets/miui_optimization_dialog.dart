@@ -6,7 +6,8 @@ import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-const _miuiPromptedKey = 'arena.miui_optim_prompted.v1';
+// Nom de préférence (pas un secret) : flag « guide MIUI déjà montré ».
+const _miuiPromptedPref = 'arena_miui_prompted';
 
 /// Affiche UNE seule fois (persisté) le guide d'optimisation MIUI sur les
 /// appareils Xiaomi. À appeler après login, depuis un endroit stable (home).
@@ -16,10 +17,10 @@ Future<void> maybePromptMiuiOptimization(
   WidgetRef ref,
 ) async {
   final prefs = ref.read(sharedPreferencesProvider);
-  if (prefs.getBool(_miuiPromptedKey) == true) return;
+  if (prefs.getBool(_miuiPromptedPref) == true) return;
   final isMiui = await ref.read(miuiOptimizationServiceProvider).isMiui();
   if (!isMiui) return;
-  await prefs.setBool(_miuiPromptedKey, true);
+  await prefs.setBool(_miuiPromptedPref, true);
   if (!context.mounted) return;
   await showMiuiOptimizationDialog(context, ref);
 }
