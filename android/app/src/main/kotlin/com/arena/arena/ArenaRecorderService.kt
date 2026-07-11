@@ -17,6 +17,7 @@ import android.os.IBinder
 import android.os.Looper
 import android.util.DisplayMetrics
 import android.util.Log
+import android.view.Surface
 import android.view.WindowManager
 import androidx.core.app.NotificationCompat
 import java.io.File
@@ -40,6 +41,12 @@ import java.io.File
  * 360p / 130 kbps / 15 fps → ≈24 MB pour 25 min (sous la cible 30 MB). L'OS
  * MIUI bride l'exécution background des apps force-stopped ; un fichier léger
  * maximise les chances de livrer la preuve dans cette fenêtre d'upload étroite.
+ *
+ * ⚠️ Sur ces appareils on ENCODE via [CodecScreenRecorder] (MediaCodec en CBR)
+ * et NON MediaRecorder : l'encodeur matériel Qualcomm des Redmi ignore le
+ * `setVideoEncodingBitRate` de MediaRecorder (VBR par défaut → ~820 kbps observé
+ * pour une cible de 130). CBR force le débit constant → poids prédictible. Les
+ * autres appareils gardent le chemin MediaRecorder standard, éprouvé.
  *
  * Lifecycle:
  *   START intent (with MediaProjection result) → setup + start.
@@ -126,6 +133,8 @@ class ArenaRecorderService : Service() {
     private var projection: MediaProjection? = null
     private var virtualDisplay: VirtualDisplay? = null
     private var mediaRecorder: MediaRecorder? = null
+    // Chemin MediaCodec CBR (Xiaomi/MIUI) — alternatif à mediaRecorder.
+    private var codecRecorder: CodecScreenRecorder? = null
     private var outputPath: String? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -229,24 +238,32 @@ class ArenaRecorderService : Service() {
         val outFile = File(externalCacheDir ?: cacheDir, "$filename.mp4")
         outputPath = outFile.absolutePath
 
-        val recorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            MediaRecorder(applicationContext)
+        // Encodeur → Surface d'entrée pour le VirtualDisplay. Sur Xiaomi/MIUI :
+        // MediaCodec en CBR (l'encodeur matériel QCom ignore le bitrate de
+        // MediaRecorder → fichier ~6× trop lourd). Ailleurs : MediaRecorder
+        // standard (éprouvé), bitrate / fps selon le profil calculé plus haut.
+        val encoderSurface: Surface = if (xiaomi) {
+            val cr = CodecScreenRecorder()
+            codecRecorder = cr
+            cr.start(outW, outH, videoBitRate, videoFps, outFile.absolutePath)
         } else {
-            @Suppress("DEPRECATION")
-            MediaRecorder()
+            val recorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                MediaRecorder(applicationContext)
+            } else {
+                @Suppress("DEPRECATION")
+                MediaRecorder()
+            }
+            recorder.setVideoSource(MediaRecorder.VideoSource.SURFACE)
+            recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+            recorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264)
+            recorder.setVideoSize(outW, outH)
+            recorder.setVideoEncodingBitRate(videoBitRate)
+            recorder.setVideoFrameRate(videoFps)
+            recorder.setOutputFile(outFile.absolutePath)
+            recorder.prepare()
+            mediaRecorder = recorder
+            recorder.surface
         }
-        recorder.setVideoSource(MediaRecorder.VideoSource.SURFACE)
-        recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
-        recorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264)
-        recorder.setVideoSize(outW, outH)
-        // Bitrate / fps selon le profil (cf. plus haut) : standard 600 kbps/24 fps
-        // (~113 MB/25min) ; MIUI/Xiaomi allégé 130 kbps/15 fps (~24 MB/25min, sous
-        // la cible 30 MB) pour un upload background fiable malgré le bridage OS.
-        recorder.setVideoEncodingBitRate(videoBitRate)
-        recorder.setVideoFrameRate(videoFps)
-        recorder.setOutputFile(outFile.absolutePath)
-        recorder.prepare()
-        mediaRecorder = recorder
 
         proj.registerCallback(
             object : MediaProjection.Callback() {
@@ -270,11 +287,13 @@ class ArenaRecorderService : Service() {
             "ArenaRecorder",
             outW, outH, density,
             DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-            recorder.surface,
+            encoderSurface,
             null, null
         )
 
-        recorder.start()
+        // MediaRecorder démarre son encodage ici ; MediaCodec (Xiaomi) tourne
+        // déjà (son thread de drain a été lancé dans CodecScreenRecorder.start()).
+        mediaRecorder?.start()
         Log.d(TAG, "recording started: ${outFile.absolutePath}")
     }
 
@@ -296,15 +315,28 @@ class ArenaRecorderService : Service() {
         virtualDisplay = null
 
         var stopSucceeded = false
-        try {
-            mediaRecorder?.stop()
-            stopSucceeded = true
-        } catch (e: Exception) {
-            Log.w(TAG, "mediaRecorder.stop() threw — moov atom NOT written, file is truncated", e)
+        val cr = codecRecorder
+        if (cr != null) {
+            // Chemin MediaCodec CBR (Xiaomi) : stop() signale l'EOS, laisse le
+            // drain écrire le moov, puis relâche codec + muxer.
+            stopSucceeded = try {
+                cr.stop()
+            } catch (e: Exception) {
+                Log.w(TAG, "CodecScreenRecorder.stop() threw", e)
+                false
+            }
+            codecRecorder = null
+        } else {
+            try {
+                mediaRecorder?.stop()
+                stopSucceeded = true
+            } catch (e: Exception) {
+                Log.w(TAG, "mediaRecorder.stop() threw — moov atom NOT written, file is truncated", e)
+            }
+            try { mediaRecorder?.release() } catch (_: Exception) {}
+            mediaRecorder = null
         }
 
-        try { mediaRecorder?.release() } catch (_: Exception) {}
-        mediaRecorder = null
         try { projection?.stop() } catch (_: Exception) {}
         projection = null
         outputPath = null
