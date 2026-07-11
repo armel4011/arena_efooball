@@ -4,20 +4,22 @@ import android.media.MediaCodec
 import android.media.MediaCodecInfo
 import android.media.MediaFormat
 import android.media.MediaMuxer
-import android.os.Build
 import android.util.Log
 import android.view.Surface
 
 /**
- * Encodeur d'écran basé sur [MediaCodec] + [MediaMuxer], utilisé à la place de
- * `MediaRecorder` sur les encodeurs matériels qui IGNORENT
- * `setVideoEncodingBitRate` (observé sur Qualcomm/QC2Comp des Redmi : un ciblage
- * 130 kbps produit ~820 kbps en VBR par défaut).
+ * Encodeur d'écran basé sur [MediaCodec] + [MediaMuxer], utilisé comme encodeur
+ * PRIMAIRE sur tous les appareils, à la place de `MediaRecorder` qui IGNORE
+ * `setVideoEncodingBitRate` sur beaucoup d'encodeurs matériels (Qualcomm des
+ * Redmi ET Snapdragon 888 des Samsung : un ciblage 160 kbps produit ~147 Mo).
  *
- * On configure explicitement le **mode débit constant** (`BITRATE_MODE_CBR`) :
- * l'encodeur cappe alors le débit total à la cible quelle que soit la motion →
- * le poids du fichier = `bitRate × durée`, PRÉDICTIBLE (130 kbps ⇒ ~24 Mo pour
- * 25 min, sous la cible 30 Mo).
+ * [start] NÉGOCIE les paramètres avec les capacités réelles de l'encodeur AVC
+ * du device (résolution alignée/bornée, bitrate/fps bornés) pour couvrir tout
+ * type de puce, puis configure le **mode débit constant** (`BITRATE_MODE_CBR`)
+ * s'il est supporté — l'encodeur cappe alors le débit à la cible quelle que soit
+ * la motion → poids = `bitRate × durée`, PRÉDICTIBLE (160 kbps ⇒ ~30 Mo / 25
+ * min). Si l'encodeur ne supporte pas le CBR, on retombe sur le **VBR** (qui
+ * respecte quand même `KEY_BIT_RATE` bien mieux que MediaRecorder).
  *
  * Cycle : [start] configure le codec en mode surface, crée la surface d'entrée
  * (à donner au `VirtualDisplay` de la MediaProjection) et démarre un thread de
@@ -31,14 +33,30 @@ class CodecScreenRecorder {
     private var inputSurface: Surface? = null
     private var drainThread: Thread? = null
 
+    /**
+     * Dimensions RÉELLEMENT configurées après négociation avec les capacités de
+     * l'encodeur (peuvent différer de celles demandées : alignement/bornes). Le
+     * `VirtualDisplay` DOIT être créé à ces dimensions. 0 tant que [start] n'a
+     * pas réussi.
+     */
+    var configuredWidth = 0
+        private set
+    var configuredHeight = 0
+        private set
+
     private var trackIndex = -1
     @Volatile private var muxerStarted = false
     @Volatile private var stopRequested = false
     private val bufferInfo = MediaCodec.BufferInfo()
 
     /**
-     * Configure l'encodeur H.264 en CBR et renvoie la Surface d'entrée à
-     * brancher sur le `VirtualDisplay`. Lève si la configuration échoue.
+     * NÉGOCIE les paramètres selon les capacités RÉELLES de l'encodeur AVC du
+     * device (mode de débit, résolution, bitrate, fps) — pour couvrir tout type
+     * de puce (Qualcomm, Exynos, MediaTek, Unisoc, Kirin, Tensor, bas de gamme…)
+     * — puis configure l'encodeur et renvoie la Surface d'entrée à brancher sur
+     * le `VirtualDisplay`. Les dimensions retenues sont exposées via
+     * [configuredWidth] / [configuredHeight]. Lève si AUCUN mode ne configure —
+     * l'appelant retombe alors sur MediaRecorder.
      */
     fun start(
         width: Int,
@@ -47,6 +65,95 @@ class CodecScreenRecorder {
         fps: Int,
         outputPath: String,
     ): Surface {
+        // ── Sondage des capacités (best-effort : si le sondage échoue, on garde
+        //    les valeurs demandées et on tente CBR puis VBR) ───────────────────
+        var w = width
+        var h = height
+        var br = bitRate
+        var f = fps
+        var supportsCbr = true
+        var supportsVbr = true
+        var probe: MediaCodec? = null
+        try {
+            probe = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
+            val caps = probe.codecInfo
+                .getCapabilitiesForType(MediaFormat.MIMETYPE_VIDEO_AVC)
+            val enc = caps.encoderCapabilities
+            supportsCbr = enc.isBitrateModeSupported(
+                MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_CBR,
+            )
+            supportsVbr = enc.isBitrateModeSupported(
+                MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_VBR,
+            )
+            val vc = caps.videoCapabilities
+            // Résolution : alignée sur les contraintes de l'encodeur (certaines
+            // puces exigent un alignement 16, d'autres 2) et bornée à sa plage
+            // supportée — sinon configure() lève.
+            w = alignDown(width, vc.widthAlignment)
+                .coerceIn(vc.supportedWidths.lower, vc.supportedWidths.upper)
+            val hRange = try {
+                vc.getSupportedHeightsFor(w)
+            } catch (_: Exception) {
+                vc.supportedHeights
+            }
+            h = alignDown(height, vc.heightAlignment)
+                .coerceIn(hRange.lower, hRange.upper)
+            br = bitRate.coerceIn(vc.bitrateRange.lower, vc.bitrateRange.upper)
+            val frRange = try {
+                vc.getSupportedFrameRatesFor(w, h)
+            } catch (_: Exception) {
+                null
+            }
+            if (frRange != null) {
+                f = fps.toDouble()
+                    .coerceIn(frRange.lower, frRange.upper)
+                    .toInt()
+                    .coerceAtLeast(1)
+            }
+        } catch (_: Exception) {
+            // Sondage impossible : valeurs brutes + CBR/VBR à tenter.
+        } finally {
+            try { probe?.release() } catch (_: Exception) {}
+        }
+        configuredWidth = w
+        configuredHeight = h
+
+        // Préférence des modes de débit : CBR (poids le plus prédictible) → VBR
+        // (respecte quand même KEY_BIT_RATE bien mieux que MediaRecorder). On
+        // saute les modes non supportés pour éviter un configure() qui lève.
+        val modes = ArrayList<Int>(2)
+        if (supportsCbr) modes.add(MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_CBR)
+        if (supportsVbr) modes.add(MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_VBR)
+        if (modes.isEmpty()) modes.add(MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_VBR)
+
+        var lastError: Exception? = null
+        for (mode in modes) {
+            try {
+                return startWithMode(w, h, br, f, mode, outputPath)
+            } catch (e: Exception) {
+                Log.w("ArenaRecorder", "encoder configure failed (mode=$mode) — next", e)
+                lastError = e
+                releasePartial()
+            }
+        }
+        throw lastError ?: IllegalStateException("aucun mode d'encodeur AVC exploitable")
+    }
+
+    /** Configure + démarre le codec pour un [bitrateMode] donné. Lève si échec. */
+    private fun startWithMode(
+        width: Int,
+        height: Int,
+        bitRate: Int,
+        fps: Int,
+        bitrateMode: Int,
+        outputPath: String,
+    ): Surface {
+        // Réinitialise l'état : une tentative de mode précédente a pu poser ces
+        // flags (releasePartial met stopRequested=true).
+        stopRequested = false
+        muxerStarted = false
+        trackIndex = -1
+
         val format = MediaFormat.createVideoFormat(
             MediaFormat.MIMETYPE_VIDEO_AVC, width, height,
         ).apply {
@@ -57,36 +164,27 @@ class CodecScreenRecorder {
             setInteger(MediaFormat.KEY_BIT_RATE, bitRate)
             setInteger(MediaFormat.KEY_FRAME_RATE, fps)
             setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 2)
-            // CBR : force le débit constant. C'est LE réglage que MediaRecorder
-            // n'expose pas et dont l'absence laissait l'encodeur ignorer la cible.
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                setInteger(
-                    MediaFormat.KEY_BITRATE_MODE,
-                    MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_CBR,
-                )
-            }
+            setInteger(MediaFormat.KEY_BITRATE_MODE, bitrateMode)
         }
 
-        try {
-            val c = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
-            codec = c
-            c.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
-            inputSurface = c.createInputSurface()
-            c.start()
+        val c = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
+        codec = c
+        c.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
+        inputSurface = c.createInputSurface()
+        c.start()
 
-            muxer = MediaMuxer(outputPath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
+        muxer = MediaMuxer(outputPath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
 
-            drainThread = Thread({ drainLoop() }, "arena-codec-drain").apply { start() }
-            Log.d("ArenaRecorder", "MediaCodec CBR ${bitRate / 1000}kbps ${width}x$height/${fps}fps")
-            return inputSurface!!
-        } catch (e: Exception) {
-            // CBR non supporté, dimensions refusées, encodeur indisponible… On
-            // relâche TOUT état partiel (sinon codec matériel + muxer fuités) et
-            // on relance : l'appelant peut alors retomber proprement sur
-            // MediaRecorder (cf. ArenaRecorderService, filet de sécurité).
-            releasePartial()
-            throw e
-        }
+        drainThread = Thread({ drainLoop() }, "arena-codec-drain").apply { start() }
+        val modeName =
+            if (bitrateMode == MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_CBR) "CBR" else "VBR"
+        Log.d("ArenaRecorder", "MediaCodec $modeName ${bitRate / 1000}kbps ${width}x$height/${fps}fps")
+        return inputSurface!!
+    }
+
+    private fun alignDown(value: Int, alignment: Int): Int {
+        if (alignment <= 1) return value
+        return value - (value % alignment)
     }
 
     /** Relâche best-effort l'état alloué par [start] en cas d'échec de config. */
