@@ -157,6 +157,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
     );
   }
   const isCall = r.type === 'call_invite';
+  // Réclamation de preuve anti-triche : envoyée en DATA-only haute priorité (comme
+  // les appels) pour que le handler background de l'app se déclenche même app
+  // TUÉE et enfile l'upload de la vidéo engagée, sans dépendre d'une réouverture
+  // volontaire par le joueur accusé. Data payload = notification_type + match_id
+  // + stream_id (déjà propagés via forwardedData). Pas de notif visible en
+  // arrière-plan : l'upload est silencieux (comportement anti-triche voulu).
+  const isProofClaim = r.type === 'proof_claim_request';
   const callId = (r.data?.['call_id'] as string | undefined) ?? '';
   const callerName = (r.data?.['caller_name'] as string | undefined) ?? '';
 
@@ -245,8 +252,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
       fcmToken: profile.fcm_token,
       title: r.title,
       body: r.body ?? '',
-      dataOnly: isCall,
-      imageUrl: isCall ? undefined : (r.image_url ?? undefined),
+      dataOnly: isCall || isProofClaim,
+      imageUrl: (isCall || isProofClaim) ? undefined : (r.image_url ?? undefined),
       data: isCall
         ? {
             notification_type: 'call_invite',
