@@ -67,17 +67,40 @@ class CodecScreenRecorder {
             }
         }
 
-        val c = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
-        c.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
-        inputSurface = c.createInputSurface()
-        c.start()
-        codec = c
+        try {
+            val c = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
+            codec = c
+            c.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
+            inputSurface = c.createInputSurface()
+            c.start()
 
-        muxer = MediaMuxer(outputPath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
+            muxer = MediaMuxer(outputPath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
 
-        drainThread = Thread({ drainLoop() }, "arena-codec-drain").apply { start() }
-        Log.d("ArenaRecorder", "MediaCodec CBR ${bitRate / 1000}kbps ${width}x$height/${fps}fps")
-        return inputSurface!!
+            drainThread = Thread({ drainLoop() }, "arena-codec-drain").apply { start() }
+            Log.d("ArenaRecorder", "MediaCodec CBR ${bitRate / 1000}kbps ${width}x$height/${fps}fps")
+            return inputSurface!!
+        } catch (e: Exception) {
+            // CBR non supporté, dimensions refusées, encodeur indisponible… On
+            // relâche TOUT état partiel (sinon codec matériel + muxer fuités) et
+            // on relance : l'appelant peut alors retomber proprement sur
+            // MediaRecorder (cf. ArenaRecorderService, filet de sécurité).
+            releasePartial()
+            throw e
+        }
+    }
+
+    /** Relâche best-effort l'état alloué par [start] en cas d'échec de config. */
+    private fun releasePartial() {
+        stopRequested = true
+        try { drainThread?.join(300) } catch (_: Exception) {}
+        try { muxer?.release() } catch (_: Exception) {}
+        try { codec?.stop() } catch (_: Exception) {}
+        try { codec?.release() } catch (_: Exception) {}
+        try { inputSurface?.release() } catch (_: Exception) {}
+        codec = null
+        muxer = null
+        inputSurface = null
+        drainThread = null
     }
 
     private fun drainLoop() {
