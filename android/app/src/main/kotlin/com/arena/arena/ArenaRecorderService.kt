@@ -36,6 +36,11 @@ import java.io.File
  *   * 24 fps — fluidité suffisante pour relire un jeu d'eFootball
  *     ou un Jeu de Dames et distinguer le score à l'écran.
  *
+ * Profil MIUI/Xiaomi (Build.MANUFACTURER = Xiaomi / marques Redmi, POCO) :
+ * 360p / 130 kbps / 15 fps → ≈24 MB pour 25 min (sous la cible 30 MB). L'OS
+ * MIUI bride l'exécution background des apps force-stopped ; un fichier léger
+ * maximise les chances de livrer la preuve dans cette fenêtre d'upload étroite.
+ *
  * Lifecycle:
  *   START intent (with MediaProjection result) → setup + start.
  *   STOP intent → stop, release, publish path, exit foreground.
@@ -190,16 +195,36 @@ class ArenaRecorderService : Service() {
             throw IllegalStateException("display dimensions invalid")
         }
 
-        // Target 540p on the SHORTER axis, preserve aspect ratio,
-        // align dimensions to a multiple of 16 (H.264 encoder
-        // requirement on most chips). 540p est un compromis : net
-        // pour relire un HUD de jeu (score, chrono, joueurs) sans
-        // exploser le quota d'upload (1200 kbps × 25 min ≈ 225 MB).
+        // Profil d'encodage. Par défaut : 540p / 600 kbps / 24 fps (~113 MB max
+        // pour 25 min) — net pour relire un HUD de jeu (score, chrono, joueurs).
+        //
+        // MIUI/Xiaomi : la fenêtre d'exécution BACKGROUND y est agressivement
+        // bridée (l'OS tue l'isolate d'une app force-stopped avant la fin d'un
+        // gros upload). On produit donc un fichier BEAUCOUP plus léger pour
+        // maximiser les chances de livrer la preuve dans cette fenêtre :
+        //   360p / 130 kbps / 15 fps → ≈24 MB pour 25 min (marge sous la cible
+        //   30 MB malgré la variance VBR de l'encodeur). À 360p le HUD reste
+        //   lisible car on descend AUSSI la résolution (un 540p à 130 kbps
+        //   serait un brouillard de macroblocks, moins lisible).
+        val xiaomi = Build.MANUFACTURER.equals("Xiaomi", ignoreCase = true) ||
+            Build.BRAND.equals("Xiaomi", ignoreCase = true) ||
+            Build.BRAND.equals("Redmi", ignoreCase = true) ||
+            Build.BRAND.equals("POCO", ignoreCase = true)
+        val targetShort = if (xiaomi) 360 else 540
+        val videoBitRate = if (xiaomi) 130_000 else 600_000
+        val videoFps = if (xiaomi) 15 else 24
+
+        // Cible `targetShort` sur l'axe COURT, ratio préservé, dimensions
+        // alignées sur un multiple de 16 (contrainte encodeur H.264).
         val shorter = minOf(realW, realH)
-        val scale = 540.0 / shorter
+        val scale = targetShort.toDouble() / shorter
         val outW = ((realW * scale).toInt()) and -16
         val outH = ((realH * scale).toInt()) and -16
-        Log.d(TAG, "recording at ${outW}x${outH} (screen ${realW}x${realH} @ ${density}dpi)")
+        Log.d(
+            TAG,
+            "recording at ${outW}x${outH} @ ${videoBitRate / 1000}kbps/${videoFps}fps " +
+                "(screen ${realW}x${realH} @ ${density}dpi, xiaomi=$xiaomi)",
+        )
 
         val outFile = File(externalCacheDir ?: cacheDir, "$filename.mp4")
         outputPath = outFile.absolutePath
@@ -214,13 +239,11 @@ class ArenaRecorderService : Service() {
         recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
         recorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264)
         recorder.setVideoSize(outW, outH)
-        // 600 kbps + 24 fps : compromis lisibilité / poids. 540p sans
-        // brouillard de macroblocks pour distinguer le HUD du jeu,
-        // ~113 MB max pour un match de 25 min, friendly pour upload
-        // sur réseau mobile money africain. Le précédent palier
-        // 1.2 Mbps / 30 fps donnait ~225 MB pour 25 min.
-        recorder.setVideoEncodingBitRate(600_000)
-        recorder.setVideoFrameRate(24)
+        // Bitrate / fps selon le profil (cf. plus haut) : standard 600 kbps/24 fps
+        // (~113 MB/25min) ; MIUI/Xiaomi allégé 130 kbps/15 fps (~24 MB/25min, sous
+        // la cible 30 MB) pour un upload background fiable malgré le bridage OS.
+        recorder.setVideoEncodingBitRate(videoBitRate)
+        recorder.setVideoFrameRate(videoFps)
         recorder.setOutputFile(outFile.absolutePath)
         recorder.prepare()
         mediaRecorder = recorder
