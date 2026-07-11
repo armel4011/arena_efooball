@@ -142,7 +142,10 @@ void main() {
   // 2482 → 2498 le 2026-07-10 : +16 des widgets paiement CEMAC (numéro à copier,
   // étapes, card tuto) dans mobile_money_details_page — tokens ArenaColors +
   // 1 seul vrai Colors.white (icône play de la card tuto).
-  const colorsDotBaseline = 2498; // occurrences de `Colors.`
+  // 2498 → 2502 le 2026-07-11 : +4 `ArenaColors.silver` des légendes de rôle
+  // (Domicile/Extérieur) sous les vignettes de preuve, litige admin (mobile +
+  // desktop).
+  const colorsDotBaseline = 2502; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.
@@ -176,7 +179,9 @@ void main() {
   // À migrer vers ArenaText à terme.
   // 220 → 221 le 2026-07-10 : +1 `GoogleFonts.spaceGrotesk` de la vignette
   // « capture d'inscription » du paiement desktop (_DesktopProofPreview).
-  const googleFontsBaseline = 221; // occurrences de `GoogleFonts.`
+  // 221 → 223 le 2026-07-11 : +2 `GoogleFonts.spaceGrotesk` des légendes de rôle
+  // (Domicile/Extérieur) des vignettes de preuve, litige admin desktop.
+  const googleFontsBaseline = 223; // occurrences de `GoogleFonts.`
 
   final colorsDotRe = RegExp(r'Colors\.');
   final colorHexRe = RegExp(r'Color\(0x');

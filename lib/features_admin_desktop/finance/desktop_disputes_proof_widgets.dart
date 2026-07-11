@@ -30,11 +30,17 @@ class _ProofsSection extends ConsumerWidget {
             ),
           );
         }
+        final match = ref.watch(matchByIdProvider(matchId)).valueOrNull;
         return Wrap(
           spacing: 12,
           runSpacing: 12,
           children: [
-            for (final p in list) _ProofTile(proof: p),
+            for (final p in list)
+              _ProofTile(
+                proof: p,
+                homeId: match?.player1Id,
+                awayId: match?.player2Id,
+              ),
           ],
         );
       },
@@ -43,14 +49,43 @@ class _ProofsSection extends ConsumerWidget {
 }
 
 class _ProofTile extends StatelessWidget {
-  const _ProofTile({required this.proof});
+  const _ProofTile({required this.proof, this.homeId, this.awayId});
 
   final SignedDisputeProof proof;
+  final String? homeId;
+  final String? awayId;
 
   static const double _size = 110;
 
   @override
   Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _thumb(context),
+        const SizedBox(height: 4),
+        SizedBox(
+          width: _size,
+          child: Text(
+            _disputePlayerRoleShort(
+              proof.playerId,
+              homeId: homeId,
+              awayId: awayId,
+            ),
+            style: GoogleFonts.spaceGrotesk(
+              color: ArenaColors.silver,
+              fontSize: 11,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _thumb(BuildContext context) {
     if (proof.isVideo) {
       return SizedBox(
         width: _size,
@@ -213,11 +248,17 @@ class _RecordingsSection extends ConsumerWidget {
             ),
           );
         }
+        final match = ref.watch(matchByIdProvider(matchId)).valueOrNull;
         return Wrap(
           spacing: 12,
           runSpacing: 12,
           children: [
-            for (final r in list) _RecordingTile(recording: r),
+            for (final r in list)
+              _RecordingTile(
+                recording: r,
+                homeId: match?.player1Id,
+                awayId: match?.player2Id,
+              ),
           ],
         );
       },
@@ -226,28 +267,53 @@ class _RecordingsSection extends ConsumerWidget {
 }
 
 class _RecordingTile extends StatelessWidget {
-  const _RecordingTile({required this.recording});
+  const _RecordingTile({required this.recording, this.homeId, this.awayId});
 
   final SignedMatchRecording recording;
+  final String? homeId;
+  final String? awayId;
 
   static const double _size = 110;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: _size,
-      height: _size,
-      child: Button(
-        onPressed: () => _openVideo(context),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(FluentIcons.play, size: 24),
-            const SizedBox(height: 6),
-            Text(recording.isLiveKit ? 'LiveKit' : 'Natif'),
-          ],
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: _size,
+          height: _size,
+          child: Button(
+            onPressed: () => _openVideo(context),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(FluentIcons.play, size: 24),
+                const SizedBox(height: 6),
+                Text(recording.isLiveKit ? 'LiveKit' : 'Natif'),
+              ],
+            ),
+          ),
         ),
-      ),
+        const SizedBox(height: 4),
+        SizedBox(
+          width: _size,
+          child: Text(
+            _disputePlayerRoleShort(
+              recording.playerId,
+              homeId: homeId,
+              awayId: awayId,
+            ),
+            style: GoogleFonts.spaceGrotesk(
+              color: ArenaColors.silver,
+              fontSize: 11,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
     );
   }
 
