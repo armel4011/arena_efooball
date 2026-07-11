@@ -28,23 +28,20 @@ import java.io.File
  * `flutter_screen_recording` plugin so we can pick our own
  * resolution / bitrate / framerate.
  *
- * PROFIL ALLÉGÉ (toute la flotte, cible ≈30 MB / 25 min — upload mobile
- * money-friendly ET livrable dans une fenêtre background étroite) :
- *   * Défaut : 480p (axe court), ratio préservé, 160 kbps H.264, 20 fps.
- *     480p garde le HUD (score, chrono) lisible pour l'arbitrage, 160 kbps
- *     tient la cible poids, 20 fps suffit à relire un eFootball / Jeu de Dames.
- *   * MIUI/Xiaomi (Build.MANUFACTURER = Xiaomi / marques Redmi, POCO) :
- *     360p / 130 kbps / 15 fps → ≈24 MB pour 25 min. MIUI bride l'exécution
- *     background des apps force-stopped ; un fichier encore plus léger maximise
- *     les chances de livrer la preuve dans cette fenêtre d'upload.
+ * PROFIL ALLÉGÉ UNIFORME (toute la flotte, cible ≈30 MB / 25 min — upload
+ * mobile money-friendly ET livrable dans une fenêtre background étroite) :
+ *   360p (axe court, ratio préservé), 160 kbps H.264, 20 fps. 360p garde le
+ *   HUD (score, chrono) lisible pour l'arbitrage ; 20 fps suffit à relire un
+ *   eFootball / Jeu de Dames.
  *
- * ENCODEUR + FILET DE SÉCURITÉ :
- *   * Xiaomi/MIUI : [CodecScreenRecorder] (MediaCodec en CBR) — l'encodeur
- *     matériel Qualcomm des Redmi ignore le `setVideoEncodingBitRate` de
- *     MediaRecorder (VBR → ~820 kbps observé pour une cible de 130). CBR force
- *     le débit constant → poids prédictible. Si l'init MediaCodec échoue (CBR
- *     non supporté, dimensions refusées…), on RETOMBE sur MediaRecorder : une
- *     preuve plus lourde vaut infiniment mieux qu'aucune preuve.
+ * ENCODEUR + FILET DE SÉCURITÉ (seule chose qui diffère selon l'appareil) :
+ *   * Xiaomi/MIUI (Build.MANUFACTURER = Xiaomi / marques Redmi, POCO) :
+ *     [CodecScreenRecorder] (MediaCodec en CBR) — l'encodeur matériel Qualcomm
+ *     des Redmi ignore le `setVideoEncodingBitRate` de MediaRecorder (VBR →
+ *     ~820 kbps observé pour une cible de 160). CBR force le débit constant →
+ *     poids prédictible. Si l'init MediaCodec échoue (CBR non supporté,
+ *     dimensions refusées…), on RETOMBE sur MediaRecorder : une preuve plus
+ *     lourde vaut infiniment mieux qu'aucune preuve.
  *   * Autres appareils : MediaRecorder standard, éprouvé — il respecte le
  *     bitrate demandé hors puces QCom, donc pas besoin du chemin MediaCodec.
  *
@@ -204,19 +201,19 @@ class ArenaRecorderService : Service() {
             throw IllegalStateException("display dimensions invalid")
         }
 
-        // Profil d'encodage ALLÉGÉ (cf. KDoc de classe). Cible ≈30 MB / 25 min
-        // sur toute la flotte pour un upload mobile-friendly.
-        //   Défaut     : 480p / 160 kbps / 20 fps — HUD lisible, poids tenu
-        //                (MediaRecorder respecte ce bitrate hors puces QCom).
-        //   MIUI/Xiaomi: 360p / 130 kbps / 15 fps — fenêtre background plus
-        //                étroite ⇒ fichier encore plus léger (≈24 MB / 25 min).
+        // Profil d'encodage ALLÉGÉ, UNIFORME sur toute la flotte :
+        //   360p / 160 kbps / 20 fps → ≈30 MB pour 25 min (upload mobile-
+        //   friendly). 360p garde le HUD (score, chrono) lisible pour l'arbitrage.
+        // Seul l'ENCODEUR diffère (cf. plus bas) : Xiaomi/MIUI en MediaCodec CBR
+        // (l'encodeur QCom ignore le bitrate MediaRecorder), les autres en
+        // MediaRecorder standard qui, lui, respecte ce bitrate.
         val xiaomi = Build.MANUFACTURER.equals("Xiaomi", ignoreCase = true) ||
             Build.BRAND.equals("Xiaomi", ignoreCase = true) ||
             Build.BRAND.equals("Redmi", ignoreCase = true) ||
             Build.BRAND.equals("POCO", ignoreCase = true)
-        val targetShort = if (xiaomi) 360 else 480
-        val videoBitRate = if (xiaomi) 130_000 else 160_000
-        val videoFps = if (xiaomi) 15 else 20
+        val targetShort = 360
+        val videoBitRate = 160_000
+        val videoFps = 20
 
         // Cible `targetShort` sur l'axe COURT, ratio préservé, dimensions
         // alignées sur un multiple de 16 (contrainte encodeur H.264).
