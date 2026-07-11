@@ -6,15 +6,24 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:arena/core/services/callkit_service.dart';
+import 'package:arena/core/services/proof_file_store.dart';
+import 'package:arena/core/services/secure_local_storage.dart';
+// sync_queue_service expose generateUuidV4 + ProofUploadAction (part
+// sync_queue_actions.dart).
+import 'package:arena/core/services/sync_queue_service.dart';
 import 'package:arena/core/theme/arena_theme.dart' show ArenaColors;
 import 'package:arena/core/utils/error_reporter.dart';
 import 'package:arena/data/repositories/notification_repository.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart' show WidgetsFlutterBinding;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// FCM + in-app notifications glue (PHASE 10).
 ///
@@ -323,12 +332,80 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   if (kDebugMode) {
     debugPrint('[notifs] background message ${message.messageId}');
   }
-  if (message.data['notification_type'] != 'call_invite') return;
-  await CallkitService.showIncoming(
-    callId: message.data['call_id'] as String? ?? '',
-    callerName: message.data['caller_name'] as String? ?? '',
-    scope: message.data['scope'] as String? ?? '',
-    scopeId: message.data['scope_id'] as String? ?? '',
-    callerId: message.data['caller_id'] as String? ?? '',
-  );
+  final type = message.data['notification_type'];
+  if (type == 'call_invite') {
+    await CallkitService.showIncoming(
+      callId: message.data['call_id'] as String? ?? '',
+      callerName: message.data['caller_name'] as String? ?? '',
+      scope: message.data['scope'] as String? ?? '',
+      scopeId: message.data['scope_id'] as String? ?? '',
+      callerId: message.data['caller_id'] as String? ?? '',
+    );
+    return;
+  }
+  // Réclamation de preuve anti-triche reçue APP TUÉE : on enfile l'upload de la
+  // vidéo engagée sans dépendre d'une réouverture volontaire du joueur (les
+  // chemins foreground/tap/reconcile ne s'exécutent qu'app rouverte). Envoyée en
+  // data-only haute priorité par `dispatch_notification`.
+  if (type == 'proof_claim_request') {
+    await _uploadClaimedProofInBackground(message.data);
+    return;
+  }
+}
+
+/// Upload de la preuve engagée depuis l'isolate BACKGROUND (fresh isolate FCM),
+/// sur réclamation admin. Bootstrappe Supabase (session restaurée depuis le
+/// secure storage) puis réutilise [ProofUploadAction] (upload + `proof-verify`).
+///
+/// Best-effort : soumis aux limites d'exécution background de l'OS (certains OEM
+/// agressifs — MIUI/Xiaomi — peuvent tuer l'isolate avant la fin de l'upload) et
+/// exige que le fichier engagé soit encore présent localement. Idempotent :
+/// `proof-verify` + l'upsert storage tolèrent un ré-upload (foreground/reconcile).
+Future<void> _uploadClaimedProofInBackground(Map<String, dynamic> data) async {
+  final matchId = data['match_id'] as String?;
+  final streamId = data['stream_id'] as String?;
+  if (matchId == null || streamId == null) return;
+  try {
+    WidgetsFlutterBinding.ensureInitialized();
+
+    // 1. Fichier engagé localement (SharedPreferences). Rien à livrer sinon.
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.reload(); // voir les écritures du main isolate
+    final entry = ProofFileStore(prefs).get(matchId);
+    if (entry == null || !File(entry.filePath).existsSync()) return;
+
+    // 2. Supabase dans cet isolate : session du joueur restaurée depuis le
+    //    secure storage (l'isolate FCM ne partage pas le singleton du main).
+    if (!dotenv.isInitialized) {
+      await dotenv.load();
+    }
+    final url = dotenv.env['SUPABASE_URL']?.trim() ?? '';
+    final anon = dotenv.env['SUPABASE_ANON_KEY']?.trim() ?? '';
+    if (url.isEmpty || anon.isEmpty) return;
+    try {
+      await Supabase.initialize(
+        url: url,
+        anonKey: anon,
+        authOptions: FlutterAuthClientOptions(
+          localStorage: SecureLocalStorage.fromUrl(url),
+        ),
+      );
+    } catch (_) {
+      // Déjà initialisé dans cet isolate (handler ré-entrant) — on continue.
+    }
+    final client = Supabase.instance.client;
+    if (client.auth.currentSession == null) return; // pas de session → rien
+
+    // 3. Upload + proof-verify (réutilise l'action de la sync queue).
+    await ProofUploadAction(
+      id: generateUuidV4(),
+      createdAt: DateTime.now().toUtc(),
+      matchId: matchId,
+      streamId: streamId,
+      playerId: entry.playerId,
+      filePath: entry.filePath,
+    ).execute(client);
+  } catch (e, st) {
+    unawaited(reportError(e, st, context: 'notifs.bgProofClaimUpload'));
+  }
 }
