@@ -207,37 +207,22 @@ class _VerdictButtons extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final p1Score = match.score1 ?? 0;
-    final p2Score = match.score2 ?? 0;
-
     return Column(
       children: [
         ArenaButton(
-          label: '✓ VALIDER $p1Score-$p2Score (J1 gagne)',
+          label: '🏳️ J1 GAGNE 3-0 (tapis vert)',
           fullWidth: true,
           onPressed: match.player1Id == null
               ? null
-              : () => _commit(
-                    context,
-                    ref,
-                    winnerId: match.player1Id,
-                    scoreP1: p1Score,
-                    scoreP2: p2Score,
-                  ),
+              : () => _commit(context, ref, winnerId: match.player1Id),
         ),
         const SizedBox(height: ArenaSpacing.xs),
         ArenaButton(
-          label: '✓ VALIDER $p2Score-$p1Score (J2 gagne)',
+          label: '🏳️ J2 GAGNE 3-0 (tapis vert)',
           fullWidth: true,
           onPressed: match.player2Id == null
               ? null
-              : () => _commit(
-                    context,
-                    ref,
-                    winnerId: match.player2Id,
-                    scoreP1: p2Score,
-                    scoreP2: p1Score,
-                  ),
+              : () => _commit(context, ref, winnerId: match.player2Id),
         ),
         const SizedBox(height: ArenaSpacing.xs),
         ArenaButton(
@@ -254,8 +239,6 @@ class _VerdictButtons extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref, {
     required String? winnerId,
-    required int scoreP1,
-    required int scoreP2,
   }) async {
     final justification = justificationController.text.trim();
     if (justification.isEmpty) {
@@ -264,10 +247,15 @@ class _VerdictButtons extends ConsumerWidget {
       );
       return;
     }
+    // TAPIS VERT : le favorisé gagne 3-0 (le serveur force ce score, cf.
+    // resolve_dispute). On oriente 3-0 selon le vainqueur pour l'affichage/audit.
+    final winsP1 = winnerId == match.player1Id;
+    final scoreP1 = winsP1 ? 3 : 0;
+    final scoreP2 = winsP1 ? 0 : 3;
     final totpOk = await TotpGate.confirm(
       context,
       ref,
-      reason: 'Résoudre dispute · verdict $scoreP1-$scoreP2',
+      reason: 'Résoudre dispute · tapis vert $scoreP1-$scoreP2',
     );
     if (!totpOk) return;
     if (!context.mounted) return;
