@@ -23,30 +23,27 @@ import androidx.core.app.NotificationCompat
 import java.io.File
 
 /**
- * Foreground service that hosts the MediaProjection + MediaRecorder
- * for the anti-cheat screen recording. Replaces the upstream
+ * Foreground service that hosts the MediaProjection + encoder for the
+ * anti-cheat screen recording. Replaces the upstream
  * `flutter_screen_recording` plugin so we can pick our own
- * resolution / bitrate / framerate:
+ * resolution / bitrate / framerate.
  *
- *   * 540p shorter dimension, aspect ratio preserved (so a 1080×2400
- *     portrait device produces ~ 544×1216, a 1920×1080 landscape
- *     game render produces 960×544),
- *   * 600 kbps H.264 (≈113 MB pour un match plein de 25 min, ~80 MB
- *     pour 18 min — confortablement sous le ceiling 500 MB du bucket
- *     `match-recordings` ET upload mobile money-friendly),
- *   * 24 fps — fluidité suffisante pour relire un jeu d'eFootball
- *     ou un Jeu de Dames et distinguer le score à l'écran.
+ * PROFIL ALLÉGÉ UNIFORME (toute la flotte, cible ≈30 MB / 25 min — upload
+ * mobile money-friendly ET livrable dans une fenêtre background étroite) :
+ *   360p (axe court, ratio préservé), 160 kbps H.264, 20 fps. 360p garde le
+ *   HUD (score, chrono) lisible pour l'arbitrage ; 20 fps suffit à relire un
+ *   eFootball / Jeu de Dames.
  *
- * Profil MIUI/Xiaomi (Build.MANUFACTURER = Xiaomi / marques Redmi, POCO) :
- * 360p / 130 kbps / 15 fps → ≈24 MB pour 25 min (sous la cible 30 MB). L'OS
- * MIUI bride l'exécution background des apps force-stopped ; un fichier léger
- * maximise les chances de livrer la preuve dans cette fenêtre d'upload étroite.
- *
- * ⚠️ Sur ces appareils on ENCODE via [CodecScreenRecorder] (MediaCodec en CBR)
- * et NON MediaRecorder : l'encodeur matériel Qualcomm des Redmi ignore le
- * `setVideoEncodingBitRate` de MediaRecorder (VBR par défaut → ~820 kbps observé
- * pour une cible de 130). CBR force le débit constant → poids prédictible. Les
- * autres appareils gardent le chemin MediaRecorder standard, éprouvé.
+ * ENCODEUR + FILET DE SÉCURITÉ (seule chose qui diffère selon l'appareil) :
+ *   * Xiaomi/MIUI (Build.MANUFACTURER = Xiaomi / marques Redmi, POCO) :
+ *     [CodecScreenRecorder] (MediaCodec en CBR) — l'encodeur matériel Qualcomm
+ *     des Redmi ignore le `setVideoEncodingBitRate` de MediaRecorder (VBR →
+ *     ~820 kbps observé pour une cible de 160). CBR force le débit constant →
+ *     poids prédictible. Si l'init MediaCodec échoue (CBR non supporté,
+ *     dimensions refusées…), on RETOMBE sur MediaRecorder : une preuve plus
+ *     lourde vaut infiniment mieux qu'aucune preuve.
+ *   * Autres appareils : MediaRecorder standard, éprouvé — il respecte le
+ *     bitrate demandé hors puces QCom, donc pas besoin du chemin MediaCodec.
  *
  * Lifecycle:
  *   START intent (with MediaProjection result) → setup + start.
@@ -204,24 +201,19 @@ class ArenaRecorderService : Service() {
             throw IllegalStateException("display dimensions invalid")
         }
 
-        // Profil d'encodage. Par défaut : 540p / 600 kbps / 24 fps (~113 MB max
-        // pour 25 min) — net pour relire un HUD de jeu (score, chrono, joueurs).
-        //
-        // MIUI/Xiaomi : la fenêtre d'exécution BACKGROUND y est agressivement
-        // bridée (l'OS tue l'isolate d'une app force-stopped avant la fin d'un
-        // gros upload). On produit donc un fichier BEAUCOUP plus léger pour
-        // maximiser les chances de livrer la preuve dans cette fenêtre :
-        //   360p / 130 kbps / 15 fps → ≈24 MB pour 25 min (marge sous la cible
-        //   30 MB malgré la variance VBR de l'encodeur). À 360p le HUD reste
-        //   lisible car on descend AUSSI la résolution (un 540p à 130 kbps
-        //   serait un brouillard de macroblocks, moins lisible).
+        // Profil d'encodage ALLÉGÉ, UNIFORME sur toute la flotte :
+        //   360p / 160 kbps / 20 fps → ≈30 MB pour 25 min (upload mobile-
+        //   friendly). 360p garde le HUD (score, chrono) lisible pour l'arbitrage.
+        // Seul l'ENCODEUR diffère (cf. plus bas) : Xiaomi/MIUI en MediaCodec CBR
+        // (l'encodeur QCom ignore le bitrate MediaRecorder), les autres en
+        // MediaRecorder standard qui, lui, respecte ce bitrate.
         val xiaomi = Build.MANUFACTURER.equals("Xiaomi", ignoreCase = true) ||
             Build.BRAND.equals("Xiaomi", ignoreCase = true) ||
             Build.BRAND.equals("Redmi", ignoreCase = true) ||
             Build.BRAND.equals("POCO", ignoreCase = true)
-        val targetShort = if (xiaomi) 360 else 540
-        val videoBitRate = if (xiaomi) 130_000 else 600_000
-        val videoFps = if (xiaomi) 15 else 24
+        val targetShort = 360
+        val videoBitRate = 160_000
+        val videoFps = 20
 
         // Cible `targetShort` sur l'axe COURT, ratio préservé, dimensions
         // alignées sur un multiple de 16 (contrainte encodeur H.264).
@@ -238,32 +230,25 @@ class ArenaRecorderService : Service() {
         val outFile = File(externalCacheDir ?: cacheDir, "$filename.mp4")
         outputPath = outFile.absolutePath
 
-        // Encodeur → Surface d'entrée pour le VirtualDisplay. Sur Xiaomi/MIUI :
-        // MediaCodec en CBR (l'encodeur matériel QCom ignore le bitrate de
-        // MediaRecorder → fichier ~6× trop lourd). Ailleurs : MediaRecorder
-        // standard (éprouvé), bitrate / fps selon le profil calculé plus haut.
-        val encoderSurface: Surface = if (xiaomi) {
-            val cr = CodecScreenRecorder()
-            codecRecorder = cr
-            cr.start(outW, outH, videoBitRate, videoFps, outFile.absolutePath)
-        } else {
-            val recorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                MediaRecorder(applicationContext)
-            } else {
-                @Suppress("DEPRECATION")
-                MediaRecorder()
+        // Encodeur → Surface d'entrée pour le VirtualDisplay.
+        //  - Xiaomi/MIUI : MediaCodec CBR (l'encodeur matériel QCom ignore le
+        //    bitrate de MediaRecorder → fichier ~6× trop lourd). FILET : si
+        //    l'init échoue, on retombe sur MediaRecorder (preuve plus lourde
+        //    mais preuve quand même).
+        //  - Autres : MediaRecorder standard (éprouvé, respecte le bitrate).
+        var codecSurface: Surface? = null
+        if (xiaomi) {
+            try {
+                val cr = CodecScreenRecorder()
+                codecSurface = cr.start(outW, outH, videoBitRate, videoFps, outFile.absolutePath)
+                codecRecorder = cr
+            } catch (e: Exception) {
+                Log.w(TAG, "MediaCodec CBR init failed on Xiaomi — fallback MediaRecorder", e)
+                codecRecorder = null
             }
-            recorder.setVideoSource(MediaRecorder.VideoSource.SURFACE)
-            recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
-            recorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264)
-            recorder.setVideoSize(outW, outH)
-            recorder.setVideoEncodingBitRate(videoBitRate)
-            recorder.setVideoFrameRate(videoFps)
-            recorder.setOutputFile(outFile.absolutePath)
-            recorder.prepare()
-            mediaRecorder = recorder
-            recorder.surface
         }
+        val encoderSurface: Surface = codecSurface
+            ?: buildMediaRecorder(outW, outH, videoBitRate, videoFps, outFile.absolutePath)
 
         proj.registerCallback(
             object : MediaProjection.Callback() {
@@ -295,6 +280,37 @@ class ArenaRecorderService : Service() {
         // déjà (son thread de drain a été lancé dans CodecScreenRecorder.start()).
         mediaRecorder?.start()
         Log.d(TAG, "recording started: ${outFile.absolutePath}")
+    }
+
+    /**
+     * Construit et prépare un [MediaRecorder] H.264 SURFACE selon le profil,
+     * le stocke dans [mediaRecorder] et renvoie sa Surface d'entrée. Utilisé sur
+     * les appareils non-Xiaomi ET comme filet de secours si l'init MediaCodec
+     * CBR échoue (cf. [startRecording]).
+     */
+    private fun buildMediaRecorder(
+        outW: Int,
+        outH: Int,
+        videoBitRate: Int,
+        videoFps: Int,
+        path: String,
+    ): Surface {
+        val recorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            MediaRecorder(applicationContext)
+        } else {
+            @Suppress("DEPRECATION")
+            MediaRecorder()
+        }
+        recorder.setVideoSource(MediaRecorder.VideoSource.SURFACE)
+        recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+        recorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264)
+        recorder.setVideoSize(outW, outH)
+        recorder.setVideoEncodingBitRate(videoBitRate)
+        recorder.setVideoFrameRate(videoFps)
+        recorder.setOutputFile(path)
+        recorder.prepare()
+        mediaRecorder = recorder
+        return recorder.surface
     }
 
     private fun teardown() {
