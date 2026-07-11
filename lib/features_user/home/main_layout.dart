@@ -6,6 +6,7 @@ import 'package:arena/core/services/sync_queue_service.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/repositories/app_update_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
+import 'package:arena/features_shared/widgets/miui_optimization_dialog.dart';
 import 'package:arena/features_shared/widgets/offline_banner.dart';
 import 'package:arena/features_user/chat/messages_inbox_page.dart';
 import 'package:arena/features_user/competitions/competitions_list_page.dart';
@@ -66,6 +67,11 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
         await UpdateAvailableDialog.show(context, status);
       }
     } catch (_) {/* non bloquant */}
+    // Après l'éventuelle MAJ : guide MIUI/Xiaomi une seule fois (déblocage de
+    // l'upload background de preuve anti-triche). No-op hors Xiaomi / si déjà vu.
+    if (mounted) {
+      await maybePromptMiuiOptimization(context, ref);
+    }
   }
 
   @override
