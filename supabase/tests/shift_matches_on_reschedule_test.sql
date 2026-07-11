@@ -32,13 +32,13 @@ values ('c1000000-0000-0000-0000-00000000c001','SHIFT','efootball','single_elimi
 
 insert into matches(id,competition_id,status,scheduled_at,player1_id,player2_id) values
   -- round 1 programmé (doit se décaler)
-  ('c1000000-0000-0000-0000-0000000000m1','c1000000-0000-0000-0000-00000000c001','scheduled',
+  ('c1000000-0000-0000-0000-000000000011','c1000000-0000-0000-0000-00000000c001','scheduled',
    '2026-08-01 10:00:00+00','c1000000-0000-0000-0000-0000000000a1','c1000000-0000-0000-0000-0000000000a2'),
   -- round 2 placeholder pending (doit se décaler, espacement +2h préservé)
-  ('c1000000-0000-0000-0000-0000000000m3','c1000000-0000-0000-0000-00000000c001','pending',
+  ('c1000000-0000-0000-0000-000000000013','c1000000-0000-0000-0000-00000000c001','pending',
    '2026-08-01 12:00:00+00',null,null),
   -- match déjà joué (ne doit PAS bouger)
-  ('c1000000-0000-0000-0000-0000000000m2','c1000000-0000-0000-0000-00000000c001','completed',
+  ('c1000000-0000-0000-0000-000000000012','c1000000-0000-0000-0000-00000000c001','completed',
    '2026-08-01 10:00:00+00','c1000000-0000-0000-0000-0000000000a1','c1000000-0000-0000-0000-0000000000a2');
 
 select has_function('public', 'shift_competition_matches_on_reschedule', array[]::text[]);
@@ -49,15 +49,15 @@ update public.competitions
  where id = 'c1000000-0000-0000-0000-00000000c001';
 
 select is(
-  (select scheduled_at from matches where id='c1000000-0000-0000-0000-0000000000m1'),
+  (select scheduled_at from matches where id='c1000000-0000-0000-0000-000000000011'),
   '2026-08-03 10:00:00+00'::timestamptz,
   'match scheduled décalé de +2 jours');
 select is(
-  (select scheduled_at from matches where id='c1000000-0000-0000-0000-0000000000m3'),
+  (select scheduled_at from matches where id='c1000000-0000-0000-0000-000000000013'),
   '2026-08-03 12:00:00+00'::timestamptz,
   'match pending décalé de +2 jours (espacement +2h préservé)');
 select is(
-  (select scheduled_at from matches where id='c1000000-0000-0000-0000-0000000000m2'),
+  (select scheduled_at from matches where id='c1000000-0000-0000-0000-000000000012'),
   '2026-08-01 10:00:00+00'::timestamptz,
   'match completed NON décalé');
 
@@ -66,7 +66,7 @@ update public.competitions
    set name = 'SHIFT2'
  where id = 'c1000000-0000-0000-0000-00000000c001';
 select is(
-  (select scheduled_at from matches where id='c1000000-0000-0000-0000-0000000000m1'),
+  (select scheduled_at from matches where id='c1000000-0000-0000-0000-000000000011'),
   '2026-08-03 10:00:00+00'::timestamptz,
   'changer le nom ne re-décale pas les matchs');
 
