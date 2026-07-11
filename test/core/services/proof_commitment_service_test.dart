@@ -1,8 +1,12 @@
 import 'dart:io';
 
 import 'package:arena/core/services/proof_commitment_service.dart';
+import 'package:arena/core/services/proof_file_store.dart';
+import 'package:arena/core/services/proof_transcoder.dart';
 import 'package:arena/core/services/sync_queue_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() {
@@ -101,6 +105,49 @@ void main() {
     });
   });
 
+  group('commitForMatch write-once', () {
+    test('ignore un ré-enregistrement si une preuve existe déjà pour le match',
+        () async {
+      // Régression : un match ré-enregistré (ré-entrées dans la salle) doit
+      // GARDER le 1er fichier engagé — sinon l'upload envoie un fichier dont le
+      // hash ne correspond plus au commitment serveur (write-once) et
+      // proof-verify le déclare « falsifié » à tort.
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final store = ProofFileStore(prefs);
+      await store.put(
+        matchId: 'm1',
+        filePath: '/first/proof.mp4',
+        playerId: 'p1',
+      );
+
+      final dir = await Directory.systemTemp.createTemp('commit_once');
+      final second = File('${dir.path}/second.mp4')
+        ..writeAsBytesSync(List<int>.filled(1024, 0x62));
+      addTearDown(() => dir.delete(recursive: true));
+
+      final spy = _SpyBackend();
+      final container = ProviderContainer(
+        overrides: [
+          proofFileStoreProvider.overrideWithValue(store),
+          proofTranscoderProvider.overrideWithValue(ProofTranscoder(spy)),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(proofCommitmentServiceProvider).commitForMatch(
+            matchId: 'm1',
+            filePath: second.path,
+            playerId: 'p1',
+          );
+
+      // Court-circuit AVANT le transcodage → aucune tentative de ré-hash.
+      expect(spy.calls, 0);
+      // L'entrée d'origine (1er enregistrement) reste canonique.
+      expect(store.get('m1')!.filePath, '/first/proof.mp4');
+    });
+  });
+
   group('ProofUploadAction', () {
     test('payload + roundtrip JSON conserve les champs', () {
       final action = ProofUploadAction(
@@ -151,4 +198,16 @@ class _UnusedClient implements SupabaseClient {
   @override
   dynamic noSuchMethod(Invocation invocation) =>
       throw StateError('SupabaseClient ne doit pas être utilisé');
+}
+
+/// Backend de transcodage espion : compte les appels pour vérifier que la garde
+/// write-once court-circuite AVANT toute tentative de transcodage.
+class _SpyBackend implements VideoTranscoderBackend {
+  int calls = 0;
+
+  @override
+  Future<String?> compressToLowRes(String inputPath) async {
+    calls++;
+    return null;
+  }
 }

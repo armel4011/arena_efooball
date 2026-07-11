@@ -54,6 +54,19 @@ class ProofCommitmentService {
       // lecture — négligeable, et on est déjà hors chemin critique.
       if (!File(filePath).existsSync()) return;
 
+      // WRITE-ONCE CÔTÉ CLIENT (intégrité anti-triche). Le commitment SERVEUR
+      // est write-once (`anticheat-commit` n'écrase jamais un hash engagé).
+      // Or `ProofFileStore` est keyé par MATCH : un ré-enregistrement du même
+      // match (ré-entrées dans la salle, redémarrage capture MIUI, coordinator
+      // relancé…) écraserait l'entrée et pointerait l'upload vers un AUTRE
+      // fichier que celui dont le hash a été engagé → `proof-verify` le
+      // déclarerait « falsifié » alors que le joueur n'a rien modifié.
+      // Le PREMIER enregistrement engagé est donc canonique : si une entrée
+      // existe déjà pour ce match, on ignore les captures ultérieures (ne pas
+      // ré-hasher / ré-archiver / ré-committer), gardant fichier stocké et hash
+      // engagé strictement alignés.
+      if (_ref.read(proofFileStoreProvider).get(matchId) != null) return;
+
       // Transcode le 540p en proxy 360p (allègement). GARDE-FOU : si le
       // transcodage échoue, on retombe sur le 540p (on engage/uploade le 540p).
       // Le fichier RÉELLEMENT hashé/stocké/uploadé est `proofPath`.
