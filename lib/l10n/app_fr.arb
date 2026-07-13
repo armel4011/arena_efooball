@@ -765,6 +765,7 @@
   "playerProfileUnavailable": "Profil indisponible. Reconnecte-toi.",
   "playerProfileSuccessHeader": "🏆 SUCCÈS",
   "playerProfileRecentMatchesHeader": "MATCHS RÉCENTS",
+  "playerProfilePaymentsButton": "RÉCLAMATION DE GAINS",
   "playerProfileSettingsButton": "PARAMÈTRES",
   "playerProfileSignOutButton": "SE DÉCONNECTER",
   "playerProfileJoinedPrefix": "Inscrit en",

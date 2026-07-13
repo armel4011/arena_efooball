@@ -2356,6 +2356,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get playerProfileRecentMatchesHeader => 'RECENT MATCHES';
 
   @override
+  String get playerProfilePaymentsButton => 'CLAIM EARNINGS';
+
+  @override
   String get playerProfileSettingsButton => 'SETTINGS';
 
   @override

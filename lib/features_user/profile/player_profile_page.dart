@@ -126,6 +126,16 @@ class _ProfileBody extends ConsumerWidget {
           const SizedBox(height: ArenaSpacing.sm),
           _RecentMatches(playerId: profile.id, asyncMatches: recentAsync),
           const SizedBox(height: ArenaSpacing.xl),
+          // Accès à la page Paiements & gains : l'utilisateur y voit ses
+          // versements et RÉCLAME ses gains (onglet GAINS → « À réclamer »).
+          ArenaButton(
+            label: l10n.playerProfilePaymentsButton,
+            icon: Icons.payments_outlined,
+            variant: ArenaButtonVariant.secondary,
+            fullWidth: true,
+            onPressed: () => context.push(UserRoutes.paymentHistory),
+          ),
+          const SizedBox(height: ArenaSpacing.sm),
           ArenaButton(
             label: l10n.playerProfileSettingsButton,
             icon: Icons.settings_outlined,
