@@ -233,23 +233,6 @@ class AdminDisputesRepository {
     );
   }
 
-  /// Resolves a dispute. The admin's written reasoning is required —
-  /// surfaced in the audit log + future "see why" link from the
-  /// player-facing notif.
-  Future<void> resolve({
-    required String disputeId,
-    required String adminId,
-    required String resolution,
-    String status = 'resolved',
-  }) async {
-    await _client.from(_table).update({
-      'status': status,
-      'resolved_at': DateTime.now().toUtc().toIso8601String(),
-      'resolved_by': adminId,
-      'resolution': resolution,
-    }).eq('id', disputeId);
-  }
-
   /// Résolution ATOMIQUE via la RPC `resolve_dispute` : verdict
   /// (score/winner/completed) OU annulation du match + résolution du litige +
   /// trace d'audit, dans UNE seule transaction (gate `is_admin()` serveur).
