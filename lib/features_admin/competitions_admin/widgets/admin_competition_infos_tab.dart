@@ -1,6 +1,7 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
+import 'package:arena/features_shared/admin/competition_labels.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -16,7 +17,7 @@ class AdminCompetitionInfosTab extends StatelessWidget {
       padding: const EdgeInsets.all(ArenaSpacing.lg),
       children: [
         _InfoRow(label: 'Jeu', value: competition.game.label),
-        _InfoRow(label: 'Format', value: _formatLabel(competition.format)),
+        _InfoRow(label: 'Format', value: competitionFormatLabel(competition.format)),
         _InfoRow(
           label: 'Joueurs',
           value: '${competition.currentPlayers}/${competition.maxPlayers}',
@@ -68,16 +69,7 @@ class AdminCompetitionInfosTab extends StatelessWidget {
     );
   }
 
-  static String _formatLabel(TournamentFormat f) {
-    switch (f) {
-      case TournamentFormat.singleElimination:
-        return 'Élimination directe';
-      case TournamentFormat.groupsThenKnockout:
-        return 'Poules + KO';
-      case TournamentFormat.roundRobin:
-        return 'Round robin';
-    }
-  }
+  // _formatLabel → competitionFormatLabel (features_shared/admin/competition_labels.dart)
 
   static String _intervalLabel(int minutes) {
     if (minutes < 60) return '$minutes min';

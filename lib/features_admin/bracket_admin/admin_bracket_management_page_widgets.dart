@@ -150,16 +150,7 @@ class _BracketTreeView extends ConsumerWidget {
   }
 }
 
-String _formatLabel(TournamentFormat f) {
-  switch (f) {
-    case TournamentFormat.singleElimination:
-      return 'Élimination directe';
-    case TournamentFormat.groupsThenKnockout:
-      return 'Poules + KO';
-    case TournamentFormat.roundRobin:
-      return 'Round robin';
-  }
-}
+// _formatLabel → competitionFormatLabel (features_shared/admin/competition_labels.dart)
 
 String _statusLabel(MatchStatus s) {
   switch (s) {

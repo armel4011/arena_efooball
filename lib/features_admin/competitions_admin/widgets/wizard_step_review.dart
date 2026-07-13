@@ -1,6 +1,7 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/features_admin/competitions_admin/widgets/competition_form_widgets.dart';
+import 'package:arena/features_shared/admin/competition_labels.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -68,7 +69,7 @@ class WizardStepReview extends StatelessWidget {
         const SizedBox(height: ArenaSpacing.md),
         ReviewRow(label: 'Nom', value: name),
         ReviewRow(label: 'Jeu', value: gameLabel),
-        ReviewRow(label: 'Format', value: formatLabel(format)),
+        ReviewRow(label: 'Format', value: competitionFormatLabel(format)),
         ReviewRow(label: 'Joueurs', value: '$maxPlayers max'),
         ReviewRow(
           label: 'Date',
