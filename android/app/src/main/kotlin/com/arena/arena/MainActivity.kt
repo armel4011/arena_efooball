@@ -208,6 +208,19 @@ class MainActivity : FlutterActivity() {
             }
         }
 
+        // Tap « Arrêter » sur la notif de contrôle native → on prévient Dart
+        // pour que le coordinator arrête TOUT de façon coordonnée (recording +
+        // notif + bouton flottant), comme le stop du bouton flottant lui-même.
+        ArenaRecorderService.onStopRequested = {
+            runOnUiThread {
+                try {
+                    nativeEventSink?.success(mapOf("event" to "recorder_stop_requested"))
+                } catch (e: Exception) {
+                    Log.w(TAG, "nativeEventSink.success (recorder stop) failed", e)
+                }
+            }
+        }
+
         // HOME a tapé le code room dans la réponse directe de la notif → on le
         // transmet à Dart qui écrit matches.room_code (relayé à l'AWAY).
         ArenaRecorderService.onRoomCodeSubmitted = { code ->
@@ -228,6 +241,7 @@ class MainActivity : FlutterActivity() {
         // callback retient une ref vers une activité morte et fuit.
         ArenaRecorderService.onProjectionDied = null
         ArenaRecorderService.onRoomCodeSubmitted = null
+        ArenaRecorderService.onStopRequested = null
         LivekitCaptureFgsService.onStopRequested = null
         nativeEventSink = null
         super.onDestroy()

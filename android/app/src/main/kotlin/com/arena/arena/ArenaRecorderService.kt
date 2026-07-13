@@ -72,6 +72,11 @@ class ArenaRecorderService : Service() {
 
         const val ACTION_START = "com.arena.arena.recorder.START"
         const val ACTION_STOP = "com.arena.arena.recorder.STOP"
+        // Tap « Arrêter » sur la notif : ne tear-down PAS directement — signale
+        // Dart pour que le COORDINATOR orchestre l'arrêt (recording + notif +
+        // bouton flottant fermés ensemble). Symétrique au bouton flottant, qui
+        // passe déjà par coordinator.stopCleanly(). Cf. LiveKit onStopRequested.
+        const val ACTION_STOP_REQUESTED = "com.arena.arena.recorder.STOP_REQUESTED"
         // Échange du code room via la notification (repli Pixel 9 du panneau
         // overlay) : HOME (domicile) ENVOIE via une réponse directe RemoteInput,
         // AWAY (extérieur) REÇOIT le code + un bouton « Copier ».
@@ -91,6 +96,13 @@ class ArenaRecorderService : Service() {
         // Set par MainActivity ; forwardé à Dart (→ écrit matches.room_code).
         @Volatile
         var onRoomCodeSubmitted: ((String) -> Unit)? = null
+
+        // Callback : l'utilisateur a tapé « Arrêter » sur la notif. Set par
+        // MainActivity ; forwardé à Dart → coordinator.stopCleanly() (arrêt
+        // COORDONNÉ des deux surfaces). Si Dart ne répond pas, ACTION_STOP
+        // reste dispo comme filet (stop système MediaProjection).
+        @Volatile
+        var onStopRequested: (() -> Unit)? = null
 
         // True while the foreground service is hosting a recording.
         @Volatile
@@ -171,6 +183,14 @@ class ArenaRecorderService : Service() {
                 stopForegroundCompat()
                 stopSelf()
                 return START_NOT_STICKY
+            }
+            ACTION_STOP_REQUESTED -> {
+                // Tap « Arrêter » sur la notif → on laisse le COORDINATOR Dart
+                // orchestrer (il appellera ACTION_STOP + fermera le bouton
+                // flottant). On ne tear-down PAS ici pour garder un seul chemin.
+                Log.d(TAG, "ACTION_STOP_REQUESTED — deferring to Dart coordinator")
+                try { onStopRequested?.invoke() } catch (_: Exception) {}
+                return START_STICKY
             }
             ACTION_START -> {
                 val resultCode = intent.getIntExtra(EXTRA_RESULT_CODE, 0)
@@ -512,7 +532,11 @@ class ArenaRecorderService : Service() {
             )
         }
         val openPending = PendingIntent.getActivity(this, 0, openIntent, pendingFlags())
-        val stopIntent = Intent(this, ArenaRecorderService::class.java).apply { action = ACTION_STOP }
+        // « Arrêter » passe par le coordinator Dart (arrêt coordonné des deux
+        // surfaces), pas par ACTION_STOP direct.
+        val stopIntent = Intent(this, ArenaRecorderService::class.java).apply {
+            action = ACTION_STOP_REQUESTED
+        }
         val stopPending = PendingIntent.getService(this, 1, stopIntent, pendingFlags())
 
         val code = roomCode

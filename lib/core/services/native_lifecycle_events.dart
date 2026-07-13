@@ -20,6 +20,12 @@ enum NativeLifecycleEvent {
   /// flottant. Le listener doit appeler `liveKitCaptureService.stop()`
   /// (déconnexion room → egress_ended côté serveur + arrêt du FGS).
   liveKitStopRequested,
+
+  /// L'utilisateur a tapé "Arrêter" sur la notification de contrôle native
+  /// (ArenaRecorderService). Le listener doit appeler `coordinator.stopCleanly()`
+  /// pour un arrêt COORDONNÉ des deux surfaces (recording + notif + bouton
+  /// flottant), symétrique au stop du bouton flottant.
+  recorderStopRequested,
 }
 
 /// Bridge l'EventChannel `arena/native/events` vers un broadcast Stream
@@ -73,6 +79,8 @@ class NativeLifecycleEvents {
         _controller.add(NativeLifecycleEvent.mediaProjectionDied);
       case 'livekit_stop_requested':
         _controller.add(NativeLifecycleEvent.liveKitStopRequested);
+      case 'recorder_stop_requested':
+        _controller.add(NativeLifecycleEvent.recorderStopRequested);
       case 'room_code_submitted':
         final code = raw['code'];
         if (code is String && code.isNotEmpty) _codeController.add(code);

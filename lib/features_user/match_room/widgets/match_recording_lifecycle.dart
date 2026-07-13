@@ -472,7 +472,13 @@ class _MatchRecordingLifecycleState
         nativeLifecycleEventsStreamProvider,
         (_, next) {
           final evt = next.valueOrNull;
-          if (evt == NativeLifecycleEvent.mediaProjectionDied) {
+          if (evt == NativeLifecycleEvent.mediaProjectionDied ||
+              evt == NativeLifecycleEvent.recorderStopRequested) {
+            // Mort de la MediaProjection (stop système) OU tap « Arrêter » sur
+            // la notif de contrôle → arrêt COORDONNÉ via le coordinator :
+            // stopCleanly() coupe le recording ET ferme le bouton flottant
+            // (et la notif est retirée par le teardown natif). Symétrique au
+            // stop du bouton flottant, qui passe déjà par stopCleanly().
             final coord = ref.read(matchRecordingCoordinatorProvider);
             final s = coord.state;
             if (s is CoordinatorRecording || s is CoordinatorPaused) {
