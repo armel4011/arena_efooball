@@ -2,7 +2,10 @@ package com.arena.arena
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
@@ -20,6 +23,7 @@ import android.util.Log
 import android.view.Surface
 import android.view.WindowManager
 import androidx.core.app.NotificationCompat
+import androidx.core.app.RemoteInput
 import java.io.File
 
 /**
@@ -68,11 +72,37 @@ class ArenaRecorderService : Service() {
 
         const val ACTION_START = "com.arena.arena.recorder.START"
         const val ACTION_STOP = "com.arena.arena.recorder.STOP"
+        // Tap « Arrêter » sur la notif : ne tear-down PAS directement — signale
+        // Dart pour que le COORDINATOR orchestre l'arrêt (recording + notif +
+        // bouton flottant fermés ensemble). Symétrique au bouton flottant, qui
+        // passe déjà par coordinator.stopCleanly(). Cf. LiveKit onStopRequested.
+        const val ACTION_STOP_REQUESTED = "com.arena.arena.recorder.STOP_REQUESTED"
+        // Échange du code room via la notification (repli Pixel 9 du panneau
+        // overlay) : HOME (domicile) ENVOIE via une réponse directe RemoteInput,
+        // AWAY (extérieur) REÇOIT le code + un bouton « Copier ».
+        const val ACTION_SUBMIT_CODE = "com.arena.arena.recorder.SUBMIT_CODE"
+        const val ACTION_COPY_CODE = "com.arena.arena.recorder.COPY_CODE"
+        const val ACTION_UPDATE_CODE = "com.arena.arena.recorder.UPDATE_CODE"
         const val EXTRA_RESULT_CODE = "result_code"
         const val EXTRA_RESULT_DATA = "result_data"
         const val EXTRA_FILENAME = "filename"
         const val EXTRA_TITLE = "title"
         const val EXTRA_MESSAGE = "message"
+        const val EXTRA_ROOM_CODE = "room_code"
+        const val EXTRA_AWAITING_CODE = "awaiting_code"
+        const val REMOTE_INPUT_KEY = "arena_room_code"
+
+        // Callback : le HOME a tapé le code dans la réponse directe de la notif.
+        // Set par MainActivity ; forwardé à Dart (→ écrit matches.room_code).
+        @Volatile
+        var onRoomCodeSubmitted: ((String) -> Unit)? = null
+
+        // Callback : l'utilisateur a tapé « Arrêter » sur la notif. Set par
+        // MainActivity ; forwardé à Dart → coordinator.stopCleanly() (arrêt
+        // COORDONNÉ des deux surfaces). Si Dart ne répond pas, ACTION_STOP
+        // reste dispo comme filet (stop système MediaProjection).
+        @Volatile
+        var onStopRequested: (() -> Unit)? = null
 
         // True while the foreground service is hosting a recording.
         @Volatile
@@ -133,6 +163,17 @@ class ArenaRecorderService : Service() {
     // Chemin MediaCodec CBR (encodeur primaire) — alternatif à mediaRecorder.
     private var codecRecorder: CodecScreenRecorder? = null
     private var outputPath: String? = null
+    // Horodatage de départ pour le chrono de la notif (compteur d'enregistrement
+    // qui s'incrémente tout seul via setUsesChronometer — pas de re-post/s).
+    private var recordStartMillis: Long = 0L
+    // Titre/texte courants de la notif (mémorisés pour la reconstruire quand
+    // l'état du code room change, sans re-passer par ACTION_START).
+    private var notifTitle: String = "ARENA"
+    private var notifMessage: String = "Enregistrement en cours"
+    // Code room reçu à afficher (côté AWAY) ; null si aucun.
+    private var roomCode: String? = null
+    // Vrai côté HOME tant qu'il doit ENVOYER le code (affiche la réponse directe).
+    private var awaitingCode: Boolean = false
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
@@ -142,6 +183,14 @@ class ArenaRecorderService : Service() {
                 stopForegroundCompat()
                 stopSelf()
                 return START_NOT_STICKY
+            }
+            ACTION_STOP_REQUESTED -> {
+                // Tap « Arrêter » sur la notif → on laisse le COORDINATOR Dart
+                // orchestrer (il appellera ACTION_STOP + fermera le bouton
+                // flottant). On ne tear-down PAS ici pour garder un seul chemin.
+                Log.d(TAG, "ACTION_STOP_REQUESTED — deferring to Dart coordinator")
+                try { onStopRequested?.invoke() } catch (_: Exception) {}
+                return START_STICKY
             }
             ACTION_START -> {
                 val resultCode = intent.getIntExtra(EXTRA_RESULT_CODE, 0)
@@ -156,6 +205,9 @@ class ArenaRecorderService : Service() {
                     stopSelf()
                     return START_NOT_STICKY
                 }
+                recordStartMillis = System.currentTimeMillis()
+                notifTitle = title
+                notifMessage = message
                 startForegroundCompat(title, message)
                 try {
                     startRecording(resultCode, resultData, filename)
@@ -167,6 +219,44 @@ class ArenaRecorderService : Service() {
                     stopSelf()
                     return START_NOT_STICKY
                 }
+                return START_STICKY
+            }
+            ACTION_SUBMIT_CODE -> {
+                // HOME a validé la réponse directe → récupère le texte tapé.
+                val typed = RemoteInput.getResultsFromIntent(intent)
+                    ?.getCharSequence(REMOTE_INPUT_KEY)?.toString()?.trim()
+                if (!typed.isNullOrEmpty()) {
+                    awaitingCode = false
+                    try { onRoomCodeSubmitted?.invoke(typed) } catch (_: Exception) {}
+                    refreshNotification()
+                }
+                return START_STICKY
+            }
+            ACTION_COPY_CODE -> {
+                // AWAY a tapé « Copier » → code dans le presse-papier.
+                val code = roomCode
+                if (!code.isNullOrEmpty()) {
+                    try {
+                        val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        cm.setPrimaryClip(ClipData.newPlainText("Code room", code))
+                    } catch (e: Exception) {
+                        Log.w(TAG, "copy room code failed", e)
+                    }
+                }
+                return START_STICKY
+            }
+            ACTION_UPDATE_CODE -> {
+                // Dart pousse l'état du code : AWAY reçoit un code, ou HOME doit
+                // l'envoyer (awaitingCode). On reconstruit juste la notif.
+                // Si aucun enregistrement n'est en cours, ne PAS laisser un
+                // service non-foreground zombie → stopSelf.
+                if (!isActive) {
+                    stopSelf()
+                    return START_NOT_STICKY
+                }
+                roomCode = intent.getStringExtra(EXTRA_ROOM_CODE)
+                awaitingCode = intent.getBooleanExtra(EXTRA_AWAITING_CODE, false)
+                refreshNotification()
                 return START_STICKY
             }
             else -> {
@@ -378,6 +468,16 @@ class ArenaRecorderService : Service() {
         publishOutput(finalPath)
     }
 
+    // Flags PendingIntent : FLAG_IMMUTABLE est OBLIGATOIRE sur Android 12+ (S)
+    // pour tout PendingIntent non explicitement mutable.
+    private fun pendingFlags(): Int {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        } else {
+            PendingIntent.FLAG_UPDATE_CURRENT
+        }
+    }
+
     private fun startForegroundCompat(title: String, message: String) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val mgr = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -393,12 +493,7 @@ class ArenaRecorderService : Service() {
                 )
             }
         }
-        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle(title)
-            .setContentText(message)
-            .setSmallIcon(android.R.drawable.presence_video_online)
-            .setOngoing(true)
-            .build()
+        val notification = buildNotification()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(
                 NOTIF_ID,
@@ -408,6 +503,96 @@ class ArenaRecorderService : Service() {
         } else {
             startForeground(NOTIF_ID, notification)
         }
+    }
+
+    /** Re-poste la notif quand l'état du code room change, SANS refaire un
+     *  startForeground (le service tourne déjà). */
+    private fun refreshNotification() {
+        try {
+            val mgr = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            mgr.notify(NOTIF_ID, buildNotification())
+        } catch (e: Exception) {
+            Log.w(TAG, "refreshNotification failed", e)
+        }
+    }
+
+    /**
+     * Notif de contrôle unifiée : compteur (chrono) + « Arrêter » + tap « Ouvrir
+     * Arena », et l'échange du code room selon le rôle :
+     *   * HOME (awaitingCode) → RÉPONSE DIRECTE (RemoteInput) pour ENVOYER le
+     *     code sans quitter eFootball ;
+     *   * AWAY (roomCode != null) → le code affiché + bouton « Copier ».
+     */
+    private fun buildNotification(): android.app.Notification {
+        val openIntent = Intent(this, MainActivity::class.java).apply {
+            addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP,
+            )
+        }
+        val openPending = PendingIntent.getActivity(this, 0, openIntent, pendingFlags())
+        // « Arrêter » passe par le coordinator Dart (arrêt coordonné des deux
+        // surfaces), pas par ACTION_STOP direct.
+        val stopIntent = Intent(this, ArenaRecorderService::class.java).apply {
+            action = ACTION_STOP_REQUESTED
+        }
+        val stopPending = PendingIntent.getService(this, 1, stopIntent, pendingFlags())
+
+        val code = roomCode
+        val text = when {
+            awaitingCode -> "Crée la room dans eFootball, puis envoie le code ici."
+            !code.isNullOrEmpty() -> "Code room reçu : $code"
+            else -> notifMessage
+        }
+
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle(notifTitle)
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setSmallIcon(android.R.drawable.presence_video_online)
+            .setOngoing(true)
+            // Compteur d'enregistrement : chrono qui s'incrémente tout seul.
+            .setUsesChronometer(true)
+            .setWhen(recordStartMillis)
+            .setShowWhen(true)
+            .setContentIntent(openPending)
+            .addAction(
+                android.R.drawable.ic_menu_close_clear_cancel,
+                "Arrêter",
+                stopPending,
+            )
+
+        if (awaitingCode) {
+            // HOME — réponse directe. Le PendingIntent DOIT être MUTABLE
+            // (le système y injecte le texte saisi via RemoteInput).
+            val remoteInput = RemoteInput.Builder(REMOTE_INPUT_KEY)
+                .setLabel("Code de la room eFootball")
+                .build()
+            val submitIntent = Intent(this, ArenaRecorderService::class.java).apply {
+                action = ACTION_SUBMIT_CODE
+            }
+            val mutableFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            } else {
+                PendingIntent.FLAG_UPDATE_CURRENT
+            }
+            val submitPending = PendingIntent.getService(this, 2, submitIntent, mutableFlags)
+            builder.addAction(
+                NotificationCompat.Action.Builder(
+                    android.R.drawable.ic_menu_send, "Envoyer le code", submitPending,
+                ).addRemoteInput(remoteInput).build()
+            )
+        } else if (!code.isNullOrEmpty()) {
+            // AWAY — copie du code reçu dans le presse-papier.
+            val copyIntent = Intent(this, ArenaRecorderService::class.java).apply {
+                action = ACTION_COPY_CODE
+            }
+            val copyPending = PendingIntent.getService(this, 3, copyIntent, pendingFlags())
+            builder.addAction(android.R.drawable.ic_menu_save, "Copier", copyPending)
+        }
+
+        return builder.build()
     }
 
     private fun stopForegroundCompat() {
