@@ -1,5 +1,6 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/competition_enums.dart';
+import 'package:arena/features_shared/admin/competition_labels.dart';
 import 'package:arena/features_shared/prize_ranks.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
@@ -18,16 +19,7 @@ import 'package:intl/intl.dart';
 
 /// Libellé public du format de tournoi. Utilisé à la fois par
 /// [FormatPicker] et par le rendu Review du wizard.
-String formatLabel(TournamentFormat f) {
-  switch (f) {
-    case TournamentFormat.singleElimination:
-      return 'Élimination directe';
-    case TournamentFormat.groupsThenKnockout:
-      return 'Poules puis KO';
-    case TournamentFormat.roundRobin:
-      return 'Round robin';
-  }
-}
+// formatLabel → competitionFormatLabel (features_shared/admin/competition_labels.dart)
 
 class GamePicker extends StatelessWidget {
   const GamePicker({required this.current, required this.onChanged, super.key});
@@ -69,7 +61,7 @@ class FormatPicker extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(bottom: ArenaSpacing.xs),
             child: ArenaButton(
-              label: formatLabel(f).toUpperCase(),
+              label: competitionFormatLabel(f).toUpperCase(),
               variant: f == current
                   ? ArenaButtonVariant.primary
                   : ArenaButtonVariant.secondary,

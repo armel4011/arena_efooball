@@ -32,7 +32,7 @@ class _EmptyStateState extends ConsumerState<_EmptyState> {
               ),
               const SizedBox(height: ArenaSpacing.xs),
               Text(
-                'Format : ${_formatLabel(widget.competition.format)} · '
+                'Format : ${competitionFormatLabel(widget.competition.format)} · '
                 'Inscrits ${widget.competition.currentPlayers}/${widget.competition.maxPlayers}',
                 style: ArenaText.bodyMuted,
                 textAlign: TextAlign.center,

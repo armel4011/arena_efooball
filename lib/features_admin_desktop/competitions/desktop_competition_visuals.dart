@@ -4,6 +4,11 @@ import 'package:arena/data/models/match_status.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+// competitionFormatLabel vit désormais dans features_shared/admin — ré-exporté
+// ici pour que les appelants desktop existants restent inchangés.
+export 'package:arena/features_shared/admin/competition_labels.dart'
+    show competitionFormatLabel;
+
 /// Visuel d'un statut de compétition pour les écrans desktop : libellé
 /// court + couleur d'accent. Mutualisé entre la liste, le détail et le
 /// header pour garder une seule source de vérité.
@@ -92,18 +97,6 @@ DesktopStatusVisual matchStatusVisual(MatchStatus status) {
         label: 'EN ATTENTE',
         color: ArenaColors.silver,
       );
-  }
-}
-
-/// Libellé humain d'un [TournamentFormat].
-String competitionFormatLabel(TournamentFormat format) {
-  switch (format) {
-    case TournamentFormat.singleElimination:
-      return 'Élimination directe';
-    case TournamentFormat.groupsThenKnockout:
-      return 'Poules puis KO';
-    case TournamentFormat.roundRobin:
-      return 'Round robin';
   }
 }
 
