@@ -4540,6 +4540,12 @@ abstract class AppLocalizations {
   /// **'MATCHS RÉCENTS'**
   String get playerProfileRecentMatchesHeader;
 
+  /// No description provided for @playerProfilePaymentsButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'PAIEMENTS & GAINS'**
+  String get playerProfilePaymentsButton;
+
   /// No description provided for @playerProfileSettingsButton.
   ///
   /// In fr, this message translates to:

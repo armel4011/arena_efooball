@@ -745,6 +745,7 @@
   "playerProfileUnavailable": "Profile unavailable. Please sign in again.",
   "playerProfileSuccessHeader": "🏆 ACHIEVEMENTS",
   "playerProfileRecentMatchesHeader": "RECENT MATCHES",
+  "playerProfilePaymentsButton": "PAYMENTS & EARNINGS",
   "playerProfileSettingsButton": "SETTINGS",
   "playerProfileSignOutButton": "SIGN OUT",
   "playerProfileJoinedPrefix": "Joined",

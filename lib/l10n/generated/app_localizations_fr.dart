@@ -2369,6 +2369,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get playerProfileRecentMatchesHeader => 'MATCHS RÉCENTS';
 
   @override
+  String get playerProfilePaymentsButton => 'PAIEMENTS & GAINS';
+
+  @override
   String get playerProfileSettingsButton => 'PARAMÈTRES';
 
   @override
