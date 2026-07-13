@@ -5,9 +5,7 @@ import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/models/dispute.dart';
 import 'package:arena/data/models/match_stream.dart';
 import 'package:arena/data/models/proof_status.dart';
-import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_disputes_repository.dart';
-import 'package:arena/data/repositories/admin/admin_matches_repository.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
 import 'package:arena/data/repositories/match_repository.dart';
 import 'package:arena/features_admin_desktop/shared/desktop_totp_gate.dart';
@@ -27,9 +25,9 @@ part 'desktop_disputes_commitment_widgets.dart';
 /// résolution (verdict J1 / J2 / annulation), protégée par le step-up
 /// TOTP.
 ///
-/// Réutilise [adminDisputeByMatchProvider], [matchByIdProvider],
-/// [adminMatchesRepositoryProvider], [adminDisputesRepositoryProvider]
-/// et [adminAuditLogRepositoryProvider] (mêmes providers que le mobile).
+/// Réutilise [adminDisputeByMatchProvider], [matchByIdProvider] et
+/// [adminDisputesRepositoryProvider] (résolution atomique via
+/// `resolve_dispute`, mêmes providers que le mobile).
 class DesktopDisputesPage extends ConsumerStatefulWidget {
   const DesktopDisputesPage({required this.matchId, super.key});
 

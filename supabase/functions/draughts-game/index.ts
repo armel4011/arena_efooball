@@ -173,7 +173,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const { data: match, error: matchErr } = await service
     .from("matches")
     .select(
-      "id, player1_id, player2_id, home_player_id, group_id, status",
+      "id, player1_id, player2_id, home_player_id, group_id, status, scheduled_at",
     )
     .eq("id", matchId)
     .maybeSingle();
@@ -198,8 +198,22 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (existing) {
       return jsonResponse({ game: existing, created: false });
     }
-    if (["completed", "cancelled", "forfeited"].includes(match.status)) {
-      return jsonResponse({ error: "match_already_finalized" }, 409);
+    // Le match doit être réellement EN COURS (le lobby a basculé `in_progress`
+    // via markInProgress une fois les deux joueurs présents) ET sa fenêtre
+    // planifiée ouverte. Sans ce gate, un joueur pouvait flipper le statut en
+    // avance (la RLS `matches_update` autorise un joueur du match à écrire
+    // `in_progress` — seuls score/winner/completed sont verrouillés par
+    // `guard_matches_protected_columns`), créer la partie, puis réclamer un
+    // `timeout` hors fenêtre → victoire par walkover prématuré et avancement
+    // du bracket (impact cagnotte). Cf. audit 2026-07-13 (P2).
+    if (match.status !== "in_progress") {
+      return jsonResponse({ error: "match_not_in_progress" }, 409);
+    }
+    if (
+      match.scheduled_at &&
+      new Date(match.scheduled_at).getTime() > Date.now()
+    ) {
+      return jsonResponse({ error: "match_not_started_yet" }, 409);
     }
     const colors = assignColors(
       match.home_player_id ?? null,
@@ -251,6 +265,15 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   // ────────────────────────────── timeout ───────────────────────────────
   if (action === "timeout") {
+    // Défense en profondeur : ne jamais octroyer une victoire au temps avant
+    // l'ouverture de la fenêtre planifiée du match (le gate `start` empêche
+    // déjà la création prématurée de la partie).
+    if (
+      match.scheduled_at &&
+      new Date(match.scheduled_at).getTime() > Date.now()
+    ) {
+      return jsonResponse({ error: "match_not_started_yet" }, 409);
+    }
     const clockOfTurn = turnSide === Side.White
       ? game.white_clock_ms
       : game.black_clock_ms;

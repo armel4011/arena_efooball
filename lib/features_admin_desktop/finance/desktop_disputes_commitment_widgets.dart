@@ -263,8 +263,6 @@ class _VerdictButtons extends ConsumerWidget {
     final winsP1 = winnerId == match.player1Id;
     final scoreP1 = winsP1 ? 3 : 0;
     final scoreP2 = winsP1 ? 0 : 3;
-    final adminId = ref.read(currentSessionProvider)?.user.id;
-    if (adminId == null) return;
     final totpOk = await showDesktopTotpGate(
       context,
       ref,
@@ -272,31 +270,18 @@ class _VerdictButtons extends ConsumerWidget {
     );
     if (!totpOk || !context.mounted) return;
     try {
-      await ref.read(adminMatchesRepositoryProvider).setVerdict(
+      // Verdict + résolution du litige + audit, ATOMIQUEMENT (resolve_dispute).
+      // Le serveur force le tapis vert 3-0 ; les deux écritures séparées de
+      // l'ancienne version laissaient le match `completed` avec un litige
+      // resté `open` en cas d'échec de la seconde. Parité avec le mobile.
+      await ref.read(adminDisputesRepositoryProvider).resolveAtomic(
             matchId: match.id,
+            disputeId: dispute?.id,
+            justification: justification,
+            winnerId: winnerId,
             scoreP1: scoreP1,
             scoreP2: scoreP2,
-            winnerId: winnerId,
           );
-      if (dispute != null) {
-        await ref.read(adminDisputesRepositoryProvider).resolve(
-              disputeId: dispute!.id,
-              adminId: adminId,
-              resolution: justification,
-            );
-      }
-      await ref.read(adminAuditLogRepositoryProvider).record(
-        adminId: adminId,
-        action: 'dispute_resolved',
-        targetType: 'match',
-        targetId: match.id,
-        afterState: {
-          'winner_id': winnerId,
-          'score1': scoreP1,
-          'score2': scoreP2,
-          'justification': justification,
-        },
-      );
       if (!context.mounted) return;
       await _showResult(context, 'Verdict enregistré.', isError: false);
     } catch (e) {
@@ -315,8 +300,6 @@ class _VerdictButtons extends ConsumerWidget {
       );
       return;
     }
-    final adminId = ref.read(currentSessionProvider)?.user.id;
-    if (adminId == null) return;
     final totpOk = await showDesktopTotpGate(
       context,
       ref,
@@ -324,22 +307,13 @@ class _VerdictButtons extends ConsumerWidget {
     );
     if (!totpOk || !context.mounted) return;
     try {
-      await ref.read(adminMatchesRepositoryProvider).cancel(match.id);
-      if (dispute != null) {
-        await ref.read(adminDisputesRepositoryProvider).resolve(
-              disputeId: dispute!.id,
-              adminId: adminId,
-              resolution: justification,
-              status: 'cancelled',
-            );
-      }
-      await ref.read(adminAuditLogRepositoryProvider).record(
-        adminId: adminId,
-        action: 'dispute_cancelled',
-        targetType: 'match',
-        targetId: match.id,
-        afterState: {'justification': justification},
-      );
+      // Annulation du match + résolution du litige + audit, ATOMIQUEMENT.
+      await ref.read(adminDisputesRepositoryProvider).resolveAtomic(
+            matchId: match.id,
+            disputeId: dispute?.id,
+            justification: justification,
+            cancel: true,
+          );
       if (!context.mounted) return;
       await _showResult(context, 'Match annulé.', isError: false);
     } catch (e) {

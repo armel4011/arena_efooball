@@ -150,6 +150,17 @@ final adminDesktopRouterProvider = Provider<GoRouter>((ref) {
             : AdminDesktopRoutes.totpVerify;
       }
 
+      // Garde super-admin : les routes `/super/*` (revenus, validation des
+      // paiements, payouts, utilisateurs, broadcast…) exigent le rôle
+      // super_admin, pas seulement admin. Sans ce contrôle elles sont
+      // atteignables en deep-link par un admin simple ; certaines lectures
+      // (payments_select/payouts_select/admin_filter_users) ne sont gatées
+      // qu'`is_admin()` côté serveur → ceci ferme l'accès UI (parité avec le
+      // router mobile, cf. admin_router.dart).
+      if (loc.startsWith('/super') && !profile.isSuperAdmin) {
+        return AdminDesktopRoutes.dashboard;
+      }
+
       // VOLET 3 — garde de périmètre par SECTION (défense en profondeur).
       final section = adminSectionForLocation(loc);
       if (section != null && !adminCanSection(profile, section)) {

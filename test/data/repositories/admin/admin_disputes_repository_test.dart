@@ -187,34 +187,6 @@ void main() {
     });
   });
 
-  group('resolve', () {
-    test('update status/resolution + resolved_at/by, cible le litige',
-        () async {
-      final from = stub('disputes', null);
-      await repo.resolve(
-        disputeId: 'd1',
-        adminId: 'a1',
-        resolution: 'P1 a triché',
-      );
-      final v = from.updatedValues!;
-      expect(v['status'], 'resolved');
-      expect(v['resolved_by'], 'a1');
-      expect(v['resolution'], 'P1 a triché');
-      expect(from.filters.any((f) => f == 'eq:id=d1'), isTrue);
-    });
-
-    test('status custom (cancelled)', () async {
-      final from = stub('disputes', null);
-      await repo.resolve(
-        disputeId: 'd1',
-        adminId: 'a1',
-        resolution: 'x',
-        status: 'cancelled',
-      );
-      expect(from.updatedValues!['status'], 'cancelled');
-    });
-  });
-
   group('watchById (Realtime)', () {
     test('liste vide → null, filtre id + primaryKey', () async {
       final probe = stubStream(
