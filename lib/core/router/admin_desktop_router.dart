@@ -33,7 +33,7 @@ import 'package:arena/features_admin_desktop/super_admin/desktop_revenue_page.da
 import 'package:arena/features_admin_desktop/super_admin/desktop_super_dashboard_page.dart';
 import 'package:arena/features_admin_desktop/super_admin/desktop_tutorial_banners_page.dart';
 import 'package:arena/features_admin_desktop/super_admin/desktop_users_page.dart';
-import 'package:arena/features_shared/admin_sections.dart';
+import 'package:arena/features_shared/admin_route_policy.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -150,20 +150,10 @@ final adminDesktopRouterProvider = Provider<GoRouter>((ref) {
             : AdminDesktopRoutes.totpVerify;
       }
 
-      // Garde super-admin : les routes `/super/*` (revenus, validation des
-      // paiements, payouts, utilisateurs, broadcast…) exigent le rôle
-      // super_admin, pas seulement admin. Sans ce contrôle elles sont
-      // atteignables en deep-link par un admin simple ; certaines lectures
-      // (payments_select/payouts_select/admin_filter_users) ne sont gatées
-      // qu'`is_admin()` côté serveur → ceci ferme l'accès UI (parité avec le
-      // router mobile, cf. admin_router.dart).
-      if (loc.startsWith('/super') && !profile.isSuperAdmin) {
-        return AdminDesktopRoutes.dashboard;
-      }
-
-      // VOLET 3 — garde de périmètre par SECTION (défense en profondeur).
-      final section = adminSectionForLocation(loc);
-      if (section != null && !adminCanSection(profile, section)) {
+      // Autorisation (rôle super-admin sur `/super/*` + périmètre de section)
+      // via la politique PARTAGÉE avec le router mobile : parité stricte, même
+      // source de vérité (cf. P1 audit 2026-07-13 où cette garde manquait ici).
+      if (adminRouteDenial(loc, profile) != null) {
         return AdminDesktopRoutes.dashboard;
       }
 
