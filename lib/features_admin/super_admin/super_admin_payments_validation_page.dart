@@ -3,6 +3,7 @@ import 'package:arena/core/utils/arena_error_message.dart';
 import 'package:arena/core/utils/sentry_trace.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_payments_repository.dart';
+import 'package:arena/features_shared/admin/admin_formatters.dart';
 import 'package:arena/features_shared/admin/payment_labels.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
@@ -86,7 +87,7 @@ class _SuperAdminPaymentsValidationPageState
         title: const Text('Valider le paiement ?'),
         content: Text(
           'Vérifie sur ton compte ${paymentMethodLabel(row.payment.payerMethod)} '
-          'que tu as bien reçu ${_xaf(row.payment.amountLocal)} XAF depuis '
+          'que tu as bien reçu ${adminMoney(row.payment.amountLocal)} XAF depuis '
           'le numéro ${row.payment.payerPhone ?? "—"}.',
         ),
         actions: [
@@ -246,7 +247,7 @@ class _SuperAdminPaymentsValidationPageState
         backgroundColor: ArenaColors.carbon,
         title: const Text('Confirmer le remboursement ?'),
         content: Text(
-          'Confirme avoir rembourse ${_xaf(row.payment.amountLocal)} '
+          'Confirme avoir rembourse ${adminMoney(row.payment.amountLocal)} '
           '${row.payment.currency} a ${row.username} sur le '
           '${paymentMethodLabel(row.payment.payerMethod)} '
           '${row.payment.payerPhone ?? "—"}.',
@@ -369,7 +370,7 @@ class _RefundCard extends StatelessWidget {
               children: [
                 _kv(
                   'A rembourser',
-                  '${_xaf(p.amountLocal)} ${p.currency}',
+                  '${adminMoney(p.amountLocal)} ${p.currency}',
                   emphasize: true,
                 ),
                 _kv('Méthode', paymentMethodLabel(p.payerMethod)),
@@ -538,7 +539,7 @@ class _PendingCard extends StatelessWidget {
               children: [
                 _kv(
                   'Montant',
-                  '${_xaf(p.amountLocal)} ${p.currency}',
+                  '${adminMoney(p.amountLocal)} ${p.currency}',
                   emphasize: true,
                 ),
                 _kv('Méthode', paymentMethodLabel(p.payerMethod)),
@@ -692,7 +693,7 @@ class _HistoryCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            '${row.competitionName} · ${_xaf(p.amountLocal)} XAF · '
+            '${row.competitionName} · ${adminMoney(p.amountLocal)} XAF · '
             '${paymentMethodLabel(p.payerMethod)}',
             style: ArenaText.bodyMuted,
           ),
@@ -718,15 +719,7 @@ class _HistoryCard extends StatelessWidget {
 
 // _methodLabel → paymentMethodLabel (features_shared/admin/payment_labels.dart)
 
-String _xaf(double amount) {
-  final s = amount.round().toString();
-  final buf = StringBuffer();
-  for (var i = 0; i < s.length; i++) {
-    if (i > 0 && (s.length - i) % 3 == 0) buf.write(' ');
-    buf.write(s[i]);
-  }
-  return buf.toString();
-}
+// _xaf → adminMoney (features_shared/admin/admin_formatters.dart)
 
 /// Vignette cliquable de la capture d'inscription jointe par le joueur (URL
 /// signée à la demande — bucket `payment-proofs` privé). Tap → plein écran.

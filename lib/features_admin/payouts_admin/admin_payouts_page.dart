@@ -4,6 +4,7 @@ import 'package:arena/data/models/payout.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_payouts_repository.dart';
 import 'package:arena/features_admin/auth_admin/widgets/totp_gate.dart';
+import 'package:arena/features_shared/admin/admin_formatters.dart';
 import 'package:arena/features_shared/admin/payout_checks.dart';
 import 'package:arena/features_shared/admin_sections.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
@@ -16,7 +17,6 @@ import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 /// PHASE 11 · A13 — payout validation page (CRITIQUE).
 ///
@@ -131,10 +131,6 @@ class _Summary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final total = payouts.fold<double>(0, (a, p) => a + p.amountLocal);
-    final fmt = NumberFormat('#,###', 'fr_FR')
-        .format(total.round())
-        .replaceAll(',', ' ');
-
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.lg),
       decoration: arenaDangerCardDecoration(),
@@ -147,7 +143,7 @@ class _Summary extends StatelessWidget {
                 Text('À verser', style: ArenaText.bodyMuted),
                 const SizedBox(height: 4),
                 Text(
-                  '$fmt XAF',
+                  '${adminMoney(total)} XAF',
                   style: ArenaText.bigNumber.copyWith(
                     color: ArenaColors.neonRed,
                     fontSize: 28,
@@ -195,10 +191,6 @@ class _PayoutCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final allOk = payout.allAutoChecksPassed;
     final border = allOk ? ArenaColors.statusOk : ArenaColors.neonRed;
-    final amountFmt = NumberFormat('#,###', 'fr_FR')
-        .format(payout.amountLocal.round())
-        .replaceAll(',', ' ');
-
     final checks = buildPayoutChecks(payout, emptyLabel: 'Aucun contrôle auto');
 
     return Container(
@@ -240,7 +232,7 @@ class _PayoutCard extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '$amountFmt ${payout.currency}',
+                    '${adminMoney(payout.amountLocal)} ${payout.currency}',
                     style: ArenaText.mono.copyWith(
                       color: allOk ? ArenaColors.statusOk : ArenaColors.silver,
                       fontWeight: FontWeight.w700,
@@ -290,7 +282,7 @@ class _PayoutCard extends ConsumerWidget {
           const SizedBox(height: ArenaSpacing.sm),
           if (allOk)
             ArenaButton(
-              label: '✅ VALIDER · $amountFmt ${payout.currency}',
+              label: '✅ VALIDER · ${adminMoney(payout.amountLocal)} ${payout.currency}',
               variant: ArenaButtonVariant.primary,
               fullWidth: true,
               onPressed: () => _validate(context, ref),
@@ -500,9 +492,6 @@ class _BatchCard extends ConsumerWidget {
       0,
       (acc, p) => acc + p.amountLocal,
     );
-    final fmt = NumberFormat('#,###', 'fr_FR')
-        .format(expectedTotal.round())
-        .replaceAll(',', ' ');
     final typed = int.tryParse(controller.text.replaceAll(' ', '')) ?? 0;
     final enabled = eligible.isNotEmpty && typed == expectedTotal.round();
 
@@ -530,7 +519,7 @@ class _BatchCard extends ConsumerWidget {
           ),
           const SizedBox(height: ArenaSpacing.sm),
           Text(
-            'Total attendu : $fmt XAF',
+            'Total attendu : ${adminMoney(expectedTotal)} XAF',
             style: ArenaText.inputLabel,
           ),
           const SizedBox(height: ArenaSpacing.xs),
