@@ -25,14 +25,9 @@ insert into profiles(id,username,email,country_code,referral_code,role,is_active
 
 -- d1 : pool 5000, AUCUNE recette → subvention réelle 5000 (mais PAS bloquée).
 -- d2 : pool 3000, recette 3000 → pas de subvention.
--- NB : registration_fee de d2 = 3000 pour rester cohérent avec le trigger
--- enforce_payment_amount (migration 20260713120000) qui recale amount_local
--- des paiements sur le fee de la compétition — un paiement ne peut plus
--- diverger du fee, la recette encaissée (ligne payments ci-dessous) DOIT donc
--- valoir le fee.
 insert into competitions(id,name,game,format,status,start_date,max_players,registration_fee,registration_currency,country_code,prize_pool_local,prize_distribution) values
   ('f2000000-0000-0000-0000-000000000d01','F2_NOFEE','efootball','single_elimination','completed',now()-interval '2 hour',4,1000,'XAF','CM',5000,'["5000"]'::jsonb),
-  ('f2000000-0000-0000-0000-000000000d02','F2_FEEOK','efootball','single_elimination','completed',now()-interval '2 hour',4,3000,'XAF','CM',3000,'["3000"]'::jsonb);
+  ('f2000000-0000-0000-0000-000000000d02','F2_FEEOK','efootball','single_elimination','completed',now()-interval '2 hour',4,1000,'XAF','CM',3000,'["3000"]'::jsonb);
 
 insert into competition_registrations(competition_id,player_id,status,final_rank) values
   ('f2000000-0000-0000-0000-000000000d01','f2000000-0000-0000-0000-0000000000b1','confirmed',1),
