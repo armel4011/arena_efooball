@@ -35,7 +35,7 @@ import 'package:arena/features_admin/super_admin/super_admin_support_inbox.dart'
 import 'package:arena/features_admin/super_admin/super_admin_support_thread.dart';
 import 'package:arena/features_admin/super_admin/super_admin_tutorial_video.dart';
 import 'package:arena/features_admin/super_admin/super_admin_users.dart';
-import 'package:arena/features_shared/admin_sections.dart';
+import 'package:arena/features_shared/admin_route_policy.dart';
 import 'package:arena/features_shared/presentation/dev_preview_page.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:flutter/foundation.dart';
@@ -177,21 +177,11 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
         return loc == AdminRoutes.totpVerify ? null : AdminRoutes.totpVerify;
       }
 
-      // Garde super-admin : les routes `/super/*` (revenus, validation des
-      // paiements, bannissements, codes d'invitation, broadcast…) exigent le
-      // rôle super_admin, pas seulement admin. Sans ce contrôle elles sont
-      // atteignables en deep-link par un admin simple ; la RLS protège la
-      // donnée côté serveur, ceci ferme l'accès UI (défense en profondeur).
-      if (loc.startsWith('/super') && !profile.isSuperAdmin) {
-        return AdminRoutes.home;
-      }
-
-      // VOLET 3 — garde de périmètre par SECTION. Un admin/super-admin
-      // au scope restreint qui tente un deep-link vers une section masquée
-      // est renvoyé à l'accueil. Défense en profondeur (la RLS/les RPC
-      // protègent déjà la donnée côté serveur).
-      final section = adminSectionForLocation(loc);
-      if (section != null && !adminCanSection(profile, section)) {
+      // Autorisation (rôle super-admin sur `/super/*` + périmètre de section)
+      // via la politique PARTAGÉE avec le router desktop : source unique de
+      // vérité, impossible de garder une route d'un seul côté (cf. P1 audit
+      // 2026-07-13). L'authentification ci-dessus reste propre à ce router.
+      if (adminRouteDenial(loc, profile) != null) {
         return AdminRoutes.home;
       }
 
