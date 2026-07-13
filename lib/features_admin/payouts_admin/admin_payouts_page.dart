@@ -4,6 +4,7 @@ import 'package:arena/data/models/payout.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_payouts_repository.dart';
 import 'package:arena/features_admin/auth_admin/widgets/totp_gate.dart';
+import 'package:arena/features_shared/admin/payout_checks.dart';
 import 'package:arena/features_shared/admin_sections.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/widgets/admin_scope_banner.dart';
@@ -198,7 +199,7 @@ class _PayoutCard extends ConsumerWidget {
         .format(payout.amountLocal.round())
         .replaceAll(',', ' ');
 
-    final checks = _buildChecks(payout);
+    final checks = buildPayoutChecks(payout, emptyLabel: 'Aucun contrôle auto');
 
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.md),
@@ -475,46 +476,11 @@ class _PayoutCard extends ConsumerWidget {
     return result;
   }
 
-  static List<_Check> _buildChecks(Payout payout) {
-    final raw = payout.autoChecks;
-    if (raw.isEmpty) {
-      return const [_Check(label: 'Aucun contrôle auto', ok: false)];
-    }
-    return [
-      for (final entry in raw.entries)
-        _Check(label: _labelFor(entry.key), ok: entry.value == true),
-    ];
-  }
-
-  static String _labelFor(String key) {
-    switch (key) {
-      case 'kyc_verified':
-      case 'kyc':
-        return 'KYC vérifié';
-      case 'no_dispute':
-        return 'Aucun litige ouvert';
-      case 'no_anti_cheat':
-      case 'anti_cheat':
-        return "Pas d'alerte anti-cheat";
-      case 'not_banned':
-      case 'account_active':
-        return 'Compte non banni';
-      case 'momo_valid':
-      case 'payment_destination':
-        return 'Destination paiement valide';
-      default:
-        return key.replaceAll('_', ' ');
-    }
-  }
+  // _buildChecks / _labelFor / _Check → features_shared/admin/payout_checks.dart
 }
 
 enum _PayoutAction { validate, refuse, cancel }
 
-class _Check {
-  const _Check({required this.label, required this.ok});
-  final String label;
-  final bool ok;
-}
 
 class _BatchCard extends ConsumerWidget {
   const _BatchCard({

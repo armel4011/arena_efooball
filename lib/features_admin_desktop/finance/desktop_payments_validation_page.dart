@@ -4,6 +4,7 @@ import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_payments_repository.dart';
 import 'package:arena/features_admin_desktop/shared/desktop_totp_gate.dart';
 import 'package:arena/features_shared/admin/admin_formatters.dart';
+import 'package:arena/features_shared/admin/payment_labels.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -194,7 +195,7 @@ class _PendingCard extends ConsumerWidget {
             '${adminMoney(payment.amountLocal)} ${payment.currency}',
             emphasize: true,
           ),
-          _kv('Méthode', _methodLabel(payment.payerMethod)),
+          _kv('Méthode', paymentMethodLabel(payment.payerMethod)),
           _kv('Numéro payeur', payment.payerPhone ?? '—'),
           _kv(
             'Reçu le',
@@ -239,7 +240,7 @@ class _PendingCard extends ConsumerWidget {
       builder: (ctx) => ContentDialog(
         title: const Text('Valider le paiement ?'),
         content: Text(
-          'Vérifiez sur votre compte ${_methodLabel(row.payment.payerMethod)} '
+          'Vérifiez sur votre compte ${paymentMethodLabel(row.payment.payerMethod)} '
           'avoir bien reçu ${adminMoney(row.payment.amountLocal)} '
           '${row.payment.currency} depuis le numéro '
           '${row.payment.payerPhone ?? "—"}.',
@@ -511,7 +512,7 @@ class _RefundCard extends ConsumerWidget {
             '${adminMoney(payment.amountLocal)} ${payment.currency}',
             emphasize: true,
           ),
-          _refundKv('Méthode', _methodLabel(payment.payerMethod)),
+          _refundKv('Méthode', paymentMethodLabel(payment.payerMethod)),
           _refundKv('Numéro payeur', payment.payerPhone ?? '—'),
           const SizedBox(height: 16),
           FilledButton(
@@ -533,7 +534,7 @@ class _RefundCard extends ConsumerWidget {
         content: Text(
           'Confirme avoir reversé ${adminMoney(row.payment.amountLocal)} '
           '${row.payment.currency} à ${row.username} sur le '
-          '${_methodLabel(row.payment.payerMethod)} '
+          '${paymentMethodLabel(row.payment.payerMethod)} '
           '${row.payment.payerPhone ?? "—"} (compétition annulée).',
         ),
         actions: [
@@ -707,7 +708,7 @@ class _HistoryCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             '${row.competitionName} · ${adminMoney(payment.amountLocal)} '
-            '${payment.currency} · ${_methodLabel(payment.payerMethod)}',
+            '${payment.currency} · ${paymentMethodLabel(payment.payerMethod)}',
             style: GoogleFonts.spaceGrotesk(
               color: ArenaColors.silver,
               fontSize: 12,
@@ -736,16 +737,7 @@ class _HistoryCard extends StatelessWidget {
   }
 }
 
-String _methodLabel(String? code) {
-  switch (code) {
-    case 'MTN_MOMO':
-      return 'MTN MoMo';
-    case 'ORANGE_MONEY':
-      return 'Orange Money';
-    default:
-      return '—';
-  }
-}
+// _methodLabel → paymentMethodLabel (features_shared/admin/payment_labels.dart)
 
 Future<void> _showResult(
   BuildContext context,

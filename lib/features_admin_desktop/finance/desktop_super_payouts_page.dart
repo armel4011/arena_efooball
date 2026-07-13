@@ -3,6 +3,7 @@ import 'package:arena/core/utils/arena_error_message.dart';
 import 'package:arena/data/repositories/payout_repository.dart';
 import 'package:arena/features_admin_desktop/shared/desktop_scope_banner.dart';
 import 'package:arena/features_shared/admin/admin_formatters.dart';
+import 'package:arena/features_shared/admin/payment_labels.dart';
 import 'package:arena/features_shared/admin_sections.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:fluent_ui/fluent_ui.dart';
@@ -147,7 +148,7 @@ class _ToPayList extends ConsumerWidget {
       context,
       title: 'Confirmer le versement ?',
       body: 'Confirme avoir versé ${adminMoney(payout.amountLocal)} '
-          '${payout.currency} sur le ${_methodLabel(payout.payeeMethod)} '
+          '${payout.currency} sur le ${paymentMethodLabel(payout.payeeMethod)} '
           '${payout.payeePhone ?? "—"}.',
       confirmLabel: 'Marquer payé',
     );
@@ -289,7 +290,7 @@ class _PayoutCard extends StatelessWidget {
             emphasize: true,
           ),
           if (payout.rank != null) _kv('Rang', '${payout.rank}'),
-          _kv('Méthode', _methodLabel(payout.payeeMethod)),
+          _kv('Méthode', paymentMethodLabel(payout.payeeMethod)),
           _kv('Numéro retrait', payout.payeePhone ?? '—'),
           if (claimed && payout.claimedAt != null)
             _kv(
@@ -503,13 +504,4 @@ Future<void> _info(
 String _shortId(String id) =>
     id.length <= 8 ? id : id.substring(0, 8).toUpperCase();
 
-String _methodLabel(String? code) {
-  switch (code) {
-    case 'MTN_MOMO':
-      return 'MTN MoMo';
-    case 'ORANGE_MONEY':
-      return 'Orange Money';
-    default:
-      return '—';
-  }
-}
+// _methodLabel → paymentMethodLabel (features_shared/admin/payment_labels.dart)
