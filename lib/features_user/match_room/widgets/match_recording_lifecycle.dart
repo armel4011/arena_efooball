@@ -16,6 +16,7 @@ import 'package:arena/data/models/match_stream.dart';
 import 'package:arena/data/repositories/match_repository.dart';
 import 'package:arena/data/repositories/match_stream_repository.dart';
 import 'package:arena/features_user/match_room/widgets/match_recording_actions_sheet.dart';
+import 'package:arena/features_user/recording/overlay/overlay_restricted_guide.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform, kDebugMode, kIsWeb;
@@ -63,6 +64,11 @@ class _MatchRecordingLifecycleState
     extends ConsumerState<MatchRecordingLifecycle> {
   bool _startAttempted = false;
   String? _startError;
+
+  /// Vrai si la capture native tourne SANS le bouton flottant (overlay refusé /
+  /// restreint sur Android 13+). Non bloquant : on affiche une bannière qui
+  /// ouvre le guide d'activation. La preuve est capturée quand même.
+  bool _overlayMissing = false;
 
   bool get _isPlayer =>
       widget.selfId != null &&
@@ -241,17 +247,20 @@ class _MatchRecordingLifecycleState
       return;
     }
 
-    // SYSTEM_ALERT_WINDOW for the floating anti-cheat button. Sends the
-    // user to a full-screen settings page on Android 6+, so handle it
-    // explicitly here — RecordingOverlayController.start() also checks
-    // but bails silently on denial, which hides the failure.
+    // SYSTEM_ALERT_WINDOW = bouton flottant anti-triche : CONFORT, PAS requis
+    // pour la preuve. La capture (MediaProjection natif, FGS dédié) survit sans
+    // overlay — comme le chemin LiveKit. On demande donc la permission en
+    // BEST-EFFORT et on NE bloque PLUS l'enregistrement si elle est refusée.
+    //
+    // Important sur Android 13+/15 : le toggle « Afficher au-dessus des autres
+    // apps » est GRISÉ « paramètre restreint » pour les apps installées hors
+    // Play Store (Pixel 9 & co) → l'utilisateur ne peut pas l'accorder par le
+    // chemin normal. Bloquer là-dessus rendait la preuve impossible sur ces
+    // téléphones. On enregistre quand même, et on guide vers l'activation du
+    // bouton flottant via une bannière non bloquante (showOverlayRestrictedGuide).
     final overlay = await permissions.requestOverlay();
-    if (!overlay.isGranted) {
-      _reportCaptureUnavailable('overlay_denied');
-      if (mounted) {
-        setState(() => _startError = _overlayErrorMessage(overlay));
-      }
-      return;
+    if (mounted) {
+      setState(() => _overlayMissing = !overlay.isGranted);
     }
 
     try {
@@ -376,14 +385,6 @@ class _MatchRecordingLifecycleState
       return l10n.recordingPermBundleNeedsSettings(list);
     }
     return l10n.recordingPermBundleDenied(list);
-  }
-
-  String _overlayErrorMessage(PermissionOutcome outcome) {
-    final l10n = AppLocalizations.of(context);
-    if (outcome.needsSettings) {
-      return l10n.recordingPermOverlayNeedsSettings;
-    }
-    return l10n.recordingPermOverlayDenied;
   }
 
   /// Message d'erreur quand POST_NOTIFICATIONS est refusée pour la capture
@@ -513,7 +514,29 @@ class _MatchRecordingLifecycleState
         ),
       _ => null,
     };
-    if (nativeBanner != null) return nativeBanner;
+    if (nativeBanner != null) {
+      // Capture active mais bouton flottant manquant (overlay refusé/restreint
+      // sur Android 13+) → on garde la bannière d'enregistrement ET on ajoute
+      // un rappel NON bloquant qui ouvre le guide d'activation. La preuve est
+      // capturée quand même.
+      if (_overlayMissing &&
+          (coordState is CoordinatorRecording ||
+              coordState is CoordinatorPaused)) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            nativeBanner,
+            _LifecycleBanner(
+              icon: Icons.open_in_new,
+              color: ArenaColors.signalBlue,
+              text: "Bouton flottant désactivé — appuie pour l'activer",
+              onTap: () => showOverlayRestrictedGuide(context, ref),
+            ),
+          ],
+        );
+      }
+      return nativeBanner;
+    }
 
     // Provider LiveKit actif : bannière simple « enregistrement en cours »
     // (pas d'overlay/pause/forfait — capture publish-only enregistrée serveur).
