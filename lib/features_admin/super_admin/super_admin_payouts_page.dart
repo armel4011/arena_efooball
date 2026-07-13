@@ -1,6 +1,7 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/core/utils/arena_error_message.dart';
 import 'package:arena/data/repositories/payout_repository.dart';
+import 'package:arena/features_shared/admin/admin_formatters.dart';
 import 'package:arena/features_shared/admin/payment_labels.dart';
 import 'package:arena/features_shared/admin_sections.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
@@ -84,7 +85,7 @@ class SuperAdminPayoutsPage extends ConsumerWidget {
     WidgetRef ref,
     PayoutRecord payout,
   ) async {
-    final amount = _fmt(payout.amountLocal);
+    final amount = adminMoney(payout.amountLocal);
     final ok = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
@@ -285,7 +286,7 @@ class _PayoutCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final amount = _fmt(payout.amountLocal);
+    final amount = adminMoney(payout.amountLocal);
     final claimed = payout.isClaimed;
     final overdue = claimed &&
         payout.claimedAt != null &&
@@ -392,7 +393,7 @@ class _CompetitionToSettleCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Cagnotte : ${_fmt(comp.prizePoolLocal)} ${comp.currency}',
+            'Cagnotte : ${adminMoney(comp.prizePoolLocal)} ${comp.currency}',
             style: ArenaText.bodyMuted,
           ),
           const SizedBox(height: ArenaSpacing.sm),
@@ -434,7 +435,6 @@ Widget _kv(
   );
 }
 
-String _fmt(double amount) =>
-    NumberFormat('#,##0', 'fr_FR').format(amount).replaceAll(',', ' ');
+// _fmt → adminMoney (features_shared/admin/admin_formatters.dart)
 
 // _methodLabel → paymentMethodLabel (features_shared/admin/payment_labels.dart)
