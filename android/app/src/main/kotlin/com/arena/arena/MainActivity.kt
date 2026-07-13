@@ -134,6 +134,26 @@ class MainActivity : FlutterActivity() {
                     "stopCustomRecording" -> {
                         stopCustomRecording(result)
                     }
+                    "updateRoomCodeNotification" -> {
+                        // Pousse l'état du code room dans la notif de contrôle :
+                        // HOME (awaitingCode=true) → réponse directe pour envoyer ;
+                        // AWAY (code non nul) → code affiché + « Copier ».
+                        val code = call.argument<String>("code")
+                        val awaiting = call.argument<Boolean>("awaitingCode") ?: false
+                        val intent = Intent(
+                            applicationContext, ArenaRecorderService::class.java,
+                        ).apply {
+                            action = ArenaRecorderService.ACTION_UPDATE_CODE
+                            putExtra(ArenaRecorderService.EXTRA_ROOM_CODE, code)
+                            putExtra(ArenaRecorderService.EXTRA_AWAITING_CODE, awaiting)
+                        }
+                        try {
+                            startService(intent)
+                        } catch (e: Exception) {
+                            Log.w(TAG, "updateRoomCodeNotification failed", e)
+                        }
+                        result.success(true)
+                    }
                     "startLivekitCaptureFgs" -> {
                         startLivekitCaptureFgs(result)
                     }
@@ -187,12 +207,27 @@ class MainActivity : FlutterActivity() {
                 }
             }
         }
+
+        // HOME a tapé le code room dans la réponse directe de la notif → on le
+        // transmet à Dart qui écrit matches.room_code (relayé à l'AWAY).
+        ArenaRecorderService.onRoomCodeSubmitted = { code ->
+            runOnUiThread {
+                try {
+                    nativeEventSink?.success(
+                        mapOf("event" to "room_code_submitted", "code" to code),
+                    )
+                } catch (e: Exception) {
+                    Log.w(TAG, "nativeEventSink.success (room code) failed", e)
+                }
+            }
+        }
     }
 
     override fun onDestroy() {
         // Le service Kotlin peut survivre à l'activité — sans cleanup, son
         // callback retient une ref vers une activité morte et fuit.
         ArenaRecorderService.onProjectionDied = null
+        ArenaRecorderService.onRoomCodeSubmitted = null
         LivekitCaptureFgsService.onStopRequested = null
         nativeEventSink = null
         super.onDestroy()

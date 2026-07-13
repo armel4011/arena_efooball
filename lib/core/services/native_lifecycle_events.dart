@@ -36,8 +36,34 @@ class NativeLifecycleEvents {
   final EventChannel _channel;
   late final StreamSubscription<dynamic> _subscription;
   final _controller = StreamController<NativeLifecycleEvent>.broadcast();
+  // Code room tapé par le HOME dans la réponse directe de la notif de contrôle.
+  final _codeController = StreamController<String>.broadcast();
+
+  // Canal method pour POUSSER vers le natif (mise à jour de la notif de code).
+  static const MethodChannel _method = MethodChannel('arena/native');
 
   Stream<NativeLifecycleEvent> get stream => _controller.stream;
+
+  /// Le HOME a envoyé le code room via la réponse directe de la notification
+  /// (repli Pixel 9 du panneau overlay). Le listener écrit `matches.room_code`.
+  Stream<String> get roomCodeSubmitted => _codeController.stream;
+
+  /// Met à jour l'échange de code room dans la notif de contrôle native :
+  ///   * HOME → [awaitingCode] true : affiche la réponse directe « Envoyer le code ».
+  ///   * AWAY → [code] non nul : affiche le code reçu + un bouton « Copier ».
+  Future<void> updateRoomCodeNotification({
+    required bool awaitingCode,
+    String? code,
+  }) async {
+    try {
+      await _method.invokeMethod<void>('updateRoomCodeNotification', {
+        'code': code,
+        'awaitingCode': awaitingCode,
+      });
+    } catch (_) {
+      // Canal down (CI / autre OS / service pas encore démarré) — non bloquant.
+    }
+  }
 
   void _onNative(dynamic raw) {
     if (raw is! Map) return;
@@ -47,12 +73,16 @@ class NativeLifecycleEvents {
         _controller.add(NativeLifecycleEvent.mediaProjectionDied);
       case 'livekit_stop_requested':
         _controller.add(NativeLifecycleEvent.liveKitStopRequested);
+      case 'room_code_submitted':
+        final code = raw['code'];
+        if (code is String && code.isNotEmpty) _codeController.add(code);
     }
   }
 
   Future<void> dispose() async {
     await _subscription.cancel();
     await _controller.close();
+    await _codeController.close();
   }
 }
 
@@ -68,4 +98,10 @@ final nativeLifecycleEventsProvider = Provider<NativeLifecycleEvents>((ref) {
 final nativeLifecycleEventsStreamProvider =
     StreamProvider<NativeLifecycleEvent>((ref) {
   return ref.watch(nativeLifecycleEventsProvider).stream;
+});
+
+/// Codes room envoyés par le HOME via la réponse directe de la notif de
+/// contrôle → à écrire dans `matches.room_code` par le listener.
+final nativeRoomCodeSubmittedProvider = StreamProvider<String>((ref) {
+  return ref.watch(nativeLifecycleEventsProvider).roomCodeSubmitted;
 });

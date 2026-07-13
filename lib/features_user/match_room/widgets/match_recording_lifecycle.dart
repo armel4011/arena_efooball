@@ -118,9 +118,10 @@ class _MatchRecordingLifecycleState
       _maybeReact();
     }
     // L'hôte a renseigné / modifié le code de salle (realtime) → le rafraîchir
-    // sur le bouton overlay de l'adversaire.
+    // sur le bouton overlay de l'adversaire ET dans la notif de contrôle.
     if (old.match.roomCode != widget.match.roomCode) {
       _pushRoomCodeToOverlay();
+      _pushRoomCodeToNotification();
     }
   }
 
@@ -132,6 +133,31 @@ class _MatchRecordingLifecycleState
     final isHome = widget.match.homePlayerId == widget.selfId;
     final code = isHome ? null : widget.match.roomCode;
     ref.read(recordingOverlayControllerProvider).setDisplayedRoomCode(code);
+  }
+
+  /// Pousse l'échange du code room vers la NOTIF de contrôle native (repli
+  /// universel du panneau overlay : marche SANS permission de superposition —
+  /// utile là où l'overlay est bloqué, Pixel 9 / Android 15). Le HOME
+  /// (domicile) ENVOIE via la réponse directe ; l'AWAY (extérieur) REÇOIT le
+  /// code + un bouton « Copier ». No-op si aucune capture native n'est active
+  /// (le service natif ignore alors l'update).
+  void _pushRoomCodeToNotification() {
+    if (!_isAndroidNative || !_isPlayer) return;
+    final isHome = widget.match.homePlayerId == widget.selfId;
+    final code = widget.match.roomCode;
+    final events = ref.read(nativeLifecycleEventsProvider);
+    if (isHome) {
+      // Domicile : réponse directe tant qu'il n'a pas encore partagé le code.
+      final hasCode = code != null && code.trim().isNotEmpty;
+      unawaited(
+        events.updateRoomCodeNotification(code: null, awaitingCode: !hasCode),
+      );
+    } else {
+      // Extérieur : affiche le code reçu (ou rien tant qu'il n'est pas arrivé).
+      unawaited(
+        events.updateRoomCodeNotification(code: code, awaitingCode: false),
+      );
+    }
   }
 
   Future<void> _maybeReact() async {
@@ -269,6 +295,10 @@ class _MatchRecordingLifecycleState
         playerId: widget.selfId!,
         opponentId: opp,
       );
+      // Notif de contrôle native : pousse l'échange du code room selon le rôle
+      // (HOME → réponse directe pour envoyer ; AWAY → code + Copier). Repli
+      // universel du panneau overlay (marche même sans superposition, Pixel 9).
+      _pushRoomCodeToNotification();
     } catch (e) {
       _reportCaptureUnavailable('start_failed');
       if (mounted) {
@@ -464,6 +494,19 @@ class _MatchRecordingLifecycleState
       // CoordinatorStopped (`_maybeAutoExportRecording` ci-dessus), donc
       // valable pour TOUS les chemins de stop : saveAndStop overlay, stop
       // via notif système Android, auto-stop 25 min, match terminé.
+      // Le HOME a envoyé le code room via la réponse directe de la notif de
+      // contrôle → on l'écrit dans matches.room_code (le trigger DB le relaie
+      // à l'AWAY, qui le voit dans sa notif + « Copier »).
+      ..listen<AsyncValue<String>>(nativeRoomCodeSubmittedProvider, (_, next) {
+        final code = next.valueOrNull;
+        if (code == null || code.trim().isEmpty) return;
+        unawaited(
+          ref.read(matchRepositoryProvider).sendRoomCode(
+                matchId: widget.match.id,
+                code: code,
+              ),
+        );
+      })
       ..listen(coordinatorFocusRequestsProvider, (_, __) {
         if (!mounted) return;
         MatchRecordingActionsSheet.show(context);
