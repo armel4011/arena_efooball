@@ -207,12 +207,43 @@ class _VerdictButtons extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Verrou serveur (audit 2026-07-07, guard_matches_protected_columns) :
+    // re-arbitrer un match à cagnotte déjà décidé est réservé au super-admin.
+    // On désactive les CTA verdict pour un admin simple — PARITÉ avec la
+    // console desktop (le serveur rejette en 42501, mais l'UI doit le refléter ;
+    // c'était une divergence mobile/desktop relevée par l'audit 2026-07-13).
+    final isSuperAdmin =
+        ref.watch(currentProfileProvider).valueOrNull?.isSuperAdmin ?? false;
+    final competition =
+        ref.watch(competitionByIdProvider(match.competitionId)).valueOrNull;
+    final verdictLocked = competition != null &&
+        matchResultLockedForAdmin(
+          isSuperAdmin: isSuperAdmin,
+          competition: competition,
+          match: match,
+        );
     return Column(
       children: [
+        if (verdictLocked) ...[
+          Row(
+            children: [
+              const Icon(
+                Icons.lock_outline,
+                size: 16,
+                color: ArenaColors.silver,
+              ),
+              const SizedBox(width: ArenaSpacing.xs),
+              Expanded(
+                child: Text(superAdminOnlyHint, style: ArenaText.small),
+              ),
+            ],
+          ),
+          const SizedBox(height: ArenaSpacing.xs),
+        ],
         ArenaButton(
           label: '🏳️ J1 GAGNE 3-0 (tapis vert)',
           fullWidth: true,
-          onPressed: match.player1Id == null
+          onPressed: verdictLocked || match.player1Id == null
               ? null
               : () => _commit(context, ref, winnerId: match.player1Id),
         ),
@@ -220,7 +251,7 @@ class _VerdictButtons extends ConsumerWidget {
         ArenaButton(
           label: '🏳️ J2 GAGNE 3-0 (tapis vert)',
           fullWidth: true,
-          onPressed: match.player2Id == null
+          onPressed: verdictLocked || match.player2Id == null
               ? null
               : () => _commit(context, ref, winnerId: match.player2Id),
         ),
@@ -248,10 +279,13 @@ class _VerdictButtons extends ConsumerWidget {
       return;
     }
     // TAPIS VERT : le favorisé gagne 3-0 (le serveur force ce score, cf.
-    // resolve_dispute). On oriente 3-0 selon le vainqueur pour l'affichage/audit.
-    final winsP1 = winnerId == match.player1Id;
-    final scoreP1 = winsP1 ? 3 : 0;
-    final scoreP2 = winsP1 ? 0 : 3;
+    // resolve_dispute). Score orienté via le helper PARTAGÉ (parité desktop).
+    final score = disputeWalkoverScore(
+      winnerId: winnerId,
+      player1Id: match.player1Id,
+    );
+    final scoreP1 = score.scoreP1;
+    final scoreP2 = score.scoreP2;
     final totpOk = await TotpGate.confirm(
       context,
       ref,
