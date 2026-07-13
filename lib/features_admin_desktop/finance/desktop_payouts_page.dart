@@ -6,6 +6,7 @@ import 'package:arena/data/repositories/admin/admin_payouts_repository.dart';
 import 'package:arena/features_admin_desktop/shared/desktop_scope_banner.dart';
 import 'package:arena/features_admin_desktop/shared/desktop_totp_gate.dart';
 import 'package:arena/features_shared/admin/admin_formatters.dart';
+import 'package:arena/features_shared/admin/payout_checks.dart';
 import 'package:arena/features_shared/admin_sections.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:fluent_ui/fluent_ui.dart';
@@ -149,7 +150,7 @@ class _PayoutCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final allOk = payout.allAutoChecksPassed;
     final accent = allOk ? ArenaColors.statusOk : ArenaColors.statusWarn;
-    final checks = _buildChecks(payout);
+    final checks = buildPayoutChecks(payout);
 
     return Card(
       backgroundColor: ArenaColors.carbon,
@@ -347,37 +348,7 @@ class _PayoutCard extends ConsumerWidget {
     }
   }
 
-  static List<_Check> _buildChecks(Payout payout) {
-    final raw = payout.autoChecks;
-    if (raw.isEmpty) {
-      return const [_Check(label: 'Aucun contrôle automatique', ok: false)];
-    }
-    return [
-      for (final entry in raw.entries)
-        _Check(label: _labelFor(entry.key), ok: entry.value == true),
-    ];
-  }
-
-  static String _labelFor(String key) {
-    switch (key) {
-      case 'kyc_verified':
-      case 'kyc':
-        return 'KYC vérifié';
-      case 'no_dispute':
-        return 'Aucun litige ouvert';
-      case 'no_anti_cheat':
-      case 'anti_cheat':
-        return "Pas d'alerte anti-cheat";
-      case 'not_banned':
-      case 'account_active':
-        return 'Compte non banni';
-      case 'momo_valid':
-      case 'payment_destination':
-        return 'Destination paiement valide';
-      default:
-        return key.replaceAll('_', ' ');
-    }
-  }
+  // _buildChecks / _labelFor / _Check → features_shared/admin/payout_checks.dart
 }
 
 class _EmptyState extends StatelessWidget {
@@ -410,12 +381,6 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-class _Check {
-  const _Check({required this.label, required this.ok});
-
-  final String label;
-  final bool ok;
-}
 
 // ─────────────────────────────────────────────────────────────────────
 // Helpers partagés (dialogs + formatage) — locaux à la feature finance.

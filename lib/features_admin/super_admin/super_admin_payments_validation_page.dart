@@ -3,6 +3,7 @@ import 'package:arena/core/utils/arena_error_message.dart';
 import 'package:arena/core/utils/sentry_trace.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_payments_repository.dart';
+import 'package:arena/features_shared/admin/payment_labels.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
@@ -84,7 +85,7 @@ class _SuperAdminPaymentsValidationPageState
         backgroundColor: ArenaColors.carbon,
         title: const Text('Valider le paiement ?'),
         content: Text(
-          'Vérifie sur ton compte ${_methodLabel(row.payment.payerMethod)} '
+          'Vérifie sur ton compte ${paymentMethodLabel(row.payment.payerMethod)} '
           'que tu as bien reçu ${_xaf(row.payment.amountLocal)} XAF depuis '
           'le numéro ${row.payment.payerPhone ?? "—"}.',
         ),
@@ -247,7 +248,7 @@ class _SuperAdminPaymentsValidationPageState
         content: Text(
           'Confirme avoir rembourse ${_xaf(row.payment.amountLocal)} '
           '${row.payment.currency} a ${row.username} sur le '
-          '${_methodLabel(row.payment.payerMethod)} '
+          '${paymentMethodLabel(row.payment.payerMethod)} '
           '${row.payment.payerPhone ?? "—"}.',
         ),
         actions: [
@@ -371,7 +372,7 @@ class _RefundCard extends StatelessWidget {
                   '${_xaf(p.amountLocal)} ${p.currency}',
                   emphasize: true,
                 ),
-                _kv('Méthode', _methodLabel(p.payerMethod)),
+                _kv('Méthode', paymentMethodLabel(p.payerMethod)),
                 _kv('Numéro', p.payerPhone ?? '—', mono: true),
                 _kv(
                   'Référence',
@@ -540,7 +541,7 @@ class _PendingCard extends StatelessWidget {
                   '${_xaf(p.amountLocal)} ${p.currency}',
                   emphasize: true,
                 ),
-                _kv('Méthode', _methodLabel(p.payerMethod)),
+                _kv('Méthode', paymentMethodLabel(p.payerMethod)),
                 _kv('Numéro payeur', p.payerPhone ?? '—', mono: true),
                 _kv(
                   'Reçu le',
@@ -692,7 +693,7 @@ class _HistoryCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             '${row.competitionName} · ${_xaf(p.amountLocal)} XAF · '
-            '${_methodLabel(p.payerMethod)}',
+            '${paymentMethodLabel(p.payerMethod)}',
             style: ArenaText.bodyMuted,
           ),
           if (p.rejectionReason != null) ...[
@@ -715,16 +716,7 @@ class _HistoryCard extends StatelessWidget {
   }
 }
 
-String _methodLabel(String? code) {
-  switch (code) {
-    case 'MTN_MOMO':
-      return 'MTN MoMo';
-    case 'ORANGE_MONEY':
-      return 'Orange Money';
-    default:
-      return '—';
-  }
-}
+// _methodLabel → paymentMethodLabel (features_shared/admin/payment_labels.dart)
 
 String _xaf(double amount) {
   final s = amount.round().toString();
