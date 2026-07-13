@@ -1,6 +1,5 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/competition.dart';
-import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/features_shared/admin/competition_labels.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
