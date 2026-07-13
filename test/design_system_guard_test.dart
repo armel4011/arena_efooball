@@ -148,7 +148,9 @@ void main() {
   // 2502 → 2510 le 2026-07-11 : +8 `ArenaColors.*` du dialog de déblocage MIUI
   // (guide « Démarrage auto » + batterie sans restriction, upload preuve bg) —
   // carbon/void_/border/signalBlue/silver.
-  const colorsDotBaseline = 2510; // occurrences de `Colors.`
+  // 2510 → 2511 le 2026-07-13 : +1 `ArenaColors.silver` du bandeau de verrou
+  // verdict (parité mobile/desktop, audit 2026-07-13).
+  const colorsDotBaseline = 2511; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.

@@ -9,6 +9,7 @@ import 'package:arena/data/repositories/admin/admin_disputes_repository.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
 import 'package:arena/data/repositories/match_repository.dart';
 import 'package:arena/features_admin_desktop/shared/desktop_totp_gate.dart';
+import 'package:arena/features_shared/admin/dispute_resolution.dart';
 import 'package:arena/features_shared/admin_result_gate.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/widgets/arena_image_viewer.dart';

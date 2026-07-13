@@ -259,10 +259,13 @@ class _VerdictButtons extends ConsumerWidget {
       );
       return;
     }
-    // TAPIS VERT : le favorisé gagne 3-0 (parité app mobile / resolve_dispute).
-    final winsP1 = winnerId == match.player1Id;
-    final scoreP1 = winsP1 ? 3 : 0;
-    final scoreP2 = winsP1 ? 0 : 3;
+    // TAPIS VERT : le favorisé gagne 3-0 (helper PARTAGÉ / resolve_dispute).
+    final score = disputeWalkoverScore(
+      winnerId: winnerId,
+      player1Id: match.player1Id,
+    );
+    final scoreP1 = score.scoreP1;
+    final scoreP2 = score.scoreP2;
     final totpOk = await showDesktopTotpGate(
       context,
       ref,
