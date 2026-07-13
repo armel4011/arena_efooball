@@ -4543,7 +4543,7 @@ abstract class AppLocalizations {
   /// No description provided for @playerProfilePaymentsButton.
   ///
   /// In fr, this message translates to:
-  /// **'PAIEMENTS & GAINS'**
+  /// **'RÉCLAMATION DE GAINS'**
   String get playerProfilePaymentsButton;
 
   /// No description provided for @playerProfileSettingsButton.

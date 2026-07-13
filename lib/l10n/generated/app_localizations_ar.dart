@@ -2344,7 +2344,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get playerProfileRecentMatchesHeader => 'المباريات الأخيرة';
 
   @override
-  String get playerProfilePaymentsButton => 'المدفوعات والأرباح';
+  String get playerProfilePaymentsButton => 'المطالبة بالأرباح';
 
   @override
   String get playerProfileSettingsButton => 'الإعدادات';
