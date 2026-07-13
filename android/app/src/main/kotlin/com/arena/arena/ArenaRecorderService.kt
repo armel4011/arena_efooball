@@ -2,6 +2,7 @@ package com.arena.arena
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -133,6 +134,9 @@ class ArenaRecorderService : Service() {
     // Chemin MediaCodec CBR (encodeur primaire) — alternatif à mediaRecorder.
     private var codecRecorder: CodecScreenRecorder? = null
     private var outputPath: String? = null
+    // Horodatage de départ pour le chrono de la notif (compteur d'enregistrement
+    // qui s'incrémente tout seul via setUsesChronometer — pas de re-post/s).
+    private var recordStartMillis: Long = 0L
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
@@ -156,6 +160,7 @@ class ArenaRecorderService : Service() {
                     stopSelf()
                     return START_NOT_STICKY
                 }
+                recordStartMillis = System.currentTimeMillis()
                 startForegroundCompat(title, message)
                 try {
                     startRecording(resultCode, resultData, filename)
@@ -378,6 +383,16 @@ class ArenaRecorderService : Service() {
         publishOutput(finalPath)
     }
 
+    // Flags PendingIntent : FLAG_IMMUTABLE est OBLIGATOIRE sur Android 12+ (S)
+    // pour tout PendingIntent non explicitement mutable.
+    private fun pendingFlags(): Int {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        } else {
+            PendingIntent.FLAG_UPDATE_CURRENT
+        }
+    }
+
     private fun startForegroundCompat(title: String, message: String) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val mgr = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -393,11 +408,42 @@ class ArenaRecorderService : Service() {
                 )
             }
         }
+        // Tap sur le corps → ramène Arena au premier plan (équivalent du
+        // "focus main" du bouton flottant).
+        val openIntent = Intent(this, MainActivity::class.java).apply {
+            addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP,
+            )
+        }
+        val openPending = PendingIntent.getActivity(
+            this, 0, openIntent, pendingFlags(),
+        )
+        // Bouton « Arrêter » → ACTION_STOP du service (même chemin que le stop
+        // via la notif système existante : teardown → onProjectionDied → Dart).
+        val stopIntent = Intent(this, ArenaRecorderService::class.java).apply {
+            action = ACTION_STOP
+        }
+        val stopPending = PendingIntent.getService(
+            this, 1, stopIntent, pendingFlags(),
+        )
+
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(title)
             .setContentText(message)
             .setSmallIcon(android.R.drawable.presence_video_online)
             .setOngoing(true)
+            // Compteur d'enregistrement : chrono qui s'incrémente tout seul.
+            .setUsesChronometer(true)
+            .setWhen(recordStartMillis)
+            .setShowWhen(true)
+            .setContentIntent(openPending)
+            .addAction(
+                android.R.drawable.ic_menu_close_clear_cancel,
+                "Arrêter",
+                stopPending,
+            )
             .build()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(
