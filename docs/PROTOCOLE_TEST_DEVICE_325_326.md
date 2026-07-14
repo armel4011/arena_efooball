@@ -85,3 +85,46 @@ overlay bloqué** (notif seule), puis sur AWAY.
 
 Tous les ✅ sur **Pixel 9 (overlay bloqué)** + **1 second device** ⇒ #325/#326
 validés runtime → lever la mention « RESTE validation device » de la passation.
+
+---
+
+## 7. Résultats — session de validation 2026-07-14
+
+Testé sur **2 vrais téléphones Android 15** : Samsung SCG10 (HOME, overlay accordé)
++ Xiaomi 23129RAA4G / MIUI (AWAY, overlay refusé via `appops set … ignore`).
+Pas de Pixel 9 sous la main, mais Android 15 reproduit le « paramètre restreint ».
+
+### ✅ Validé
+- **#325 cœur** — overlay REFUSÉ : l'enregistrement natif **démarre et encode**
+  (`MediaCodec c2.qti.avc.encoder` actif, `ArenaRecorder` virtual display). La
+  preuve ne dépend plus de l'overlay.
+- **Règle 2 surfaces** — overlay accordé (Samsung) → notif **+ bouton flottant** ;
+  overlay refusé (Xiaomi) → **notif seule**.
+- **Notif** — chrono (`setUsesChronometer`) + action « Arrêter » présents.
+- **B4 — envoi du code par la notif (HOME)** : réponse directe `RemoteInput` →
+  `ACTION_SUBMIT_CODE` reçu → `matches.room_code` écrit en DB. **E2E OK.**
+
+### ⚠️ Bugs / limites constatés (chantier à part)
+- **Bouton flottant : 2ᵉ démarrage figé.** `flutter_overlay_window` réutilise son
+  moteur ; un `closeOverlay()` + `showOverlay()` (stop puis restart) ré-attache un
+  moteur sans relancer `overlayMain` → `initState`/`overlayListener` non rejoués →
+  **chrono figé, actions mortes, fermeture impossible**. Contourner par « morph-only
+  (idle, ne jamais re-show, fermer seulement au dispose) » teste comme un **gel
+  visuel** (mauvaise UX) ; le vrai correctif = **repenser le cycle de vie overlay**
+  (ou patcher la lib).
+- **B5 — Copier en arrière-plan (AWAY dans eFootball).** Le code arrive via la notif
+  FCM autonome (corps du message) mais **sans bouton « Copier »**. L'ajouter exige
+  le message en `dataOnly` + un handler background — MAIS ⚠️ **rendre le push
+  `dataOnly` CASSE la livraison pour les clients déjà en prod** (pas de handler →
+  notif muette). À ne faire **qu'après** avoir shippé l'app avec le handler.
+- **Design des boutons de notif.** Sur **Android 7+, les icônes d'action ne sont pas
+  affichées** (libellé texte seul) et **on ne peut pas colorer** les boutons d'une
+  notif standard → nécessite une **notification à layout personnalisé (RemoteViews)**.
+- **« Épingler » la notif en tête de liste** : pas d'API ; au mieux importance HIGH +
+  `ongoing` + `setColorized(true)`.
+- **Renvoi du code room (2ᵉ envoi)** : à déboguer (`PendingIntent`/RemoteInput
+  probablement consommé).
+
+### Suite
+Chantier dédié « overlay lifecycle + notif RemoteViews » à concevoir proprement
+(maquette + implémentation + 1 validation), hors boucle build/test live.
