@@ -31,6 +31,14 @@ class _RoomReadyViewState extends ConsumerState<RoomReadyView> {
   bool _submitting = false;
   late final TextEditingController _teamCtrl;
 
+  /// Sous-étape LOCALE (comme le flux HOME) : 0 = saisie du nom d'équipe,
+  /// 1 = « Activer l'enregistrement ». On NE persiste le nom d'équipe qu'à
+  /// l'étape 1 : chez l'AWAY, le match est déjà `in_progress`, donc poser le
+  /// team name déclencherait AUSSITÔT l'enregistrement (via selfJoined). En
+  /// gardant le nom en local jusqu'à l'étape « Activer », aucune permission
+  /// n'est demandée sur la page du nom d'équipe (étape 1 du modèle).
+  int _localStep = 0;
+
   bool get _isPlayer1 => widget.role == MatchRole.player1;
 
   bool get _isHome =>
@@ -158,25 +166,49 @@ class _RoomReadyViewState extends ConsumerState<RoomReadyView> {
         ],
         if (isPlayer) ...[
           const SizedBox(height: ArenaSpacing.lg),
-          Text(l10n.roomReadyTeamNameLabel, style: ArenaText.inputLabel),
-          const SizedBox(height: ArenaSpacing.sm),
-          ArenaTextField(
-            controller: _teamCtrl,
-            hint: l10n.roomReadyTeamNameHint,
-            maxLength: 40,
-            helper: l10n.roomReadyTeamNameHelper,
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: ArenaSpacing.md),
-          ArenaButton(
-            label: widget.match.status == MatchStatus.inProgress
-                ? l10n.roomReadyJoinedButton
-                : l10n.roomReadyInRoomButton,
-            icon: Icons.play_arrow_rounded,
-            fullWidth: true,
-            isLoading: _submitting,
-            onPressed: _teamCtrl.text.trim().isEmpty ? null : _markStarted,
-          ),
+          if (_localStep == 0) ...[
+            // Étape 1 — nom d'équipe (aucun enregistrement déclenché : le nom
+            // n'est PAS encore persisté, donc selfJoined reste faux).
+            Text(l10n.roomReadyTeamNameLabel, style: ArenaText.inputLabel),
+            const SizedBox(height: ArenaSpacing.sm),
+            ArenaTextField(
+              controller: _teamCtrl,
+              hint: l10n.roomReadyTeamNameHint,
+              maxLength: 40,
+              helper: l10n.roomReadyTeamNameHelper,
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: ArenaSpacing.md),
+            ArenaButton(
+              label: l10n.commonContinue,
+              icon: Icons.arrow_forward_rounded,
+              fullWidth: true,
+              onPressed: _teamCtrl.text.trim().isEmpty
+                  ? null
+                  : () => setState(() => _localStep = 1),
+            ),
+          ] else ...[
+            // Étape 2 — activation de l'enregistrement. Le bouton persiste le
+            // nom d'équipe (→ selfJoined) : c'est ICI que la permission de
+            // capture est demandée.
+            Text(l10n.startRecordingActivateTitle, style: ArenaText.inputLabel),
+            const SizedBox(height: ArenaSpacing.sm),
+            CyanDashedContainer(
+              child: Text(
+                l10n.startRecordingActivateDesc,
+                textAlign: TextAlign.center,
+                style: ArenaText.small.copyWith(color: ArenaColors.silver),
+              ),
+            ),
+            const SizedBox(height: ArenaSpacing.md),
+            ArenaButton(
+              label: l10n.roomReadyJoinedButton,
+              icon: Icons.fiber_manual_record,
+              fullWidth: true,
+              isLoading: _submitting,
+              onPressed: _markStarted,
+            ),
+          ],
           const SizedBox(height: ArenaSpacing.sm),
           OpenChatLink(matchId: widget.match.id),
         ],
