@@ -36,16 +36,20 @@ class StepBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return switch (match.status) {
-      MatchStatus.pending || MatchStatus.scheduled => isDraughts
-          ? (role == MatchRole.observer
-              ? _observerWaiting(context)
-              : DraughtsLobbyView(match: match, selfId: selfId))
-          : _stepPrepare(context),
-      MatchStatus.ready => isDraughts
-          ? (role == MatchRole.observer
-              ? _observerWaiting(context)
-              : DraughtsLobbyView(match: match, selfId: selfId))
-          : RoomReadyView(match: match, role: role),
+      // `ready` est un statut LEGACY : plus aucun code (client ni serveur) ne
+      // l'attribue — les matchs passent `pending`/`scheduled` → `in_progress`
+      // directement. On le route comme `pending`/`scheduled` pour rester
+      // cohérent avec le flux actuel ; sinon il affichait `RoomReadyView` aux
+      // DEUX joueurs, où le HOME voyait un bouton « rejoindre » qui déclenchait
+      // pourtant `markInProgress` + l'enregistrement (incohérence dormante).
+      MatchStatus.pending ||
+      MatchStatus.scheduled ||
+      MatchStatus.ready =>
+        isDraughts
+            ? (role == MatchRole.observer
+                ? _observerWaiting(context)
+                : DraughtsLobbyView(match: match, selfId: selfId))
+            : _stepPrepare(context),
       MatchStatus.inProgress ||
       MatchStatus.scorePending ||
       MatchStatus.awaitingValidation =>
