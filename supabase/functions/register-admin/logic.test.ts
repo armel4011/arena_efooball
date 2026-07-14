@@ -9,6 +9,7 @@ import {
   normalizeCode,
   normalizeEmail,
   rateLimitKey,
+  rateLimitKeys,
   validateAdminPassword,
   validateRegisterFields,
 } from "./logic.ts";
@@ -85,6 +86,25 @@ Deno.test("rateLimitKey : privilégie l'email, fallback IP réelle", () => {
   // Email absent → fallback sur l'IP réelle (dernière entrée XFF).
   assertEquals(rateLimitKey("", mk("1.1.1.1, 9.9.9.9")), "ip:9.9.9.9");
   assertEquals(rateLimitKey("", mk(null)), "ip:unknown");
+});
+
+Deno.test("rateLimitKeys : verrouille sur email ET IP (anti-rotation d'email)", () => {
+  const mk = (xff: string | null) =>
+    new Request("https://x.invalid", {
+      headers: xff === null ? {} : { "x-forwarded-for": xff },
+    });
+  // Email + IP réelle présents → les DEUX dimensions (l'IP borne le volume
+  // total même si l'attaquant fait tourner l'email).
+  assertEquals(
+    rateLimitKeys("  Foo@Bar.COM ", mk("1.1.1.1, 9.9.9.9")),
+    ["email:foo@bar.com", "ip:9.9.9.9"],
+  );
+  // Email présent mais IP inconnue → email seul (pas de clé "ip:unknown" inutile).
+  assertEquals(rateLimitKeys("a@b.co", mk(null)), ["email:a@b.co"]);
+  // Email absent → IP réelle seule.
+  assertEquals(rateLimitKeys("", mk("1.1.1.1, 9.9.9.9")), ["ip:9.9.9.9"]);
+  // Ni email ni IP exploitables → garde-fou : jamais un tableau vide.
+  assertEquals(rateLimitKeys("", mk(null)), ["ip:unknown"]);
 });
 
 Deno.test("validateRegisterFields : valide → null", () => {

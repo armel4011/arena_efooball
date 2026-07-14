@@ -21,7 +21,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.108.2";
 import {
-  rateLimitKey,
+  rateLimitKeys,
   isInvitationExpired,
   normalizeCode,
   validateRegisterFields,
@@ -57,15 +57,21 @@ interface RegisterBody {
 // deno-lint-ignore no-explicit-any
 type ServiceClient = any;
 
-// Enregistre un échec de redeem (code refusé) pour l'IP. Fail-open : si le
-// backend rate-limit est indisponible, on n'empêche pas un admin légitime —
-// on log seulement.
+// Enregistre un échec de redeem (code refusé) sur chaque dimension de
+// rate-limit (email + IP). Fail-open : si le backend rate-limit est
+// indisponible, on n'empêche pas un admin légitime — on log seulement.
 async function recordFailure(
   service: ServiceClient,
-  ip: string,
+  keys: string[],
 ): Promise<void> {
   try {
-    await service.rpc("register_admin_record_failure", { p_ip: ip });
+    // Enregistre l'échec sur chaque dimension (email + IP) → un attaquant qui
+    // fait tourner l'email reste borné par le compteur IP.
+    await Promise.all(
+      keys.map((k) =>
+        service.rpc("register_admin_record_failure", { p_ip: k })
+      ),
+    );
   } catch (e) {
     if (Deno.env.get("ARENA_DEBUG") === "1") {
       console.error("[register-admin] record_failure failed:", e);
@@ -126,22 +132,28 @@ Deno.serve(async (req: Request): Promise<Response> => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  // 0. Rate-limit par IP (anti-énumération de codes). Lu AVANT toute requête
-  //    sur `invitation_codes` → un attaquant verrouillé n'obtient aucun signal
-  //    sur l'existence/état d'un code. Fail-open : si le backend est indispo on
+  // 0. Rate-limit anti-énumération de codes. Lu AVANT toute requête sur
+  //    `invitation_codes` → un attaquant verrouillé n'obtient aucun signal sur
+  //    l'existence/état d'un code. Fail-open : si le backend est indispo on
   //    laisse passer (un admin légitime ne doit pas être bloqué par une panne).
-  // Clé de rate-limit = email cible (non-spoofable) plutôt que l'IP seule —
-  // le header x-forwarded-for est partiellement contrôlé par le client.
-  const ip = rateLimitKey(email, req);
+  // Rate-limit verrouillé sur DEUX dimensions (audit 2026-07-14) : l'email cible
+  // ET l'IP réelle (dernière entrée XFF). Verrouiller le seul email laissait un
+  // attaquant faire tourner l'email pour repartir d'un compteur neuf à chaque
+  // probe ; l'IP borne désormais le volume total. Bloqué si l'une OU l'autre
+  // est en cooldown.
+  const rlKeys = rateLimitKeys(email, req);
   try {
-    const { data: lock } = await service.rpc("register_admin_check_lock", {
-      p_ip: ip,
-    });
-    if (lock?.locked === true) {
+    const locks = await Promise.all(
+      rlKeys.map((k) =>
+        service.rpc("register_admin_check_lock", { p_ip: k })
+      ),
+    );
+    const locked = locks.find((l) => l.data?.locked === true);
+    if (locked) {
       return jsonResponse(
         {
           error: "too_many_attempts",
-          retry_after_seconds: lock.retry_after_seconds ?? 1800,
+          retry_after_seconds: locked.data.retry_after_seconds ?? 1800,
         },
         429,
       );
@@ -175,21 +187,21 @@ Deno.serve(async (req: Request): Promise<Response> => {
   // d'erreur restent distincts (l'UI s'appuie dessus) mais le rate-limit borne
   // le nombre de probes possibles → l'oracle d'énumération devient inexploitable.
   if (!invite) {
-    await recordFailure(service, ip);
+    await recordFailure(service, rlKeys);
     return jsonResponse({ error: "invalid_invitation_code" }, 404);
   }
   if (invite.uses_count >= invite.max_uses) {
-    await recordFailure(service, ip);
+    await recordFailure(service, rlKeys);
     return jsonResponse({ error: "invitation_already_used" }, 409);
   }
   if (isInvitationExpired(invite.expires_at, Date.now())) {
-    await recordFailure(service, ip);
+    await recordFailure(service, rlKeys);
     return jsonResponse({ error: "invitation_expired" }, 410);
   }
   if (invite.target_email && invite.target_email !== email) {
     // Code émis pour une adresse précise — l'admin l'a saisie côté SA2,
     // on bloque toute tentative de redeem avec une autre boîte.
-    await recordFailure(service, ip);
+    await recordFailure(service, rlKeys);
     return jsonResponse({ error: "invitation_email_mismatch" }, 403);
   }
 
@@ -325,10 +337,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
     console.error("invitation stamp failed:", stampErr.message);
   }
 
-  // 4bis. Inscription réussie → on nettoie le compteur de tentatives de l'IP
-  //        (best-effort, non bloquant).
+  // 4bis. Inscription réussie → on nettoie le compteur de tentatives sur chaque
+  //        dimension (email + IP) (best-effort, non bloquant).
   try {
-    await service.rpc("register_admin_record_success", { p_ip: ip });
+    await Promise.all(
+      rlKeys.map((k) =>
+        service.rpc("register_admin_record_success", { p_ip: k })
+      ),
+    );
   } catch (_) {
     // best-effort : au pire le compteur expirera tout seul (fenêtre 15 min).
   }

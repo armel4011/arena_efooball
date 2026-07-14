@@ -61,6 +61,27 @@ export function rateLimitKey(email: string, req: Request): string {
   return e ? `email:${e}` : `ip:${clientIp(req)}`;
 }
 
+/** Clés de rate-limit anti-énumération de codes, verrouillées sur DEUX
+ *  dimensions indépendantes (audit 2026-07-14) :
+ *   • l'EMAIL cible — identité stable, mais que l'attaquant contrôle : en la
+ *     faisant tourner il repart d'un compteur neuf à chaque probe, donc seule
+ *     elle ne borne jamais le volume total de tentatives ;
+ *   • l'IP réelle (dernière entrée XFF, non-spoofable) — borne le volume total
+ *     quel que soit l'email présenté.
+ *  On verrouille/enregistre sur les DEUX : une tentative est bloquée si l'une
+ *  OU l'autre est en cooldown. Dédupliquées, entrées vides écartées. */
+export function rateLimitKeys(email: string, req: Request): string[] {
+  const keys: string[] = [];
+  const e = normalizeEmail(email);
+  if (e) keys.push(`email:${e}`);
+  const ip = clientIp(req);
+  if (ip && ip !== "unknown") keys.push(`ip:${ip}`);
+  // Garde-fou : si ni email ni IP exploitables, retomber sur une clé IP unique
+  // (jamais de tableau vide → le rate-limit n'est jamais court-circuité).
+  if (keys.length === 0) keys.push(`ip:${ip}`);
+  return [...new Set(keys)];
+}
+
 export interface RegisterFields {
   rawCode: string;
   email: string; // déjà normalisé (lowercase/trim) par le handler
