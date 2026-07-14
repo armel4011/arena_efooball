@@ -2812,6 +2812,30 @@ abstract class AppLocalizations {
   /// **'DÉMARRER L\'ENREGISTREMENT'**
   String get startRecordingButton;
 
+  /// No description provided for @startRecordingTeamStepTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ton nom d\'équipe'**
+  String get startRecordingTeamStepTitle;
+
+  /// No description provided for @startRecordingTeamStepDesc.
+  ///
+  /// In fr, this message translates to:
+  /// **'Saisis le nom de l\'équipe que tu utilises pour ce match, puis continue.'**
+  String get startRecordingTeamStepDesc;
+
+  /// No description provided for @startRecordingActivateTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Active ton enregistrement'**
+  String get startRecordingActivateTitle;
+
+  /// No description provided for @startRecordingActivateDesc.
+  ///
+  /// In fr, this message translates to:
+  /// **'L\'enregistrement anti-triche va démarrer. Autorise la capture d\'écran, puis crée ta room dans eFootball et envoie le code depuis le bouton flottant.'**
+  String get startRecordingActivateDesc;
+
   /// No description provided for @stepBodyHostPreparingTitle.
   ///
   /// In fr, this message translates to:

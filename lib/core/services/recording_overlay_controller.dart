@@ -209,6 +209,18 @@ class RecordingOverlayController {
     await _platform.shareData(RecordingOverlayMessages.modeRecording());
     // Remplace le heartbeat code-sender par les ticks recording.
     _startTicking();
+    // Rafale anti-drop : quand on réveille le canal depuis l'état idle, le tout
+    // premier `mode_recording` est PARFOIS perdu (bouton resté gris de façon
+    // intermittente). On le réémet quelques fois en rafale — dès qu'un passe, le
+    // dispatcher morphe en rouge, puis les ticks 1 s prennent le relais. Chaque
+    // push est gardé par `_startedAt` (annulé si un stop survient entre-temps).
+    for (final ms in const [120, 300, 600, 1000, 1600]) {
+      Future<void>.delayed(Duration(milliseconds: ms), () {
+        if (_startedAt != null && _pausedElapsed == null) {
+          _platform.shareData(RecordingOverlayMessages.modeRecording());
+        }
+      });
+    }
   }
 
   /// Démarre le bouton d'enregistrement, OU transforme l'overlay
@@ -325,6 +337,77 @@ class RecordingOverlayController {
     );
     _overlayShown = false;
     await _platform.closeOverlay();
+  }
+
+  /// Arrêt d'enregistrement SANS fermer l'overlay : coupe les ticks, remet
+  /// l'état recording à zéro, et bascule le bouton en mode ARRÊTÉ (gris
+  /// « Reprendre », visuel DISTINCT de la pause). La FENÊTRE + l'isolate + le
+  /// listener + le port restent VIVANTS → un redémarrage passera par
+  /// `morphToRecording` (pas de 2ᵉ `showOverlay` qui réutiliserait un moteur mort
+  /// et figerait le panneau — quirk flutter_overlay_window).
+  ///
+  /// La fermeture RÉELLE (`stop()` → `closeOverlay`) n'a lieu qu'à la fin de vie
+  /// du match : dispose du coordinator (sortie de salle), statut terminal, ou
+  /// bascule Live. No-op si aucun overlay n'est affiché.
+  Future<void> idle() async {
+    if (!_overlayShown) return;
+    _startedAt = null;
+    _pausedElapsed = null;
+    _codeEntry = false;
+    _displayedRoomCode = null;
+    // Bascule visuelle : bouton gris « Reprendre » (le dispatcher overlay rend
+    // le mode idle). Listener/port NON touchés → les taps du bouton remontent.
+    //
+    // HEARTBEAT (crucial) : on RÉ-ÉMET `mode_idle` chaque seconde au lieu d'un
+    // seul push. Sans ce battement, le canal `shareData` main→overlay devient
+    // SILENCIEUX pendant tout l'état arrêté et le plugin le met en dormance —
+    // le `mode_recording` d'un redémarrage est alors PERDU (bouton figé au gris,
+    // symptôme observé). Le morph code-sender→recording marche justement parce
+    // que le code-sender garde le canal chaud avec le même battement 1 s. Le
+    // `_startTicking` du morph annulera ce timer et prendra le relais.
+    _startIdleHeartbeat();
+  }
+
+  void _startIdleHeartbeat() {
+    _tickTimer?.cancel();
+    unawaited(_platform.shareData(RecordingOverlayMessages.modeIdle()));
+    _tickTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      _platform.shareData(RecordingOverlayMessages.modeIdle());
+    });
+  }
+
+  /// Re-pousse le visage « recording » (mode + tick immédiat) sur l'overlay
+  /// DÉJÀ affiché, sans rien recréer. No-op si aucun enregistrement en cours
+  /// (`_startedAt == null`).
+  ///
+  /// Pourquoi : après un redémarrage (idle→recording), le message
+  /// `mode_recording` de `morphToRecording` est poussé alors qu'ARENA vient de
+  /// repasser au PREMIER PLAN (retour via `focus_main` + boîte de permission
+  /// MediaProjection). Sur plusieurs OEM, le canal `shareData` vers le moteur
+  /// overlay est perdu tant qu'ARENA est au premier plan → le bouton reste gris
+  /// « Reprendre ». En revanche il est FIABLE quand ARENA est en arrière-plan
+  /// (c'est ainsi qu'`idle()` affiche son bouton gris). On rappelle donc cette
+  /// méthode quand l'app REPASSE en arrière-plan : le bouton vire alors rouge,
+  /// pile au moment où le joueur retourne sur eFootball et regarde l'overlay.
+  void repushRecordingFace() {
+    final start = _startedAt;
+    if (start == null) return;
+    final elapsed = DateTime.now().difference(start);
+    final remaining = totalDuration - elapsed;
+    unawaited(_platform.shareData(RecordingOverlayMessages.modeRecording()));
+    unawaited(
+      _platform.shareData(
+        RecordingOverlayMessages.tick(
+          elapsedSeconds: elapsed.inSeconds,
+          warning: remaining <= const Duration(seconds: 30),
+          paused: _pausedElapsed != null,
+          liveAvailable: _liveAvailable,
+          simple: _simpleMode,
+          codeEntry: _codeEntry,
+          roomCode: _displayedRoomCode,
+        ),
+      ),
+    );
   }
 
   /// Freezes the chronometer in the overlay isolate and pushes a

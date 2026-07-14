@@ -153,7 +153,7 @@ void main() {
   // 2511 → 2520 le 2026-07-13 : +9 `ArenaColors.*` du guide « activer le bouton
   // flottant » (overlay restreint Android 13+/Pixel 9) + bannière non bloquante —
   // signalBlue/carbon/void_/border/silver.
-  const colorsDotBaseline = 2520; // occurrences de `Colors.`
+  const colorsDotBaseline = 2527; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.

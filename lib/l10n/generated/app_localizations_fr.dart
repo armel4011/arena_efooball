@@ -1442,6 +1442,20 @@ class AppLocalizationsFr extends AppLocalizations {
   String get startRecordingButton => 'DÉMARRER L\'ENREGISTREMENT';
 
   @override
+  String get startRecordingTeamStepTitle => 'Ton nom d\'équipe';
+
+  @override
+  String get startRecordingTeamStepDesc =>
+      'Saisis le nom de l\'équipe que tu utilises pour ce match, puis continue.';
+
+  @override
+  String get startRecordingActivateTitle => 'Active ton enregistrement';
+
+  @override
+  String get startRecordingActivateDesc =>
+      'L\'enregistrement anti-triche va démarrer. Autorise la capture d\'écran, puis crée ta room dans eFootball et envoie le code depuis le bouton flottant.';
+
+  @override
   String get stepBodyHostPreparingTitle => 'L\'hôte prépare la room';
 
   @override

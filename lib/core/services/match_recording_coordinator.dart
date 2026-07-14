@@ -191,11 +191,16 @@ class MatchRecordingCoordinator {
 
   Future<String?> _doStopCleanly() async {
     final result = await _recording.stop();
-    await _overlay.stop();
+    // GÈLE l'overlay sans le fermer (idle) : un redémarrage dans le même match
+    // morphera la fenêtre existante au lieu de refaire un `showOverlay` (qui
+    // figerait le panneau — quirk flutter_overlay_window). Fermeture réelle à la
+    // fin de vie du match (dispose / terminal / Live).
+    await _overlay.idle();
     _graceTimer?.cancel();
     _graceTimer = null;
-    await _actionsSub?.cancel();
-    _actionsSub = null;
+    // On GARDE `_actionsSub` vivant : l'overlay reste affiché (idle « Reprendre »)
+    // et son tap doit continuer d'arriver au coordinator pour relancer. (Il est
+    // ré-abonné proprement au prochain startForMatch, et annulé au dispose.)
     await _roomCodeSub?.cancel();
     _roomCodeSub = null;
     final matchId = _matchId ?? '';
@@ -213,6 +218,11 @@ class MatchRecordingCoordinator {
 
   Future<void> dispose() async {
     _graceTimer?.cancel();
+    // Fermeture RÉELLE de l'overlay (sortie de la salle de match) : l'idle le
+    // gardait vivant pour permettre un redémarrage ; ici la salle disparaît.
+    try {
+      await _overlay.stop();
+    } catch (_) {}
     await _actionsSub?.cancel();
     await _roomCodeSub?.cancel();
     await _stateController.close();
@@ -266,6 +276,9 @@ class MatchRecordingCoordinator {
         final matchIdForLive = _matchId;
         try {
           await stopCleanly();
+          // Bascule Live : plus de bouton d'enregistrement → fermeture RÉELLE de
+          // l'overlay (l'idle par défaut le garderait affiché pendant le live).
+          await _overlay.stop();
         } catch (e, st) {
           await Sentry.captureException(e, stackTrace: st);
           if (kDebugMode) {
@@ -293,6 +306,17 @@ class MatchRecordingCoordinator {
   /// Public entry for the in-app actions sheet to declare a forfeit.
   /// Mirrors the overlay "Arrêter (forfait)" tile.
   Future<void> declareForfeit() => _declareForfeit('user_chose_forfeit');
+
+  /// Re-synchronise le visage de l'overlay avec l'état courant. Appelé quand
+  /// ARENA repasse en arrière-plan : force le bouton flottant à revenir en
+  /// ROUGE après un redémarrage (le message `mode_recording` du morph étant
+  /// perdu tant qu'ARENA est au premier plan sur certains OEM — cf.
+  /// `RecordingOverlayController.repushRecordingFace`). No-op hors recording.
+  void refreshOverlayFace() {
+    if (_state is CoordinatorRecording) {
+      _overlay.repushRecordingFace();
+    }
+  }
 
   Future<void> _onPause() async {
     final matchId = _matchId;
