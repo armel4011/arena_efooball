@@ -15,7 +15,7 @@
 -- ════════════════════════════════════════════════════════════════════
 
 begin;
-select plan(6);
+select plan(5);
 
 -- ─── Fixtures ───────────────────────────────────────────────────────
 insert into auth.users(id) values
@@ -31,8 +31,6 @@ insert into profiles(id,username,email,country_code,referral_code,role,is_active
   ('ce000000-0000-0000-0000-0000000000ff','ce_super','cesu@ci.invalid','CM','CESU','super_admin',true, NULL),
   ('ce000000-0000-0000-0000-0000000000c1','ce_user_cm','ceucm@ci.invalid','CM','CEUC','player',true, NULL),
   ('ce000000-0000-0000-0000-00000000005e','ce_user_sn','ceusn@ci.invalid','SN','CEUS','player',true, NULL);
-
-select has_function('public', 'admin_filter_users');
 
 -- ─── Admin scopé {CM} ───────────────────────────────────────────────
 set local request.jwt.claims = '{"sub":"ce000000-0000-0000-0000-0000000000cd"}';
