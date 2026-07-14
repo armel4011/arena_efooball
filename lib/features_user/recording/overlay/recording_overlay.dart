@@ -143,8 +143,58 @@ class _ArenaOverlayRootState extends State<ArenaOverlayRoot> {
           onSubmitCode: _onCodeSubmitted,
           onFieldFocusChange: _onFieldFocusChange,
         ),
+      OverlayMode.idle => const IdleOverlayButton(),
       null => const SizedBox.shrink(),
     };
+  }
+}
+
+/// Bouton flottant en état ARRÊTÉ : l'enregistrement est stoppé mais la fenêtre
+/// overlay reste vivante (évite le 2ᵉ `showOverlay` qui figerait le panneau).
+/// Visuel DISTINCT de la pause : gris, icône « replay » + « Reprendre ». Un tap
+/// ramène Arena au premier plan (`focus_main`) — le redémarrage du recording est
+/// piloté par le flux de match côté app.
+class IdleOverlayButton extends StatelessWidget {
+  const IdleOverlayButton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 220,
+      height: 220,
+      child: Center(
+        child: GestureDetector(
+          onTap: () => sendToMain(RecordingOverlayMessages.focusMainType),
+          child: Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              color: ArenaColors.carbon,
+              shape: BoxShape.circle,
+              border: Border.all(color: ArenaColors.silverDim, width: 1.5),
+              boxShadow: const [
+                BoxShadow(color: Colors.black45, blurRadius: 8),
+              ],
+            ),
+            child: const Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.replay, color: ArenaColors.silver, size: 34),
+                SizedBox(height: 4),
+                Text(
+                  'Reprendre',
+                  style: TextStyle(
+                    color: ArenaColors.silver,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

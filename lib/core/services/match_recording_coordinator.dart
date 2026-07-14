@@ -191,7 +191,11 @@ class MatchRecordingCoordinator {
 
   Future<String?> _doStopCleanly() async {
     final result = await _recording.stop();
-    await _overlay.stop();
+    // GÈLE l'overlay sans le fermer (idle) : un redémarrage dans le même match
+    // morphera la fenêtre existante au lieu de refaire un `showOverlay` (qui
+    // figerait le panneau — quirk flutter_overlay_window). Fermeture réelle à la
+    // fin de vie du match (dispose / terminal / Live).
+    await _overlay.idle();
     _graceTimer?.cancel();
     _graceTimer = null;
     await _actionsSub?.cancel();
@@ -213,6 +217,11 @@ class MatchRecordingCoordinator {
 
   Future<void> dispose() async {
     _graceTimer?.cancel();
+    // Fermeture RÉELLE de l'overlay (sortie de la salle de match) : l'idle le
+    // gardait vivant pour permettre un redémarrage ; ici la salle disparaît.
+    try {
+      await _overlay.stop();
+    } catch (_) {}
     await _actionsSub?.cancel();
     await _roomCodeSub?.cancel();
     await _stateController.close();
@@ -266,6 +275,9 @@ class MatchRecordingCoordinator {
         final matchIdForLive = _matchId;
         try {
           await stopCleanly();
+          // Bascule Live : plus de bouton d'enregistrement → fermeture RÉELLE de
+          // l'overlay (l'idle par défaut le garderait affiché pendant le live).
+          await _overlay.stop();
         } catch (e, st) {
           await Sentry.captureException(e, stackTrace: st);
           if (kDebugMode) {

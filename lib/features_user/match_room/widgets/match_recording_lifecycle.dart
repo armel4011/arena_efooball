@@ -385,6 +385,11 @@ class _MatchRecordingLifecycleState
         debugPrint('[recording] terminal stopCleanly failed: $e');
       }
     }
+    // Match terminé → fermeture RÉELLE de l'overlay (stopCleanly l'a laissé en
+    // idle pour permettre un redémarrage, ce qui n'a plus lieu d'être ici).
+    try {
+      await ref.read(recordingOverlayControllerProvider).stop();
+    } catch (_) {}
     await _stopLiveKitIfRunning();
   }
 

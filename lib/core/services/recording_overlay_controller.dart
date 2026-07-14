@@ -327,6 +327,29 @@ class RecordingOverlayController {
     await _platform.closeOverlay();
   }
 
+  /// Arrêt d'enregistrement SANS fermer l'overlay : coupe les ticks, remet
+  /// l'état recording à zéro, et bascule le bouton en mode ARRÊTÉ (gris
+  /// « Reprendre », visuel DISTINCT de la pause). La FENÊTRE + l'isolate + le
+  /// listener + le port restent VIVANTS → un redémarrage passera par
+  /// `morphToRecording` (pas de 2ᵉ `showOverlay` qui réutiliserait un moteur mort
+  /// et figerait le panneau — quirk flutter_overlay_window).
+  ///
+  /// La fermeture RÉELLE (`stop()` → `closeOverlay`) n'a lieu qu'à la fin de vie
+  /// du match : dispose du coordinator (sortie de salle), statut terminal, ou
+  /// bascule Live. No-op si aucun overlay n'est affiché.
+  Future<void> idle() async {
+    if (!_overlayShown) return;
+    _tickTimer?.cancel();
+    _tickTimer = null;
+    _startedAt = null;
+    _pausedElapsed = null;
+    _codeEntry = false;
+    _displayedRoomCode = null;
+    // Bascule visuelle : bouton gris « Reprendre » (le dispatcher overlay rend
+    // le mode idle). Listener/port NON touchés → les taps du bouton remontent.
+    await _platform.shareData(RecordingOverlayMessages.modeIdle());
+  }
+
   /// Freezes the chronometer in the overlay isolate and pushes a
   /// `paused` tick so the floating button switches to the yellow
   /// "PAUSE" face. Idempotent.
