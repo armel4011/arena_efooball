@@ -77,11 +77,14 @@ do $$ begin
   insert into _r values ('reject_spoofed_user','allowed');
 exception when others then insert into _r values ('reject_spoofed_user','denied'); end $$;
 
--- (5) Un joueur ne peut PAS valider un paiement (UPDATE réservé super_admin → 0 ligne).
-with upd as (
-  update payments set status='succeeded' where id='dddddddd-0000-0000-0000-000000000011' returning 1
-)
-insert into _r select 'user_cannot_validate', count(*)::text from upd;
+-- (5) Un joueur ne peut PAS s'auto-valider. Depuis payments_self_cancel
+--     (audit 2026-07-14), le propriétaire peut toucher SA ligne awaiting_admin
+--     mais UNIQUEMENT vers 'failed' → un passage vers 'succeeded' viole le
+--     WITH CHECK (erreur), donc l'auto-validation reste impossible.
+do $$ begin
+  update payments set status='succeeded' where id='dddddddd-0000-0000-0000-000000000011';
+  insert into _r values ('user_cannot_validate','allowed');
+exception when others then insert into _r values ('user_cannot_validate','denied'); end $$;
 
 -- (8) Payouts : isolation SELECT (le joueur ne voit que son gain).
 insert into _r select 'payout_isolation', count(*)::text from payouts;
@@ -121,8 +124,8 @@ select is((select result from _r where test='reject_forged_status'), 'denied',
   'payments_self_insert refuse un status forgé (validated)');
 select is((select result from _r where test='reject_spoofed_user'), 'denied',
   'payments_self_insert refuse un user_id usurpé');
-select is((select result from _r where test='user_cannot_validate'), '0',
-  'payments_admin_update : un joueur ne peut pas valider un paiement');
+select is((select result from _r where test='user_cannot_validate'), 'denied',
+  'payments_self_cancel : un joueur ne peut pas s''auto-valider (awaiting_admin->succeeded refusé)');
 select is((select result from _r where test='sadmin_can_validate'), '1',
   'payments_admin_update : un super_admin peut valider un paiement');
 select is((select result from _r where test='sadmin_sees_all'), 'true',
