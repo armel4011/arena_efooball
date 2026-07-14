@@ -189,6 +189,23 @@ class _MatchRecordingLifecycleState
         return;
       }
 
+      // Garde anti-re-demande : si une capture tourne DÉJÀ (le coordinator et
+      // le service LiveKit vivent à portée provider, ils survivent au remount de
+      // ce widget quand on navigue hors/dans la salle), NE PAS redemander la
+      // permission MediaProjection. Sans ça, `requestRecordingBundle()` ci-dessous
+      // fait re-surgir la boîte de permission d'enregistrement alors que ça filme
+      // déjà — le `startForMatch` refuserait le doublon, mais trop tard (la boîte
+      // a déjà été montrée). On marque `_startAttempted` pour rester cohérent.
+      final coordState = ref.read(matchRecordingCoordinatorProvider).state;
+      final liveKitCapturing =
+          ref.read(liveKitCaptureServiceProvider).state is! LiveKitCaptureIdle;
+      if (coordState is CoordinatorRecording ||
+          coordState is CoordinatorPaused ||
+          liveKitCapturing) {
+        _startAttempted = true;
+        return;
+      }
+
       _startAttempted = true;
 
       // Provider anti-triche actif — lecture réelle de app_config (pas le
