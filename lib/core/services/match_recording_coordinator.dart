@@ -307,6 +307,17 @@ class MatchRecordingCoordinator {
   /// Mirrors the overlay "Arrêter (forfait)" tile.
   Future<void> declareForfeit() => _declareForfeit('user_chose_forfeit');
 
+  /// Re-synchronise le visage de l'overlay avec l'état courant. Appelé quand
+  /// ARENA repasse en arrière-plan : force le bouton flottant à revenir en
+  /// ROUGE après un redémarrage (le message `mode_recording` du morph étant
+  /// perdu tant qu'ARENA est au premier plan sur certains OEM — cf.
+  /// `RecordingOverlayController.repushRecordingFace`). No-op hors recording.
+  void refreshOverlayFace() {
+    if (_state is CoordinatorRecording) {
+      _overlay.repushRecordingFace();
+    }
+  }
+
   Future<void> _onPause() async {
     final matchId = _matchId;
     final playerId = _playerId;

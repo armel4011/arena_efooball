@@ -134,6 +134,36 @@ void main() {
     expect(await next, OverlayAction.unknown);
   });
 
+  group('idle (bouton gris « Reprendre »)', () {
+    bool hasType(String type) => platform.sharedData
+        .any((d) => d is Map && d['type'] == type);
+
+    test('idle() pousse mode_idle SANS fermer la fenêtre', () async {
+      await controller.start();
+      platform.sharedData.clear();
+      await controller.idle();
+      // La fenêtre survit (redémarrage possible via morph), et le bouton passe
+      // au visuel gris « Reprendre ».
+      expect(platform.overlayShown, isTrue);
+      expect(hasType(RecordingOverlayMessages.modeIdleType), isTrue);
+    });
+
+    test('idle() est un no-op si aucun overlay affiché', () async {
+      platform.sharedData.clear();
+      await controller.idle();
+      expect(platform.sharedData, isEmpty);
+    });
+
+    test('un redémarrage après idle re-morphe en mode_recording', () async {
+      await controller.start();
+      await controller.idle();
+      platform.sharedData.clear();
+      // Reprise : la fenêtre étant vivante, on morphe (pas de re-showOverlay).
+      await controller.startOrMorphToRecording(matchId: 'm1');
+      expect(hasType(RecordingOverlayMessages.modeRecordingType), isTrue);
+    });
+  });
+
   group('code-sender', () {
     test('showAsCodeSender affiche le panneau + pousse mode_code_sender',
         () async {

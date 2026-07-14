@@ -124,6 +124,15 @@ class _MatchRecordingLifecycleState
     if (state == AppLifecycleState.resumed) {
       _startAttempted = false;
       _maybeReact();
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden) {
+      // ARENA repasse en arrière-plan (le joueur retourne sur eFootball) : c'est
+      // le moment FIABLE pour (re)pousser le visage « recording » sur l'overlay.
+      // Après un redémarrage via « Reprendre », `morphToRecording` a poussé
+      // `mode_recording` alors qu'ARENA était au premier plan → message perdu
+      // sur certains OEM (bouton resté gris). Ici le canal shareData fonctionne
+      // → le bouton vire enfin rouge, pile quand le joueur le regarde.
+      ref.read(matchRecordingCoordinatorProvider).refreshOverlayFace();
     }
   }
 
