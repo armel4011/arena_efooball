@@ -198,8 +198,9 @@ class MatchRecordingCoordinator {
     await _overlay.idle();
     _graceTimer?.cancel();
     _graceTimer = null;
-    await _actionsSub?.cancel();
-    _actionsSub = null;
+    // On GARDE `_actionsSub` vivant : l'overlay reste affiché (idle « Reprendre »)
+    // et son tap doit continuer d'arriver au coordinator pour relancer. (Il est
+    // ré-abonné proprement au prochain startForMatch, et annulé au dispose.)
     await _roomCodeSub?.cancel();
     _roomCodeSub = null;
     final matchId = _matchId ?? '';

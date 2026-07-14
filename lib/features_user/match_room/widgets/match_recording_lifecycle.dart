@@ -559,7 +559,20 @@ class _MatchRecordingLifecycleState
       })
       ..listen(coordinatorFocusRequestsProvider, (_, __) {
         if (!mounted) return;
-        MatchRecordingActionsSheet.show(context);
+        // Tap sur le bouton flottant. Si l'enregistrement est COUPÉ (bouton idle
+        // « Reprendre »), on RELANCE directement (l'app est déjà ramenée au 1er
+        // plan par le coordinator, donc `didChangeAppLifecycleState` ne refire
+        // pas forcément). Sinon (enregistrement actif), on ouvre la feuille
+        // d'actions comme avant.
+        final coordState = ref.read(matchRecordingCoordinatorProvider).state;
+        final capturing =
+            coordState is CoordinatorRecording || coordState is CoordinatorPaused;
+        if (capturing) {
+          MatchRecordingActionsSheet.show(context);
+        } else {
+          _startAttempted = false;
+          _maybeReact();
+        }
       });
 
     final startError = _startError;
