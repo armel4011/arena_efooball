@@ -1429,6 +1429,20 @@ class AppLocalizationsAr extends AppLocalizations {
   String get startRecordingButton => 'بدء التسجيل';
 
   @override
+  String get startRecordingTeamStepTitle => 'اسم فريقك';
+
+  @override
+  String get startRecordingTeamStepDesc =>
+      'أدخل اسم الفريق الذي تستخدمه في هذه المباراة، ثم تابع.';
+
+  @override
+  String get startRecordingActivateTitle => 'ابدأ التسجيل';
+
+  @override
+  String get startRecordingActivateDesc =>
+      'سيبدأ تسجيل مكافحة الغش. اسمح بتسجيل الشاشة، ثم أنشئ غرفتك في eFootball وشارك الرمز من الزر العائم.';
+
+  @override
   String get stepBodyHostPreparingTitle => 'المضيف يجهّز الغرفة';
 
   @override

@@ -19,8 +19,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// `markInProgress` fait que `MatchRecordingLifecycle` démarre le recording
 /// pour lui (garde `_selfJoined`).
 class StartRecordingForm extends ConsumerStatefulWidget {
-  const StartRecordingForm(
-      {required this.match, required this.role, super.key});
+  const StartRecordingForm({
+    required this.match,
+    required this.role,
+    super.key,
+  });
 
   final ArenaMatch match;
   final MatchRole role;
@@ -50,20 +53,45 @@ class _StartRecordingFormState extends ConsumerState<StartRecordingForm> {
     super.dispose();
   }
 
-  Future<void> _start() async {
+  /// Vrai quand le nom d'équipe du joueur est DÉJÀ posé en base → on passe à
+  /// l'étape 2 (« Activer l'enregistrement »).
+  bool get _hasTeamName {
+    final n = _isPlayer1
+        ? widget.match.player1TeamName
+        : widget.match.player2TeamName;
+    return n != null && n.trim().isNotEmpty;
+  }
+
+  /// ÉTAPE 1 — persiste UNIQUEMENT le nom d'équipe (pas de `markInProgress`,
+  /// donc pas d'enregistrement ici). Le rebuild realtime fait passer à l'étape 2.
+  Future<void> _saveTeamName() async {
     final teamName = _teamCtrl.text.trim();
     if (teamName.isEmpty) return;
     setState(() => _submitting = true);
     try {
-      final repo = ref.read(matchRepositoryProvider);
-      // Team name d'abord (aide l'arbitrage anti-triche + sert de signal
-      // « ce joueur a rejoint » pour démarrer SON recording), puis in_progress.
-      await repo.setTeamName(
-        matchId: widget.match.id,
-        isPlayer1: _isPlayer1,
-        teamName: teamName,
+      await ref.read(matchRepositoryProvider).setTeamName(
+            matchId: widget.match.id,
+            isPlayer1: _isPlayer1,
+            teamName: teamName,
+          );
+    } catch (e) {
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${l10n.roomReadyMarkStartedError}$e')),
       );
-      await repo.markInProgress(widget.match.id);
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  /// ÉTAPE 2 — bascule le match en `in_progress`. C'est CE moment (nouvelle
+  /// étape, APRÈS le nom d'équipe) qui déclenche la demande d'enregistrement
+  /// (via MatchRecordingLifecycle : isLive + team name posé).
+  Future<void> _startRecording() async {
+    setState(() => _submitting = true);
+    try {
+      await ref.read(matchRepositoryProvider).markInProgress(widget.match.id);
     } catch (e) {
       if (!mounted) return;
       final l10n = AppLocalizations.of(context);
@@ -77,14 +105,19 @@ class _StartRecordingFormState extends ConsumerState<StartRecordingForm> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    return _hasTeamName ? _activateStep(l10n) : _teamNameStep(l10n);
+  }
+
+  /// Étape 1 : saisie du nom d'équipe (aucun enregistrement déclenché ici).
+  Widget _teamNameStep(AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(l10n.startRecordingTitle, style: ArenaText.inputLabel),
+        Text(l10n.startRecordingTeamStepTitle, style: ArenaText.inputLabel),
         const SizedBox(height: ArenaSpacing.sm),
         CyanDashedContainer(
           child: Text(
-            l10n.startRecordingDesc,
+            l10n.startRecordingTeamStepDesc,
             textAlign: TextAlign.center,
             style: ArenaText.small.copyWith(color: ArenaColors.silver),
           ),
@@ -105,11 +138,44 @@ class _StartRecordingFormState extends ConsumerState<StartRecordingForm> {
         ],
         const SizedBox(height: ArenaSpacing.lg),
         ArenaButton(
+          label: l10n.commonContinue,
+          icon: Icons.arrow_forward_rounded,
+          fullWidth: true,
+          isLoading: _submitting,
+          onPressed: _teamCtrl.text.trim().isEmpty ? null : _saveTeamName,
+        ),
+        const SizedBox(height: ArenaSpacing.sm),
+        OpenChatLink(matchId: widget.match.id),
+      ],
+    );
+  }
+
+  /// Étape 2 : activation de l'enregistrement (APRÈS le nom d'équipe). C'est ici
+  /// que la permission de capture d'écran est demandée.
+  Widget _activateStep(AppLocalizations l10n) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(l10n.startRecordingActivateTitle, style: ArenaText.inputLabel),
+        const SizedBox(height: ArenaSpacing.sm),
+        CyanDashedContainer(
+          child: Text(
+            l10n.startRecordingActivateDesc,
+            textAlign: TextAlign.center,
+            style: ArenaText.small.copyWith(color: ArenaColors.silver),
+          ),
+        ),
+        if (widget.match.scheduledAt != null) ...[
+          const SizedBox(height: ArenaSpacing.lg),
+          ForfeitTimerCard(scheduledAt: widget.match.scheduledAt!),
+        ],
+        const SizedBox(height: ArenaSpacing.lg),
+        ArenaButton(
           label: l10n.startRecordingButton,
           icon: Icons.fiber_manual_record,
           fullWidth: true,
           isLoading: _submitting,
-          onPressed: _teamCtrl.text.trim().isEmpty ? null : _start,
+          onPressed: _startRecording,
         ),
         const SizedBox(height: ArenaSpacing.sm),
         OpenChatLink(matchId: widget.match.id),
