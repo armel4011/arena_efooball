@@ -64,10 +64,8 @@ void main() {
         simpleMode: any(named: 'simpleMode'),
       ),
     ).thenAnswer((_) async {});
+    // `_doStopCleanly` FERME l'overlay (arrêt = définitif, plus de reprise).
     when(() => overlay.stop()).thenAnswer((_) async {});
-    // `_doStopCleanly` gèle l'overlay via idle() (bouton gris « Reprendre »)
-    // au lieu de le fermer — le stubber évite le mock null-default.
-    when(() => overlay.idle()).thenAnswer((_) async {});
     // L'overlay a aussi pause()/resume() pour figer le chrono pendant
     // une pause — les stubber empêche les appels de tomber dans le
     // mock null-default (qui throw silently et bloque la transition).
@@ -279,10 +277,8 @@ void main() {
 
     expect(path, '/tmp/r.mp4');
     verify(() => recording.stop()).called(1);
-    // Le stop propre GÈLE l'overlay (bouton gris « Reprendre ») au lieu de le
-    // fermer : la fenêtre survit pour permettre un redémarrage dans le match.
-    verify(() => overlay.idle()).called(1);
-    verifyNever(() => overlay.stop());
+    // Arrêt = définitif (plus de reprise) → le stop propre FERME l'overlay.
+    verify(() => overlay.stop()).called(1);
     verifyNever(
       () => matches.markForfeit(
         matchId: any(named: 'matchId'),

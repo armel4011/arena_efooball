@@ -69,13 +69,6 @@ class ArenaRecorderService : Service() {
         private const val TAG = "ArenaRecorder"
         private const val CHANNEL_ID = "arena_recorder"
         private const val NOTIF_ID = 1101
-        // Notif « Enregistrement arrêté » — surface FIABLE de reprise après un
-        // arrêt en cours de match. ID DISTINCT du NOTIF_ID de la FGS : elle
-        // survit au `stopForeground(REMOVE)` du teardown (qui ne retire que
-        // NOTIF_ID) et n'entre pas en course avec lui. Portée du bouton flottant
-        // idle « Reprendre » (gris), dont le rendu reste intermittent (limite
-        // flutter_overlay_window : canal shareData mis en dormance à l'arrêt).
-        private const val STOPPED_NOTIF_ID = 1102
 
         const val ACTION_START = "com.arena.arena.recorder.START"
         const val ACTION_STOP = "com.arena.arena.recorder.STOP"
@@ -162,87 +155,6 @@ class ArenaRecorderService : Service() {
                 }
             }
         }
-
-        /** Crée le canal de notif (idempotent) — requis avant tout `notify`. */
-        private fun ensureChannel(ctx: Context) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val mgr = ctx.getSystemService(Context.NOTIFICATION_SERVICE)
-                    as NotificationManager
-                if (mgr.getNotificationChannel(CHANNEL_ID) == null) {
-                    mgr.createNotificationChannel(
-                        NotificationChannel(
-                            CHANNEL_ID,
-                            "ARENA recorder",
-                            NotificationManager.IMPORTANCE_LOW,
-                        ).apply {
-                            description = "Enregistrement anti-triche en cours"
-                        },
-                    )
-                }
-            }
-        }
-
-        private fun pendingFlagsFor(): Int {
-            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-            } else {
-                PendingIntent.FLAG_UPDATE_CURRENT
-            }
-        }
-
-        /**
-         * Poste la notif « Enregistrement arrêté » : plus de chrono, un bouton
-         * « Ouvrir » (+ tap sur le corps) qui ramène ARENA au premier plan pour
-         * reprendre l'enregistrement ou envoyer le score. STANDALONE (via
-         * NotificationManager, PAS startForeground) : elle ne dépend pas d'un
-         * service vivant et survit au teardown du recorder. Piloté depuis Dart
-         * (coordinator → arrêt propre en cours de match), retiré à la reprise,
-         * au forfait, à l'état terminal ou à la sortie de salle.
-         */
-        fun postStoppedNotification(ctx: Context) {
-            ensureChannel(ctx)
-            val openIntent = Intent(ctx, MainActivity::class.java).apply {
-                addFlags(
-                    Intent.FLAG_ACTIVITY_NEW_TASK or
-                        Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
-                        Intent.FLAG_ACTIVITY_SINGLE_TOP,
-                )
-            }
-            // requestCode dédié (10) pour ne pas collisionner avec les
-            // PendingIntent de la FGS (0=ouvrir, 1=stop, 2=submit, 3=copy).
-            val openPending =
-                PendingIntent.getActivity(ctx, 10, openIntent, pendingFlagsFor())
-            val text =
-                "Appuie sur Ouvrir pour revenir dans ARENA et reprendre."
-            val notif = NotificationCompat.Builder(ctx, CHANNEL_ID)
-                .setContentTitle("ARENA — Enregistrement arrêté")
-                .setContentText(text)
-                .setStyle(NotificationCompat.BigTextStyle().bigText(text))
-                .setSmallIcon(android.R.drawable.ic_menu_revert)
-                .setOngoing(false)
-                .setAutoCancel(true)
-                .setContentIntent(openPending)
-                .addAction(android.R.drawable.ic_menu_revert, "Ouvrir", openPending)
-                .build()
-            try {
-                val mgr = ctx.getSystemService(Context.NOTIFICATION_SERVICE)
-                    as NotificationManager
-                mgr.notify(STOPPED_NOTIF_ID, notif)
-            } catch (e: Exception) {
-                Log.w(TAG, "postStoppedNotification failed", e)
-            }
-        }
-
-        /** Retire la notif « arrêté » (reprise, forfait, terminal, sortie). */
-        fun cancelStoppedNotification(ctx: Context) {
-            try {
-                val mgr = ctx.getSystemService(Context.NOTIFICATION_SERVICE)
-                    as NotificationManager
-                mgr.cancel(STOPPED_NOTIF_ID)
-            } catch (e: Exception) {
-                Log.w(TAG, "cancelStoppedNotification failed", e)
-            }
-        }
     }
 
     private var projection: MediaProjection? = null
@@ -296,9 +208,6 @@ class ArenaRecorderService : Service() {
                 recordStartMillis = System.currentTimeMillis()
                 notifTitle = title
                 notifMessage = message
-                // Reprise : retire une éventuelle notif « arrêté » restante avant
-                // de reposter la FGS d'enregistrement.
-                cancelStoppedNotification(applicationContext)
                 startForegroundCompat(title, message)
                 try {
                     startRecording(resultCode, resultData, filename)
@@ -570,7 +479,20 @@ class ArenaRecorderService : Service() {
     }
 
     private fun startForegroundCompat(title: String, message: String) {
-        ensureChannel(applicationContext)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val mgr = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            if (mgr.getNotificationChannel(CHANNEL_ID) == null) {
+                mgr.createNotificationChannel(
+                    NotificationChannel(
+                        CHANNEL_ID,
+                        "ARENA recorder",
+                        NotificationManager.IMPORTANCE_LOW
+                    ).apply {
+                        description = "Enregistrement anti-triche en cours"
+                    }
+                )
+            }
+        }
         val notification = buildNotification()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(

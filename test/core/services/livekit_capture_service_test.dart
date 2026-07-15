@@ -96,14 +96,6 @@ class _FakeOverlay implements RecordingOverlayController {
   @override
   Future<void> stop() async => stopCount++;
 
-  int idleCount = 0;
-
-  @override
-  Future<void> idle() async => idleCount++;
-
-  @override
-  void repushRecordingFace() {}
-
   @override
   Future<void> pause() async {}
 

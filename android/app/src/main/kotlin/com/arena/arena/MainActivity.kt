@@ -154,21 +154,6 @@ class MainActivity : FlutterActivity() {
                         }
                         result.success(true)
                     }
-                    "showStoppedNotification" -> {
-                        // Arrêt propre en cours de match → notif « Enregistrement
-                        // arrêté » (bouton « Ouvrir ») : surface FIABLE de reprise,
-                        // en doublon du bouton flottant idle (gris « Reprendre »)
-                        // dont le rendu reste intermittent. Postée directement via
-                        // NotificationManager (pas de service à réveiller) → marche
-                        // même app en arrière-plan (auto-stop 25 min) et sans
-                        // superposition (Pixel 9 / Android 15).
-                        ArenaRecorderService.postStoppedNotification(applicationContext)
-                        result.success(true)
-                    }
-                    "hideStoppedNotification" -> {
-                        ArenaRecorderService.cancelStoppedNotification(applicationContext)
-                        result.success(true)
-                    }
                     "startLivekitCaptureFgs" -> {
                         startLivekitCaptureFgs(result)
                     }
