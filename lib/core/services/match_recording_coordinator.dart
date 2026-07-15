@@ -142,7 +142,24 @@ class MatchRecordingCoordinator {
     await _recording.start(matchId: matchId, playerId: playerId);
     // Transforme l'overlay code-sender du HOME s'il est déjà ouvert, sinon
     // affiche le bouton d'enregistrement (quirk MIUI #4 : pas de 2ᵉ show).
-    await _overlay.startOrMorphToRecording(matchId: matchId);
+    //
+    // BEST-EFFORT : le bouton flottant est du CONFORT, pas la preuve. À la
+    // reprise, l'engine de l'overlay peut être mort (app revenue au 1er plan +
+    // boîte MediaProjection) → `resizeOverlay` lève `MissingPluginException` sur
+    // le canal `x-slayer/overlay`. Sans cette garde, l'exception remontait et
+    // FAISAIT ÉCHOUER tout le redémarrage de l'enregistrement (bannière
+    // « Recording indisponible ») alors que la MediaProjection, elle, a bien
+    // (re)démarré. On avale donc l'échec overlay : l'enregistrement continue et
+    // la NOTIF de contrôle reste la surface fiable (le bouton gris se
+    // rattrapera au prochain passage en arrière-plan via `repushRecordingFace`).
+    try {
+      await _overlay.startOrMorphToRecording(matchId: matchId);
+    } catch (e, st) {
+      await Sentry.captureException(e, stackTrace: st);
+      if (kDebugMode) {
+        debugPrint('[coordinator] overlay bring-up failed (non-fatal): $e');
+      }
+    }
 
     await _actionsSub?.cancel();
     _actionsSub = _overlay.actions.listen(_onOverlayAction);

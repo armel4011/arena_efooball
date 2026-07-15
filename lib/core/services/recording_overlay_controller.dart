@@ -204,9 +204,27 @@ class RecordingOverlayController {
     // recording (stop/pause/forfait) remontent bien. No-op si déjà liés.
     _bindListener();
     _bindIsolatePort();
-    await _platform.resizeToRecording();
+    // Le resize passe par le canal `x-slayer/overlay` de l'ENGINE de l'overlay,
+    // qui peut être mort à la reprise (app revenue au 1er plan + boîte
+    // MediaProjection) → `MissingPluginException`. On l'avale pour NE PAS
+    // empêcher le push `mode_recording` + les ticks juste en dessous : le bouton
+    // a alors une chance de repasser rouge sans resize (autre canal) et le chrono
+    // repart. La taille reste celle de l'idle — cosmétique, non bloquant.
+    try {
+      await _platform.resizeToRecording();
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[overlay] resizeToRecording failed (non-fatal): $e');
+      }
+    }
     _startedAt = DateTime.now();
-    await _platform.shareData(RecordingOverlayMessages.modeRecording());
+    try {
+      await _platform.shareData(RecordingOverlayMessages.modeRecording());
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[overlay] morph shareData failed (non-fatal): $e');
+      }
+    }
     // Remplace le heartbeat code-sender par les ticks recording.
     _startTicking();
     // Rafale anti-drop : quand on réveille le canal depuis l'état idle, le tout

@@ -6,6 +6,7 @@ import 'package:arena/core/services/recording_overlay_controller.dart';
 import 'package:arena/core/services/recording_service.dart';
 import 'package:arena/data/models/match_stream.dart';
 import 'package:arena/data/repositories/match_repository.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -114,6 +115,35 @@ void main() {
     verify(() => recording.start(matchId: 'match-1', playerId: 'player-1'))
         .called(1);
     verify(() => overlay.startOrMorphToRecording(matchId: 'match-1')).called(1);
+    expect(coordinator.state, isA<CoordinatorRecording>());
+  });
+
+  test('overlay bring-up qui throw NE bloque PAS le démarrage (best-effort)',
+      () async {
+    // À la reprise, l'engine de l'overlay peut être mort → resizeOverlay lève
+    // MissingPluginException. Le bouton flottant est du CONFORT : l'échec ne
+    // doit pas faire échouer le redémarrage de l'enregistrement.
+    when(
+      () => overlay.startOrMorphToRecording(
+        matchId: any(named: 'matchId'),
+        simpleMode: any(named: 'simpleMode'),
+      ),
+    ).thenThrow(
+      MissingPluginException(
+        'No implementation found for method resizeOverlay '
+        'on channel x-slayer/overlay',
+      ),
+    );
+
+    await coordinator.startForMatch(
+      matchId: 'match-1',
+      playerId: 'player-1',
+      opponentId: 'player-2',
+    );
+
+    // Recording a bien démarré ET l'état est passé à Recording malgré l'overlay.
+    verify(() => recording.start(matchId: 'match-1', playerId: 'player-1'))
+        .called(1);
     expect(coordinator.state, isA<CoordinatorRecording>());
   });
 
