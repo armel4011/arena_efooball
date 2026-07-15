@@ -71,6 +71,14 @@ class _MatchRecordingLifecycleState
   /// ouvre le guide d'activation. La preuve est capturée quand même.
   bool _overlayMissing = false;
 
+  /// Vrai tant que le match peut ENCORE tourner (donc l'enregistrement
+  /// relançable) : mêmes statuts « live » que `_maybeReact`. À l'état terminal
+  /// ou en litige on n'offre pas la reprise via la notif « arrêté ».
+  static bool _isResumableStatus(MatchStatus s) =>
+      s == MatchStatus.inProgress ||
+      s == MatchStatus.scorePending ||
+      s == MatchStatus.awaitingValidation;
+
   bool get _isPlayer =>
       widget.selfId != null &&
       (widget.selfId == widget.match.player1Id ||
@@ -421,6 +429,13 @@ class _MatchRecordingLifecycleState
     try {
       await ref.read(recordingOverlayControllerProvider).stop();
     } catch (_) {}
+    // …et retrait de la notif « arrêté » (le flux est fini, plus de reprise).
+    // `stopCleanly()` ci-dessus a émis CoordinatorStopped, mais le statut est
+    // déjà terminal → le listener ne l'a pas affichée ; ce hide couvre le cas
+    // où elle avait été postée juste avant la bascule terminale.
+    unawaited(
+      ref.read(nativeLifecycleEventsProvider).hideStoppedNotification(),
+    );
     await _stopLiveKitIfRunning();
   }
 
@@ -565,6 +580,27 @@ class _MatchRecordingLifecycleState
                 code: code,
               ),
         );
+      })
+      // Notif « Enregistrement arrêté » (bouton « Ouvrir ») : surface FIABLE de
+      // reprise après un arrêt propre EN COURS de match, en doublon du bouton
+      // flottant idle (gris « Reprendre ») dont le rendu reste intermittent
+      // (limite flutter_overlay_window). On ne l'affiche que pour un match
+      // ENCORE actif (résumable) ; à l'état terminal, `_stopOnTerminal` la
+      // retire (le flux est fini). Retirée aussi dès qu'on repart en
+      // enregistrement ou qu'un forfait est déclaré.
+      ..listen<AsyncValue<CoordinatorState>>(coordinatorStateProvider, (_, next) {
+        if (!_isAndroidNative || !_isPlayer) return;
+        final s = next.valueOrNull;
+        final events = ref.read(nativeLifecycleEventsProvider);
+        if (s is CoordinatorStopped) {
+          if (_isResumableStatus(widget.match.status)) {
+            unawaited(events.showStoppedNotification());
+          } else {
+            unawaited(events.hideStoppedNotification());
+          }
+        } else if (s is CoordinatorRecording || s is CoordinatorForfeited) {
+          unawaited(events.hideStoppedNotification());
+        }
       })
       ..listen(coordinatorFocusRequestsProvider, (_, __) {
         if (!mounted) return;

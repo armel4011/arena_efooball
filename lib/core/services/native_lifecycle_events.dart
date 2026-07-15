@@ -71,6 +71,29 @@ class NativeLifecycleEvents {
     }
   }
 
+  /// Affiche la notif « Enregistrement arrêté » (bouton « Ouvrir ») : surface
+  /// FIABLE de reprise après un arrêt propre EN COURS de match, portée du
+  /// bouton flottant idle (gris « Reprendre ») dont le rendu reste intermittent
+  /// (limite flutter_overlay_window). Marche sans superposition (Pixel 9) et
+  /// app en arrière-plan (auto-stop 25 min). No-op hors Android / canal down.
+  Future<void> showStoppedNotification() async {
+    try {
+      await _method.invokeMethod<void>('showStoppedNotification');
+    } catch (_) {
+      // Canal down (CI / autre OS) — non bloquant.
+    }
+  }
+
+  /// Retire la notif « arrêté » : reprise, forfait, état terminal, sortie de
+  /// salle. No-op si aucune n'est affichée.
+  Future<void> hideStoppedNotification() async {
+    try {
+      await _method.invokeMethod<void>('hideStoppedNotification');
+    } catch (_) {
+      // Canal down (CI / autre OS) — non bloquant.
+    }
+  }
+
   void _onNative(dynamic raw) {
     if (raw is! Map) return;
     final name = raw['event'];
