@@ -168,20 +168,38 @@ class _MatchRecordingLifecycleState
         status == MatchStatus.forfeited;
 
     if (isLive && _selfJoined && !_startAttempted) {
-      // Lock recording if this player has already submitted a score
-      // for the match. Once a score is in, the match is either
-      // pending-opponent, in dispute, or up for admin validation —
-      // recording adds no value and would just chew battery.
-      final submissions =
-          ref.read(matchScoreSubmissionsProvider(widget.match.id)).valueOrNull;
-      final alreadySubmitted = submissions?.any(
-            (s) => s['created_by'] == widget.selfId,
-          ) ??
-          false;
-      if (alreadySubmitted) {
-        _startAttempted = true;
-        return;
+      // Posé AVANT tout `await` ci-dessous : sans ça, deux `_maybeReact`
+      // concurrents (changement de statut pendant qu'on attend) franchiraient
+      // tous les deux la garde et demanderaient DEUX fois le consentement de
+      // capture. Toutes les sorties de ce bloc le posaient déjà — on le
+      // remonte simplement pour fermer la fenêtre de ré-entrance.
+      _startAttempted = true;
+
+      // Ce joueur a-t-il déjà soumis son score ? Si oui, le match est joué
+      // (en attente de l'adversaire, en litige ou en validation admin) :
+      // filmer n'apporte rien et userait la batterie.
+      //
+      // ON ATTEND la réponse au lieu de lire `.valueOrNull` : un provider
+      // encore en chargement rendait `null`, que le `?? false` traduisait en
+      // « n'a rien soumis » — donc « relance la capture ». La garde traitait
+      // « je ne sais pas encore » comme « non », précisément au premier build
+      // après un remontage du widget, quand elle n'est justement pas chargée.
+      // D'où une boîte « ARENA va commencer à capturer » qui resurgissait de
+      // façon intermittente sur un match déjà joué.
+      bool alreadySubmitted;
+      try {
+        final submissions =
+            await ref.read(matchScoreSubmissionsProvider(widget.match.id).future);
+        alreadySubmitted =
+            submissions.any((s) => s['created_by'] == widget.selfId);
+      } catch (_) {
+        // Vraie panne (hors-ligne) : on ne saura pas. On démarre quand même —
+        // une capture de trop coûte une boîte de dialogue, une capture
+        // manquante coûte la PREUVE du match.
+        alreadySubmitted = false;
       }
+      if (!mounted) return;
+      if (alreadySubmitted) return;
 
       // Garde anti-re-demande : si une capture tourne DÉJÀ (le coordinator et
       // le service LiveKit vivent à portée provider, ils survivent au remount de
@@ -189,7 +207,7 @@ class _MatchRecordingLifecycleState
       // permission MediaProjection. Sans ça, `requestRecordingBundle()` ci-dessous
       // fait re-surgir la boîte de permission d'enregistrement alors que ça filme
       // déjà — le `startForMatch` refuserait le doublon, mais trop tard (la boîte
-      // a déjà été montrée). On marque `_startAttempted` pour rester cohérent.
+      // a déjà été montrée).
       //
       // Stopped/Forfeited = l'enregistrement a DÉJÀ eu lieu et s'est arrêté pour
       // ce match : PAS de reprise. Un arrêt en cours de match est DÉFINITIF — on
@@ -202,11 +220,8 @@ class _MatchRecordingLifecycleState
           coordState is CoordinatorStopped ||
           coordState is CoordinatorForfeited ||
           liveKitCapturing) {
-        _startAttempted = true;
         return;
       }
-
-      _startAttempted = true;
 
       // Provider anti-triche actif — lecture réelle de app_config (pas le
       // best-effort sync : on est déjà dans un contexte async one-shot).
