@@ -61,8 +61,7 @@ class MatchRecordingLifecycle extends ConsumerStatefulWidget {
 }
 
 class _MatchRecordingLifecycleState
-    extends ConsumerState<MatchRecordingLifecycle>
-    with WidgetsBindingObserver {
+    extends ConsumerState<MatchRecordingLifecycle> {
   bool _startAttempted = false;
   String? _startError;
 
@@ -100,40 +99,10 @@ class _MatchRecordingLifecycleState
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _maybeReact();
       _pushRoomCodeToOverlay();
     });
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Retour de l'app au premier plan (ex. tap « Reprendre » du bouton flottant
-    // qui fait `focus_main`, ou retour depuis eFootball) : si on est à l'étape 2
-    // (isLive, joueur ayant rejoint, score PAS encore envoyé) et que
-    // l'enregistrement est COUPÉ, on le RE-PROPOSE. Le flag `_startAttempted` est
-    // réarmé pour que `_maybeReact` réévalue ; sa garde interne saute si la
-    // capture tourne déjà (pas de re-demande inutile) et si le score est envoyé.
-    if (state == AppLifecycleState.resumed) {
-      _startAttempted = false;
-      _maybeReact();
-    } else if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.hidden) {
-      // ARENA repasse en arrière-plan (le joueur retourne sur eFootball) : c'est
-      // le moment FIABLE pour (re)pousser le visage « recording » sur l'overlay.
-      // Après un redémarrage via « Reprendre », `morphToRecording` a poussé
-      // `mode_recording` alors qu'ARENA était au premier plan → message perdu
-      // sur certains OEM (bouton resté gris). Ici le canal shareData fonctionne
-      // → le bouton vire enfin rouge, pile quand le joueur le regarde.
-      ref.read(matchRecordingCoordinatorProvider).refreshOverlayFace();
-    }
   }
 
   @override
@@ -227,11 +196,17 @@ class _MatchRecordingLifecycleState
       // fait re-surgir la boîte de permission d'enregistrement alors que ça filme
       // déjà — le `startForMatch` refuserait le doublon, mais trop tard (la boîte
       // a déjà été montrée). On marque `_startAttempted` pour rester cohérent.
+      //
+      // Stopped/Forfeited = l'enregistrement a DÉJÀ eu lieu et s'est arrêté pour
+      // ce match : PAS de reprise. Un arrêt en cours de match est DÉFINITIF — on
+      // ne relance jamais (ni ici, ni au retour au premier plan).
       final coordState = ref.read(matchRecordingCoordinatorProvider).state;
       final liveKitCapturing =
           ref.read(liveKitCaptureServiceProvider).state is! LiveKitCaptureIdle;
       if (coordState is CoordinatorRecording ||
           coordState is CoordinatorPaused ||
+          coordState is CoordinatorStopped ||
+          coordState is CoordinatorForfeited ||
           liveKitCapturing) {
         _startAttempted = true;
         return;
@@ -416,8 +391,8 @@ class _MatchRecordingLifecycleState
         debugPrint('[recording] terminal stopCleanly failed: $e');
       }
     }
-    // Match terminé → fermeture RÉELLE de l'overlay (stopCleanly l'a laissé en
-    // idle pour permettre un redémarrage, ce qui n'a plus lieu d'être ici).
+    // Match terminé → fermeture RÉELLE de l'overlay (idempotent : `stopCleanly`
+    // le ferme déjà pour un arrêt en cours de match).
     try {
       await ref.read(recordingOverlayControllerProvider).stop();
     } catch (_) {}
@@ -568,19 +543,14 @@ class _MatchRecordingLifecycleState
       })
       ..listen(coordinatorFocusRequestsProvider, (_, __) {
         if (!mounted) return;
-        // Tap sur le bouton flottant. Si l'enregistrement est COUPÉ (bouton idle
-        // « Reprendre »), on RELANCE directement (l'app est déjà ramenée au 1er
-        // plan par le coordinator, donc `didChangeAppLifecycleState` ne refire
-        // pas forcément). Sinon (enregistrement actif), on ouvre la feuille
-        // d'actions comme avant.
+        // Tap sur le bouton flottant pendant l'enregistrement → feuille
+        // d'actions. Hors enregistrement, il n'y a plus de bouton flottant (fermé
+        // à l'arrêt) donc plus de focus à traiter : pas de relance.
         final coordState = ref.read(matchRecordingCoordinatorProvider).state;
         final capturing =
             coordState is CoordinatorRecording || coordState is CoordinatorPaused;
         if (capturing) {
           MatchRecordingActionsSheet.show(context);
-        } else {
-          _startAttempted = false;
-          _maybeReact();
         }
       });
 

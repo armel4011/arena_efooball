@@ -86,21 +86,11 @@ abstract final class RecordingOverlayMessages {
   /// pousse un tick `codeEntry:false` → retour au bouton d'enregistrement.
   static const String askExitCodeType = 'ask_exit_code';
 
-  /// `main → overlay` — bascule l'overlay en mode « ARRÊTÉ » (l'enregistrement
-  /// s'est arrêté mais la FENÊTRE overlay reste vivante pour permettre un
-  /// redémarrage sans 2ᵉ `showOverlay` — quirk MIUI #4). Visuel DISTINCT de la
-  /// pause : bouton gris « Reprendre », pas de chrono. Le morph recording le
-  /// remplace au redémarrage.
-  static const String modeIdleType = 'mode_idle';
-
   /// Construit le message `main → overlay` de bascule en mode code-sender.
   static Map<String, dynamic> modeCodeSender() => {'type': modeCodeSenderType};
 
   /// Construit le message `main → overlay` de bascule en mode recording.
   static Map<String, dynamic> modeRecording() => {'type': modeRecordingType};
-
-  /// Construit le message `main → overlay` de bascule en mode ARRÊTÉ.
-  static Map<String, dynamic> modeIdle() => {'type': modeIdleType};
 
   /// Construit le message `overlay → main` portant le code room saisi.
   static Map<String, dynamic> submitRoomCode(String code) => {
@@ -221,10 +211,6 @@ enum OverlayMode {
 
   /// Bouton d'enregistrement anti-triche (cluster 4-minis + chrono).
   recording,
-
-  /// Enregistrement ARRÊTÉ mais overlay gardé vivant (bouton gris
-  /// « Reprendre ») — permet un redémarrage sans re-`showOverlay`.
-  idle,
 }
 
 /// Déduit le mode overlay d'un message `main → overlay`, ou `null` si le
@@ -240,8 +226,6 @@ OverlayMode? overlayModeFromMessage(Object? raw) {
   switch (raw['type']) {
     case RecordingOverlayMessages.modeCodeSenderType:
       return OverlayMode.codeSender;
-    case RecordingOverlayMessages.modeIdleType:
-      return OverlayMode.idle;
     case RecordingOverlayMessages.modeRecordingType:
     case RecordingOverlayMessages.tickType:
     case RecordingOverlayMessages.warnType:

@@ -142,7 +142,21 @@ class MatchRecordingCoordinator {
     await _recording.start(matchId: matchId, playerId: playerId);
     // Transforme l'overlay code-sender du HOME s'il est déjà ouvert, sinon
     // affiche le bouton d'enregistrement (quirk MIUI #4 : pas de 2ᵉ show).
-    await _overlay.startOrMorphToRecording(matchId: matchId);
+    //
+    // BEST-EFFORT : le bouton flottant est du CONFORT, pas la preuve. Le bring-up
+    // overlay peut lever `MissingPluginException` (canal `x-slayer/overlay` de
+    // l'engine overlay indisponible selon l'état OEM). Sans cette garde,
+    // l'exception ferait ÉCHOUER tout le démarrage de l'enregistrement (bannière
+    // « Recording indisponible ») alors que la MediaProjection a bien démarré. On
+    // avale donc l'échec overlay : l'enregistrement continue quoi qu'il arrive.
+    try {
+      await _overlay.startOrMorphToRecording(matchId: matchId);
+    } catch (e, st) {
+      await Sentry.captureException(e, stackTrace: st);
+      if (kDebugMode) {
+        debugPrint('[coordinator] overlay bring-up failed (non-fatal): $e');
+      }
+    }
 
     await _actionsSub?.cancel();
     _actionsSub = _overlay.actions.listen(_onOverlayAction);
@@ -191,16 +205,16 @@ class MatchRecordingCoordinator {
 
   Future<String?> _doStopCleanly() async {
     final result = await _recording.stop();
-    // GÈLE l'overlay sans le fermer (idle) : un redémarrage dans le même match
-    // morphera la fenêtre existante au lieu de refaire un `showOverlay` (qui
-    // figerait le panneau — quirk flutter_overlay_window). Fermeture réelle à la
-    // fin de vie du match (dispose / terminal / Live).
-    await _overlay.idle();
+    // Arrêt = DÉFINITIF pour ce match : plus de reprise. On FERME l'overlay (pas
+    // d'état idle « Reprendre ») et on coupe les abonnements — un arrêt en cours
+    // de match ne relance plus l'enregistrement.
+    try {
+      await _overlay.stop();
+    } catch (_) {}
     _graceTimer?.cancel();
     _graceTimer = null;
-    // On GARDE `_actionsSub` vivant : l'overlay reste affiché (idle « Reprendre »)
-    // et son tap doit continuer d'arriver au coordinator pour relancer. (Il est
-    // ré-abonné proprement au prochain startForMatch, et annulé au dispose.)
+    await _actionsSub?.cancel();
+    _actionsSub = null;
     await _roomCodeSub?.cancel();
     _roomCodeSub = null;
     final matchId = _matchId ?? '';
@@ -306,17 +320,6 @@ class MatchRecordingCoordinator {
   /// Public entry for the in-app actions sheet to declare a forfeit.
   /// Mirrors the overlay "Arrêter (forfait)" tile.
   Future<void> declareForfeit() => _declareForfeit('user_chose_forfeit');
-
-  /// Re-synchronise le visage de l'overlay avec l'état courant. Appelé quand
-  /// ARENA repasse en arrière-plan : force le bouton flottant à revenir en
-  /// ROUGE après un redémarrage (le message `mode_recording` du morph étant
-  /// perdu tant qu'ARENA est au premier plan sur certains OEM — cf.
-  /// `RecordingOverlayController.repushRecordingFace`). No-op hors recording.
-  void refreshOverlayFace() {
-    if (_state is CoordinatorRecording) {
-      _overlay.repushRecordingFace();
-    }
-  }
 
   Future<void> _onPause() async {
     final matchId = _matchId;
