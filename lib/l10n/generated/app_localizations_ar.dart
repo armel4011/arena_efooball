@@ -876,7 +876,20 @@ class AppLocalizationsAr extends AppLocalizations {
   String get compDetailTabNextMatch => 'المباراة التالية';
 
   @override
+  String get compDetailTabCalendar => 'الجدول';
+
+  @override
   String get compDetailTabRanking => 'الترتيب';
+
+  @override
+  String get compScheduleEmptyTitle => 'لا توجد مباريات مجدولة';
+
+  @override
+  String get compScheduleEmptyDescription =>
+      'سيظهر الجدول بمجرد أن ينشئ المنظم شجرة المباريات.';
+
+  @override
+  String get compScheduleUnscheduled => 'بانتظار الجدولة';
 
   @override
   String get compDetailParticipantsTitle => 'قائمة المشاركين';

@@ -11,8 +11,8 @@ class _DetailBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return DefaultTabController(
-      length: 5,
-      // L'onglet par défaut reste Infos ; ScrollableTab car 5 onglets.
+      length: 6,
+      // L'onglet par défaut reste Infos ; ScrollableTab car 6 onglets.
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -43,6 +43,9 @@ class _DetailBody extends StatelessWidget {
               // « Prochain match » — juste à côté de Bracket : les matchs
               // actifs du joueur DANS cette compétition.
               Tab(text: l10n.compDetailTabNextMatch),
+              // « Calendrier » — le planning COMPLET (tous joueurs, tous
+              // formats), là où « Prochain match » ne montre que les siens.
+              Tab(text: l10n.compDetailTabCalendar),
               Tab(text: l10n.compDetailTabRanking),
             ],
           ),
@@ -60,6 +63,7 @@ class _DetailBody extends StatelessWidget {
                 else
                   GroupStandingsPage(competitionId: competition.id),
                 UpcomingMatchesList(competitionId: competition.id),
+                CompetitionScheduleView(competitionId: competition.id),
                 _RankingTab(competition: competition),
               ],
             ),
