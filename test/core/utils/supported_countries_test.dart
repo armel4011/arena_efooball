@@ -90,4 +90,33 @@ void main() {
       expect(isCemacCountry(''), isFalse);
     });
   });
+
+  group('needsRecipientNumberFlow', () {
+    test('CEMAC hors Cameroun → true (transfert transfrontalier)', () {
+      for (final code in const ['GA', 'TD', 'CF', 'CG', 'GQ']) {
+        expect(needsRecipientNumberFlow(code), isTrue, reason: code);
+        expect(
+          needsRecipientNumberFlow(code.toLowerCase()),
+          isTrue,
+          reason: code,
+        );
+      }
+    });
+
+    test('Cameroun → false : paiement domestique, code marchand seul', () {
+      expect(needsRecipientNumberFlow('CM'), isFalse);
+      expect(needsRecipientNumberFlow('cm'), isFalse);
+    });
+
+    test('hors CEMAC (UEMOA / autres) → false', () {
+      for (final code in const ['SN', 'CI', 'CD', 'GN', 'FR']) {
+        expect(needsRecipientNumberFlow(code), isFalse, reason: code);
+      }
+    });
+
+    test('null / vide → false', () {
+      expect(needsRecipientNumberFlow(null), isFalse);
+      expect(needsRecipientNumberFlow(''), isFalse);
+    });
+  });
 }

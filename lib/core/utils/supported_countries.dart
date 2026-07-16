@@ -47,14 +47,27 @@ const List<SupportedCountry> kSupportedCountries = <SupportedCountry>[
 ];
 
 /// Les 6 États de la zone CEMAC (Afrique centrale, franc CFA BEAC / XAF).
-/// Sert à n'activer le flux de paiement CEMAC (numéro à copier + étapes +
-/// tuto) que pour ces pays.
 const Set<String> kCemacCountryCodes = {'CM', 'GA', 'TD', 'CF', 'CG', 'GQ'};
 
 /// `true` si [countryCode] (ISO alpha-2, casse indifférente) est un pays CEMAC.
 bool isCemacCountry(String? countryCode) {
   if (countryCode == null || countryCode.isEmpty) return false;
   return kCemacCountryCodes.contains(countryCode.toUpperCase());
+}
+
+/// `true` si le paiement depuis [countryCode] exige de saisir un NUMÉRO
+/// DESTINATAIRE (numéro à copier + étapes + tuto), parce que le code marchand
+/// n'ouvre là-bas que le menu de l'opérateur : les pays CEMAC **sauf le
+/// Cameroun**.
+///
+/// Le destinataire ARENA étant camerounais, payer depuis le Gabon ou le Tchad
+/// est un transfert TRANSFRONTALIER — d'où le choix du pays de destination puis
+/// la saisie du numéro. Depuis le Cameroun le paiement est DOMESTIQUE : le code
+/// marchand suffit, comme en zone UEMOA (décision produit 2026-07-16).
+bool needsRecipientNumberFlow(String? countryCode) {
+  if (countryCode == null || countryCode.isEmpty) return false;
+  final code = countryCode.toUpperCase();
+  return code != 'CM' && isCemacCountry(code);
 }
 
 /// Retourne l'indicatif E.164 du pays (ex: `'CI'` → `'+225'`). Fallback
