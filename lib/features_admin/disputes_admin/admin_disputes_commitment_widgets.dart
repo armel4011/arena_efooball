@@ -259,11 +259,15 @@ class _VerdictButtons extends ConsumerWidget {
         // 3e issue : quand les preuves ne départagent PAS, le tapis vert punit
         // peut-être un innocent et l'annulation efface un match qui a eu lieu.
         // On remet les deux joueurs sur le terrain, sans coupable.
+        // Sans litige ouvert, pas de rejeu : le serveur refuse, l'UI doit le
+        // refléter plutôt que de laisser tenter.
         ArenaButton(
           label: '🔄 FAIRE REJOUER',
           variant: ArenaButtonVariant.secondary,
           fullWidth: true,
-          onPressed: verdictLocked ? null : () => _replay(context, ref),
+          onPressed: verdictLocked || dispute == null
+              ? null
+              : () => _replay(context, ref),
         ),
         const SizedBox(height: ArenaSpacing.xs),
         ArenaButton(
@@ -280,6 +284,8 @@ class _VerdictButtons extends ConsumerWidget {
   /// serveur annule le résultat précédent (stats, bracket, classement) et
   /// clôture le litige SANS désigner de coupable.
   Future<void> _replay(BuildContext context, WidgetRef ref) async {
+    final disputeId = dispute?.id;
+    if (disputeId == null) return;
     final justification = justificationController.text.trim();
     if (justification.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -312,7 +318,7 @@ class _VerdictButtons extends ConsumerWidget {
     try {
       await ref.read(adminDisputesRepositoryProvider).replayMatch(
             matchId: match.id,
-            disputeId: dispute?.id,
+            disputeId: disputeId,
             justification: justification,
             scheduledAt: scheduledAt,
           );

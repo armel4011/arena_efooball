@@ -12,13 +12,15 @@
 --   • litige : clos SANS guilty_party_id (un rejeu n'accuse personne — sinon
 --     trg_three_strikes_ban sanctionnerait) ;
 --   • bracket : le vainqueur est dé-propagé du match suivant ;
+--   • SEUL UN MATCH EN LITIGE se rejoue : dispute_id NULL / inconnu / d'un autre
+--     match / déjà tranché → refus (cf. 20260716140000) ;
 --   • refus : payouts existants, match suivant déjà engagé, non-admin.
 --
 -- Superuser, rollback final.
 -- ════════════════════════════════════════════════════════════════════
 
 begin;
-select plan(10);
+select plan(14);
 
 -- ─── Fixtures ───────────────────────────────────────────────────────
 insert into auth.users(id) values
@@ -86,6 +88,33 @@ select throws_ok(
        'da000000-0000-0000-0000-0000000000d1', 'preuves illisibles', now() - interval '1 hour') $$,
   '22023', NULL, 'date passée : refuse (22023)');
 
+-- ─── SEUL UN MATCH EN LITIGE PEUT ÊTRE REJOUÉ ───────────────────────
+-- Sans ces gardes, `update disputes where id = p_dispute_id` touchait 0 ligne
+-- en silence et le match était rejoué quand même : n'importe quel match, sans
+-- litige, voyait ses stats décrémentées et son bracket dé-propagé.
+select throws_ok(
+  $$ select public.replay_match('da000000-0000-0000-0000-0000000000f1',
+       NULL, 'sans litige', now() + interval '1 day') $$,
+  '22023', NULL, 'dispute_id NULL : refuse (seul un match en litige se rejoue)');
+
+select throws_ok(
+  $$ select public.replay_match('da000000-0000-0000-0000-0000000000f1',
+       'da000000-0000-0000-0000-0000000000de', 'litige inexistant', now() + interval '1 day') $$,
+  '22023', NULL, 'litige inconnu : refuse');
+
+-- Un litige RÉEL, mais qui porte sur un AUTRE match : ne doit pas servir de
+-- passe-droit pour rejouer celui-ci.
+insert into matches(id,competition_id,round,match_number,player1_id,player2_id,status)
+values ('da000000-0000-0000-0000-0000000000f2','da000000-0000-0000-0000-0000000000c0',1,2,
+        'da000000-0000-0000-0000-000000000001','da000000-0000-0000-0000-000000000009','completed');
+insert into disputes(id,match_id,opened_by,status,reason)
+values ('da000000-0000-0000-0000-0000000000d2','da000000-0000-0000-0000-0000000000f2',
+        'da000000-0000-0000-0000-000000000009','open','autre match');
+select throws_ok(
+  $$ select public.replay_match('da000000-0000-0000-0000-0000000000f1',
+       'da000000-0000-0000-0000-0000000000d2', 'litige d un autre match', now() + interval '1 day') $$,
+  '22023', NULL, "litige d'un AUTRE match : refuse");
+
 -- ─── Cas nominal ────────────────────────────────────────────────────
 select lives_ok(
   $$ select public.replay_match('da000000-0000-0000-0000-0000000000f1',
@@ -126,13 +155,26 @@ select is(
   row('ongoing', true)::text,
   'compétition : rouverte en ongoing, completed_at effacé');
 
+-- ─── Refus : le litige vient d'être clos par le rejeu ───────────────
+-- Sinon un vieux litige clos servirait à rejouer le même match indéfiniment.
+select throws_ok(
+  $$ select public.replay_match('da000000-0000-0000-0000-0000000000f1',
+       'da000000-0000-0000-0000-0000000000d1', 'rejouer sur un litige clos',
+       now() + interval '2 days') $$,
+  '22023', NULL, 'litige déjà tranché : refuse (pas de rejeu en boucle)');
+
 -- ─── Refus : des gains ont déjà été générés ─────────────────────────
+-- Litige NEUF : d1 est clos depuis le rejeu, il lèverait avant d'atteindre la
+-- garde payouts — le test passerait pour la mauvaise raison.
+insert into disputes(id,match_id,opened_by,status,reason)
+values ('da000000-0000-0000-0000-0000000000d3','da000000-0000-0000-0000-0000000000f1',
+        'da000000-0000-0000-0000-000000000002','open','litige rouvert');
 insert into payouts(competition_id,user_id,amount_local,currency,status)
 values ('da000000-0000-0000-0000-0000000000c0','da000000-0000-0000-0000-000000000001',
         1000,'XAF','pending_admin_validation');
 select throws_ok(
   $$ select public.replay_match('da000000-0000-0000-0000-0000000000f1',
-       'da000000-0000-0000-0000-0000000000d1', 'seconde tentative', now() + interval '2 days') $$,
+       'da000000-0000-0000-0000-0000000000d3', 'seconde tentative', now() + interval '2 days') $$,
   '22023', NULL, 'payouts existants : refuse (incohérence comptable)');
 
 select * from finish();

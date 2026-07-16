@@ -271,12 +271,16 @@ class AdminDisputesRepository {
   /// Le serveur annule le résultat précédent (stats décrémentées, vainqueur
   /// dé-propagé du bracket, compétition rouverte si elle avait été clôturée),
   /// replanifie à [scheduledAt] et clôture le litige SANS désigner de coupable.
-  /// Lève si des gains ont déjà été générés ou si le match suivant est engagé.
+  ///
+  /// [disputeId] est OBLIGATOIRE : seul un match en litige se rejoue, et le
+  /// litige doit être encore ouvert et porter sur ce match (le serveur refuse
+  /// sinon). Lève aussi si des gains ont déjà été générés ou si le match suivant
+  /// est engagé.
   Future<void> replayMatch({
     required String matchId,
     required String justification,
     required DateTime scheduledAt,
-    String? disputeId,
+    required String disputeId,
   }) async {
     await _client.rpc<void>(
       'replay_match',
