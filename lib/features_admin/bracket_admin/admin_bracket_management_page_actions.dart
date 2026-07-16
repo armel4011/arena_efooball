@@ -172,8 +172,78 @@ class _AdminMatchActions extends ConsumerWidget {
           variant: ArenaButtonVariant.secondary,
           onPressed: () => _reschedule(context, ref),
         ),
+        // Décalage de TOUT le round : ses matchs partagent le même créneau,
+        // c'est l'unité de planification. Contrairement au bouton ci-dessus,
+        // celui-ci NOTIFIE les inscrits.
+        if (match.round != null) ...[
+          const SizedBox(height: ArenaSpacing.sm),
+          ArenaButton(
+            label: '🗓 DÉCALER TOUT LE ROUND ${match.round}',
+            fullWidth: true,
+            variant: ArenaButtonVariant.secondary,
+            onPressed: () => _rescheduleRound(context, ref),
+          ),
+        ],
       ],
     );
+  }
+
+  /// Décale tous les matchs NON DÉMARRÉS du round à un nouveau créneau et
+  /// notifie les inscrits confirmés (RPC `reschedule_round`). Marche même si la
+  /// compétition a déjà commencé.
+  Future<void> _rescheduleRound(BuildContext context, WidgetRef ref) async {
+    final adminId = ref.read(currentSessionProvider)?.user.id;
+    final round = match.round;
+    if (adminId == null || round == null) return;
+    final initial = match.scheduledAt?.toLocal() ?? DateTime.now();
+    final date = await showDatePicker(
+      context: context,
+      initialDate: initial.isBefore(DateTime.now()) ? DateTime.now() : initial,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (date == null || !context.mounted) return;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(initial),
+    );
+    if (time == null || !context.mounted) return;
+    final scheduledAt =
+        DateTime(date.year, date.month, date.day, time.hour, time.minute);
+
+    try {
+      final notified =
+          await ref.read(adminMatchesRepositoryProvider).rescheduleRound(
+                competitionId: match.competitionId,
+                round: round,
+                scheduledAt: scheduledAt,
+              );
+      await ref.read(adminAuditLogRepositoryProvider).record(
+        adminId: adminId,
+        action: 'round_rescheduled',
+        targetType: 'competition',
+        targetId: match.competitionId,
+        afterState: {
+          'round': round,
+          'scheduled_at': scheduledAt.toUtc().toIso8601String(),
+          'notified': notified,
+        },
+      );
+      if (!context.mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Round $round replanifié — $notified joueur(s) notifié(s).',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(arenaErrorMessage(e))),
+      );
+    }
   }
 
   Future<void> _reschedule(BuildContext context, WidgetRef ref) async {

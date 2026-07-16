@@ -579,6 +579,8 @@ class _MatchVerdictDialog {
                 ),
               ],
             ),
+            const SizedBox(height: 16),
+            _RescheduleSection(match: match),
           ],
         ),
         actions: [
@@ -653,6 +655,173 @@ class _MatchVerdictDialog {
         ),
       );
     }
+  }
+}
+
+/// Section « Horaire » du dialog de match — desktop.
+///
+/// Le desktop n'avait AUCUN moyen de changer un horaire : `reschedule` n'existait
+/// que côté mobile, alors que l'admin desktop gère le même bracket (parité
+/// mobile/desktop, audit 2026-07-13).
+///
+/// Deux portées, volontairement distinctes :
+///   * « Replanifier ce match » — décale ce seul match ;
+///   * « Décaler tout le round N » — décale tous les matchs NON DÉMARRÉS du
+///     round (leur unité de planification) ET **notifie les inscrits**.
+class _RescheduleSection extends ConsumerStatefulWidget {
+  const _RescheduleSection({required this.match});
+
+  final ArenaMatch match;
+
+  @override
+  ConsumerState<_RescheduleSection> createState() => _RescheduleSectionState();
+}
+
+class _RescheduleSectionState extends ConsumerState<_RescheduleSection> {
+  late DateTime _slot = widget.match.scheduledAt?.toLocal() ??
+      DateTime.now().add(const Duration(hours: 1));
+  bool _busy = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final round = widget.match.round;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        InfoLabel(
+          label: 'Horaire',
+          child: Row(
+            children: [
+              Expanded(
+                child: DatePicker(
+                  selected: _slot,
+                  onChanged: (d) => setState(
+                    () => _slot = DateTime(
+                      d.year,
+                      d.month,
+                      d.day,
+                      _slot.hour,
+                      _slot.minute,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TimePicker(
+                  selected: _slot,
+                  onChanged: (t) => setState(
+                    () => _slot = DateTime(
+                      _slot.year,
+                      _slot.month,
+                      _slot.day,
+                      t.hour,
+                      t.minute,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        if (_busy)
+          const Center(child: ProgressRing())
+        else
+          Row(
+            children: [
+              Expanded(
+                child: Button(
+                  onPressed: _rescheduleMatch,
+                  child: const Text('Replanifier ce match'),
+                ),
+              ),
+              if (round != null) ...[
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Button(
+                    onPressed: _rescheduleRound,
+                    child: Text('Décaler le round $round'),
+                  ),
+                ),
+              ],
+            ],
+          ),
+      ],
+    );
+  }
+
+  Future<void> _rescheduleMatch() async {
+    final adminId = ref.read(currentSessionProvider)?.user.id;
+    if (adminId == null) return;
+    setState(() => _busy = true);
+    try {
+      await ref.read(adminMatchesRepositoryProvider).reschedule(
+            matchId: widget.match.id,
+            scheduledAt: _slot,
+          );
+      await ref.read(adminAuditLogRepositoryProvider).record(
+        adminId: adminId,
+        action: 'match_rescheduled',
+        targetType: 'match',
+        targetId: widget.match.id,
+        afterState: {
+          'scheduled_at': _slot.toUtc().toIso8601String(),
+          'from': 'desktop_bracket',
+        },
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      await _showError(e);
+    }
+  }
+
+  Future<void> _rescheduleRound() async {
+    final adminId = ref.read(currentSessionProvider)?.user.id;
+    final round = widget.match.round;
+    if (adminId == null || round == null) return;
+    setState(() => _busy = true);
+    try {
+      final notified =
+          await ref.read(adminMatchesRepositoryProvider).rescheduleRound(
+                competitionId: widget.match.competitionId,
+                round: round,
+                scheduledAt: _slot,
+              );
+      await ref.read(adminAuditLogRepositoryProvider).record(
+        adminId: adminId,
+        action: 'round_rescheduled',
+        targetType: 'competition',
+        targetId: widget.match.competitionId,
+        afterState: {
+          'round': round,
+          'scheduled_at': _slot.toUtc().toIso8601String(),
+          'notified': notified,
+        },
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      await _showError(e);
+    }
+  }
+
+  Future<void> _showError(Object e) async {
+    if (!mounted) return;
+    await displayInfoBar(
+      context,
+      builder: (ctx, close) => InfoBar(
+        title: const Text('Échec'),
+        content: Text(arenaErrorMessage(e)),
+        severity: InfoBarSeverity.error,
+        onClose: close,
+      ),
+    );
   }
 }
 

@@ -182,6 +182,32 @@ class AdminMatchesRepository {
       'status': 'scheduled',
     }).eq('id', matchId);
   }
+
+  /// Replanifie TOUS les matchs non démarrés d'un round via la RPC
+  /// `reschedule_round` (SECURITY DEFINER, gardes `is_admin` +
+  /// `admin_can_country`), puis notifie les inscrits confirmés. Marche
+  /// compétition en cours — contrairement à `reprogram_competition`, qui
+  /// rouvre les inscriptions.
+  ///
+  /// Un round est l'unité de planification : ses matchs partagent le même
+  /// créneau (cf. `try_schedule_next_round`). Retourne le nombre de joueurs
+  /// notifiés. Lève si aucun match n'est déplaçable (round déjà démarré ou
+  /// terminé).
+  Future<int> rescheduleRound({
+    required String competitionId,
+    required int round,
+    required DateTime scheduledAt,
+  }) async {
+    final res = await _client.rpc<dynamic>(
+      'reschedule_round',
+      params: {
+        'p_competition_id': competitionId,
+        'p_round': round,
+        'p_scheduled_at': scheduledAt.toUtc().toIso8601String(),
+      },
+    );
+    return (res as num?)?.toInt() ?? 0;
+  }
 }
 
 final adminMatchesRepositoryProvider =
