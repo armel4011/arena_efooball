@@ -25,7 +25,6 @@ import android.view.Surface
 import android.view.WindowManager
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
-import androidx.core.app.RemoteInput
 import java.io.File
 
 /**
@@ -80,8 +79,9 @@ class ArenaRecorderService : Service() {
         // passe déjà par coordinator.stopCleanly(). Cf. LiveKit onStopRequested.
         const val ACTION_STOP_REQUESTED = "com.arena.arena.recorder.STOP_REQUESTED"
         // Échange du code room via la notification (repli Pixel 9 du panneau
-        // overlay) : HOME (domicile) ENVOIE via une réponse directe RemoteInput,
-        // AWAY (extérieur) REÇOIT le code + un bouton « Copier ».
+        // overlay). Une SEULE pastille cyan, selon le rôle :
+        //   * HOME (domicile) ENVOIE → ouvre RoomCodeInputActivity (mini-dialogue) ;
+        //   * AWAY (extérieur) REÇOIT le code → « Copier ».
         const val ACTION_SUBMIT_CODE = "com.arena.arena.recorder.SUBMIT_CODE"
         const val ACTION_COPY_CODE = "com.arena.arena.recorder.COPY_CODE"
         const val ACTION_UPDATE_CODE = "com.arena.arena.recorder.UPDATE_CODE"
@@ -92,9 +92,10 @@ class ArenaRecorderService : Service() {
         const val EXTRA_MESSAGE = "message"
         const val EXTRA_ROOM_CODE = "room_code"
         const val EXTRA_AWAITING_CODE = "awaiting_code"
-        const val REMOTE_INPUT_KEY = "arena_room_code"
+        // Code saisi par le HOME dans RoomCodeInputActivity.
+        const val EXTRA_TYPED_CODE = "typed_code"
 
-        // Callback : le HOME a tapé le code dans la réponse directe de la notif.
+        // Callback : le HOME a tapé le code depuis la notif (mini-dialogue).
         // Set par MainActivity ; forwardé à Dart (→ écrit matches.room_code).
         @Volatile
         var onRoomCodeSubmitted: ((String) -> Unit)? = null
@@ -239,9 +240,8 @@ class ArenaRecorderService : Service() {
                 return START_STICKY
             }
             ACTION_SUBMIT_CODE -> {
-                // HOME a validé la réponse directe → récupère le texte tapé.
-                val typed = RemoteInput.getResultsFromIntent(intent)
-                    ?.getCharSequence(REMOTE_INPUT_KEY)?.toString()?.trim()
+                // HOME a validé le mini-dialogue → récupère le texte tapé.
+                val typed = intent.getStringExtra(EXTRA_TYPED_CODE)?.trim()
                 if (!typed.isNullOrEmpty()) {
                     awaitingCode = false
                     try { onRoomCodeSubmitted?.invoke(typed) } catch (_: Exception) {}
@@ -538,10 +538,15 @@ class ArenaRecorderService : Service() {
      * pastilles d'action COLORÉES avec vraies icônes (les actions standard
      * n'affichent ni icône Android 7+ ni couleur individuelle).
      *   * Compteur (Chronometer natif) + statut.
-     *   * Pastilles : ⏹ Arrêter (rouge) · ⧉ Ouvrir (bleu) · ⧉ Copier (cyan, AWAY).
-     *   * HOME (awaitingCode) → « Envoyer le code » en action STANDARD sous la vue
-     *     (le RemoteInput / réponse directe ne se rend pas dans un RemoteViews
-     *     custom — repli documenté du chantier).
+     *   * Pastilles : ⏹ Arrêter (rouge) · ⧉ Ouvrir (bleu) · 3e pastille cyan.
+     *
+     * La 3e pastille porte les deux faces — exclusives — de l'échange du code :
+     * HOME (awaitingCode) « Envoyer » → [RoomCodeInputActivity] ; AWAY (code reçu)
+     * « Copier » → [ACTION_COPY_CODE]. Même emplacement, même cyan.
+     *
+     * Pas de réponse directe (RemoteInput) : le champ de saisie inline ne se
+     * déclenche que depuis une action STANDARD, dont Android n'autorise ni
+     * l'icône (≥ N) ni la couleur — d'où le mini-dialogue.
      */
     private fun buildNotification(): android.app.Notification {
         val openIntent = Intent(this, MainActivity::class.java).apply {
@@ -562,6 +567,11 @@ class ArenaRecorderService : Service() {
             action = ACTION_COPY_CODE
         }
         val copyPending = PendingIntent.getService(this, 3, copyIntent, pendingFlags())
+        // HOME — mini-dialogue de saisie posé par-dessus eFootball.
+        val typeIntent = Intent(this, RoomCodeInputActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        }
+        val typePending = PendingIntent.getActivity(this, 4, typeIntent, pendingFlags())
 
         val code = roomCode
         val text = when {
@@ -572,6 +582,8 @@ class ArenaRecorderService : Service() {
         // Base du Chronometer : timebase elapsedRealtime (≠ currentTimeMillis).
         val chronoBase =
             SystemClock.elapsedRealtime() - (System.currentTimeMillis() - recordStartMillis)
+        // 3e pastille : « Envoyer » (HOME) et « Copier » (AWAY) sont exclusifs.
+        val showSend = awaitingCode
         val showCopy = !awaitingCode && !code.isNullOrEmpty()
 
         fun buildView(withButtons: Boolean): RemoteViews {
@@ -585,9 +597,16 @@ class ArenaRecorderService : Service() {
                     setOnClickPendingIntent(R.id.notif_btn_open, openPending)
                     setViewVisibility(
                         R.id.notif_btn_code,
-                        if (showCopy) android.view.View.VISIBLE else android.view.View.GONE,
+                        if (showSend || showCopy) android.view.View.VISIBLE
+                        else android.view.View.GONE,
                     )
-                    if (showCopy) {
+                    if (showSend) {
+                        setImageViewResource(R.id.notif_btn_code_icon, R.drawable.ic_notif_send)
+                        setTextViewText(R.id.notif_btn_code_label, "Envoyer")
+                        setOnClickPendingIntent(R.id.notif_btn_code, typePending)
+                    } else if (showCopy) {
+                        setImageViewResource(R.id.notif_btn_code_icon, R.drawable.ic_notif_copy)
+                        setTextViewText(R.id.notif_btn_code_label, "Copier")
                         setOnClickPendingIntent(R.id.notif_btn_code, copyPending)
                     }
                 }
@@ -605,28 +624,6 @@ class ArenaRecorderService : Service() {
             .setStyle(NotificationCompat.DecoratedCustomViewStyle())
             .setCustomContentView(buildView(withButtons = false))
             .setCustomBigContentView(buildView(withButtons = true))
-
-        if (awaitingCode) {
-            // HOME — réponse directe (action STANDARD sous la vue custom). Le
-            // PendingIntent DOIT être MUTABLE (le système y injecte le texte saisi).
-            val remoteInput = RemoteInput.Builder(REMOTE_INPUT_KEY)
-                .setLabel("Code de la room eFootball")
-                .build()
-            val submitIntent = Intent(this, ArenaRecorderService::class.java).apply {
-                action = ACTION_SUBMIT_CODE
-            }
-            val mutableFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-            } else {
-                PendingIntent.FLAG_UPDATE_CURRENT
-            }
-            val submitPending = PendingIntent.getService(this, 2, submitIntent, mutableFlags)
-            builder.addAction(
-                NotificationCompat.Action.Builder(
-                    R.drawable.ic_notif_send, "Envoyer le code", submitPending,
-                ).addRemoteInput(remoteInput).build(),
-            )
-        }
 
         return builder.build()
     }

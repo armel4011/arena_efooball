@@ -96,7 +96,10 @@
                 android:textStyle="bold" />
         </LinearLayout>
 
-        <!-- Copier (cyan) — AWAY seulement, masqué par défaut -->
+        <!-- Échange du code (cyan) — masquée par défaut. Icône, libellé et action
+             sont posés à la construction de la notif selon le rôle : « Envoyer »
+             (HOME, ouvre le mini-dialogue de saisie) ou « Copier » (AWAY). Les
+             deux faces sont exclusives, d'où une seule pastille. -->
         <LinearLayout
             android:id="@+id/notif_btn_code"
             android:layout_width="0dp"
@@ -109,11 +112,13 @@
             android:paddingTop="9dp"
             android:paddingBottom="9dp">
             <ImageView
+                android:id="@+id/notif_btn_code_icon"
                 android:layout_width="16dp"
                 android:layout_height="16dp"
                 android:src="@drawable/ic_notif_copy"
                 android:importantForAccessibility="no" />
             <TextView
+                android:id="@+id/notif_btn_code_label"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="6dp"
