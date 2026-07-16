@@ -50,5 +50,26 @@ String formatRelativeDate(DateTime date, {bool withTime = true}) {
   return '$dayPart · $time';
 }
 
+/// Formate l'horaire d'un match pour un contexte TRÈS ÉTROIT (card de bracket,
+/// ~84 px utiles) — là où [formatRelativeDate] déborderait.
+///
+/// Renvoie `null` si [date] est null : au caller de décider du placeholder
+/// (un match non encore programmé n'a pas d'horaire à montrer).
+///
+/// Le jour n'apparaît que s'il n'est pas aujourd'hui — dans un bracket, la
+/// plupart des matchs du jour se lisent à l'heure seule. Exemples :
+///  * « 14:30 » (aujourd'hui)
+///  * « 30/06 · 14:30 » (autre jour)
+String? formatMatchSlotCompact(DateTime? date) {
+  if (date == null) return null;
+  final local = date.toLocal();
+  final now = DateTime.now();
+  final time = DateFormat('HH:mm', _kLocale).format(local);
+  final isToday =
+      local.year == now.year && local.month == now.month && local.day == now.day;
+  if (isToday) return time;
+  return '${DateFormat('dd/MM', _kLocale).format(local)} · $time';
+}
+
 String _capitalize(String s) =>
     s.isEmpty ? s : '${s[0].toUpperCase()}${s.substring(1)}';

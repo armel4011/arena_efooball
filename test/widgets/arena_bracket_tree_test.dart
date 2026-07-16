@@ -117,6 +117,40 @@ void main() {
       expect(find.textContaining('P-'), findsWidgets);
     });
 
+    testWidgets("affiche l'horaire des matchs, « — » si non programmé",
+        (tester) async {
+      // Bracket 4 joueurs : 2 matchs de R1 + la finale. On date le 1er match
+      // aujourd'hui et on laisse les autres sans horaire.
+      final now = DateTime.now();
+      final slot = DateTime(now.year, now.month, now.day, 14, 30);
+      final base = _synthBracket(2);
+      final matches = [
+        base.first.copyWith(scheduledAt: slot),
+        ...base.skip(1),
+      ];
+
+      await tester.binding.setSurfaceSize(const Size(800, 1000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('fr'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: SizedBox.expand(child: ArenaBracketTree(matches: matches)),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // Le match daté aujourd'hui montre l'heure seule.
+      expect(find.text('14:30'), findsOneWidget);
+      // Les matchs sans horaire gardent une ligne (hauteur des cards
+      // constante, sinon les connecteurs se désalignent).
+      expect(find.text('—'), findsWidgets);
+    });
+
     testWidgets('does not crash when matches list is empty', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(

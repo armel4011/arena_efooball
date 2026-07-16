@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:arena/core/theme/arena_fluent_theme.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/core/utils/arena_error_message.dart';
@@ -341,7 +343,12 @@ class _BracketView extends ConsumerWidget {
         const SizedBox(height: 16),
         if (showTree)
           SizedBox(
-            height: 560,
+            // Desktop : au moins 560 px (l'écran est large, autant en profiter),
+            // mais on suit le calcul partagé si le bracket demande davantage.
+            height: math.max(
+              560,
+              ArenaBracketTree.viewportHeightFor(matches.length),
+            ),
             child: ArenaBracketTree(
               matches: matches,
               usernamesByPlayerId: usernames,

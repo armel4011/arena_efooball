@@ -116,7 +116,7 @@ class _BracketTreeView extends ConsumerWidget {
         ),
         const SizedBox(height: ArenaSpacing.sm),
         SizedBox(
-          height: _treeHeightFor(matches.length),
+          height: ArenaBracketTree.viewportHeightFor(matches.length),
           child: ArenaBracketTree(
             matches: matches,
             usernamesByPlayerId: usernames,
@@ -142,12 +142,6 @@ class _BracketTreeView extends ConsumerWidget {
     );
   }
 
-  static double _treeHeightFor(int matchCount) {
-    if (matchCount >= 15) return 460;
-    if (matchCount >= 7) return 320;
-    if (matchCount >= 3) return 220;
-    return 160;
-  }
 }
 
 // _formatLabel → competitionFormatLabel (features_shared/admin/competition_labels.dart)
