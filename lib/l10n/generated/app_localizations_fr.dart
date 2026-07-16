@@ -885,7 +885,20 @@ class AppLocalizationsFr extends AppLocalizations {
   String get compDetailTabNextMatch => 'PROCHAIN MATCH';
 
   @override
+  String get compDetailTabCalendar => 'CALENDRIER';
+
+  @override
   String get compDetailTabRanking => 'CLASSEMENT';
+
+  @override
+  String get compScheduleEmptyTitle => 'Aucun match programmé';
+
+  @override
+  String get compScheduleEmptyDescription =>
+      'Le calendrier apparaîtra dès que l\'organisateur aura généré le tableau.';
+
+  @override
+  String get compScheduleUnscheduled => 'À programmer';
 
   @override
   String get compDetailParticipantsTitle => 'Liste des participants';

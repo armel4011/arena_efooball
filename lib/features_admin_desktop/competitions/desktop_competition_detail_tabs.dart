@@ -4,6 +4,62 @@ part of 'desktop_competition_detail_page.dart';
 // Onglet Classement
 // ─────────────────────────────────────────────────────────────────────
 
+/// Onglet CALENDRIER — le planning de la compétition groupé par jour.
+///
+/// Complète l'onglet « Matchs », qui est une table à plat : pour replanifier,
+/// l'admin a besoin de voir les journées et leurs créneaux. Même widget que
+/// l'app user (Flutter pur, il se compose dans un arbre Fluent).
+class _ScheduleTab extends ConsumerWidget {
+  const _ScheduleTab({required this.competitionId});
+
+  final String competitionId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(competitionMatchesProvider(competitionId));
+    return async.when(
+      loading: () => const Center(child: ProgressRing()),
+      error: (e, _) => InfoBar(
+        title: const Text('Erreur'),
+        content: Text(arenaErrorMessage(e)),
+        severity: InfoBarSeverity.error,
+      ),
+      data: (matches) {
+        if (matches.isEmpty) {
+          return Center(
+            child: Text(
+              'Aucun match — le bracket n’a pas encore été généré.',
+              style: ArenaText.bodyMuted,
+            ),
+          );
+        }
+        final players = <String>{
+          for (final m in matches) ...[
+            if (m.player1Id != null) m.player1Id!,
+            if (m.player2Id != null) m.player2Id!,
+          ],
+        };
+        final joinedIds = (players.toList()..sort()).join(',');
+        final usernames = ref.watch(profilesByIdsProvider(joinedIds)).maybeWhen(
+              data: (m) => {
+                for (final e in m.entries)
+                  if (e.value.username.isNotEmpty) e.key: e.value.username,
+              },
+              orElse: () => const <String, String>{},
+            );
+        return ArenaCompetitionSchedule(
+          matches: matches,
+          usernamesByPlayerId: usernames,
+          padding: const EdgeInsets.symmetric(
+            horizontal: ArenaDesktop.pagePadding,
+            vertical: 12,
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _RankingTab extends ConsumerWidget {
   const _RankingTab({required this.competitionId});
 

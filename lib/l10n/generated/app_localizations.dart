@@ -1756,11 +1756,35 @@ abstract class AppLocalizations {
   /// **'PROCHAIN MATCH'**
   String get compDetailTabNextMatch;
 
+  /// No description provided for @compDetailTabCalendar.
+  ///
+  /// In fr, this message translates to:
+  /// **'CALENDRIER'**
+  String get compDetailTabCalendar;
+
   /// No description provided for @compDetailTabRanking.
   ///
   /// In fr, this message translates to:
   /// **'CLASSEMENT'**
   String get compDetailTabRanking;
+
+  /// No description provided for @compScheduleEmptyTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun match programmé'**
+  String get compScheduleEmptyTitle;
+
+  /// No description provided for @compScheduleEmptyDescription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le calendrier apparaîtra dès que l\'organisateur aura généré le tableau.'**
+  String get compScheduleEmptyDescription;
+
+  /// No description provided for @compScheduleUnscheduled.
+  ///
+  /// In fr, this message translates to:
+  /// **'À programmer'**
+  String get compScheduleUnscheduled;
 
   /// No description provided for @compDetailParticipantsTitle.
   ///

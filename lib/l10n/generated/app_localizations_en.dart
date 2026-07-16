@@ -879,7 +879,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get compDetailTabNextMatch => 'NEXT MATCH';
 
   @override
+  String get compDetailTabCalendar => 'SCHEDULE';
+
+  @override
   String get compDetailTabRanking => 'RANKING';
+
+  @override
+  String get compScheduleEmptyTitle => 'No match scheduled';
+
+  @override
+  String get compScheduleEmptyDescription =>
+      'The schedule will appear as soon as the organiser has generated the bracket.';
+
+  @override
+  String get compScheduleUnscheduled => 'To be scheduled';
 
   @override
   String get compDetailParticipantsTitle => 'Participants list';
