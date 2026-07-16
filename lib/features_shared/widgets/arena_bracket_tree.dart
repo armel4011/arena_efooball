@@ -1,4 +1,5 @@
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/core/utils/date_formatter.dart';
 import 'package:arena/data/models/arena_match.dart';
 import 'package:flutter/material.dart';
 
@@ -39,11 +40,29 @@ class ArenaBracketTree extends StatelessWidget {
   /// Plafond du zoom in.
   final double maxScale;
 
+  /// Hauteur de viewport à réserver à l'arbre pour [matchCount] matchs, bornée
+  /// pour qu'`InteractiveViewer` ait de la place sans faire scroller la page
+  /// jusqu'en bas. Les paliers suivent la taille du bracket (2 / 4 / 8 / 16).
+  ///
+  /// Exposé ici parce que la hauteur dépend des constantes de layout internes :
+  /// les callers la dupliquaient, et toute retouche de card les désynchronisait
+  /// en silence.
+  static double viewportHeightFor(int matchCount) {
+    if (matchCount >= 15) return 520; // bracket 16
+    if (matchCount >= 7) return 360; // bracket 8
+    if (matchCount >= 3) return 250; // bracket 4
+    return 180; // bracket 2 (finale seule)
+  }
+
   // Layout constants — légèrement agrandis pour une meilleure lisibilité.
   static const double _columnWidth = 96;
   static const double _columnGap = 24;
-  static const double _matchHeight = 54;
+  // 66 (et non 54) : chaque card porte une 3e ligne, l'horaire du match.
+  static const double _matchHeight = 66;
   static const double _matchGap = 8;
+  // Finale / 3e place : mêmes +12 px que [_matchHeight] pour l'horaire.
+  static const double _finaleHeight = 76;
+  static const double _thirdPlaceHeight = 62;
   static const double _connectorPad = 4;
   static const double _bottomMargin = 40;
 
@@ -272,7 +291,7 @@ class _CenterColumn extends StatelessWidget {
       children: [
         if (finalMatch != null)
           SizedBox(
-            height: 64,
+            height: ArenaBracketTree._finaleHeight,
             child: _MatchCard(
               match: finalMatch!,
               style: _RoundStyle.finale,
@@ -285,7 +304,7 @@ class _CenterColumn extends StatelessWidget {
         if (thirdPlace != null) ...[
           const SizedBox(height: ArenaSpacing.md),
           SizedBox(
-            height: 50,
+            height: ArenaBracketTree._thirdPlaceHeight,
             child: _MatchCard(
               match: thirdPlace!,
               style: _RoundStyle.thirdPlace,
@@ -349,31 +368,36 @@ class _MatchCard extends StatelessWidget {
             : null,
       ),
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-      child: style == _RoundStyle.finale
-          ? _FinaleContent(score1: match.score1, score2: match.score2)
-          : style == _RoundStyle.thirdPlace
-              ? _ThirdPlaceContent(score1: match.score1, score2: match.score2)
-              : Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _PlayerLine(
-                      label: p1,
-                      score: hasScore ? match.score1 : null,
-                      win: p1Win,
-                      fg: fg,
-                      mirrored: mirrored,
-                    ),
-                    const SizedBox(height: 2),
-                    _PlayerLine(
-                      label: p2,
-                      score: hasScore ? match.score2 : null,
-                      win: p2Win,
-                      fg: fg,
-                      mirrored: mirrored,
-                    ),
-                  ],
-                ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (style == _RoundStyle.finale)
+            _FinaleContent(score1: match.score1, score2: match.score2)
+          else if (style == _RoundStyle.thirdPlace)
+            _ThirdPlaceContent(score1: match.score1, score2: match.score2)
+          else ...[
+            _PlayerLine(
+              label: p1,
+              score: hasScore ? match.score1 : null,
+              win: p1Win,
+              fg: fg,
+              mirrored: mirrored,
+            ),
+            const SizedBox(height: 2),
+            _PlayerLine(
+              label: p2,
+              score: hasScore ? match.score2 : null,
+              win: p2Win,
+              fg: fg,
+              mirrored: mirrored,
+            ),
+          ],
+          const SizedBox(height: 3),
+          _MatchSlotLine(scheduledAt: match.scheduledAt, fg: fg),
+        ],
+      ),
     );
 
     if (onTap == null) return card;
@@ -430,6 +454,34 @@ class _MatchCard extends StatelessWidget {
             false,
           ),
       };
+}
+
+/// Pied de card : horaire du match, discret sous les joueurs.
+///
+/// Un match dont le round n'est pas encore programmé n'a pas d'horaire — on
+/// affiche « — » plutôt que rien, pour garder la hauteur des cards constante
+/// (sinon une colonne se désaligne des connecteurs).
+class _MatchSlotLine extends StatelessWidget {
+  const _MatchSlotLine({required this.scheduledAt, required this.fg});
+
+  final DateTime? scheduledAt;
+  final Color fg;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      formatMatchSlotCompact(scheduledAt) ?? '—',
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      textAlign: TextAlign.center,
+      style: ArenaText.monoSmall.copyWith(
+        fontSize: 9,
+        height: 1,
+        color: fg.withValues(alpha: 0.75),
+        fontWeight: FontWeight.w600,
+      ),
+    );
+  }
 }
 
 class _PlayerLine extends StatelessWidget {
@@ -495,6 +547,7 @@ class _FinaleContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasScore = score1 != null && score2 != null;
     return Column(
+      mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         const Text('🏆', style: TextStyle(fontSize: 18, height: 1)),
@@ -523,6 +576,7 @@ class _ThirdPlaceContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasScore = score1 != null && score2 != null;
     return Column(
+      mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         const Text('🥉', style: TextStyle(fontSize: 14, height: 1)),

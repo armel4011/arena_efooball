@@ -90,7 +90,7 @@ class BracketView extends ConsumerWidget {
                 _BracketCaption(playerCount: players.length),
                 const SizedBox(height: ArenaSpacing.sm),
                 SizedBox(
-                  height: _treeHeightFor(matches.length),
+                  height: ArenaBracketTree.viewportHeightFor(matches.length),
                   child: ArenaBracketTree(
                     matches: matches,
                     usernamesByPlayerId: usernames,
@@ -111,16 +111,6 @@ class BracketView extends ConsumerWidget {
     );
   }
 
-  /// Hauteur réservée pour l'arbre — proportionnelle au nombre de
-  /// matches du R1 (max 8 pour un bracket 16). On garde une borne haute
-  /// pour que `InteractiveViewer` ait toujours suffisamment de place
-  /// sans forcer le ListView à scroller jusqu'à la caption finale.
-  static double _treeHeightFor(int matchCount) {
-    if (matchCount >= 15) return 460; // bracket 16
-    if (matchCount >= 7) return 320; // bracket 8
-    if (matchCount >= 3) return 220; // bracket 4
-    return 160; // bracket 2 (finale seule)
-  }
 }
 
 /// Caption "SINGLE ELIM · N JOUEURS" au-dessus de l'arbre. Reproduit
