@@ -1,0 +1,6 @@
+<!-- Fond pastille « Copier / code » (cyan) — notif de contrôle RemoteViews. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/notif_btn_code" />
+    <corners android:radius="10dp" />
+</shape>
