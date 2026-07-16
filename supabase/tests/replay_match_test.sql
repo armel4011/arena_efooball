@@ -48,8 +48,13 @@ insert into competition_registrations(competition_id,player_id,status,final_rank
   ('da000000-0000-0000-0000-0000000000c0','da000000-0000-0000-0000-000000000001','confirmed',1),
   ('da000000-0000-0000-0000-0000000000c0','da000000-0000-0000-0000-000000000002','confirmed',2);
 
--- Match TERMINÉ : J1 bat J2 3-1. Les stats ci-dessus sont l'état APRÈS
--- incrément par le trigger — on attend leur retour exact après décrément.
+-- Match TERMINÉ : J1 bat J2 3-1.
+-- ⚠️ Cet INSERT en `completed` déclenche `trg_matches_increment_stats_insert` :
+-- les stats des fixtures ci-dessus sont donc incrémentées ICI même. C'est ce
+-- qu'on veut — le test devient un ALLER-RETOUR : incrément (trigger) puis
+-- décrément (replay_match) doivent ramener EXACTEMENT aux valeurs de fixture.
+-- C'est la seule preuve qui compte : un décrément qui ne serait pas le miroir
+-- exact de l'incrément fausserait les classements à vie.
 insert into matches(id,competition_id,round,match_number,player1_id,player2_id,
                     status,score1,score2,winner_id,started_at,finished_at,room_code)
 values ('da000000-0000-0000-0000-0000000000f1','da000000-0000-0000-0000-0000000000c0',1,1,
@@ -88,15 +93,17 @@ select lives_ok(
        now() + interval '1 day') $$,
   'admin CM : remise en jeu acceptée');
 
--- STATS : miroir exact de l'incrément → retour à l'état d'avant le match.
+-- STATS — LE test : l'aller-retour incrément (trigger à l'INSERT) → décrément
+-- (replay_match) doit rendre EXACTEMENT les valeurs de fixture. Toute dérive ici
+-- signifie un match rejoué qui double-compte, à vie et sans rattrapage.
 select is(
   (select stats from profiles where id='da000000-0000-0000-0000-000000000001'),
-  jsonb_build_object('wins',4,'losses',2,'draws',1,'goals_scored',17,'goals_conceded',9),
-  'J1 : victoire + buts du match retirés (pas de double-comptage au rejeu)');
+  jsonb_build_object('wins',5,'losses',2,'draws',1,'goals_scored',20,'goals_conceded',10),
+  'J1 : stats revenues à l''identique (incrément puis décrément = identité)');
 select is(
   (select stats from profiles where id='da000000-0000-0000-0000-000000000002'),
-  jsonb_build_object('wins',3,'losses',3,'draws',0,'goals_scored',11,'goals_conceded',12),
-  'J2 : défaite + buts du match retirés');
+  jsonb_build_object('wins',3,'losses',4,'draws',0,'goals_scored',12,'goals_conceded',15),
+  'J2 : stats revenues à l''identique');
 
 -- MATCH : réellement remis en jeu.
 select is(
@@ -122,7 +129,7 @@ select is(
 -- ─── Refus : des gains ont déjà été générés ─────────────────────────
 insert into payouts(competition_id,user_id,amount_local,currency,status)
 values ('da000000-0000-0000-0000-0000000000c0','da000000-0000-0000-0000-000000000001',
-        1000,'XAF','pending');
+        1000,'XAF','pending_admin_validation');
 select throws_ok(
   $$ select public.replay_match('da000000-0000-0000-0000-0000000000f1',
        'da000000-0000-0000-0000-0000000000d1', 'seconde tentative', now() + interval '2 days') $$,
