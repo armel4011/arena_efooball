@@ -66,11 +66,14 @@ class _MobileMoneyDetailsPageState
   /// Code de transfert de l'opérateur (peut être vide si non configuré).
   String get _transferCode => widget.operator.transferCode ?? '';
 
-  /// Flux CEMAC : numéro destinataire copiable + étapes + tuto, activé
-  /// uniquement pour les pays de la zone CEMAC.
-  bool get _isCemac => isCemacCountry(widget.operator.countryCode);
+  /// Flux « transfert vers un numéro destinataire » : numéro copiable + étapes
+  /// + tuto. Réservé aux pays CEMAC HORS Cameroun, où payer ARENA est un
+  /// transfert transfrontalier. Depuis le Cameroun le paiement est domestique →
+  /// le code marchand suffit, comme en UEMOA.
+  bool get _needsRecipientNumber =>
+      needsRecipientNumberFlow(widget.operator.countryCode);
 
-  /// Numéro destinataire à copier (zone CEMAC), vide si non configuré.
+  /// Numéro destinataire à copier, vide si non configuré.
   String get _paymentNumber => widget.operator.paymentNumber ?? '';
 
   /// URL du tutoriel vidéo de paiement (placeholder en dur — à remplacer par
@@ -114,9 +117,10 @@ class _MobileMoneyDetailsPageState
                   .animate()
                   .fadeIn(duration: ArenaDurations.medium),
               const SizedBox(height: ArenaSpacing.lg),
-              // CEMAC : le numéro destinataire vient AVANT le code à exécuter —
-              // l'utilisateur le copie pour le saisir dans le menu de l'opérateur.
-              if (_isCemac && _paymentNumber.isNotEmpty) ...[
+              // Transfert transfrontalier : le numéro destinataire vient AVANT
+              // le code à exécuter — l'utilisateur le copie pour le saisir dans
+              // le menu de l'opérateur.
+              if (_needsRecipientNumber && _paymentNumber.isNotEmpty) ...[
                 _PaymentNumberCard(
                   number: _paymentNumber,
                   onCopy: () => _copyNumber(context),
@@ -133,11 +137,12 @@ class _MobileMoneyDetailsPageState
                   onCopy: () => _copyCode(context),
                   onDial: () => _dialPayment(context),
                 ),
-              // CEMAC : le code n'est qu'une étape — on guide la suite (choix du
-              // pays destinataire + saisie du numéro copié) + un tuto vidéo.
-              if (_isCemac) ...[
+              // Transfert transfrontalier : le code n'est qu'une étape — on
+              // guide la suite (choix du pays destinataire + saisie du numéro
+              // copié) + un tuto vidéo.
+              if (_needsRecipientNumber) ...[
                 const SizedBox(height: ArenaSpacing.lg),
-                _CemacStepsCard(hasNumber: _paymentNumber.isNotEmpty),
+                _CrossBorderStepsCard(hasNumber: _paymentNumber.isNotEmpty),
                 const SizedBox(height: ArenaSpacing.md),
                 _PaymentTutorialCard(
                   onTap: () => _openTutorial(context),
@@ -609,10 +614,11 @@ class _PaymentNumberCard extends StatelessWidget {
   }
 }
 
-/// CEMAC — étapes textuelles guidant la suite du paiement (le code n'ouvre que
-/// le menu de l'opérateur ; le choix du pays + la saisie du numéro s'y font).
-class _CemacStepsCard extends StatelessWidget {
-  const _CemacStepsCard({required this.hasNumber});
+/// Transfert transfrontalier (CEMAC hors Cameroun) — étapes textuelles guidant
+/// la suite du paiement : le code n'ouvre que le menu de l'opérateur, le choix
+/// du pays de destination et la saisie du numéro s'y font.
+class _CrossBorderStepsCard extends StatelessWidget {
+  const _CrossBorderStepsCard({required this.hasNumber});
 
   final bool hasNumber;
 
@@ -672,7 +678,8 @@ class _CemacStepsCard extends StatelessWidget {
   }
 }
 
-/// CEMAC — petite card renvoyant vers une vidéo tutoriel de paiement.
+/// Transfert transfrontalier (CEMAC hors Cameroun) — petite card renvoyant vers
+/// une vidéo tutoriel de paiement.
 class _PaymentTutorialCard extends StatelessWidget {
   const _PaymentTutorialCard({required this.onTap});
 
