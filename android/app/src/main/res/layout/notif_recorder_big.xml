@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Notif de contrôle ARENA — vue DÉPLIÉE (DecoratedCustomViewStyle : en-tête
+     app + petite icône ajoutés par le système au-dessus ; les actions standard
+     — ex. « Envoyer le code » HOME avec réponse directe — apparaissent en
+     dessous). Statut + compteur, puis rangée de pastilles d'action colorées.
+     Chaque pastille reçoit son PendingIntent via setOnClickPendingIntent. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingStart="4dp"
+    android:paddingEnd="4dp"
+    android:paddingTop="2dp"
+    android:paddingBottom="4dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/notif_status"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:textAppearance="@style/TextAppearance.Compat.Notification.Info" />
+
+        <Chronometer
+            android:id="@+id/notif_chrono"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:textAppearance="@style/TextAppearance.Compat.Notification.Time" />
+    </LinearLayout>
+
+    <!-- Rangée d'actions. Les poids ne sont pas égaux : la pastille du code porte
+         le libellé le plus long (« Renvoyer code ») et déborderait à 1/3 de la
+         largeur. Les libellés sont bornés à 1 ligne — un retour à la ligne
+         casserait la hauteur de toute la rangée (polices agrandies, écrans
+         étroits, surcouches constructeur). -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:baselineAligned="false"
+        android:orientation="horizontal">
+
+        <!-- Arrêter (rouge) -->
+        <LinearLayout
+            android:id="@+id/notif_btn_stop"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1.1"
+            android:layout_marginEnd="6dp"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:background="@drawable/bg_notif_pill_stop"
+            android:paddingTop="9dp"
+            android:paddingBottom="9dp">
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@drawable/ic_notif_stop"
+                android:importantForAccessibility="no" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="Arrêter"
+                android:textColor="@color/notif_btn_label"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- Ouvrir (bleu) -->
+        <LinearLayout
+            android:id="@+id/notif_btn_open"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:background="@drawable/bg_notif_pill_open"
+            android:paddingTop="9dp"
+            android:paddingBottom="9dp">
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@drawable/ic_notif_open"
+                android:importantForAccessibility="no" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="Ouvrir"
+                android:textColor="@color/notif_btn_label"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- Échange du code (cyan) — masquée par défaut. Icône, libellé et action
+             sont posés à la construction de la notif selon le rôle : « Envoyer »
+             (HOME, ouvre le mini-dialogue de saisie) ou « Copier » (AWAY). Les
+             deux faces sont exclusives, d'où une seule pastille. -->
+        <LinearLayout
+            android:id="@+id/notif_btn_code"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1.6"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:visibility="gone"
+            android:background="@drawable/bg_notif_pill_code"
+            android:paddingTop="9dp"
+            android:paddingBottom="9dp">
+            <ImageView
+                android:id="@+id/notif_btn_code_icon"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@drawable/ic_notif_copy"
+                android:importantForAccessibility="no" />
+            <TextView
+                android:id="@+id/notif_btn_code_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="Copier"
+                android:textColor="@color/notif_btn_label"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

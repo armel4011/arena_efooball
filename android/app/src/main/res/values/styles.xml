@@ -15,4 +15,14 @@
     <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
         <item name="android:windowBackground">?android:colorBackground</item>
     </style>
+
+    <!-- Mini-dialogue de saisie du code room, ouvert depuis la notif de contrôle
+         pendant que le joueur est dans eFootball. Fenêtre flottante : le jeu
+         reste visible derrière, on ne bascule pas dans ARENA. Variante sombre,
+         cohérente avec l'UI ARENA. -->
+    <style name="RoomCodeDialogTheme" parent="@android:style/Theme.Material.Dialog.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowCloseOnTouchOutside">true</item>
+        <item name="android:colorAccent">@color/notif_btn_code</item>
+    </style>
 </resources>

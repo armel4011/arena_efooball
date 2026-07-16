@@ -104,6 +104,21 @@
                     android:host="reset-password"/>
             </intent-filter>
         </activity>
+        <!-- Saisie du code room depuis la notif de contrôle (côté HOME), en
+             dialogue flottant par-dessus eFootball. `taskAffinity=""` +
+             `excludeFromRecents` : ce dialogue ne doit ni rejoindre la task de
+             MainActivity ni laisser de trace dans les récents — il s'ouvre,
+             encaisse le code, se ferme. Non exporté : seul notre PendingIntent
+             de notif le lance. -->
+        <activity
+            android:name=".RoomCodeInputActivity"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:theme="@style/RoomCodeDialogTheme"
+            android:windowSoftInputMode="adjustResize" />
+
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

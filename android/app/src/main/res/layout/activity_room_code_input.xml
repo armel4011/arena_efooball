@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Mini-dialogue de saisie du code room (RoomCodeInputActivity), posé par-dessus
+     eFootball via un thème flottant translucide. Volontairement minimal : le
+     joueur est en plein match, il lit le code dans le jeu et le retape ici. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Code de la room eFootball"
+        android:textSize="17sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="Ton adversaire le recevra tout de suite."
+        android:textSize="13sp" />
+
+    <EditText
+        android:id="@+id/room_code_field"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:hint="Ex. 12345678"
+        android:importantForAutofill="no"
+        android:inputType="textCapCharacters|textNoSuggestions"
+        android:maxLines="1"
+        android:textSize="18sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:gravity="end"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/room_code_cancel"
+            style="?android:attr/borderlessButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Annuler" />
+
+        <Button
+            android:id="@+id/room_code_submit"
+            style="?android:attr/borderlessButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:text="Envoyer"
+            android:textColor="@color/notif_btn_code"
+            android:textStyle="bold" />
+    </LinearLayout>
+</LinearLayout>

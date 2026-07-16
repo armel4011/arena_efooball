@@ -136,16 +136,16 @@ class MainActivity : FlutterActivity() {
                     }
                     "updateRoomCodeNotification" -> {
                         // Pousse l'état du code room dans la notif de contrôle :
-                        // HOME (awaitingCode=true) → réponse directe pour envoyer ;
+                        // HOME (isHome=true) → pastille « Envoyer »/« Renvoyer » ;
                         // AWAY (code non nul) → code affiché + « Copier ».
                         val code = call.argument<String>("code")
-                        val awaiting = call.argument<Boolean>("awaitingCode") ?: false
+                        val isHome = call.argument<Boolean>("isHome") ?: false
                         val intent = Intent(
                             applicationContext, ArenaRecorderService::class.java,
                         ).apply {
                             action = ArenaRecorderService.ACTION_UPDATE_CODE
                             putExtra(ArenaRecorderService.EXTRA_ROOM_CODE, code)
-                            putExtra(ArenaRecorderService.EXTRA_AWAITING_CODE, awaiting)
+                            putExtra(ArenaRecorderService.EXTRA_IS_HOME, isHome)
                         }
                         try {
                             startService(intent)

@@ -18,12 +18,13 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.os.SystemClock
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.Surface
 import android.view.WindowManager
+import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
-import androidx.core.app.RemoteInput
 import java.io.File
 
 /**
@@ -78,8 +79,11 @@ class ArenaRecorderService : Service() {
         // passe déjà par coordinator.stopCleanly(). Cf. LiveKit onStopRequested.
         const val ACTION_STOP_REQUESTED = "com.arena.arena.recorder.STOP_REQUESTED"
         // Échange du code room via la notification (repli Pixel 9 du panneau
-        // overlay) : HOME (domicile) ENVOIE via une réponse directe RemoteInput,
-        // AWAY (extérieur) REÇOIT le code + un bouton « Copier ».
+        // overlay). Une SEULE pastille cyan, selon le rôle :
+        //   * HOME (domicile) ENVOIE → ouvre RoomCodeInputActivity (mini-dialogue).
+        //     Reste disponible APRÈS l'envoi (« Renvoyer ») : recréer une room
+        //     dans eFootball change le code, le HOME doit pouvoir le repousser.
+        //   * AWAY (extérieur) REÇOIT le code → « Copier ».
         const val ACTION_SUBMIT_CODE = "com.arena.arena.recorder.SUBMIT_CODE"
         const val ACTION_COPY_CODE = "com.arena.arena.recorder.COPY_CODE"
         const val ACTION_UPDATE_CODE = "com.arena.arena.recorder.UPDATE_CODE"
@@ -89,10 +93,14 @@ class ArenaRecorderService : Service() {
         const val EXTRA_TITLE = "title"
         const val EXTRA_MESSAGE = "message"
         const val EXTRA_ROOM_CODE = "room_code"
-        const val EXTRA_AWAITING_CODE = "awaiting_code"
-        const val REMOTE_INPUT_KEY = "arena_room_code"
+        // Rôle du joueur : le HOME envoie le code, l'AWAY le reçoit. C'est bien
+        // le RÔLE, pas « il manque un code » — le HOME garde l'envoi une fois le
+        // code partagé, pour pouvoir le renvoyer.
+        const val EXTRA_IS_HOME = "is_home"
+        // Code saisi par le HOME dans RoomCodeInputActivity.
+        const val EXTRA_TYPED_CODE = "typed_code"
 
-        // Callback : le HOME a tapé le code dans la réponse directe de la notif.
+        // Callback : le HOME a tapé le code depuis la notif (mini-dialogue).
         // Set par MainActivity ; forwardé à Dart (→ écrit matches.room_code).
         @Volatile
         var onRoomCodeSubmitted: ((String) -> Unit)? = null
@@ -170,10 +178,10 @@ class ArenaRecorderService : Service() {
     // l'état du code room change, sans re-passer par ACTION_START).
     private var notifTitle: String = "ARENA"
     private var notifMessage: String = "Enregistrement en cours"
-    // Code room reçu à afficher (côté AWAY) ; null si aucun.
+    // Code room courant : celui que le HOME a envoyé, ou celui que l'AWAY a reçu.
     private var roomCode: String? = null
-    // Vrai côté HOME tant qu'il doit ENVOYER le code (affiche la réponse directe).
-    private var awaitingCode: Boolean = false
+    // Vrai côté HOME (celui qui crée la room et ENVOIE le code).
+    private var isHome: Boolean = false
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
@@ -188,7 +196,22 @@ class ArenaRecorderService : Service() {
                 // Tap « Arrêter » sur la notif → on laisse le COORDINATOR Dart
                 // orchestrer (il appellera ACTION_STOP + fermera le bouton
                 // flottant). On ne tear-down PAS ici pour garder un seul chemin.
-                Log.d(TAG, "ACTION_STOP_REQUESTED — deferring to Dart coordinator")
+                // On RAMÈNE aussi ARENA au premier plan : le joueur qui arrête
+                // depuis eFootball veut revenir dans l'app (envoyer son score…).
+                Log.d(TAG, "ACTION_STOP_REQUESTED — bring to front + deferring to Dart")
+                try {
+                    startActivity(
+                        Intent(applicationContext, MainActivity::class.java).apply {
+                            addFlags(
+                                Intent.FLAG_ACTIVITY_NEW_TASK or
+                                    Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
+                                    Intent.FLAG_ACTIVITY_SINGLE_TOP,
+                            )
+                        },
+                    )
+                } catch (e: Exception) {
+                    Log.w(TAG, "bring to front on stop failed", e)
+                }
                 try { onStopRequested?.invoke() } catch (_: Exception) {}
                 return START_STICKY
             }
@@ -222,11 +245,12 @@ class ArenaRecorderService : Service() {
                 return START_STICKY
             }
             ACTION_SUBMIT_CODE -> {
-                // HOME a validé la réponse directe → récupère le texte tapé.
-                val typed = RemoteInput.getResultsFromIntent(intent)
-                    ?.getCharSequence(REMOTE_INPUT_KEY)?.toString()?.trim()
+                // HOME a validé le mini-dialogue → récupère le texte tapé.
+                // On garde `isHome` : le code d'une room recréée change, le HOME
+                // doit pouvoir le RENVOYER autant de fois que nécessaire.
+                val typed = intent.getStringExtra(EXTRA_TYPED_CODE)?.trim()
                 if (!typed.isNullOrEmpty()) {
-                    awaitingCode = false
+                    roomCode = typed
                     try { onRoomCodeSubmitted?.invoke(typed) } catch (_: Exception) {}
                     refreshNotification()
                 }
@@ -246,8 +270,8 @@ class ArenaRecorderService : Service() {
                 return START_STICKY
             }
             ACTION_UPDATE_CODE -> {
-                // Dart pousse l'état du code : AWAY reçoit un code, ou HOME doit
-                // l'envoyer (awaitingCode). On reconstruit juste la notif.
+                // Dart pousse l'état du code : le rôle (isHome) + le code courant
+                // lu en base. On reconstruit juste la notif.
                 // Si aucun enregistrement n'est en cours, ne PAS laisser un
                 // service non-foreground zombie → stopSelf.
                 if (!isActive) {
@@ -255,7 +279,7 @@ class ArenaRecorderService : Service() {
                     return START_NOT_STICKY
                 }
                 roomCode = intent.getStringExtra(EXTRA_ROOM_CODE)
-                awaitingCode = intent.getBooleanExtra(EXTRA_AWAITING_CODE, false)
+                isHome = intent.getBooleanExtra(EXTRA_IS_HOME, false)
                 refreshNotification()
                 return START_STICKY
             }
@@ -517,11 +541,23 @@ class ArenaRecorderService : Service() {
     }
 
     /**
-     * Notif de contrôle unifiée : compteur (chrono) + « Arrêter » + tap « Ouvrir
-     * Arena », et l'échange du code room selon le rôle :
-     *   * HOME (awaitingCode) → RÉPONSE DIRECTE (RemoteInput) pour ENVOYER le
-     *     code sans quitter eFootball ;
-     *   * AWAY (roomCode != null) → le code affiché + bouton « Copier ».
+     * Notif de contrôle unifiée, RemoteViews (`DecoratedCustomViewStyle`) :
+     * pastilles d'action COLORÉES avec vraies icônes (les actions standard
+     * n'affichent ni icône Android 7+ ni couleur individuelle).
+     *   * Compteur (Chronometer natif) + statut.
+     *   * Pastilles : ⏹ Arrêter (rouge) · ⧉ Ouvrir (bleu) · 3e pastille cyan.
+     *
+     * La 3e pastille porte les deux faces — exclusives — de l'échange du code :
+     * HOME « Envoyer » / « Renvoyer » → [RoomCodeInputActivity] ; AWAY (code reçu)
+     * « Copier » → [ACTION_COPY_CODE]. Même emplacement, même cyan.
+     *
+     * Côté HOME la pastille ne disparaît JAMAIS pendant l'enregistrement :
+     * recréer une room dans eFootball change le code, il faut pouvoir le
+     * renvoyer autant de fois que nécessaire.
+     *
+     * Pas de réponse directe (RemoteInput) : le champ de saisie inline ne se
+     * déclenche que depuis une action STANDARD, dont Android n'autorise ni
+     * l'icône (≥ N) ni la couleur — d'où le mini-dialogue.
      */
     private fun buildNotification(): android.app.Notification {
         val openIntent = Intent(this, MainActivity::class.java).apply {
@@ -538,59 +574,76 @@ class ArenaRecorderService : Service() {
             action = ACTION_STOP_REQUESTED
         }
         val stopPending = PendingIntent.getService(this, 1, stopIntent, pendingFlags())
-
+        val copyIntent = Intent(this, ArenaRecorderService::class.java).apply {
+            action = ACTION_COPY_CODE
+        }
+        val copyPending = PendingIntent.getService(this, 3, copyIntent, pendingFlags())
         val code = roomCode
+        // HOME — mini-dialogue de saisie posé par-dessus eFootball. Pré-rempli
+        // avec le code déjà envoyé (renvoi = souvent une retouche). `pendingFlags`
+        // porte FLAG_UPDATE_CURRENT, donc l'extra suit les changements de code.
+        val typeIntent = Intent(this, RoomCodeInputActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            putExtra(EXTRA_ROOM_CODE, code)
+        }
+        val typePending = PendingIntent.getActivity(this, 4, typeIntent, pendingFlags())
+
+        val hasCode = !code.isNullOrEmpty()
         val text = when {
-            awaitingCode -> "Crée la room dans eFootball, puis envoie le code ici."
-            !code.isNullOrEmpty() -> "Code room reçu : $code"
+            isHome && !hasCode -> "Crée la room dans eFootball, puis envoie le code ici."
+            isHome -> "Code envoyé : $code — renvoie-le s'il change."
+            hasCode -> "Code room reçu : $code"
             else -> notifMessage
+        }
+        // Base du Chronometer : timebase elapsedRealtime (≠ currentTimeMillis).
+        val chronoBase =
+            SystemClock.elapsedRealtime() - (System.currentTimeMillis() - recordStartMillis)
+        // 3e pastille : « Envoyer »/« Renvoyer » (HOME) et « Copier » (AWAY) sont
+        // exclusifs. Côté HOME elle reste là même une fois le code envoyé.
+        val showSend = isHome
+        val showCopy = !isHome && hasCode
+
+        fun buildView(withButtons: Boolean): RemoteViews {
+            val layout = if (withButtons) R.layout.notif_recorder_big
+            else R.layout.notif_recorder_small
+            return RemoteViews(packageName, layout).apply {
+                setTextViewText(R.id.notif_status, text)
+                setChronometer(R.id.notif_chrono, chronoBase, null, true)
+                if (withButtons) {
+                    setOnClickPendingIntent(R.id.notif_btn_stop, stopPending)
+                    setOnClickPendingIntent(R.id.notif_btn_open, openPending)
+                    setViewVisibility(
+                        R.id.notif_btn_code,
+                        if (showSend || showCopy) android.view.View.VISIBLE
+                        else android.view.View.GONE,
+                    )
+                    if (showSend) {
+                        setImageViewResource(R.id.notif_btn_code_icon, R.drawable.ic_notif_send)
+                        setTextViewText(
+                            R.id.notif_btn_code_label,
+                            if (hasCode) "Renvoyer code" else "Envoyer code",
+                        )
+                        setOnClickPendingIntent(R.id.notif_btn_code, typePending)
+                    } else if (showCopy) {
+                        setImageViewResource(R.id.notif_btn_code_icon, R.drawable.ic_notif_copy)
+                        setTextViewText(R.id.notif_btn_code_label, "Copier")
+                        setOnClickPendingIntent(R.id.notif_btn_code, copyPending)
+                    }
+                }
+            }
         }
 
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(notifTitle)
             .setContentText(text)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
-            .setSmallIcon(android.R.drawable.presence_video_online)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setColor(getColor(R.color.notification_tint))
             .setOngoing(true)
-            // Compteur d'enregistrement : chrono qui s'incrémente tout seul.
-            .setUsesChronometer(true)
-            .setWhen(recordStartMillis)
-            .setShowWhen(true)
+            .setShowWhen(false)
             .setContentIntent(openPending)
-            .addAction(
-                android.R.drawable.ic_menu_close_clear_cancel,
-                "Arrêter",
-                stopPending,
-            )
-
-        if (awaitingCode) {
-            // HOME — réponse directe. Le PendingIntent DOIT être MUTABLE
-            // (le système y injecte le texte saisi via RemoteInput).
-            val remoteInput = RemoteInput.Builder(REMOTE_INPUT_KEY)
-                .setLabel("Code de la room eFootball")
-                .build()
-            val submitIntent = Intent(this, ArenaRecorderService::class.java).apply {
-                action = ACTION_SUBMIT_CODE
-            }
-            val mutableFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-            } else {
-                PendingIntent.FLAG_UPDATE_CURRENT
-            }
-            val submitPending = PendingIntent.getService(this, 2, submitIntent, mutableFlags)
-            builder.addAction(
-                NotificationCompat.Action.Builder(
-                    android.R.drawable.ic_menu_send, "Envoyer le code", submitPending,
-                ).addRemoteInput(remoteInput).build()
-            )
-        } else if (!code.isNullOrEmpty()) {
-            // AWAY — copie du code reçu dans le presse-papier.
-            val copyIntent = Intent(this, ArenaRecorderService::class.java).apply {
-                action = ACTION_COPY_CODE
-            }
-            val copyPending = PendingIntent.getService(this, 3, copyIntent, pendingFlags())
-            builder.addAction(android.R.drawable.ic_menu_save, "Copier", copyPending)
-        }
+            .setStyle(NotificationCompat.DecoratedCustomViewStyle())
+            .setCustomContentView(buildView(withButtons = false))
+            .setCustomBigContentView(buildView(withButtons = true))
 
         return builder.build()
     }

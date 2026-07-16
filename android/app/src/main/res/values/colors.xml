@@ -3,4 +3,11 @@
     <!-- Teinte de la petite icône de notification ARENA (status bar +
          accent de l'en-tête de notif). Bleu de la marque ARENA. -->
     <color name="notification_tint">#4C7AFF</color>
+
+    <!-- Pastilles d'action de la notif de contrôle (RemoteViews).
+         Icône + libellé blancs sur fond plein. -->
+    <color name="notif_btn_stop">#E5484D</color>   <!-- rouge — Arrêter -->
+    <color name="notif_btn_open">#4C7AFF</color>   <!-- bleu marque — Ouvrir -->
+    <color name="notif_btn_code">#17B8C7</color>   <!-- cyan — Copier / code -->
+    <color name="notif_btn_label">#FFFFFFFF</color> <!-- libellé pastille (blanc) -->
 </resources>
