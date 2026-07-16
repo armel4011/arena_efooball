@@ -1280,10 +1280,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get matchHeaderPlayer2 => 'Joueur 2';
 
   @override
-  String get matchHeaderBadgeHome => 'HOME';
+  String get matchHeaderBadgeHome => 'DOMICILE';
 
   @override
-  String get matchHeaderBadgeAway => 'AWAY';
+  String get matchHeaderBadgeAway => 'EXTÉRIEUR';
 
   @override
   String get recordingActionResume => 'Continuer';
@@ -1382,11 +1382,12 @@ class AppLocalizationsFr extends AppLocalizations {
       'Les joueurs vont créer une room dans le jeu et partager le code ici.';
 
   @override
-  String get stepBodyAwaitHomeCodeTitle => 'En attente du code de HOME';
+  String get stepBodyAwaitHomeCodeTitle =>
+      'En attente du code du joueur à domicile';
 
   @override
   String get stepBodyAwaitHomeCodeDesc =>
-      'Tu es AWAY sur ce match. Le joueur à domicile crée la room dans le jeu et t\'enverra le code ici dès qu\'il l\'aura partagé.';
+      'Tu joues à l\'extérieur sur ce match. Le joueur à domicile crée la room dans le jeu et t\'enverra le code ici dès qu\'il l\'aura partagé.';
 
   @override
   String get openChatButton => 'OUVRIR LE CHAT';
@@ -1629,7 +1630,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get shareCodeErrorSendFailed => 'Impossible de partager le code : ';
 
   @override
-  String get shareCodeRoomLabel => 'CODE ROOM (HOME CRÉE)';
+  String get shareCodeRoomLabel => 'CODE ROOM (CRÉÉ PAR LE DOMICILE)';
 
   @override
   String get shareCodeEnterPrompt => 'Saisis ton code eFootball :';

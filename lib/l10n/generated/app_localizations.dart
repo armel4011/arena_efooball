@@ -2521,13 +2521,13 @@ abstract class AppLocalizations {
   /// No description provided for @matchHeaderBadgeHome.
   ///
   /// In fr, this message translates to:
-  /// **'HOME'**
+  /// **'DOMICILE'**
   String get matchHeaderBadgeHome;
 
   /// No description provided for @matchHeaderBadgeAway.
   ///
   /// In fr, this message translates to:
-  /// **'AWAY'**
+  /// **'EXTÉRIEUR'**
   String get matchHeaderBadgeAway;
 
   /// No description provided for @recordingActionResume.
@@ -2707,13 +2707,13 @@ abstract class AppLocalizations {
   /// No description provided for @stepBodyAwaitHomeCodeTitle.
   ///
   /// In fr, this message translates to:
-  /// **'En attente du code de HOME'**
+  /// **'En attente du code du joueur à domicile'**
   String get stepBodyAwaitHomeCodeTitle;
 
   /// No description provided for @stepBodyAwaitHomeCodeDesc.
   ///
   /// In fr, this message translates to:
-  /// **'Tu es AWAY sur ce match. Le joueur à domicile crée la room dans le jeu et t\'enverra le code ici dès qu\'il l\'aura partagé.'**
+  /// **'Tu joues à l\'extérieur sur ce match. Le joueur à domicile crée la room dans le jeu et t\'enverra le code ici dès qu\'il l\'aura partagé.'**
   String get stepBodyAwaitHomeCodeDesc;
 
   /// No description provided for @openChatButton.
@@ -3157,7 +3157,7 @@ abstract class AppLocalizations {
   /// No description provided for @shareCodeRoomLabel.
   ///
   /// In fr, this message translates to:
-  /// **'CODE ROOM (HOME CRÉE)'**
+  /// **'CODE ROOM (CRÉÉ PAR LE DOMICILE)'**
   String get shareCodeRoomLabel;
 
   /// No description provided for @shareCodeEnterPrompt.
