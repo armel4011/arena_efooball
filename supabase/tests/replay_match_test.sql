@@ -104,9 +104,14 @@ select throws_ok(
 
 -- Un litige RÉEL, mais qui porte sur un AUTRE match : ne doit pas servir de
 -- passe-droit pour rejouer celui-ci.
+-- ⚠️ `disputed` et NON `completed` : J1 joue aussi ce match, et un INSERT en
+-- `completed` déclencherait `trg_matches_increment_stats_insert` une 2e fois sur
+-- lui (nul, +1 draw) — que le décrément de f1 ne rattrape pas, faussant
+-- l'assertion d'aller-retour plus bas. Le statut n'importe pas ici : seul le
+-- litige rattaché compte.
 insert into matches(id,competition_id,round,match_number,player1_id,player2_id,status)
 values ('da000000-0000-0000-0000-0000000000f2','da000000-0000-0000-0000-0000000000c0',1,2,
-        'da000000-0000-0000-0000-000000000001','da000000-0000-0000-0000-000000000009','completed');
+        'da000000-0000-0000-0000-000000000001','da000000-0000-0000-0000-000000000009','disputed');
 insert into disputes(id,match_id,opened_by,status,reason)
 values ('da000000-0000-0000-0000-0000000000d2','da000000-0000-0000-0000-0000000000f2',
         'da000000-0000-0000-0000-000000000009','open','autre match');
