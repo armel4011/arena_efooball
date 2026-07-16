@@ -113,7 +113,7 @@ values ('da000000-0000-0000-0000-0000000000d2','da000000-0000-0000-0000-00000000
 select throws_ok(
   $$ select public.replay_match('da000000-0000-0000-0000-0000000000f1',
        'da000000-0000-0000-0000-0000000000d2', 'litige d un autre match', now() + interval '1 day') $$,
-  '22023', NULL, "litige d'un AUTRE match : refuse");
+  '22023', NULL, 'litige d''un AUTRE match : refuse');
 
 -- ─── Cas nominal ────────────────────────────────────────────────────
 select lives_ok(
