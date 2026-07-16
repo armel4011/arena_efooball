@@ -260,6 +260,34 @@ class AdminDisputesRepository {
       },
     );
   }
+
+  /// Remet un match EN JEU quand le litige n'est pas tranchable (RPC
+  /// `replay_match`, SECURITY DEFINER).
+  ///
+  /// Troisième issue à côté du tapis vert et de l'annulation : quand les
+  /// preuves ne départagent pas, donner le match à l'un punit peut-être un
+  /// innocent, et l'annuler efface un match qui a eu lieu.
+  ///
+  /// Le serveur annule le résultat précédent (stats décrémentées, vainqueur
+  /// dé-propagé du bracket, compétition rouverte si elle avait été clôturée),
+  /// replanifie à [scheduledAt] et clôture le litige SANS désigner de coupable.
+  /// Lève si des gains ont déjà été générés ou si le match suivant est engagé.
+  Future<void> replayMatch({
+    required String matchId,
+    required String justification,
+    required DateTime scheduledAt,
+    String? disputeId,
+  }) async {
+    await _client.rpc<void>(
+      'replay_match',
+      params: {
+        'p_match_id': matchId,
+        'p_dispute_id': disputeId,
+        'p_justification': justification,
+        'p_scheduled_at': scheduledAt.toUtc().toIso8601String(),
+      },
+    );
+  }
 }
 
 final adminDisputesRepositoryProvider =

@@ -237,11 +237,110 @@ class _VerdictButtons extends ConsumerWidget {
           child: const Text('J2 gagne 3-0 (tapis vert)'),
         ),
         const SizedBox(height: 8),
+        // 3e issue : quand les preuves ne départagent PAS, le tapis vert punit
+        // peut-être un innocent et l'annulation efface un match qui a eu lieu.
+        // On remet les deux joueurs sur le terrain, sans coupable.
+        Button(
+          onPressed: verdictLocked ? null : () => _replay(context, ref),
+          child: const Text('Faire rejouer'),
+        ),
+        const SizedBox(height: 8),
         Button(
           onPressed: () => _cancelMatch(context, ref),
           child: const Text('Annuler le match'),
         ),
       ],
+    );
+  }
+
+  /// Remet le match en jeu à un nouveau créneau (RPC `replay_match`). Le
+  /// serveur annule le résultat précédent (stats, bracket, classement) et
+  /// clôture le litige SANS désigner de coupable. Parité avec le mobile.
+  Future<void> _replay(BuildContext context, WidgetRef ref) async {
+    final justification = justificationController.text.trim();
+    if (justification.isEmpty) {
+      await _showResult(context, 'Justification obligatoire.', isError: true);
+      return;
+    }
+    final slot = await _askReplaySlot(context);
+    if (slot == null || !context.mounted) return;
+
+    final totpOk = await showDesktopTotpGate(
+      context,
+      ref,
+      reason: 'Litige · faire rejouer le match',
+    );
+    if (!totpOk || !context.mounted) return;
+    try {
+      await ref.read(adminDisputesRepositoryProvider).replayMatch(
+            matchId: match.id,
+            disputeId: dispute?.id,
+            justification: justification,
+            scheduledAt: slot,
+          );
+      if (!context.mounted) return;
+      await _showResult(
+        context,
+        'Match remis en jeu — les joueurs sont prévenus.',
+        isError: false,
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      await _showResult(context, arenaErrorMessage(e), isError: true);
+    }
+  }
+
+  /// Demande le créneau de la nouvelle manche (Fluent n'a pas de
+  /// `showDateTimePicker` : on compose DatePicker + TimePicker).
+  Future<DateTime?> _askReplaySlot(BuildContext context) {
+    var slot = DateTime.now().add(const Duration(days: 1));
+    return showDialog<DateTime>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => ContentDialog(
+          title: const Text('Nouveau créneau'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'À quelle date les deux joueurs rejouent-ils ce match ?',
+              ),
+              const SizedBox(height: 12),
+              DatePicker(
+                selected: slot,
+                onChanged: (d) => setLocal(
+                  () => slot =
+                      DateTime(d.year, d.month, d.day, slot.hour, slot.minute),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TimePicker(
+                selected: slot,
+                onChanged: (t) => setLocal(
+                  () => slot = DateTime(
+                    slot.year,
+                    slot.month,
+                    slot.day,
+                    t.hour,
+                    t.minute,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            Button(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Annuler'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(slot),
+              child: const Text('Confirmer'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

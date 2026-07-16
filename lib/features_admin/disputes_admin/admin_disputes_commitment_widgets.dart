@@ -256,6 +256,16 @@ class _VerdictButtons extends ConsumerWidget {
               : () => _commit(context, ref, winnerId: match.player2Id),
         ),
         const SizedBox(height: ArenaSpacing.xs),
+        // 3e issue : quand les preuves ne départagent PAS, le tapis vert punit
+        // peut-être un innocent et l'annulation efface un match qui a eu lieu.
+        // On remet les deux joueurs sur le terrain, sans coupable.
+        ArenaButton(
+          label: '🔄 FAIRE REJOUER',
+          variant: ArenaButtonVariant.secondary,
+          fullWidth: true,
+          onPressed: verdictLocked ? null : () => _replay(context, ref),
+        ),
+        const SizedBox(height: ArenaSpacing.xs),
         ArenaButton(
           label: '🚫 ANNULER MATCH',
           variant: ArenaButtonVariant.danger,
@@ -264,6 +274,61 @@ class _VerdictButtons extends ConsumerWidget {
         ),
       ],
     );
+  }
+
+  /// Remet le match en jeu à un nouveau créneau (RPC `replay_match`). Le
+  /// serveur annule le résultat précédent (stats, bracket, classement) et
+  /// clôture le litige SANS désigner de coupable.
+  Future<void> _replay(BuildContext context, WidgetRef ref) async {
+    final justification = justificationController.text.trim();
+    if (justification.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Justification obligatoire.')),
+      );
+      return;
+    }
+    final date = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now().add(const Duration(days: 1)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (date == null || !context.mounted) return;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: const TimeOfDay(hour: 18, minute: 0),
+    );
+    if (time == null || !context.mounted) return;
+    final scheduledAt =
+        DateTime(date.year, date.month, date.day, time.hour, time.minute);
+
+    final totpOk = await TotpGate.confirm(
+      context,
+      ref,
+      reason: 'Litige · faire rejouer le match',
+    );
+    if (!totpOk || !context.mounted) return;
+
+    try {
+      await ref.read(adminDisputesRepositoryProvider).replayMatch(
+            matchId: match.id,
+            disputeId: dispute?.id,
+            justification: justification,
+            scheduledAt: scheduledAt,
+          );
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Match remis en jeu — les joueurs sont prévenus.'),
+        ),
+      );
+      await Navigator.of(context).maybePop();
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Échec : ${arenaErrorMessage(e)}')),
+      );
+    }
   }
 
   Future<void> _commit(
