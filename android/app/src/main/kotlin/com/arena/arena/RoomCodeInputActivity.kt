@@ -34,6 +34,14 @@ class RoomCodeInputActivity : Activity() {
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
 
         val field = findViewById<EditText>(R.id.room_code_field)
+        // Renvoi : pré-remplir le code déjà partagé — on vient le plus souvent
+        // le corriger, pas le retaper de zéro.
+        intent?.getStringExtra(ArenaRecorderService.EXTRA_ROOM_CODE)?.let { current ->
+            if (current.isNotEmpty()) {
+                field.setText(current)
+                field.setSelection(current.length)
+            }
+        }
         field.requestFocus()
 
         findViewById<Button>(R.id.room_code_submit).setOnClickListener {

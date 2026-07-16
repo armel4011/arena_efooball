@@ -80,7 +80,9 @@ class ArenaRecorderService : Service() {
         const val ACTION_STOP_REQUESTED = "com.arena.arena.recorder.STOP_REQUESTED"
         // Échange du code room via la notification (repli Pixel 9 du panneau
         // overlay). Une SEULE pastille cyan, selon le rôle :
-        //   * HOME (domicile) ENVOIE → ouvre RoomCodeInputActivity (mini-dialogue) ;
+        //   * HOME (domicile) ENVOIE → ouvre RoomCodeInputActivity (mini-dialogue).
+        //     Reste disponible APRÈS l'envoi (« Renvoyer ») : recréer une room
+        //     dans eFootball change le code, le HOME doit pouvoir le repousser.
         //   * AWAY (extérieur) REÇOIT le code → « Copier ».
         const val ACTION_SUBMIT_CODE = "com.arena.arena.recorder.SUBMIT_CODE"
         const val ACTION_COPY_CODE = "com.arena.arena.recorder.COPY_CODE"
@@ -91,7 +93,10 @@ class ArenaRecorderService : Service() {
         const val EXTRA_TITLE = "title"
         const val EXTRA_MESSAGE = "message"
         const val EXTRA_ROOM_CODE = "room_code"
-        const val EXTRA_AWAITING_CODE = "awaiting_code"
+        // Rôle du joueur : le HOME envoie le code, l'AWAY le reçoit. C'est bien
+        // le RÔLE, pas « il manque un code » — le HOME garde l'envoi une fois le
+        // code partagé, pour pouvoir le renvoyer.
+        const val EXTRA_IS_HOME = "is_home"
         // Code saisi par le HOME dans RoomCodeInputActivity.
         const val EXTRA_TYPED_CODE = "typed_code"
 
@@ -173,10 +178,10 @@ class ArenaRecorderService : Service() {
     // l'état du code room change, sans re-passer par ACTION_START).
     private var notifTitle: String = "ARENA"
     private var notifMessage: String = "Enregistrement en cours"
-    // Code room reçu à afficher (côté AWAY) ; null si aucun.
+    // Code room courant : celui que le HOME a envoyé, ou celui que l'AWAY a reçu.
     private var roomCode: String? = null
-    // Vrai côté HOME tant qu'il doit ENVOYER le code (affiche la réponse directe).
-    private var awaitingCode: Boolean = false
+    // Vrai côté HOME (celui qui crée la room et ENVOIE le code).
+    private var isHome: Boolean = false
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
@@ -241,9 +246,11 @@ class ArenaRecorderService : Service() {
             }
             ACTION_SUBMIT_CODE -> {
                 // HOME a validé le mini-dialogue → récupère le texte tapé.
+                // On garde `isHome` : le code d'une room recréée change, le HOME
+                // doit pouvoir le RENVOYER autant de fois que nécessaire.
                 val typed = intent.getStringExtra(EXTRA_TYPED_CODE)?.trim()
                 if (!typed.isNullOrEmpty()) {
-                    awaitingCode = false
+                    roomCode = typed
                     try { onRoomCodeSubmitted?.invoke(typed) } catch (_: Exception) {}
                     refreshNotification()
                 }
@@ -263,8 +270,8 @@ class ArenaRecorderService : Service() {
                 return START_STICKY
             }
             ACTION_UPDATE_CODE -> {
-                // Dart pousse l'état du code : AWAY reçoit un code, ou HOME doit
-                // l'envoyer (awaitingCode). On reconstruit juste la notif.
+                // Dart pousse l'état du code : le rôle (isHome) + le code courant
+                // lu en base. On reconstruit juste la notif.
                 // Si aucun enregistrement n'est en cours, ne PAS laisser un
                 // service non-foreground zombie → stopSelf.
                 if (!isActive) {
@@ -272,7 +279,7 @@ class ArenaRecorderService : Service() {
                     return START_NOT_STICKY
                 }
                 roomCode = intent.getStringExtra(EXTRA_ROOM_CODE)
-                awaitingCode = intent.getBooleanExtra(EXTRA_AWAITING_CODE, false)
+                isHome = intent.getBooleanExtra(EXTRA_IS_HOME, false)
                 refreshNotification()
                 return START_STICKY
             }
@@ -541,8 +548,12 @@ class ArenaRecorderService : Service() {
      *   * Pastilles : ⏹ Arrêter (rouge) · ⧉ Ouvrir (bleu) · 3e pastille cyan.
      *
      * La 3e pastille porte les deux faces — exclusives — de l'échange du code :
-     * HOME (awaitingCode) « Envoyer » → [RoomCodeInputActivity] ; AWAY (code reçu)
+     * HOME « Envoyer » / « Renvoyer » → [RoomCodeInputActivity] ; AWAY (code reçu)
      * « Copier » → [ACTION_COPY_CODE]. Même emplacement, même cyan.
+     *
+     * Côté HOME la pastille ne disparaît JAMAIS pendant l'enregistrement :
+     * recréer une room dans eFootball change le code, il faut pouvoir le
+     * renvoyer autant de fois que nécessaire.
      *
      * Pas de réponse directe (RemoteInput) : le champ de saisie inline ne se
      * déclenche que depuis une action STANDARD, dont Android n'autorise ni
@@ -567,24 +578,30 @@ class ArenaRecorderService : Service() {
             action = ACTION_COPY_CODE
         }
         val copyPending = PendingIntent.getService(this, 3, copyIntent, pendingFlags())
-        // HOME — mini-dialogue de saisie posé par-dessus eFootball.
+        val code = roomCode
+        // HOME — mini-dialogue de saisie posé par-dessus eFootball. Pré-rempli
+        // avec le code déjà envoyé (renvoi = souvent une retouche). `pendingFlags`
+        // porte FLAG_UPDATE_CURRENT, donc l'extra suit les changements de code.
         val typeIntent = Intent(this, RoomCodeInputActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            putExtra(EXTRA_ROOM_CODE, code)
         }
         val typePending = PendingIntent.getActivity(this, 4, typeIntent, pendingFlags())
 
-        val code = roomCode
+        val hasCode = !code.isNullOrEmpty()
         val text = when {
-            awaitingCode -> "Crée la room dans eFootball, puis envoie le code ici."
-            !code.isNullOrEmpty() -> "Code room reçu : $code"
+            isHome && !hasCode -> "Crée la room dans eFootball, puis envoie le code ici."
+            isHome -> "Code envoyé : $code — renvoie-le s'il change."
+            hasCode -> "Code room reçu : $code"
             else -> notifMessage
         }
         // Base du Chronometer : timebase elapsedRealtime (≠ currentTimeMillis).
         val chronoBase =
             SystemClock.elapsedRealtime() - (System.currentTimeMillis() - recordStartMillis)
-        // 3e pastille : « Envoyer » (HOME) et « Copier » (AWAY) sont exclusifs.
-        val showSend = awaitingCode
-        val showCopy = !awaitingCode && !code.isNullOrEmpty()
+        // 3e pastille : « Envoyer »/« Renvoyer » (HOME) et « Copier » (AWAY) sont
+        // exclusifs. Côté HOME elle reste là même une fois le code envoyé.
+        val showSend = isHome
+        val showCopy = !isHome && hasCode
 
         fun buildView(withButtons: Boolean): RemoteViews {
             val layout = if (withButtons) R.layout.notif_recorder_big
@@ -602,7 +619,10 @@ class ArenaRecorderService : Service() {
                     )
                     if (showSend) {
                         setImageViewResource(R.id.notif_btn_code_icon, R.drawable.ic_notif_send)
-                        setTextViewText(R.id.notif_btn_code_label, "Envoyer")
+                        setTextViewText(
+                            R.id.notif_btn_code_label,
+                            if (hasCode) "Renvoyer code" else "Envoyer code",
+                        )
                         setOnClickPendingIntent(R.id.notif_btn_code, typePending)
                     } else if (showCopy) {
                         setImageViewResource(R.id.notif_btn_code_icon, R.drawable.ic_notif_copy)

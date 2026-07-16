@@ -55,16 +55,17 @@ class NativeLifecycleEvents {
   Stream<String> get roomCodeSubmitted => _codeController.stream;
 
   /// Met à jour l'échange de code room dans la notif de contrôle native :
-  ///   * HOME → [awaitingCode] true : affiche la réponse directe « Envoyer le code ».
-  ///   * AWAY → [code] non nul : affiche le code reçu + un bouton « Copier ».
+  ///   * [isHome] true → pastille « Envoyer » (puis « Renvoyer » une fois [code]
+  ///     partagé : une room recréée dans eFootball change de code) ;
+  ///   * [isHome] false → le code reçu s'affiche avec un bouton « Copier ».
   Future<void> updateRoomCodeNotification({
-    required bool awaitingCode,
+    required bool isHome,
     String? code,
   }) async {
     try {
       await _method.invokeMethod<void>('updateRoomCodeNotification', {
         'code': code,
-        'awaitingCode': awaitingCode,
+        'isHome': isHome,
       });
     } catch (_) {
       // Canal down (CI / autre OS / service pas encore démarré) — non bloquant.

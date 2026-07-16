@@ -137,27 +137,21 @@ class _MatchRecordingLifecycleState
 
   /// Pousse l'échange du code room vers la NOTIF de contrôle native (repli
   /// universel du panneau overlay : marche SANS permission de superposition —
-  /// utile là où l'overlay est bloqué, Pixel 9 / Android 15). Le HOME
-  /// (domicile) ENVOIE via la réponse directe ; l'AWAY (extérieur) REÇOIT le
+  /// utile là où l'overlay est bloqué, Pixel 9 / Android 15). Le HOME (domicile)
+  /// ENVOIE le code, et peut le RENVOYER tant que l'enregistrement tourne (une
+  /// room recréée dans eFootball change de code) ; l'AWAY (extérieur) REÇOIT le
   /// code + un bouton « Copier ». No-op si aucune capture native n'est active
   /// (le service natif ignore alors l'update).
   void _pushRoomCodeToNotification() {
     if (!_isAndroidNative || !_isPlayer) return;
-    final isHome = widget.match.homePlayerId == widget.selfId;
-    final code = widget.match.roomCode;
-    final events = ref.read(nativeLifecycleEventsProvider);
-    if (isHome) {
-      // Domicile : réponse directe tant qu'il n'a pas encore partagé le code.
-      final hasCode = code != null && code.trim().isNotEmpty;
-      unawaited(
-        events.updateRoomCodeNotification(code: null, awaitingCode: !hasCode),
-      );
-    } else {
-      // Extérieur : affiche le code reçu (ou rien tant qu'il n'est pas arrivé).
-      unawaited(
-        events.updateRoomCodeNotification(code: code, awaitingCode: false),
-      );
-    }
+    unawaited(
+      ref
+          .read(nativeLifecycleEventsProvider)
+          .updateRoomCodeNotification(
+            code: widget.match.roomCode,
+            isHome: widget.match.homePlayerId == widget.selfId,
+          ),
+    );
   }
 
   Future<void> _maybeReact() async {
