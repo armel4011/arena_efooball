@@ -288,7 +288,13 @@ class _RegistrationConfirmPageState
         }
         final operator = PaymentOperator.fromOption(selected);
         if (!mounted) return;
-        context.go(
+        // `push` et NON `go` : `go` remplace toute la pile, il ne reste alors
+        // rien sous la page de paiement et le bouton Retour système QUITTE
+        // l'app. `push` garde cet écran dessous — Retour ramène au récap
+        // d'inscription, ce qu'attend le joueur qui se ravise.
+        // (La page de paiement fait elle-même `go` vers le suivi une fois payé :
+        // là, remplacer la pile est voulu — on ne revient pas payer deux fois.)
+        await context.push(
           UserRoutes.paymentMomoDetails,
           extra: PaymentMomoArgs(
             operator: operator,
@@ -297,6 +303,12 @@ class _RegistrationConfirmPageState
             competitionName: widget.competitionName,
           ),
         );
+        // Cet écran SURVIT sous la page de paiement (c'est tout l'objet du
+        // `push`) : au retour, il faut relâcher `_submitting`, sinon le joueur
+        // qui se ravise retrouve son bouton bloqué en chargement. Avec `go` la
+        // page était détruite, la question ne se posait pas.
+        if (!mounted) return;
+        setState(() => _submitting = false);
       }
     } catch (e) {
       if (!mounted) return;
