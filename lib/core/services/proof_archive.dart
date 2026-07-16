@@ -25,11 +25,12 @@ class ProofArchive {
   /// Sous-dossier dédié dans le stockage applicatif persistant.
   static const _folder = 'arena_proofs';
 
-  /// Fenêtre de rétention : au-delà, un proxy non réclamé est purgé. Aligné sur
-  /// la fenêtre de litige (les captures serveur non contestées sont, elles,
-  /// purgées à J+1 côté `cleanup-streams`, mais la preuve JOUEUR doit rester
-  /// livrable tant qu'un litige peut être ouvert).
-  static const retention = Duration(days: 30);
+  /// Fenêtre de rétention du cache de preuve : au-delà, un proxy non réclamé est
+  /// purgé. Fixée à 48 h = la fenêtre de litige (une réclamation admin doit
+  /// arriver dans ces 48 h ; au-delà, la preuve locale est purgée pour borner le
+  /// stockage). ⚠️ Une réclamation après 48 h ne retrouvera plus le fichier
+  /// local. Le `ProofFileStore` s'aligne sur cette valeur.
+  static const retention = Duration(hours: 48);
 
   Future<Directory> _dir() async {
     final base = await getApplicationSupportDirectory();
