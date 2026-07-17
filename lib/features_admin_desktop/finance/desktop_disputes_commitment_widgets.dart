@@ -186,7 +186,7 @@ class _ProofCommitmentTileState extends ConsumerState<_ProofCommitmentTile> {
   }
 }
 
-class _VerdictButtons extends ConsumerWidget {
+class _VerdictButtons extends ConsumerStatefulWidget {
   const _VerdictButtons({
     required this.match,
     required this.dispute,
@@ -198,7 +198,21 @@ class _VerdictButtons extends ConsumerWidget {
   final TextEditingController justificationController;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_VerdictButtons> createState() => _VerdictButtonsState();
+}
+
+class _VerdictButtonsState extends ConsumerState<_VerdictButtons> {
+  /// Coupable désigné — `null` = personne (le défaut). Indépendant du
+  /// vainqueur : un litige peut se trancher sans triche. Parité mobile.
+  String? _guiltyPartyId;
+
+  ArenaMatch get match => widget.match;
+  Dispute? get dispute => widget.dispute;
+  TextEditingController get justificationController =>
+      widget.justificationController;
+
+  @override
+  Widget build(BuildContext context) {
     // Verrou serveur (audit 2026-07-07) : re-arbitrer un match à cagnotte déjà
     // décidé est réservé au super-admin. On désactive les CTA verdict pour un
     // admin simple (parité app mobile).
@@ -215,6 +229,15 @@ class _VerdictButtons extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // Strike réservé au super-admin (exigence serveur) et à un litige réel.
+        if (isSuperAdmin && dispute != null) ...[
+          _GuiltySelector(
+            match: match,
+            guiltyPartyId: _guiltyPartyId,
+            onChanged: (id) => setState(() => _guiltyPartyId = id),
+          ),
+          const SizedBox(height: 8),
+        ],
         if (verdictLocked) ...[
           const InfoBar(
             title: Text('Réservé au super-admin'),
@@ -389,6 +412,7 @@ class _VerdictButtons extends ConsumerWidget {
             winnerId: winnerId,
             scoreP1: scoreP1,
             scoreP2: scoreP2,
+            guiltyPartyId: _guiltyPartyId,
           );
       if (!context.mounted) return;
       await _showResult(context, 'Verdict enregistré.', isError: false);
@@ -428,5 +452,60 @@ class _VerdictButtons extends ConsumerWidget {
       if (!context.mounted) return;
       await _showResult(context, arenaErrorMessage(e), isError: true);
     }
+  }
+}
+
+/// Sélecteur du coupable de triche (verdict « 3 strikes »), console desktop.
+///
+/// Miroir Fluent du sélecteur mobile : mêmes trois choix, même défaut « Aucun »,
+/// mêmes libellés (source unique dans `dispute_resolution.dart`) — les deux
+/// consoles doivent énoncer identiquement une conséquence aussi lourde qu'un
+/// bannissement à vie.
+class _GuiltySelector extends StatelessWidget {
+  const _GuiltySelector({
+    required this.match,
+    required this.guiltyPartyId,
+    required this.onChanged,
+  });
+
+  final ArenaMatch match;
+  final String? guiltyPartyId;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(disputeGuiltyLabel, style: FluentTheme.of(context).typography.body),
+        const SizedBox(height: 4),
+        ComboBox<String?>(
+          value: guiltyPartyId,
+          placeholder: const Text(disputeGuiltyNoneLabel),
+          items: [
+            const ComboBoxItem<String?>(
+              value: null,
+              child: Text(disputeGuiltyNoneLabel),
+            ),
+            if (match.player1Id != null)
+              ComboBoxItem<String?>(
+                value: match.player1Id,
+                child: const Text('J1 a triché'),
+              ),
+            if (match.player2Id != null)
+              ComboBoxItem<String?>(
+                value: match.player2Id,
+                child: const Text('J2 a triché'),
+              ),
+          ],
+          onChanged: onChanged,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          disputeGuiltyHint,
+          style: FluentTheme.of(context).typography.caption,
+        ),
+      ],
+    );
   }
 }

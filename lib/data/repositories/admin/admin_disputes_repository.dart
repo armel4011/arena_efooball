@@ -238,6 +238,12 @@ class AdminDisputesRepository {
   /// trace d'audit, dans UNE seule transaction (gate `is_admin()` serveur).
   /// Remplace l'enchaînement de 3 écritures non transactionnelles qui pouvait
   /// laisser un litige `open` alors que le bracket avait avancé.
+  ///
+  /// [guiltyPartyId] enregistre un **verdict de culpabilité** : 3 verdicts
+  /// valent un bannissement à vie (`trg_three_strikes_ban`). Il est
+  /// INDÉPENDANT de [winnerId] — perdre un litige n'est pas tricher, un
+  /// désaccord de score peut être de bonne foi. Le serveur exige un
+  /// super-admin, un litige, et un joueur de ce match.
   Future<void> resolveAtomic({
     required String matchId,
     required String justification,
@@ -246,6 +252,7 @@ class AdminDisputesRepository {
     String? winnerId,
     int? scoreP1,
     int? scoreP2,
+    String? guiltyPartyId,
   }) async {
     await _client.rpc<void>(
       'resolve_dispute',
@@ -257,6 +264,7 @@ class AdminDisputesRepository {
         'p_winner_id': winnerId,
         'p_score1': scoreP1,
         'p_score2': scoreP2,
+        'p_guilty_party_id': guiltyPartyId,
       },
     );
   }

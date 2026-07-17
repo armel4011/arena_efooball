@@ -194,7 +194,7 @@ class _ProofCommitmentTileState extends ConsumerState<_ProofCommitmentTile> {
   }
 }
 
-class _VerdictButtons extends ConsumerWidget {
+class _VerdictButtons extends ConsumerStatefulWidget {
   const _VerdictButtons({
     required this.match,
     required this.dispute,
@@ -206,7 +206,21 @@ class _VerdictButtons extends ConsumerWidget {
   final TextEditingController justificationController;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_VerdictButtons> createState() => _VerdictButtonsState();
+}
+
+class _VerdictButtonsState extends ConsumerState<_VerdictButtons> {
+  /// Coupable désigné — `null` = personne (le défaut). Volontairement
+  /// indépendant du vainqueur : un litige peut se trancher sans triche.
+  String? _guiltyPartyId;
+
+  ArenaMatch get match => widget.match;
+  Dispute? get dispute => widget.dispute;
+  TextEditingController get justificationController =>
+      widget.justificationController;
+
+  @override
+  Widget build(BuildContext context) {
     // Verrou serveur (audit 2026-07-07, guard_matches_protected_columns) :
     // re-arbitrer un match à cagnotte déjà décidé est réservé au super-admin.
     // On désactive les CTA verdict pour un admin simple — PARITÉ avec la
@@ -224,6 +238,16 @@ class _VerdictButtons extends ConsumerWidget {
         );
     return Column(
       children: [
+        // Le strike n'est proposé qu'au super-admin (le serveur l'exige) et
+        // seulement s'il y a un litige à porter le verdict.
+        if (isSuperAdmin && dispute != null) ...[
+          _GuiltySelector(
+            match: match,
+            guiltyPartyId: _guiltyPartyId,
+            onChanged: (id) => setState(() => _guiltyPartyId = id),
+          ),
+          const SizedBox(height: ArenaSpacing.sm),
+        ],
         if (verdictLocked) ...[
           Row(
             children: [
@@ -374,6 +398,7 @@ class _VerdictButtons extends ConsumerWidget {
             winnerId: winnerId,
             scoreP1: scoreP1,
             scoreP2: scoreP2,
+            guiltyPartyId: _guiltyPartyId,
           );
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -406,6 +431,11 @@ class _VerdictButtons extends ConsumerWidget {
 
     try {
       // Annulation du match + résolution du litige + audit, ATOMIQUEMENT.
+      // Le coupable n'est volontairement PAS transmis : une annulation clôt le
+      // litige en 'cancelled', et le compteur de strikes ne retient que les
+      // 'resolved'. L'enregistrer ici afficherait un coupable qui ne compte
+      // pour rien — une donnée trompeuse. Annuler un match, c'est l'effacer,
+      // pas juger quelqu'un.
       await ref.read(adminDisputesRepositoryProvider).resolveAtomic(
             matchId: match.id,
             disputeId: dispute?.id,
@@ -420,5 +450,60 @@ class _VerdictButtons extends ConsumerWidget {
         SnackBar(content: Text('Échec : ${arenaErrorMessage(e)}')),
       );
     }
+  }
+}
+
+/// Sélecteur du coupable de triche (verdict « 3 strikes »), console mobile.
+///
+/// Trois choix explicites, « Aucun » par défaut : la culpabilité ne se déduit
+/// jamais du perdant. Les joueurs sont désignés J1/J2, comme les boutons de
+/// tapis vert juste en dessous.
+class _GuiltySelector extends StatelessWidget {
+  const _GuiltySelector({
+    required this.match,
+    required this.guiltyPartyId,
+    required this.onChanged,
+  });
+
+  final ArenaMatch match;
+  final String? guiltyPartyId;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(disputeGuiltyLabel, style: ArenaText.small),
+        const SizedBox(height: ArenaSpacing.xs),
+        Wrap(
+          spacing: ArenaSpacing.xs,
+          children: [
+            ChoiceChip(
+              label: const Text(disputeGuiltyNoneLabel),
+              selected: guiltyPartyId == null,
+              onSelected: (_) => onChanged(null),
+            ),
+            if (match.player1Id != null)
+              ChoiceChip(
+                label: const Text('J1 a triché'),
+                selected: guiltyPartyId == match.player1Id,
+                onSelected: (_) => onChanged(match.player1Id),
+              ),
+            if (match.player2Id != null)
+              ChoiceChip(
+                label: const Text('J2 a triché'),
+                selected: guiltyPartyId == match.player2Id,
+                onSelected: (_) => onChanged(match.player2Id),
+              ),
+          ],
+        ),
+        const SizedBox(height: ArenaSpacing.xs),
+        Text(
+          disputeGuiltyHint,
+          style: ArenaText.small.copyWith(color: ArenaColors.silver),
+        ),
+      ],
+    );
   }
 }
