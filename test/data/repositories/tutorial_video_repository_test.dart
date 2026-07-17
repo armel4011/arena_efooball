@@ -86,6 +86,37 @@ void main() {
       expect(ins.containsKey('updated_by'), isFalse);
       expect(ins['target_page'], 'all');
     });
+
+    test('vidéo contextuelle : game/country_code écrits (jeu pour la salle)',
+        () async {
+      final from = stub('tutorial_video', null);
+      await repo.createBanner(
+        title: 'Règles eFootball',
+        videoUrl: 'https://youtu.be/abc',
+        targetPage: TutorialPage.matchLocked,
+        displayDays: 7,
+        game: 'efootball',
+      );
+      final ins = from.insertedValues! as Map<String, dynamic>;
+      expect(ins['target_page'], 'match_locked');
+      expect(ins['game'], 'efootball');
+      // country_code TOUJOURS présent (NULL) pour satisfaire le CHECK DB.
+      expect(ins.containsKey('country_code'), isTrue);
+      expect(ins['country_code'], isNull);
+    });
+
+    test('bannière de page : game/country_code présents mais NULL', () async {
+      final from = stub('tutorial_video', null);
+      await repo.createBanner(
+        title: 'Tuto home',
+        videoUrl: 'https://youtu.be/xyz',
+        targetPage: TutorialPage.home,
+        displayDays: 7,
+      );
+      final ins = from.insertedValues! as Map<String, dynamic>;
+      expect(ins['game'], isNull);
+      expect(ins['country_code'], isNull);
+    });
   });
 
   group('updateBanner', () {
@@ -188,6 +219,78 @@ void main() {
         TutorialPage.home,
       );
       expect(out.map((b) => b.id), ['old', 'new']);
+    });
+  });
+
+  group('activeContextualVideo (filtre pur)', () {
+    TutorialVideo ctx({
+      required String id,
+      required TutorialPage page,
+      String? game,
+      String? country,
+      bool isActive = true,
+    }) {
+      final row = videoRow(id: id, isActive: isActive, targetPage: page.wire);
+      row['game'] = game;
+      row['country_code'] = country;
+      return TutorialVideo.fromJson(row);
+    }
+
+    test('salle verrouillée : match sur (cible, jeu)', () {
+      final efoot = ctx(id: 'e', page: TutorialPage.matchLocked, game: 'efootball');
+      final dames = ctx(id: 'd', page: TutorialPage.matchLocked, game: 'draughts');
+      final out = TutorialVideoRepository.activeContextualVideo(
+        [dames, efoot],
+        TutorialPage.matchLocked,
+        gameWire: 'efootball',
+      );
+      expect(out?.id, 'e');
+    });
+
+    test('jeu sans vidéo → null', () {
+      final efoot = ctx(id: 'e', page: TutorialPage.matchLocked, game: 'efootball');
+      final out = TutorialVideoRepository.activeContextualVideo(
+        [efoot],
+        TutorialPage.matchLocked,
+        gameWire: 'ea_sports_fc',
+      );
+      expect(out, isNull);
+    });
+
+    test('inactive exclue même si jeu correspond', () {
+      final efoot = ctx(
+        id: 'e',
+        page: TutorialPage.matchLocked,
+        game: 'efootball',
+        isActive: false,
+      );
+      final out = TutorialVideoRepository.activeContextualVideo(
+        [efoot],
+        TutorialPage.matchLocked,
+        gameWire: 'efootball',
+      );
+      expect(out, isNull);
+    });
+
+    test('ne confond pas les cibles (role_intro vs match_locked)', () {
+      final locked = ctx(id: 'l', page: TutorialPage.matchLocked, game: 'efootball');
+      final out = TutorialVideoRepository.activeContextualVideo(
+        [locked],
+        TutorialPage.matchRoleIntro,
+        gameWire: 'efootball',
+      );
+      expect(out, isNull);
+    });
+
+    test('tuto paiement : match sur (cible, pays)', () {
+      final cm = ctx(id: 'cm', page: TutorialPage.paymentTutorial, country: 'CM');
+      final sn = ctx(id: 'sn', page: TutorialPage.paymentTutorial, country: 'SN');
+      final out = TutorialVideoRepository.activeContextualVideo(
+        [cm, sn],
+        TutorialPage.paymentTutorial,
+        countryCode: 'SN',
+      );
+      expect(out?.id, 'sn');
     });
   });
 

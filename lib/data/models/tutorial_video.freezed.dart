@@ -26,6 +26,13 @@ mixin _$TutorialVideo {
   bool get isActive => throw _privateConstructorUsedError;
   int get displayDays => throw _privateConstructorUsedError;
   TutorialPage get targetPage => throw _privateConstructorUsedError;
+
+  /// Jeu ciblé (valeur fil `efootball|draughts|ea_sports_fc`) pour les cibles
+  /// `match_locked` / `match_role_intro`. `null` sinon.
+  String? get game => throw _privateConstructorUsedError;
+
+  /// Pays ciblé (ISO alpha-2) pour la cible `payment_tutorial`. `null` sinon.
+  String? get countryCode => throw _privateConstructorUsedError;
   String? get updatedBy => throw _privateConstructorUsedError;
   DateTime? get createdAt => throw _privateConstructorUsedError;
   DateTime? get updatedAt => throw _privateConstructorUsedError;
@@ -53,6 +60,8 @@ abstract class $TutorialVideoCopyWith<$Res> {
       bool isActive,
       int displayDays,
       TutorialPage targetPage,
+      String? game,
+      String? countryCode,
       String? updatedBy,
       DateTime? createdAt,
       DateTime? updatedAt});
@@ -79,6 +88,8 @@ class _$TutorialVideoCopyWithImpl<$Res, $Val extends TutorialVideo>
     Object? isActive = null,
     Object? displayDays = null,
     Object? targetPage = null,
+    Object? game = freezed,
+    Object? countryCode = freezed,
     Object? updatedBy = freezed,
     Object? createdAt = freezed,
     Object? updatedAt = freezed,
@@ -108,6 +119,14 @@ class _$TutorialVideoCopyWithImpl<$Res, $Val extends TutorialVideo>
           ? _value.targetPage
           : targetPage // ignore: cast_nullable_to_non_nullable
               as TutorialPage,
+      game: freezed == game
+          ? _value.game
+          : game // ignore: cast_nullable_to_non_nullable
+              as String?,
+      countryCode: freezed == countryCode
+          ? _value.countryCode
+          : countryCode // ignore: cast_nullable_to_non_nullable
+              as String?,
       updatedBy: freezed == updatedBy
           ? _value.updatedBy
           : updatedBy // ignore: cast_nullable_to_non_nullable
@@ -139,6 +158,8 @@ abstract class _$$TutorialVideoImplCopyWith<$Res>
       bool isActive,
       int displayDays,
       TutorialPage targetPage,
+      String? game,
+      String? countryCode,
       String? updatedBy,
       DateTime? createdAt,
       DateTime? updatedAt});
@@ -163,6 +184,8 @@ class __$$TutorialVideoImplCopyWithImpl<$Res>
     Object? isActive = null,
     Object? displayDays = null,
     Object? targetPage = null,
+    Object? game = freezed,
+    Object? countryCode = freezed,
     Object? updatedBy = freezed,
     Object? createdAt = freezed,
     Object? updatedAt = freezed,
@@ -192,6 +215,14 @@ class __$$TutorialVideoImplCopyWithImpl<$Res>
           ? _value.targetPage
           : targetPage // ignore: cast_nullable_to_non_nullable
               as TutorialPage,
+      game: freezed == game
+          ? _value.game
+          : game // ignore: cast_nullable_to_non_nullable
+              as String?,
+      countryCode: freezed == countryCode
+          ? _value.countryCode
+          : countryCode // ignore: cast_nullable_to_non_nullable
+              as String?,
       updatedBy: freezed == updatedBy
           ? _value.updatedBy
           : updatedBy // ignore: cast_nullable_to_non_nullable
@@ -210,7 +241,7 @@ class __$$TutorialVideoImplCopyWithImpl<$Res>
 
 /// @nodoc
 @JsonSerializable()
-class _$TutorialVideoImpl implements _TutorialVideo {
+class _$TutorialVideoImpl extends _TutorialVideo {
   const _$TutorialVideoImpl(
       {required this.id,
       required this.title,
@@ -218,9 +249,12 @@ class _$TutorialVideoImpl implements _TutorialVideo {
       this.isActive = true,
       this.displayDays = 7,
       this.targetPage = TutorialPage.home,
+      this.game,
+      this.countryCode,
       this.updatedBy,
       this.createdAt,
-      this.updatedAt});
+      this.updatedAt})
+      : super._();
 
   factory _$TutorialVideoImpl.fromJson(Map<String, dynamic> json) =>
       _$$TutorialVideoImplFromJson(json);
@@ -240,6 +274,15 @@ class _$TutorialVideoImpl implements _TutorialVideo {
   @override
   @JsonKey()
   final TutorialPage targetPage;
+
+  /// Jeu ciblé (valeur fil `efootball|draughts|ea_sports_fc`) pour les cibles
+  /// `match_locked` / `match_role_intro`. `null` sinon.
+  @override
+  final String? game;
+
+  /// Pays ciblé (ISO alpha-2) pour la cible `payment_tutorial`. `null` sinon.
+  @override
+  final String? countryCode;
   @override
   final String? updatedBy;
   @override
@@ -249,7 +292,7 @@ class _$TutorialVideoImpl implements _TutorialVideo {
 
   @override
   String toString() {
-    return 'TutorialVideo(id: $id, title: $title, videoUrl: $videoUrl, isActive: $isActive, displayDays: $displayDays, targetPage: $targetPage, updatedBy: $updatedBy, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'TutorialVideo(id: $id, title: $title, videoUrl: $videoUrl, isActive: $isActive, displayDays: $displayDays, targetPage: $targetPage, game: $game, countryCode: $countryCode, updatedBy: $updatedBy, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -267,6 +310,9 @@ class _$TutorialVideoImpl implements _TutorialVideo {
                 other.displayDays == displayDays) &&
             (identical(other.targetPage, targetPage) ||
                 other.targetPage == targetPage) &&
+            (identical(other.game, game) || other.game == game) &&
+            (identical(other.countryCode, countryCode) ||
+                other.countryCode == countryCode) &&
             (identical(other.updatedBy, updatedBy) ||
                 other.updatedBy == updatedBy) &&
             (identical(other.createdAt, createdAt) ||
@@ -277,8 +323,19 @@ class _$TutorialVideoImpl implements _TutorialVideo {
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, id, title, videoUrl, isActive,
-      displayDays, targetPage, updatedBy, createdAt, updatedAt);
+  int get hashCode => Object.hash(
+      runtimeType,
+      id,
+      title,
+      videoUrl,
+      isActive,
+      displayDays,
+      targetPage,
+      game,
+      countryCode,
+      updatedBy,
+      createdAt,
+      updatedAt);
 
   /// Create a copy of TutorialVideo
   /// with the given fields replaced by the non-null parameter values.
@@ -296,7 +353,7 @@ class _$TutorialVideoImpl implements _TutorialVideo {
   }
 }
 
-abstract class _TutorialVideo implements TutorialVideo {
+abstract class _TutorialVideo extends TutorialVideo {
   const factory _TutorialVideo(
       {required final String id,
       required final String title,
@@ -304,9 +361,12 @@ abstract class _TutorialVideo implements TutorialVideo {
       final bool isActive,
       final int displayDays,
       final TutorialPage targetPage,
+      final String? game,
+      final String? countryCode,
       final String? updatedBy,
       final DateTime? createdAt,
       final DateTime? updatedAt}) = _$TutorialVideoImpl;
+  const _TutorialVideo._() : super._();
 
   factory _TutorialVideo.fromJson(Map<String, dynamic> json) =
       _$TutorialVideoImpl.fromJson;
@@ -323,6 +383,15 @@ abstract class _TutorialVideo implements TutorialVideo {
   int get displayDays;
   @override
   TutorialPage get targetPage;
+
+  /// Jeu ciblé (valeur fil `efootball|draughts|ea_sports_fc`) pour les cibles
+  /// `match_locked` / `match_role_intro`. `null` sinon.
+  @override
+  String? get game;
+
+  /// Pays ciblé (ISO alpha-2) pour la cible `payment_tutorial`. `null` sinon.
+  @override
+  String? get countryCode;
   @override
   String? get updatedBy;
   @override

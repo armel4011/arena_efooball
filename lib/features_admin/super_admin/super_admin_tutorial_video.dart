@@ -1,4 +1,7 @@
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/core/utils/supported_countries.dart';
+import 'package:arena/core/utils/youtube_url.dart';
+import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/models/tutorial_video.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/tutorial_video_repository.dart';
@@ -189,6 +192,8 @@ class SuperAdminTutorialVideo extends ConsumerWidget {
           'target_page': banner.targetPage.wire,
           'display_days': banner.displayDays,
           'is_active': banner.isActive,
+          'game': banner.game,
+          'country_code': banner.countryCode,
         },
       );
       _snack(messenger, '✓ Bannière supprimée.');
@@ -209,6 +214,21 @@ class SuperAdminTutorialVideo extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Ligne de contexte affichée sous une vidéo dans la liste admin : jeu pour la
+/// salle/l'intro de rôle, pays pour le tuto paiement, durée pour les bannières.
+String _bannerContextLabel(TutorialVideo v) {
+  if (v.targetPage.needsGame) {
+    return '🎮 ${v.gameType?.label ?? '—'}';
+  }
+  if (v.targetPage.needsCountry) {
+    final c = kSupportedCountries
+        .where((e) => e.code == v.countryCode)
+        .firstOrNull;
+    return '🌍 ${c == null ? (v.countryCode ?? '—') : '${c.flag} ${c.name}'}';
+  }
+  return '⏳ ${v.displayDays} jour${v.displayDays > 1 ? 's' : ''}';
 }
 
 /// Carte récapitulative d'une bannière dans la liste admin.
@@ -257,8 +277,7 @@ class _BannerCard extends StatelessWidget {
           Text(banner.videoUrl, style: ArenaText.bodyMuted, maxLines: 1),
           const SizedBox(height: ArenaSpacing.xs),
           Text(
-            '📄 ${banner.targetPage.labelFr}  ·  ⏳ ${banner.displayDays} '
-            'jour${banner.displayDays > 1 ? 's' : ''}',
+            '🎯 ${banner.targetPage.labelFr}  ·  ${_bannerContextLabel(banner)}',
             style: ArenaText.bodyMuted,
           ),
           const SizedBox(height: ArenaSpacing.sm),
@@ -330,6 +349,8 @@ class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
   late final TextEditingController _urlCtrl;
   late final TextEditingController _daysCtrl;
   late TutorialPage _page;
+  GameType? _game;
+  String? _country;
   bool _saving = false;
 
   bool get _isEdit => widget.existing != null;
@@ -342,6 +363,20 @@ class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
     _urlCtrl = TextEditingController(text: e?.videoUrl ?? '');
     _daysCtrl = TextEditingController(text: (e?.displayDays ?? 7).toString());
     _page = e?.targetPage ?? TutorialPage.home;
+    _game = e?.gameType;
+    _country = e?.countryCode;
+  }
+
+  /// Change de cible et réinitialise les discriminants devenus hors-sujet, pour
+  /// ne jamais soumettre un couple incohérent (le CHECK DB le refuserait).
+  void _onPageChanged(TutorialPage p) {
+    setState(() {
+      _page = p;
+      if (!p.needsGame) _game = null;
+      if (!p.needsCountry) _country = null;
+      // L'intro de rôle n'accepte pas les Dames : on force une resélection.
+      if (p.needsGame && !gamesForTutorialPage(p).contains(_game)) _game = null;
+    });
   }
 
   @override
@@ -361,7 +396,11 @@ class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
     return n;
   }
 
+  /// Les cibles IN-APP exigent un lien YouTube exploitable (le lecteur
+  /// n'accepte que ça) ; les bannières de page se contentent d'une URL http(s)
+  /// puisqu'elles s'ouvrent en externe.
   bool get _urlValid {
+    if (_page.isInApp) return isPlayableYoutubeUrl(_url);
     final uri = Uri.tryParse(_url);
     return uri != null &&
         uri.hasScheme &&
@@ -369,12 +408,19 @@ class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
         uri.host.isNotEmpty;
   }
 
+  /// Discriminant requis présent selon la cible (jeu / pays / rien).
+  bool get _contextValid {
+    if (_page.needsGame) return _game != null;
+    if (_page.needsCountry) return _country != null;
+    return _displayDays != null;
+  }
+
   bool get _canSave =>
       !_saving &&
       _title.isNotEmpty &&
       _url.isNotEmpty &&
       _urlValid &&
-      _displayDays != null;
+      _contextValid;
 
   Future<void> _save() async {
     if (!_canSave) return;
@@ -390,7 +436,11 @@ class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
     if (!totpOk || !mounted) return;
 
     setState(() => _saving = true);
-    final days = _displayDays!;
+    // Les cibles contextuelles n'utilisent pas la fenêtre d'affichage : on
+    // retombe sur 7 (défaut colonne) sans bloquer la saisie.
+    final days = _displayDays ?? 7;
+    final gameWire = _page.needsGame ? _game?.value : null;
+    final country = _page.needsCountry ? _country : null;
     final repo = ref.read(tutorialVideoRepositoryProvider);
     final audit = ref.read(adminAuditLogRepositoryProvider);
     try {
@@ -403,6 +453,8 @@ class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
           targetPage: _page,
           displayDays: days,
           isActive: before.isActive,
+          game: gameWire,
+          countryCode: country,
           updatedBy: adminId,
         );
         await audit.record(
@@ -415,12 +467,16 @@ class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
             'video_url': before.videoUrl,
             'target_page': before.targetPage.wire,
             'display_days': before.displayDays,
+            'game': before.game,
+            'country_code': before.countryCode,
           },
           afterState: {
             'title': _title,
             'video_url': _url,
             'target_page': _page.wire,
             'display_days': days,
+            'game': gameWire,
+            'country_code': country,
           },
         );
       } else {
@@ -429,6 +485,8 @@ class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
           videoUrl: _url,
           targetPage: _page,
           displayDays: days,
+          game: gameWire,
+          countryCode: country,
           updatedBy: adminId,
         );
         await audit.record(
@@ -440,6 +498,8 @@ class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
             'video_url': _url,
             'target_page': _page.wire,
             'display_days': days,
+            'game': gameWire,
+            'country_code': country,
           },
         );
       }
@@ -505,43 +565,69 @@ class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
                 ArenaTextField(
                   controller: _urlCtrl,
                   hint: 'https://youtu.be/…',
-                  helper: 'Lien http/https ouvert dans le navigateur externe.',
+                  helper: _page.isInApp
+                      ? "Lien YouTube lu DANS l'app (youtu.be / watch?v=…)."
+                      : 'Lien http/https ouvert dans le navigateur externe.',
                   errorText: showUrlError
-                      ? 'Lien invalide — utilisez une URL http(s) complète.'
+                      ? (_page.isInApp
+                          ? 'Lien YouTube invalide — la vidéo ne se lira pas '
+                              "dans l'app."
+                          : 'Lien invalide — utilisez une URL http(s) complète.')
                       : null,
                   onChanged: (_) => setState(() {}),
                 ),
                 const SizedBox(height: ArenaSpacing.lg),
 
-                Text('📄 PAGE CIBLE', style: ArenaText.inputLabel),
+                Text('🎯 CIBLE', style: ArenaText.inputLabel),
                 const SizedBox(height: ArenaSpacing.sm),
                 _PageDropdown(
                   value: _page,
-                  onChanged: (p) => setState(() => _page = p),
+                  onChanged: _onPageChanged,
                 ),
                 const SizedBox(height: ArenaSpacing.lg),
 
-                Text(
-                  "⏳ DURÉE D'AFFICHAGE POUR LES NOUVEAUX (JOURS)",
-                  style: ArenaText.inputLabel,
-                ),
-                const SizedBox(height: ArenaSpacing.sm),
-                ArenaTextField(
-                  controller: _daysCtrl,
-                  hint: '7',
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(3),
-                  ],
-                  helper: "La bannière s'affiche à chaque nouvel utilisateur "
-                      'pendant ce nombre de jours après sa 1re impression '
-                      '(1 à 365), puis disparaît.',
-                  errorText:
-                      showDaysError ? 'Entrez un nombre entre 1 et 365.' : null,
-                  onChanged: (_) => setState(() {}),
-                ),
-                const SizedBox(height: ArenaSpacing.lg),
+                // Discriminant contextuel : jeu, pays, ou fenêtre d'affichage.
+                if (_page.needsGame) ...[
+                  Text('🎮 JEU', style: ArenaText.inputLabel),
+                  const SizedBox(height: ArenaSpacing.sm),
+                  _GameDropdown(
+                    page: _page,
+                    value: _game,
+                    onChanged: (g) => setState(() => _game = g),
+                  ),
+                  const SizedBox(height: ArenaSpacing.lg),
+                ] else if (_page.needsCountry) ...[
+                  Text('🌍 PAYS', style: ArenaText.inputLabel),
+                  const SizedBox(height: ArenaSpacing.sm),
+                  _CountryDropdown(
+                    value: _country,
+                    onChanged: (c) => setState(() => _country = c),
+                  ),
+                  const SizedBox(height: ArenaSpacing.lg),
+                ] else ...[
+                  Text(
+                    "⏳ DURÉE D'AFFICHAGE POUR LES NOUVEAUX (JOURS)",
+                    style: ArenaText.inputLabel,
+                  ),
+                  const SizedBox(height: ArenaSpacing.sm),
+                  ArenaTextField(
+                    controller: _daysCtrl,
+                    hint: '7',
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(3),
+                    ],
+                    helper: "La bannière s'affiche à chaque nouvel utilisateur "
+                        'pendant ce nombre de jours après sa 1re impression '
+                        '(1 à 365), puis disparaît.',
+                    errorText: showDaysError
+                        ? 'Entrez un nombre entre 1 et 365.'
+                        : null,
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  const SizedBox(height: ArenaSpacing.lg),
+                ],
 
                 ArenaButton(
                   label: _saving
@@ -587,6 +673,86 @@ class _PageDropdown extends StatelessWidget {
           ],
           onChanged: (p) {
             if (p != null) onChanged(p);
+          },
+        ),
+      ),
+    );
+  }
+}
+
+/// Sélecteur de jeu pour les cibles discriminées par jeu. Le placeholder force
+/// une sélection explicite (pas de défaut silencieux).
+class _GameDropdown extends StatelessWidget {
+  const _GameDropdown({
+    required this.page,
+    required this.value,
+    required this.onChanged,
+  });
+  final TutorialPage page;
+  final GameType? value;
+  final ValueChanged<GameType> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: ArenaSpacing.md),
+      decoration: BoxDecoration(
+        color: ArenaColors.carbon,
+        borderRadius: BorderRadius.circular(ArenaRadius.md),
+        border: Border.all(color: ArenaColors.border),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<GameType>(
+          value: value,
+          isExpanded: true,
+          dropdownColor: ArenaColors.carbon,
+          style: ArenaText.body,
+          hint: Text('Choisir un jeu', style: ArenaText.bodyMuted),
+          items: [
+            for (final g in gamesForTutorialPage(page))
+              DropdownMenuItem(value: g, child: Text(g.label)),
+          ],
+          onChanged: (g) {
+            if (g != null) onChanged(g);
+          },
+        ),
+      ),
+    );
+  }
+}
+
+/// Sélecteur de pays (ISO alpha-2) pour le tuto paiement, calé sur la liste
+/// canonique des pays supportés.
+class _CountryDropdown extends StatelessWidget {
+  const _CountryDropdown({required this.value, required this.onChanged});
+  final String? value;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: ArenaSpacing.md),
+      decoration: BoxDecoration(
+        color: ArenaColors.carbon,
+        borderRadius: BorderRadius.circular(ArenaRadius.md),
+        border: Border.all(color: ArenaColors.border),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: value,
+          isExpanded: true,
+          dropdownColor: ArenaColors.carbon,
+          style: ArenaText.body,
+          hint: Text('Choisir un pays', style: ArenaText.bodyMuted),
+          items: [
+            for (final c in kSupportedCountries)
+              DropdownMenuItem(
+                value: c.code,
+                child: Text('${c.flag}  ${c.name}'),
+              ),
+          ],
+          onChanged: (c) {
+            if (c != null) onChanged(c);
           },
         ),
       ),
