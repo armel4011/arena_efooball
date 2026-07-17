@@ -159,7 +159,9 @@ void main() {
   // 2534 → 2556 le 2026-07-17 : +22 `ArenaColors.*` du chantier vidéo in-app —
   // vidéos tuto contextuelles (forms admin mobile/desktop), écran + éditeur
   // « Règles par jeu » (mobile/desktop) et briefing de l'écran de verrouillage.
-  const colorsDotBaseline = 2556; // occurrences de `Colors.`
+  // 2556 → 2559 le 2026-07-17 : +3 `ArenaColors.*` du dialogue d'intro de rôle
+  // (DOMICILE/EXTÉRIEUR) à l'étape 1 du match.
+  const colorsDotBaseline = 2559; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.

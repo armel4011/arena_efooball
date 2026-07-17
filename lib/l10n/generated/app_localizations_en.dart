@@ -1254,6 +1254,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get matchRulesVideoTitle => 'Watch before you play';
 
   @override
+  String get roleIntroHomeTitle => 'Your role: HOME';
+
+  @override
+  String get roleIntroAwayTitle => 'Your role: AWAY';
+
+  @override
+  String get roleIntroHomeBody =>
+      'As HOME, you create the room in the game and share the code with your opponent. Start the match, then enter and confirm the score at the end.';
+
+  @override
+  String get roleIntroAwayBody =>
+      'As AWAY, you join the room with the code your opponent gives you. Play the match, then enter and confirm the score at the end.';
+
+  @override
+  String get roleIntroGotIt => 'Got it';
+
+  @override
   String get manualUploadButtonLabel => 'Send a proof video';
 
   @override

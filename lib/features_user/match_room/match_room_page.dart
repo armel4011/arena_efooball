@@ -13,6 +13,7 @@ import 'package:arena/features_user/match_room/match_room_providers.dart';
 import 'package:arena/features_user/match_room/widgets/match_locked_view.dart';
 import 'package:arena/features_user/match_room/widgets/match_players_header.dart';
 import 'package:arena/features_user/match_room/widgets/match_recording_lifecycle.dart';
+import 'package:arena/features_user/match_room/widgets/match_role_intro.dart';
 import 'package:arena/features_user/match_room/widgets/match_step_body.dart';
 import 'package:arena/features_user/match_room/widgets/match_step_indicator.dart';
 import 'package:arena/features_user/streaming/start_streaming_banner.dart';
@@ -230,6 +231,18 @@ class _MatchRoomBody extends ConsumerWidget {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // Intro de rôle (DOMICILE/EXTÉRIEUR) à l'entrée en salle de
+                  // code : uniquement football, joueur, étape 1 — one-shot par
+                  // rôle. Widget invisible (déclencheur de dialogue).
+                  if (!isDraughts &&
+                      step == MatchStep.codeRoom &&
+                      role != MatchRole.observer)
+                    MatchRoleIntroGate(
+                      key: const ValueKey('role-intro-gate'),
+                      match: match,
+                      role: role,
+                      game: gameType,
+                    ),
                   // Anti-cheat recording banner (Android-only, no-op ailleurs).
                   // Inutile pour les dames : la partie est jouée in-app, le
                   // serveur tient l'historique des coups (pas d'écran tiers à
