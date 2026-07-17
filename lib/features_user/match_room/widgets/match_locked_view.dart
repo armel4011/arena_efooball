@@ -43,19 +43,41 @@ class _MatchLockedViewState extends ConsumerState<MatchLockedView> {
   @override
   void initState() {
     super.initState();
-    if (widget.opensAt != null) {
-      _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-        if (!mounted) return;
-        if (!DateTime.now().isBefore(widget.opensAt!)) {
-          // L'accès vient d'ouvrir : on invalide le match → la page parente
-          // re-évalue le verrou et laisse entrer dans la room.
-          _ticker?.cancel();
-          ref.invalidate(matchByIdProvider(widget.matchId));
-        } else {
-          setState(() {});
-        }
-      });
+    _syncTicker();
+  }
+
+  @override
+  void didUpdateWidget(MatchLockedView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Le parent reconstruit ce widget à chaque tick du stream realtime du
+    // match : l'horaire peut apparaître (round précédent terminé → l'horaire
+    // du round suivant est posé) ou changer (reprogrammation admin) SANS que
+    // l'écran soit démonté. Sans re-synchronisation, un rebours créé en
+    // `initState` sur l'ancien horaire resterait seul juge — et un écran monté
+    // sans horaire n'aurait jamais de rebours du tout.
+    if (widget.opensAt != oldWidget.opensAt ||
+        widget.matchId != oldWidget.matchId) {
+      _syncTicker();
     }
+  }
+
+  /// (Re)pose le rebours sur l'horaire courant. Sans horaire, pas de ticker :
+  /// l'écran affiche un message d'attente fixe.
+  void _syncTicker() {
+    _ticker?.cancel();
+    _ticker = null;
+    if (widget.opensAt == null) return;
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      if (!DateTime.now().isBefore(widget.opensAt!)) {
+        // L'accès vient d'ouvrir : on invalide le match → la page parente
+        // re-évalue le verrou et laisse entrer dans la room.
+        _ticker?.cancel();
+        ref.invalidate(matchByIdProvider(widget.matchId));
+      } else {
+        setState(() {});
+      }
+    });
   }
 
   @override

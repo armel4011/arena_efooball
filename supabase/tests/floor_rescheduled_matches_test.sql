@@ -2,8 +2,10 @@
 -- pgTAP — reprogrammation vers le PASSÉ : plancher à maintenant+5min
 -- ════════════════════════════════════════════════════════════════════
 -- Reprogrammer une compétition à une date antérieure décale les matchs du
--- delta MAIS jamais dans le passé : chaque match planché à now()+5min. Un match
--- qui, après décalage, reste dans le futur garde son delta (pas de plancher).
+-- delta MAIS jamais dans le passé : le match le plus précoce est planché à
+-- now()+5min. Depuis 20260717180000 le plancher est un décalage UNIFORME (et
+-- non plus un `greatest` par ligne) : toute la grille est relevée du même
+-- complément, donc l'espacement entre rounds est préservé.
 -- ════════════════════════════════════════════════════════════════════
 
 begin;
@@ -39,17 +41,20 @@ update public.competitions
    set start_date = now() - interval '1 day'
  where id = 'c2000000-0000-0000-0000-00000000c001';
 
--- round 1 : (now+10j) - 11j = now-1j → dans le passé → planché à now()+5min.
+-- round 1 (le plus précoce) : (now+10j) - 11j = now-1j → sous le plancher →
+-- relevé à ~now()+5min, ce qui fixe le complément de toute la grille.
 select ok(
   (select scheduled_at from matches where id='c2000000-0000-0000-0000-000000000011')
     between now() + interval '4 minutes' and now() + interval '6 minutes',
-  'match qui tomberait dans le passé est planché à ~maintenant+5min');
+  'match le plus précoce est planché à ~maintenant+5min');
 
--- round 2 : (now+20j) - 11j = now+9j → futur → garde son delta (non planché).
+-- round 2 : suit le MÊME complément que le round 1 → l'écart de 10 jours qui
+-- séparait les deux rounds est intact.
 select ok(
   (select scheduled_at from matches where id='c2000000-0000-0000-0000-000000000013')
-    between now() + interval '8 days 23 hours' and now() + interval '9 days 1 hour',
-  'match restant dans le futur garde son delta (pas de plancher)');
+   - (select scheduled_at from matches where id='c2000000-0000-0000-0000-000000000011')
+    = interval '10 days',
+  'l''espacement entre les rounds est préservé exactement');
 
 select * from finish();
 rollback;
