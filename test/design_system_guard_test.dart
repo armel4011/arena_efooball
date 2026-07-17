@@ -156,7 +156,10 @@ void main() {
   // 2527 → 2534 le 2026-07-16 : +7 `ArenaColors.*` du calendrier de compétition
   // (widget partagé user/admin) — signalBlue/carbon/border/bone/silver +
   // success/danger/warning des pastilles d'état.
-  const colorsDotBaseline = 2534; // occurrences de `Colors.`
+  // 2534 → 2556 le 2026-07-17 : +22 `ArenaColors.*` du chantier vidéo in-app —
+  // vidéos tuto contextuelles (forms admin mobile/desktop), écran + éditeur
+  // « Règles par jeu » (mobile/desktop) et briefing de l'écran de verrouillage.
+  const colorsDotBaseline = 2556; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.
@@ -192,7 +195,9 @@ void main() {
   // « capture d'inscription » du paiement desktop (_DesktopProofPreview).
   // 221 → 223 le 2026-07-11 : +2 `GoogleFonts.spaceGrotesk` des légendes de rôle
   // (Domicile/Extérieur) des vignettes de preuve, litige admin desktop.
-  const googleFontsBaseline = 223; // occurrences de `GoogleFonts.`
+  // 223 → 226 le 2026-07-17 : +3 `GoogleFonts.spaceGrotesk` de l'éditeur desktop
+  // « Règles par jeu » (parité Fluent UI avec les autres écrans desktop).
+  const googleFontsBaseline = 226; // occurrences de `GoogleFonts.`
 
   final colorsDotRe = RegExp(r'Colors\.');
   final colorHexRe = RegExp(r'Color\(0x');

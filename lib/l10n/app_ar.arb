@@ -400,6 +400,8 @@
   },
   "matchLockedNoScheduleTitle": "الموعد قيد التحديد",
   "matchLockedNoScheduleBody": "لا يوجد موعد محدد لهذه المباراة بعد. سيتم إعلامك بمجرد جدولتها.",
+  "matchRulesSectionTitle": "قواعد اللعبة",
+  "matchRulesVideoTitle": "شاهد قبل أن تلعب",
   "manualUploadButtonLabel": "إرسال فيديو إثبات",
   "manualUploadSuccess": "تم إرسال الفيديو. شكرًا!",
   "outcomeFinalScore": "النتيجة النهائية",

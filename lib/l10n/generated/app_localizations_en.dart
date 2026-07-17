@@ -1248,6 +1248,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'This match has no scheduled time yet. You\'ll be notified as soon as it\'s scheduled.';
 
   @override
+  String get matchRulesSectionTitle => 'Game rules';
+
+  @override
+  String get matchRulesVideoTitle => 'Watch before you play';
+
+  @override
   String get manualUploadButtonLabel => 'Send a proof video';
 
   @override

@@ -1243,6 +1243,12 @@ class AppLocalizationsAr extends AppLocalizations {
       'لا يوجد موعد محدد لهذه المباراة بعد. سيتم إعلامك بمجرد جدولتها.';
 
   @override
+  String get matchRulesSectionTitle => 'قواعد اللعبة';
+
+  @override
+  String get matchRulesVideoTitle => 'شاهد قبل أن تلعب';
+
+  @override
   String get manualUploadButtonLabel => 'إرسال فيديو إثبات';
 
   @override

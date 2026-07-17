@@ -400,6 +400,8 @@
   },
   "matchLockedNoScheduleTitle": "Time to be set",
   "matchLockedNoScheduleBody": "This match has no scheduled time yet. You'll be notified as soon as it's scheduled.",
+  "matchRulesSectionTitle": "Game rules",
+  "matchRulesVideoTitle": "Watch before you play",
   "manualUploadButtonLabel": "Send a proof video",
   "manualUploadSuccess": "Video sent. Thank you!",
   "outcomeFinalScore": "FINAL SCORE",

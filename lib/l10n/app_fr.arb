@@ -420,6 +420,8 @@
   },
   "matchLockedNoScheduleTitle": "Horaire à venir",
   "matchLockedNoScheduleBody": "Ce match n'a pas encore d'horaire planifié. Tu seras notifié dès qu'il sera programmé.",
+  "matchRulesSectionTitle": "Règles du jeu",
+  "matchRulesVideoTitle": "À regarder avant de jouer",
   "manualUploadButtonLabel": "Envoyer une vidéo de preuve",
   "manualUploadSuccess": "Vidéo envoyée. Merci !",
   "outcomeFinalScore": "SCORE FINAL",

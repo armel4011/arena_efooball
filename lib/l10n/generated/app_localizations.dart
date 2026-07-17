@@ -2470,6 +2470,18 @@ abstract class AppLocalizations {
   /// **'Ce match n\'a pas encore d\'horaire planifié. Tu seras notifié dès qu\'il sera programmé.'**
   String get matchLockedNoScheduleBody;
 
+  /// No description provided for @matchRulesSectionTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Règles du jeu'**
+  String get matchRulesSectionTitle;
+
+  /// No description provided for @matchRulesVideoTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'À regarder avant de jouer'**
+  String get matchRulesVideoTitle;
+
   /// No description provided for @manualUploadButtonLabel.
   ///
   /// In fr, this message translates to:

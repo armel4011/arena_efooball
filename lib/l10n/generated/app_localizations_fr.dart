@@ -1256,6 +1256,12 @@ class AppLocalizationsFr extends AppLocalizations {
       'Ce match n\'a pas encore d\'horaire planifié. Tu seras notifié dès qu\'il sera programmé.';
 
   @override
+  String get matchRulesSectionTitle => 'Règles du jeu';
+
+  @override
+  String get matchRulesVideoTitle => 'À regarder avant de jouer';
+
+  @override
   String get manualUploadButtonLabel => 'Envoyer une vidéo de preuve';
 
   @override
