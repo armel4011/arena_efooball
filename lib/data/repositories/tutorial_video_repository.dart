@@ -1,3 +1,4 @@
+import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/models/tutorial_video.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -37,6 +38,25 @@ class TutorialVideoRepository {
   static DateTime _createdAtOf(TutorialVideo v) =>
       v.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
 
+  /// Filtre pur : la vidéo contextuelle IN-APP active pour une cible et son
+  /// discriminant. [gameWire] pour `match_locked`/`match_role_intro`,
+  /// [countryCode] pour `payment_tutorial`. Retourne `null` si aucune. La DB
+  /// garantit l'unicité (index partiel), mais on prend la 1re par sûreté.
+  static TutorialVideo? activeContextualVideo(
+    List<TutorialVideo> videos,
+    TutorialPage target, {
+    String? gameWire,
+    String? countryCode,
+  }) {
+    for (final v in videos) {
+      if (!v.isActive || v.targetPage != target) continue;
+      if (target.needsGame && v.game != gameWire) continue;
+      if (target.needsCountry && v.countryCode != countryCode) continue;
+      return v;
+    }
+    return null;
+  }
+
   /// Realtime stream de TOUTES les bannières (brut, actives ou non). UNE seule
   /// souscription partagée par les 4 pages user — le filtrage par page se fait
   /// en Dart côté provider via [filterActiveForPage]. Avant, chaque page
@@ -59,12 +79,17 @@ class TutorialVideoRepository {
         .map((rows) => rows.map(TutorialVideo.fromJson).toList());
   }
 
-  /// Crée une nouvelle bannière active.
+  /// Crée une nouvelle bannière / vidéo contextuelle active. [game] (valeur
+  /// fil) et [countryCode] sont les discriminants des cibles contextuelles ;
+  /// on écrit toujours les deux (NULL compris) pour respecter le CHECK de
+  /// cohérence côté DB — une bannière de page les remet à NULL.
   Future<void> createBanner({
     required String title,
     required String videoUrl,
     required TutorialPage targetPage,
     required int displayDays,
+    String? game,
+    String? countryCode,
     String? updatedBy,
   }) async {
     await _client.from(_table).insert({
@@ -73,11 +98,15 @@ class TutorialVideoRepository {
       'target_page': targetPage.wire,
       'is_active': true,
       'display_days': displayDays,
+      'game': game,
+      'country_code': countryCode,
       if (updatedBy != null) 'updated_by': updatedBy,
     });
   }
 
-  /// Met à jour une bannière existante (tous les champs éditables).
+  /// Met à jour une bannière / vidéo contextuelle (tous les champs éditables).
+  /// [game] / [countryCode] sont réécrits (NULL compris) pour rester cohérents
+  /// avec la cible si celle-ci a changé.
   Future<void> updateBanner({
     required String id,
     required String title,
@@ -85,6 +114,8 @@ class TutorialVideoRepository {
     required TutorialPage targetPage,
     required int displayDays,
     required bool isActive,
+    String? game,
+    String? countryCode,
     String? updatedBy,
   }) async {
     await _client.from(_table).update({
@@ -93,6 +124,8 @@ class TutorialVideoRepository {
       'target_page': targetPage.wire,
       'display_days': displayDays,
       'is_active': isActive,
+      'game': game,
+      'country_code': countryCode,
       'updated_at': _now(),
       if (updatedBy != null) 'updated_by': updatedBy,
     }).eq('id', id);
@@ -162,6 +195,45 @@ final tutorialBannersForPageProvider = Provider.autoDispose
 final allTutorialBannersProvider =
     StreamProvider.autoDispose<List<TutorialVideo>>((ref) {
   return ref.watch(tutorialVideoRepositoryProvider).watchAll();
+});
+
+/// Vidéo IN-APP active de l'écran de verrouillage de salle, pour un [GameType].
+/// Dérivée du stream partagé : n'ouvre PAS de canal Realtime propre.
+final matchLockedVideoProvider = Provider.autoDispose
+    .family<AsyncValue<TutorialVideo?>, GameType>((ref, game) {
+  return ref.watch(_allTutorialBannersStreamProvider).whenData(
+        (all) => TutorialVideoRepository.activeContextualVideo(
+          all,
+          TutorialPage.matchLocked,
+          gameWire: game.value,
+        ),
+      );
+});
+
+/// Vidéo IN-APP active de l'intro de rôle (étape 1), pour un [GameType]
+/// (football uniquement). Dérivée du stream partagé.
+final matchRoleIntroVideoProvider = Provider.autoDispose
+    .family<AsyncValue<TutorialVideo?>, GameType>((ref, game) {
+  return ref.watch(_allTutorialBannersStreamProvider).whenData(
+        (all) => TutorialVideoRepository.activeContextualVideo(
+          all,
+          TutorialPage.matchRoleIntro,
+          gameWire: game.value,
+        ),
+      );
+});
+
+/// Vidéo IN-APP active du tuto paiement, pour un pays (ISO alpha-2). Dérivée
+/// du stream partagé.
+final paymentTutorialVideoProvider = Provider.autoDispose
+    .family<AsyncValue<TutorialVideo?>, String>((ref, countryCode) {
+  return ref.watch(_allTutorialBannersStreamProvider).whenData(
+        (all) => TutorialVideoRepository.activeContextualVideo(
+          all,
+          TutorialPage.paymentTutorial,
+          countryCode: countryCode,
+        ),
+      );
 });
 
 /// Instant de la 1re impression du user courant pour la bannière `id` —

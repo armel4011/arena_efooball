@@ -161,6 +161,13 @@ const List<_NavEntry> _superEntries = [
     section: 'tutorial',
   ),
   _NavEntry(
+    route: AdminDesktopRoutes.superGameRules,
+    icon: FluentIcons.bulleted_list,
+    label: 'Règles par jeu',
+    superAdminOnly: true,
+    section: 'tutorial',
+  ),
+  _NavEntry(
     route: AdminDesktopRoutes.superAntiCheat,
     icon: FluentIcons.shield,
     label: 'Anti-triche',

@@ -133,6 +133,12 @@ dependencies:
 
   # ─── PHASE 11bis — Paiement P2P manuel (dial USSD) ─────────
   url_launcher: ^6.3.1
+  # Lecture YouTube IN-APP (règles de match, intro de rôle, tuto paiement).
+  # Repose sur webview_flutter, qui n'a PAS d'implémentation Windows : la
+  # console admin desktop ne LIT jamais de vidéo (elle ne fait que saisir des
+  # liens), mais le paquet doit tout de même compiler sur Windows — d'où le
+  # spike de vérification avant d'écrire quoi que ce soit dessus.
+  youtube_player_iframe: ^5.2.0
 
   # ─── PHASE 12.5 — RGPD export (écrit le JSON dans Documents) ──
   path_provider: ^2.1.5

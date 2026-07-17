@@ -1,5 +1,8 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/core/utils/arena_error_message.dart';
+import 'package:arena/core/utils/supported_countries.dart';
+import 'package:arena/core/utils/youtube_url.dart';
+import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/models/tutorial_video.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/tutorial_video_repository.dart';
@@ -101,6 +104,20 @@ Future<void> _openForm(
   );
 }
 
+/// Ligne de contexte sous une vidéo : jeu (salle / intro de rôle), pays (tuto
+/// paiement) ou durée d'affichage (bannières de page).
+String _bannerContextLabel(TutorialVideo v) {
+  if (v.targetPage.needsGame) {
+    return '🎮 ${v.gameType?.label ?? '—'}';
+  }
+  if (v.targetPage.needsCountry) {
+    final c =
+        kSupportedCountries.where((e) => e.code == v.countryCode).firstOrNull;
+    return '🌍 ${c == null ? (v.countryCode ?? '—') : '${c.flag} ${c.name}'}';
+  }
+  return '${v.displayDays} jour${v.displayDays > 1 ? 's' : ''}';
+}
+
 /// Carte récapitulative d'une bannière dans la liste admin desktop.
 class _BannerCard extends ConsumerWidget {
   const _BannerCard({required this.banner});
@@ -111,7 +128,6 @@ class _BannerCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final active = banner.isActive;
     final accent = active ? ArenaColors.statusOk : ArenaColors.silverDim;
-    final days = banner.displayDays;
 
     return Card(
       backgroundColor: ArenaColors.carbon,
@@ -167,8 +183,7 @@ class _BannerCard extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '${banner.targetPage.labelFr}  ·  $days '
-            'jour${days > 1 ? 's' : ''}',
+            '${banner.targetPage.labelFr}  ·  ${_bannerContextLabel(banner)}',
             style: GoogleFonts.spaceGrotesk(
               color: ArenaColors.silverDim,
               fontSize: 12,
@@ -287,6 +302,8 @@ class _BannerCard extends ConsumerWidget {
           'target_page': banner.targetPage.wire,
           'display_days': banner.displayDays,
           'is_active': banner.isActive,
+          'game': banner.game,
+          'country_code': banner.countryCode,
         },
       );
       if (!context.mounted) return;
@@ -313,6 +330,8 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
   late final TextEditingController _urlCtrl;
   late final TextEditingController _daysCtrl;
   late TutorialPage _page;
+  GameType? _game;
+  String? _country;
   bool _saving = false;
 
   bool get _isEdit => widget.existing != null;
@@ -325,6 +344,19 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
     _urlCtrl = TextEditingController(text: e?.videoUrl ?? '');
     _daysCtrl = TextEditingController(text: (e?.displayDays ?? 7).toString());
     _page = e?.targetPage ?? TutorialPage.home;
+    _game = e?.gameType;
+    _country = e?.countryCode;
+  }
+
+  /// Change de cible et réinitialise les discriminants devenus hors-sujet, pour
+  /// ne jamais soumettre un couple incohérent (le CHECK DB le refuserait).
+  void _onPageChanged(TutorialPage p) {
+    setState(() {
+      _page = p;
+      if (!p.needsGame) _game = null;
+      if (!p.needsCountry) _country = null;
+      if (p.needsGame && !gamesForTutorialPage(p).contains(_game)) _game = null;
+    });
   }
 
   @override
@@ -344,7 +376,10 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
     return n;
   }
 
+  /// Cibles IN-APP → lien YouTube exploitable exigé ; bannières de page →
+  /// simple URL http(s) (ouverture externe).
   bool get _urlValid {
+    if (_page.isInApp) return isPlayableYoutubeUrl(_url);
     final uri = Uri.tryParse(_url);
     return uri != null &&
         uri.hasScheme &&
@@ -352,12 +387,19 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
         uri.host.isNotEmpty;
   }
 
+  /// Discriminant requis présent selon la cible (jeu / pays / durée).
+  bool get _contextValid {
+    if (_page.needsGame) return _game != null;
+    if (_page.needsCountry) return _country != null;
+    return _displayDays != null;
+  }
+
   bool get _canSave =>
       !_saving &&
       _title.isNotEmpty &&
       _url.isNotEmpty &&
       _urlValid &&
-      _displayDays != null;
+      _contextValid;
 
   Future<void> _save() async {
     if (!_canSave) return;
@@ -373,7 +415,10 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
     if (!totpOk || !mounted) return;
 
     setState(() => _saving = true);
-    final days = _displayDays!;
+    // Les cibles contextuelles n'utilisent pas la fenêtre d'affichage.
+    final days = _displayDays ?? 7;
+    final gameWire = _page.needsGame ? _game?.value : null;
+    final country = _page.needsCountry ? _country : null;
     final repo = ref.read(tutorialVideoRepositoryProvider);
     final audit = ref.read(adminAuditLogRepositoryProvider);
     try {
@@ -386,6 +431,8 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
           targetPage: _page,
           displayDays: days,
           isActive: before.isActive,
+          game: gameWire,
+          countryCode: country,
           updatedBy: adminId,
         );
         await audit.record(
@@ -398,12 +445,16 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
             'video_url': before.videoUrl,
             'target_page': before.targetPage.wire,
             'display_days': before.displayDays,
+            'game': before.game,
+            'country_code': before.countryCode,
           },
           afterState: {
             'title': _title,
             'video_url': _url,
             'target_page': _page.wire,
             'display_days': days,
+            'game': gameWire,
+            'country_code': country,
           },
         );
       } else {
@@ -412,6 +463,8 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
           videoUrl: _url,
           targetPage: _page,
           displayDays: days,
+          game: gameWire,
+          countryCode: country,
           updatedBy: adminId,
         );
         await audit.record(
@@ -423,6 +476,8 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
             'video_url': _url,
             'target_page': _page.wire,
             'display_days': days,
+            'game': gameWire,
+            'country_code': country,
           },
         );
       }
@@ -481,17 +536,32 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
                 onChanged: (_) => setState(() {}),
               ),
             ),
+            const SizedBox(height: 4),
+            Text(
+              _page.isInApp
+                  ? "Lien YouTube lu DANS l'app (youtu.be / watch?v=…)."
+                  : 'Lien http/https ouvert dans le navigateur externe.',
+              style: GoogleFonts.spaceGrotesk(
+                color: ArenaColors.silverDim,
+                fontSize: 11,
+              ),
+            ),
             if (showUrlError) ...[
               const SizedBox(height: 8),
-              const InfoBar(
-                title: Text('Lien invalide'),
-                content: Text('Utilisez une URL http(s) complète.'),
+              InfoBar(
+                title: const Text('Lien invalide'),
+                content: Text(
+                  _page.isInApp
+                      ? 'Lien YouTube invalide — la vidéo ne se lira pas '
+                          "dans l'app."
+                      : 'Utilisez une URL http(s) complète.',
+                ),
                 severity: InfoBarSeverity.warning,
               ),
             ],
             const SizedBox(height: 16),
             InfoLabel(
-              label: 'Page cible',
+              label: 'Cible',
               child: ComboBox<TutorialPage>(
                 value: _page,
                 isExpanded: true,
@@ -501,41 +571,79 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
                 ],
                 onChanged: _saving
                     ? null
-                    : (p) => p == null ? null : setState(() => _page = p),
+                    : (p) => p == null ? null : _onPageChanged(p),
               ),
             ),
             const SizedBox(height: 16),
-            InfoLabel(
-              label: "Durée d'affichage pour les nouveaux (jours)",
-              child: TextBox(
-                controller: _daysCtrl,
-                placeholder: '7',
-                enabled: !_saving,
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(3),
-                ],
-                onChanged: (_) => setState(() {}),
+            // Discriminant contextuel : jeu, pays, ou fenêtre d'affichage.
+            if (_page.needsGame)
+              InfoLabel(
+                label: 'Jeu',
+                child: ComboBox<GameType>(
+                  value: _game,
+                  isExpanded: true,
+                  placeholder: const Text('Choisir un jeu'),
+                  items: [
+                    for (final g in gamesForTutorialPage(_page))
+                      ComboBoxItem(value: g, child: Text(g.label)),
+                  ],
+                  onChanged: _saving
+                      ? null
+                      : (g) => g == null ? null : setState(() => _game = g),
+                ),
+              )
+            else if (_page.needsCountry)
+              InfoLabel(
+                label: 'Pays',
+                child: ComboBox<String>(
+                  value: _country,
+                  isExpanded: true,
+                  placeholder: const Text('Choisir un pays'),
+                  items: [
+                    for (final c in kSupportedCountries)
+                      ComboBoxItem(
+                        value: c.code,
+                        child: Text('${c.flag}  ${c.name}'),
+                      ),
+                  ],
+                  onChanged: _saving
+                      ? null
+                      : (c) => c == null ? null : setState(() => _country = c),
+                ),
+              )
+            else ...[
+              InfoLabel(
+                label: "Durée d'affichage pour les nouveaux (jours)",
+                child: TextBox(
+                  controller: _daysCtrl,
+                  placeholder: '7',
+                  enabled: !_saving,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(3),
+                  ],
+                  onChanged: (_) => setState(() {}),
+                ),
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              "La bannière s'affiche à chaque nouvel utilisateur pendant ce "
-              'nombre de jours après sa 1re impression (1 à 365), puis '
-              'disparaît.',
-              style: GoogleFonts.spaceGrotesk(
-                color: ArenaColors.silverDim,
-                fontSize: 11,
+              const SizedBox(height: 4),
+              Text(
+                "La bannière s'affiche à chaque nouvel utilisateur pendant ce "
+                'nombre de jours après sa 1re impression (1 à 365), puis '
+                'disparaît.',
+                style: GoogleFonts.spaceGrotesk(
+                  color: ArenaColors.silverDim,
+                  fontSize: 11,
+                ),
               ),
-            ),
-            if (showDaysError) ...[
-              const SizedBox(height: 8),
-              const InfoBar(
-                title: Text('Durée invalide'),
-                content: Text('Entrez un nombre entre 1 et 365.'),
-                severity: InfoBarSeverity.warning,
-              ),
+              if (showDaysError) ...[
+                const SizedBox(height: 8),
+                const InfoBar(
+                  title: Text('Durée invalide'),
+                  content: Text('Entrez un nombre entre 1 et 365.'),
+                  severity: InfoBarSeverity.warning,
+                ),
+              ],
             ],
           ],
         ),

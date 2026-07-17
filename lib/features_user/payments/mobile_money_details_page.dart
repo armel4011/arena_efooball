@@ -4,10 +4,12 @@ import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/core/utils/supported_countries.dart';
 import 'package:arena/data/repositories/payment_repository.dart';
+import 'package:arena/data/repositories/tutorial_video_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
+import 'package:arena/features_shared/widgets/arena_youtube_player.dart';
 import 'package:arena/features_user/payments/payment_method.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -76,11 +78,6 @@ class _MobileMoneyDetailsPageState
   /// Numéro destinataire à copier, vide si non configuré.
   String get _paymentNumber => widget.operator.paymentNumber ?? '';
 
-  /// URL du tutoriel vidéo de paiement (placeholder en dur — à remplacer par
-  /// un champ config admin ultérieurement).
-  static const _paymentTutorialUrl =
-      'https://www.youtube.com/results?search_query=arena+paiement+mobile+money';
-
   /// Nom du pays affiché (drapeau + nom) — repli sur le code brut.
   String get _countryDisplay {
     final match = kSupportedCountries
@@ -106,6 +103,15 @@ class _MobileMoneyDetailsPageState
     final hasCode = _transferCode.trim().isNotEmpty;
     // Disabled, read-only field — nom du pays de l'opérateur.
     _countryCtrl.text = _countryDisplay;
+    // Tuto vidéo de paiement IN-APP, propre au pays de l'opérateur. Chaque pays
+    // a son système : l'admin publie une vidéo par pays. Absent → rien ne
+    // s'affiche (plus de lien de recherche externe en dur).
+    final tutorialVideo = ref
+        .watch(paymentTutorialVideoProvider(operator.countryCode))
+        .valueOrNull;
+    final tutorialPlayer = tutorialVideo == null
+        ? null
+        : ArenaYoutubePlayer.maybe(tutorialVideo.videoUrl);
     return Scaffold(
       appBar: ArenaAppBar(title: operator.label.toUpperCase()),
       body: ArenaScreenBackground(
@@ -143,10 +149,13 @@ class _MobileMoneyDetailsPageState
               if (_needsRecipientNumber) ...[
                 const SizedBox(height: ArenaSpacing.lg),
                 _CrossBorderStepsCard(hasNumber: _paymentNumber.isNotEmpty),
+              ],
+              // Tuto vidéo par pays — pour TOUS les pays (pas seulement le
+              // transfrontalier), affiché uniquement si l'admin a publié une
+              // vidéo pour ce pays.
+              if (tutorialPlayer != null) ...[
                 const SizedBox(height: ArenaSpacing.md),
-                _PaymentTutorialCard(
-                  onTap: () => _openTutorial(context),
-                ),
+                _PaymentTutorialCard(player: tutorialPlayer),
               ],
               const SizedBox(height: ArenaSpacing.lg),
               Text(
@@ -240,16 +249,6 @@ class _MobileMoneyDetailsPageState
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Numéro copié.')),
     );
-  }
-
-  Future<void> _openTutorial(BuildContext context) async {
-    final uri = Uri.parse(_paymentTutorialUrl);
-    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!ok && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Impossible d'ouvrir le tutoriel.")),
-      );
-    }
   }
 
   Future<void> _dialPayment(BuildContext context) async {
@@ -678,54 +677,62 @@ class _CrossBorderStepsCard extends StatelessWidget {
   }
 }
 
-/// Transfert transfrontalier (CEMAC hors Cameroun) — petite card renvoyant vers
-/// une vidéo tutoriel de paiement.
+/// Tuto vidéo de paiement joué IN-APP, propre au pays. L'admin renseigne le
+/// lien YouTube par pays ; le [player] est déjà construit par la page (absent
+/// si aucune vidéo n'est publiée, auquel cas la carte n'apparaît pas).
 class _PaymentTutorialCard extends StatelessWidget {
-  const _PaymentTutorialCard({required this.onTap});
+  const _PaymentTutorialCard({required this.player});
 
-  final VoidCallback onTap;
+  final Widget player;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(ArenaSpacing.md),
-        decoration: BoxDecoration(
-          color: ArenaColors.carbon,
-          borderRadius: BorderRadius.circular(ArenaRadius.lg),
-          border: Border.all(color: ArenaColors.neonRed.withValues(alpha: 0.4)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: ArenaColors.neonRed,
-                borderRadius: BorderRadius.circular(ArenaRadius.sm),
+    return Container(
+      padding: const EdgeInsets.all(ArenaSpacing.md),
+      decoration: BoxDecoration(
+        color: ArenaColors.carbon,
+        borderRadius: BorderRadius.circular(ArenaRadius.lg),
+        border: Border.all(color: ArenaColors.neonRed.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: ArenaColors.neonRed,
+                  borderRadius: BorderRadius.circular(ArenaRadius.sm),
+                ),
+                child: const Icon(
+                  Icons.play_arrow_rounded,
+                  color: ArenaColors.bone,
+                ),
               ),
-              child: const Icon(Icons.play_arrow_rounded, color: ArenaColors.bone),
-            ),
-            const SizedBox(width: ArenaSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Voir le tutoriel vidéo',
-                    style: ArenaText.body.copyWith(fontWeight: FontWeight.w700),
-                  ),
-                  Text(
-                    'Comment payer étape par étape',
-                    style: ArenaText.small.copyWith(color: ArenaColors.silver),
-                  ),
-                ],
+              const SizedBox(width: ArenaSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Tutoriel de paiement',
+                      style:
+                          ArenaText.body.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                    Text(
+                      'Comment payer étape par étape',
+                      style: ArenaText.small.copyWith(color: ArenaColors.silver),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const Icon(Icons.chevron_right, color: ArenaColors.silver),
-          ],
-        ),
+            ],
+          ),
+          const SizedBox(height: ArenaSpacing.sm),
+          player,
+        ],
       ),
     );
   }

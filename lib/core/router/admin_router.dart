@@ -25,6 +25,7 @@ import 'package:arena/features_admin/super_admin/super_admin_anticheat.dart';
 import 'package:arena/features_admin/super_admin/super_admin_app_update.dart';
 import 'package:arena/features_admin/super_admin/super_admin_broadcast.dart';
 import 'package:arena/features_admin/super_admin/super_admin_dashboard.dart';
+import 'package:arena/features_admin/super_admin/super_admin_game_rules.dart';
 import 'package:arena/features_admin/super_admin/super_admin_invitations.dart';
 import 'package:arena/features_admin/super_admin/super_admin_payments_validation_page.dart';
 import 'package:arena/features_admin/super_admin/super_admin_payouts_page.dart';
@@ -84,6 +85,7 @@ abstract final class AdminRoutes {
   static const superBroadcast = '/super/broadcast';
   static const superPromoBanner = '/super/promo-banner';
   static const superTutorialVideo = '/super/tutorial-video';
+  static const superGameRules = '/super/game-rules';
   static const superReintegration = '/super/reintegration';
   static const superChatThread = '/super/messages/:userId';
   static const superSupport = '/super/support';
@@ -350,6 +352,11 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
         path: AdminRoutes.superTutorialVideo,
         name: 'admin.superTutorialVideo',
         builder: (context, state) => const SuperAdminTutorialVideo(),
+      ),
+      GoRoute(
+        path: AdminRoutes.superGameRules,
+        name: 'admin.superGameRules',
+        builder: (context, state) => const SuperAdminGameRules(),
       ),
       GoRoute(
         path: AdminRoutes.superReintegration,

@@ -290,6 +290,13 @@ class AdminDashboardPage extends ConsumerWidget {
                           context.push(AdminRoutes.superTutorialVideo),
                     ),
                     const SizedBox(height: ArenaSpacing.xs),
+                    ArenaButton(
+                      label: '📋 RÈGLES PAR JEU',
+                      fullWidth: true,
+                      variant: ArenaButtonVariant.secondary,
+                      onPressed: () => context.push(AdminRoutes.superGameRules),
+                    ),
+                    const SizedBox(height: ArenaSpacing.xs),
                   ],
                   if (adminCanSection(profile, 'anticheat'))
                     ArenaButton(

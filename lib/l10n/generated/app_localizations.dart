@@ -2470,6 +2470,48 @@ abstract class AppLocalizations {
   /// **'Ce match n\'a pas encore d\'horaire planifié. Tu seras notifié dès qu\'il sera programmé.'**
   String get matchLockedNoScheduleBody;
 
+  /// No description provided for @matchRulesSectionTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Règles du jeu'**
+  String get matchRulesSectionTitle;
+
+  /// No description provided for @matchRulesVideoTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'À regarder avant de jouer'**
+  String get matchRulesVideoTitle;
+
+  /// No description provided for @roleIntroHomeTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ton rôle : DOMICILE'**
+  String get roleIntroHomeTitle;
+
+  /// No description provided for @roleIntroAwayTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ton rôle : EXTÉRIEUR'**
+  String get roleIntroAwayTitle;
+
+  /// No description provided for @roleIntroHomeBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'En tant que DOMICILE, tu crées la salle dans le jeu et communiques le code à ton adversaire. Lance le match, puis à la fin saisis le score et valide-le.'**
+  String get roleIntroHomeBody;
+
+  /// No description provided for @roleIntroAwayBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'En tant qu\'EXTÉRIEUR, tu rejoins la salle avec le code que ton adversaire te donne. Joue le match, puis à la fin saisis le score et valide-le.'**
+  String get roleIntroAwayBody;
+
+  /// No description provided for @roleIntroGotIt.
+  ///
+  /// In fr, this message translates to:
+  /// **'J\'ai compris'**
+  String get roleIntroGotIt;
+
   /// No description provided for @manualUploadButtonLabel.
   ///
   /// In fr, this message translates to:

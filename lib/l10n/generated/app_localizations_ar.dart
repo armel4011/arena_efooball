@@ -1243,6 +1243,29 @@ class AppLocalizationsAr extends AppLocalizations {
       'لا يوجد موعد محدد لهذه المباراة بعد. سيتم إعلامك بمجرد جدولتها.';
 
   @override
+  String get matchRulesSectionTitle => 'قواعد اللعبة';
+
+  @override
+  String get matchRulesVideoTitle => 'شاهد قبل أن تلعب';
+
+  @override
+  String get roleIntroHomeTitle => 'دورك: المضيف';
+
+  @override
+  String get roleIntroAwayTitle => 'دورك: الضيف';
+
+  @override
+  String get roleIntroHomeBody =>
+      'بصفتك المضيف، أنشئ الغرفة في اللعبة وشارك الرمز مع خصمك. ابدأ المباراة، ثم أدخل النتيجة وأكّدها في النهاية.';
+
+  @override
+  String get roleIntroAwayBody =>
+      'بصفتك الضيف، انضم إلى الغرفة بالرمز الذي يعطيك إياه خصمك. العب المباراة، ثم أدخل النتيجة وأكّدها في النهاية.';
+
+  @override
+  String get roleIntroGotIt => 'فهمت';
+
+  @override
   String get manualUploadButtonLabel => 'إرسال فيديو إثبات';
 
   @override
