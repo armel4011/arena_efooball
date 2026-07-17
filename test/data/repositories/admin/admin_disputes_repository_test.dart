@@ -239,6 +239,9 @@ void main() {
             'p_winner_id': 'p1',
             'p_score1': 2,
             'p_score2': 1,
+            // Trancher un litige n'accuse personne par défaut : le strike
+            // (→ ban à vie au 3e) reste un choix explicite de l'admin.
+            'p_guilty_party_id': null,
           },
         ),
       ).called(1);
@@ -268,6 +271,40 @@ void main() {
             'p_winner_id': null,
             'p_score1': null,
             'p_score2': null,
+            'p_guilty_party_id': null,
+          },
+        ),
+      ).called(1);
+    });
+
+    test('verdict avec coupable : transmet p_guilty_party_id (strike)',
+        () async {
+      when(
+        () => client.rpc<void>('resolve_dispute', params: any(named: 'params')),
+      ).thenAnswer((_) => FakeQueryChain<void>(Future<void>.value()));
+
+      // Le coupable est INDÉPENDANT du vainqueur : ici p1 gagne le tapis vert
+      // et c'est p2 qui a triché — mais l'inverse doit rester exprimable.
+      await repo.resolveAtomic(
+        matchId: 'm1',
+        disputeId: 'd1',
+        justification: 'triche avérée',
+        winnerId: 'p1',
+        guiltyPartyId: 'p2',
+      );
+
+      verify(
+        () => client.rpc<void>(
+          'resolve_dispute',
+          params: {
+            'p_match_id': 'm1',
+            'p_dispute_id': 'd1',
+            'p_justification': 'triche avérée',
+            'p_cancel': false,
+            'p_winner_id': 'p1',
+            'p_score1': null,
+            'p_score2': null,
+            'p_guilty_party_id': 'p2',
           },
         ),
       ).called(1);
