@@ -62,6 +62,15 @@ class _ScoreFlowViewState extends ConsumerState<ScoreFlowView> {
   bool get _isKnockout => widget.match.groupId == null;
 
   Future<void> _submit() async {
+    // Symétrique de la garde de `_pickAndUploadProof` : la preuve est uploadée
+    // dès le choix du fichier pour qu'un réseau lent ne bloque pas le tap
+    // SOUMETTRE — mais rien n'empêchait le tap d'ARRIVER AVANT la fin de
+    // l'upload. `_uploadedProofPath` était alors encore nul : le score partait
+    // sans preuve, et comme la vue bascule ensuite sur l'après-soumission, elle
+    // ne pouvait plus jamais être rattachée. En litige, ce joueur n'a rien à
+    // opposer. La garde double celle du bouton (isLoading) : un tap parti au
+    // même frame que la fin de l'upload passerait quand même.
+    if (_pickingProof) return;
     final l10n = AppLocalizations.of(context);
     final my = int.tryParse(_myScoreCtrl.text.trim());
     final opp = int.tryParse(_oppScoreCtrl.text.trim());
@@ -381,7 +390,9 @@ class _ScoreFlowViewState extends ConsumerState<ScoreFlowView> {
           label: l10n.scoreFlowSubmitButton,
           icon: Icons.check_circle_outline,
           fullWidth: true,
-          isLoading: _submitting,
+          // `_pickingProof` compte comme un chargement : soumettre pendant que
+          // la preuve monte encore l'enverrait SANS elle, sans retour possible.
+          isLoading: _submitting || _pickingProof,
           onPressed: _submit,
         ),
         const SizedBox(height: ArenaSpacing.sm),
