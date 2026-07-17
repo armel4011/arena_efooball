@@ -95,88 +95,103 @@ class _PaymentProcessingPageState extends ConsumerState<PaymentProcessingPage> {
     ref.watch(paymentByIdProvider(widget.paymentId)).whenData((rec) {
       if (rec != null) _handleStatus(context, rec);
     });
-    return Scaffold(
-      backgroundColor: ArenaColors.void_,
-      appBar: ArenaAppBar(
-        title: l10n.paymentProcessingAppBarTitle,
-        onBack: () => _leaveScreen(context),
-      ),
-      body: ArenaScreenBackground(
-        child: SafeArea(
-          child: ListView(
-            padding: const EdgeInsets.all(ArenaSpacing.lg),
-            children: [
-              const SizedBox(height: ArenaSpacing.lg),
-              Center(
-                child: PaymentOperatorLogo(operator: widget.operator, size: 70),
-              ),
-              const SizedBox(height: ArenaSpacing.md),
-              Center(
-                child: Text(
-                  l10n.paymentProcessingWaitingTitle,
-                  textAlign: TextAlign.center,
-                  style: ArenaText.h1.copyWith(fontSize: 22),
-                ),
-              ),
-              const SizedBox(height: ArenaSpacing.sm),
-              Center(
-                child: Text(
-                  '${l10n.paymentProcessingWaitingSubtitle}'
-                  '${widget.operator.label}'
-                  '${l10n.paymentProcessingWaitingSubtitleSuffix}',
-                  textAlign: TextAlign.center,
-                  style: ArenaText.bodyMuted,
-                ),
-              ),
-              const SizedBox(height: ArenaSpacing.xl),
-              Center(
-                child: SizedBox(
-                  width: 36,
-                  height: 36,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 3,
-                    valueColor: AlwaysStoppedAnimation(accent),
+    // On y arrive par `go` depuis la saisie du paiement (pile remplacée) et
+    // cette route est hors shell : rien dessous, donc le Retour SYSTÈME sortait
+    // de l'app en plein flux d'argent — le paiement est déjà en
+    // `awaiting_admin`. Même bug que #345, une page plus loin : la pile avait
+    // été corrigée, pas le geste Retour. On le renvoie vers la sortie douce
+    // déjà câblée sur l'AppBar (retour à l'accueil, paiement conservé).
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _leaveScreen(context);
+      },
+      child: Scaffold(
+        backgroundColor: ArenaColors.void_,
+        appBar: ArenaAppBar(
+          title: l10n.paymentProcessingAppBarTitle,
+          onBack: () => _leaveScreen(context),
+        ),
+        body: ArenaScreenBackground(
+          child: SafeArea(
+            child: ListView(
+              padding: const EdgeInsets.all(ArenaSpacing.lg),
+              children: [
+                const SizedBox(height: ArenaSpacing.lg),
+                Center(
+                  child: PaymentOperatorLogo(
+                    operator: widget.operator,
+                    size: 70,
                   ),
                 ),
-              ),
-              const SizedBox(height: ArenaSpacing.lg),
-              _PaymentRecap(
-                operator: widget.operator,
-                amountXaf: widget.amountXaf,
-                competitionName: widget.competitionName,
-                maskedPhone: widget.maskedPhone,
-                paymentId: widget.paymentId,
-              ),
-              const SizedBox(height: ArenaSpacing.lg),
-              _PaymentProofSection(paymentId: widget.paymentId),
-              const SizedBox(height: ArenaSpacing.lg),
-              Container(
-                padding: const EdgeInsets.all(ArenaSpacing.md),
-                decoration: BoxDecoration(
-                  color: ArenaColors.carbon,
-                  borderRadius: BorderRadius.circular(ArenaRadius.md),
-                  border: Border.all(color: ArenaColors.border),
+                const SizedBox(height: ArenaSpacing.md),
+                Center(
+                  child: Text(
+                    l10n.paymentProcessingWaitingTitle,
+                    textAlign: TextAlign.center,
+                    style: ArenaText.h1.copyWith(fontSize: 22),
+                  ),
                 ),
-                child: Text(
-                  l10n.paymentProcessingInfoNote,
-                  style: ArenaText.small,
+                const SizedBox(height: ArenaSpacing.sm),
+                Center(
+                  child: Text(
+                    '${l10n.paymentProcessingWaitingSubtitle}'
+                    '${widget.operator.label}'
+                    '${l10n.paymentProcessingWaitingSubtitleSuffix}',
+                    textAlign: TextAlign.center,
+                    style: ArenaText.bodyMuted,
+                  ),
                 ),
-              ),
-              const SizedBox(height: ArenaSpacing.lg),
-              ArenaButton(
-                label: l10n.paymentProcessingLeaveButton,
-                variant: ArenaButtonVariant.secondary,
-                fullWidth: true,
-                onPressed: () => _leaveScreen(context),
-              ),
-              const SizedBox(height: ArenaSpacing.sm),
-              ArenaButton(
-                label: l10n.paymentProcessingCancelButton,
-                variant: ArenaButtonVariant.ghost,
-                fullWidth: true,
-                onPressed: () => _confirmCancel(context),
-              ),
-            ],
+                const SizedBox(height: ArenaSpacing.xl),
+                Center(
+                  child: SizedBox(
+                    width: 36,
+                    height: 36,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3,
+                      valueColor: AlwaysStoppedAnimation(accent),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: ArenaSpacing.lg),
+                _PaymentRecap(
+                  operator: widget.operator,
+                  amountXaf: widget.amountXaf,
+                  competitionName: widget.competitionName,
+                  maskedPhone: widget.maskedPhone,
+                  paymentId: widget.paymentId,
+                ),
+                const SizedBox(height: ArenaSpacing.lg),
+                _PaymentProofSection(paymentId: widget.paymentId),
+                const SizedBox(height: ArenaSpacing.lg),
+                Container(
+                  padding: const EdgeInsets.all(ArenaSpacing.md),
+                  decoration: BoxDecoration(
+                    color: ArenaColors.carbon,
+                    borderRadius: BorderRadius.circular(ArenaRadius.md),
+                    border: Border.all(color: ArenaColors.border),
+                  ),
+                  child: Text(
+                    l10n.paymentProcessingInfoNote,
+                    style: ArenaText.small,
+                  ),
+                ),
+                const SizedBox(height: ArenaSpacing.lg),
+                ArenaButton(
+                  label: l10n.paymentProcessingLeaveButton,
+                  variant: ArenaButtonVariant.secondary,
+                  fullWidth: true,
+                  onPressed: () => _leaveScreen(context),
+                ),
+                const SizedBox(height: ArenaSpacing.sm),
+                ArenaButton(
+                  label: l10n.paymentProcessingCancelButton,
+                  variant: ArenaButtonVariant.ghost,
+                  fullWidth: true,
+                  onPressed: () => _confirmCancel(context),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -249,9 +264,15 @@ class _PaymentRecap extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _Row(label: l10n.paymentProcessingRecapCompetition, value: competitionName),
+          _Row(
+            label: l10n.paymentProcessingRecapCompetition,
+            value: competitionName,
+          ),
           const SizedBox(height: 4),
-          _Row(label: l10n.paymentProcessingRecapAmount, value: '${_formatXaf(amountXaf)} XAF'),
+          _Row(
+            label: l10n.paymentProcessingRecapAmount,
+            value: '${_formatXaf(amountXaf)} XAF',
+          ),
           const SizedBox(height: 4),
           _Row(label: l10n.paymentProcessingRecapMethod, value: operator.label),
           const SizedBox(height: 4),
@@ -402,6 +423,19 @@ class _PaymentProofSectionState extends ConsumerState<_PaymentProofSection> {
   }
 }
 
+/// URL signée d'une capture, mémorisée par chemin de stockage.
+///
+/// Indispensable ici : le parent écoute `paymentByIdProvider`, un stream
+/// realtime qui réémet à chaque tick. Appeler `signedProofUrl()` directement
+/// dans `build` fabriquait un Future NEUF à chaque reconstruction — le
+/// FutureBuilder repassait en spinner, et comme chaque URL signée porte un
+/// token différent, la clé de cache d'`Image.network` changeait aussi : la
+/// capture était re-téléchargée en boucle sur un écran fait pour rester ouvert.
+final _signedProofUrlProvider =
+    FutureProvider.autoDispose.family<String?, String>((ref, proofPath) {
+  return ref.watch(paymentRepositoryProvider).signedProofUrl(proofPath);
+});
+
 /// Vignette cliquable de la capture jointe (URL signée à la demande).
 class _ProofThumbnail extends ConsumerWidget {
   const _ProofThumbnail({required this.proofPath});
@@ -410,41 +444,34 @@ class _ProofThumbnail extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final urlFuture =
-        ref.watch(paymentRepositoryProvider).signedProofUrl(proofPath);
-    return FutureBuilder<String?>(
-      future: urlFuture,
-      builder: (context, snap) {
-        final url = snap.data;
-        if (url == null) {
-          return const SizedBox(
-            height: 120,
-            child: Center(child: CircularProgressIndicator()),
-          );
-        }
-        return GestureDetector(
-          onTap: () => ArenaImageViewer.show(
-            context,
-            imageUrl: url,
-            caption: "Capture d'inscription",
+    final url = ref.watch(_signedProofUrlProvider(proofPath)).valueOrNull;
+    if (url == null) {
+      return const SizedBox(
+        height: 120,
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    return GestureDetector(
+      onTap: () => ArenaImageViewer.show(
+        context,
+        imageUrl: url,
+        caption: "Capture d'inscription",
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(ArenaRadius.md),
+        child: Image.network(
+          url,
+          height: 140,
+          width: double.infinity,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Container(
+            height: 140,
+            color: ArenaColors.void_,
+            alignment: Alignment.center,
+            child: const Icon(Icons.broken_image, color: ArenaColors.silver),
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(ArenaRadius.md),
-            child: Image.network(
-              url,
-              height: 140,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
-                height: 140,
-                color: ArenaColors.void_,
-                alignment: Alignment.center,
-                child: const Icon(Icons.broken_image, color: ArenaColors.silver),
-              ),
-            ),
-          ),
-        );
-      },
+        ),
+      ),
     );
   }
 }
