@@ -1,3 +1,4 @@
+import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -37,6 +38,9 @@ void main() {
       // Le verrou C-1 : aucune colonne secrète ne doit être demandée.
       expect(cols, isNot(contains('totp_secret')));
       expect(cols, isNot(contains('backup_codes')));
+      // Le sondage jeux : la colonne DOIT être lue, sinon le dialogue
+      // obligatoire se rejouerait pour tout le monde (game_interests → null).
+      expect(cols, contains('game_interests'));
       // Filtre sur l'id + maybeSingle.
       expect(from.hasFilter('eq', 'id'), isTrue);
       expect(from.hasFilter('maybeSingle', '_'), isTrue);
@@ -150,6 +154,43 @@ void main() {
       stub('public_profiles', profileRow());
       final p = await repo.getPublicById('u1');
       expect(p!.email, isNull);
+    });
+
+    test('game_interests null (jamais répondu) → hasAnsweredGameInterests false',
+        () async {
+      stub('profiles', profileRow());
+      final p = await repo.getById('u1');
+      expect(p!.gameInterests, isNull);
+      expect(p.hasAnsweredGameInterests, isFalse);
+    });
+
+    test('game_interests présent → List<GameType> + hasAnswered true', () async {
+      final row = profileRow()..['game_interests'] = ['efootball', 'draughts'];
+      stub('profiles', row);
+      final p = await repo.getById('u1');
+      expect(p!.hasAnsweredGameInterests, isTrue);
+      expect(p.gameInterests, [GameType.efootball, GameType.draughts]);
+    });
+  });
+
+  group('setGameInterests (RPC set_game_interests)', () {
+    test('envoie les GameType.value dans p_games', () async {
+      when(
+        () => client.rpc<void>(
+          'set_game_interests',
+          params: any(named: 'params'),
+        ),
+      ).thenAnswer((_) => FakeQueryChain<void>(Future<void>.value()));
+
+      await repo.setGameInterests([GameType.efootball, GameType.eaSportsFc]);
+
+      final captured = verify(
+        () => client.rpc<void>(
+          'set_game_interests',
+          params: captureAny(named: 'params'),
+        ),
+      ).captured.single as Map<String, dynamic>;
+      expect(captured['p_games'], ['efootball', 'ea_sports_fc']);
     });
   });
 }

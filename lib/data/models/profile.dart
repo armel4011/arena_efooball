@@ -1,3 +1,4 @@
+import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/models/user_role.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
@@ -55,6 +56,11 @@ sealed class Profile with _$Profile {
     // `register-admin` depuis `invitation_codes.allowed_*`.
     List<String>? adminAllowedCountries,
     List<String>? adminAllowedSections,
+    // Sondage « jeux d'intérêt » : jeux dont l'utilisateur veut disputer des
+    // compétitions. NULL = n'a JAMAIS répondu (nouveau compte → déclenche le
+    // dialogue obligatoire au 1er démarrage) ; liste (éventuellement vide) =
+    // a répondu. Écrit une seule fois via le RPC `set_game_interests`.
+    @GameInterestsConverter() List<GameType>? gameInterests,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) = _Profile;
@@ -70,6 +76,10 @@ sealed class Profile with _$Profile {
 
   bool get hasAcceptedCgu => cguAcceptedAt != null;
   bool get isDeleted => deletedAt != null;
+
+  /// `true` uniquement si l'utilisateur a déjà répondu au sondage des jeux
+  /// (colonne non NULL). NULL = jamais sollicité → montrer le dialogue.
+  bool get hasAnsweredGameInterests => gameInterests != null;
 
   /// Postgres rows include columns we don't model (e.g. `totp_secret`,
   /// `backup_codes`). Strip them so Freezed's generated `fromJson`
@@ -95,4 +105,20 @@ class UserRoleConverter implements JsonConverter<UserRole, String?> {
 
   @override
   String toJson(UserRole role) => role.value;
+}
+
+/// Maps the Postgres `text[]` column `game_interests` to `List<GameType>`.
+/// `null` reste `null` (= n'a jamais répondu au sondage) ; les valeurs
+/// inconnues retombent sur [GameType.efootball] via [GameType.fromValue].
+class GameInterestsConverter
+    implements JsonConverter<List<GameType>?, List<dynamic>?> {
+  const GameInterestsConverter();
+
+  @override
+  List<GameType>? fromJson(List<dynamic>? json) =>
+      json?.map((e) => GameType.fromValue(e as String?)).toList();
+
+  @override
+  List<dynamic>? toJson(List<GameType>? value) =>
+      value?.map((g) => g.value).toList();
 }

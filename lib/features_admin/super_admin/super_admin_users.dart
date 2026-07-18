@@ -1,6 +1,7 @@
 import 'package:arena/core/router/admin_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/core/utils/arena_error_message.dart';
+import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/models/profile.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_users_repository.dart';
@@ -296,6 +297,14 @@ class _SuperAdminUsersState extends ConsumerState<SuperAdminUsers> {
             ),
         ],
       ),
+      ArenaFilterSection(
+        id: 'games',
+        title: "Jeux d'intérêt (sondage · multi-sélection)",
+        options: [
+          for (final g in GameType.values)
+            ArenaFilterOption(id: g.value, label: g.label),
+        ],
+      ),
     ];
   }
 
@@ -313,6 +322,7 @@ class _SuperAdminUsersState extends ConsumerState<SuperAdminUsers> {
         if (_filter.guiltyMinCount != null) '${_filter.guiltyMinCount}',
       ],
       'competition': _filter.competitionIds,
+      'games': [for (final g in _filter.games) g.value],
     };
   }
 
@@ -323,6 +333,10 @@ class _SuperAdminUsersState extends ConsumerState<SuperAdminUsers> {
       final activity = selection['activity'] ?? const <String>[];
       final guiltyStr = selection['guilty']?.firstOrNull;
       final competitions = selection['competition'] ?? const <String>[];
+      final games = [
+        for (final v in selection['games'] ?? const <String>[])
+          GameType.fromValue(v),
+      ];
 
       _filter = _filter.copyWith(
         filter: status,
@@ -337,6 +351,8 @@ class _SuperAdminUsersState extends ConsumerState<SuperAdminUsers> {
         resetGuiltyMin: guiltyStr == null,
         competitionIds: competitions,
         resetCompetitionIds: competitions.isEmpty,
+        games: games,
+        resetGames: games.isEmpty,
       );
     });
   }
@@ -351,6 +367,7 @@ class _SuperAdminUsersState extends ConsumerState<SuperAdminUsers> {
     if (_filter.hadDispute) n++;
     if (_filter.guiltyMinCount != null) n++;
     if (_filter.competitionIds.isNotEmpty) n++;
+    if (_filter.games.isNotEmpty) n++;
     return n;
   }
 

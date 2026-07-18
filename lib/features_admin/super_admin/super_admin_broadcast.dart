@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_users_repository.dart';
 import 'package:arena/data/repositories/admin_chat_repository.dart';

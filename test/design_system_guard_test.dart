@@ -163,7 +163,14 @@ void main() {
   // (DOMICILE/EXTÉRIEUR) à l'étape 1 du match.
   // 2559 → 2562 le 2026-07-18 : +3 `ArenaColors.*` (gameDream ×1 + bannerDream ×2)
   // du nouveau jeu Dream League Soccer.
-  const colorsDotBaseline = 2562; // occurrences de `Colors.`
+  // 2562 → 2592 le 2026-07-18 : +30 du sondage « jeux d'intérêt » — dialogue
+  // obligatoire user (game_interests_dialog : pastilles de jeu colorées) +
+  // filtre jeux admin (users/broadcast mobile + filtres desktop partagés) +
+  // panneaux de résultats des dashboards super-admin mobile/desktop
+  // (_GameInterestBreakdown). 29 sont des tokens `ArenaColors.*` (game*/silver/
+  // carbon/void_/border/bone/neonRed) ; 1 seul vrai `Colors.white` (libellé du
+  // jeu sélectionné dans la pastille). check_colors.sh --strict = +1.
+  const colorsDotBaseline = 2592; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.
@@ -201,7 +208,10 @@ void main() {
   // (Domicile/Extérieur) des vignettes de preuve, litige admin desktop.
   // 223 → 226 le 2026-07-17 : +3 `GoogleFonts.spaceGrotesk` de l'éditeur desktop
   // « Règles par jeu » (parité Fluent UI avec les autres écrans desktop).
-  const googleFontsBaseline = 226; // occurrences de `GoogleFonts.`
+  // 226 → 230 le 2026-07-18 : +4 `GoogleFonts.spaceGrotesk` du panneau de
+  // résultats du sondage « jeux d'intérêt » du super-dashboard desktop
+  // (_GameInterestBreakdown). Même convention Fluent. À migrer vers ArenaText.
+  const googleFontsBaseline = 230; // occurrences de `GoogleFonts.`
 
   final colorsDotRe = RegExp(r'Colors\.');
   final colorHexRe = RegExp(r'Color\(0x');
