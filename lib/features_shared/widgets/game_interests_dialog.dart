@@ -110,99 +110,109 @@ class _GameInterestsDialogState extends ConsumerState<_GameInterestsDialog> {
       canPop: !widget.mandatory,
       child: Dialog(
         backgroundColor: ArenaColors.carbon,
+        // Marges latérales réduites → boîte plus large (le défaut Material de
+        // 40px la rendait étroite).
+        insetPadding: const EdgeInsets.symmetric(
+          horizontal: ArenaSpacing.md,
+          vertical: ArenaSpacing.xl,
+        ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(ArenaRadius.lg),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(ArenaSpacing.lg),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(
-                    Icons.sports_esports,
-                    color: ArenaColors.signalBlue,
-                    size: 22,
-                  ),
-                  const SizedBox(width: ArenaSpacing.sm),
-                  Expanded(
-                    child: Text(
-                      widget.mandatory
-                          ? "Quels jeux t'intéressent ?"
-                          : "Mes jeux d'intérêt",
-                      style:
-                          ArenaText.body.copyWith(fontWeight: FontWeight.w800),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: ArenaSpacing.sm),
-              Text(
-                widget.mandatory
-                    ? 'Choisis les jeux dont tu veux disputer des compétitions. '
-                        "On t'enverra les tournois qui correspondent. Tu peux "
-                        'en cocher plusieurs.'
-                    : 'Modifie les jeux dont tu veux disputer des '
-                        'compétitions. Au moins un jeu est requis.',
-                style: ArenaText.small.copyWith(color: ArenaColors.silver),
-              ),
-              const SizedBox(height: ArenaSpacing.md),
-              for (final game in GameType.values) ...[
-                _GameTile(
-                  label: game.label,
-                  color: _colorFor(game),
-                  selected: _selected.contains(game),
-                  onTap: _submitting
-                      ? null
-                      : () => setState(() {
-                            if (!_selected.add(game)) _selected.remove(game);
-                          }),
-                ),
-                const SizedBox(height: ArenaSpacing.sm),
-              ],
-              if (_error != null) ...[
-                const SizedBox(height: ArenaSpacing.xs),
-                Text(
-                  _error!,
-                  style: ArenaText.small.copyWith(color: ArenaColors.neonRed),
-                ),
-              ],
-              const SizedBox(height: ArenaSpacing.sm),
-              if (widget.mandatory)
-                ArenaButton(
-                  label: 'Valider',
-                  fullWidth: true,
-                  isLoading: _submitting,
-                  // Désactivé tant qu'aucun jeu n'est coché (sondage = ≥1 jeu).
-                  onPressed: _selected.isEmpty ? null : _submit,
-                )
-              else
+          padding: const EdgeInsets.all(ArenaSpacing.xl),
+          // Défilement de sécurité : sur un petit écran, tuiles + description
+          // agrandies pourraient dépasser la hauteur.
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 Row(
                   children: [
-                    Expanded(
-                      child: ArenaButton(
-                        label: 'Annuler',
-                        variant: ArenaButtonVariant.ghost,
-                        fullWidth: true,
-                        onPressed: _submitting
-                            ? null
-                            : () => Navigator.of(context).pop(),
-                      ),
+                    const Icon(
+                      Icons.sports_esports,
+                      color: ArenaColors.signalBlue,
+                      size: 28,
                     ),
                     const SizedBox(width: ArenaSpacing.sm),
                     Expanded(
-                      child: ArenaButton(
-                        label: 'Enregistrer',
-                        fullWidth: true,
-                        isLoading: _submitting,
-                        onPressed: _selected.isEmpty ? null : _submit,
+                      child: Text(
+                        widget.mandatory
+                            ? "Quels jeux t'intéressent ?"
+                            : "Mes jeux d'intérêt",
+                        style:
+                            ArenaText.h3.copyWith(fontWeight: FontWeight.w800),
                       ),
                     ),
                   ],
                 ),
-            ],
+                const SizedBox(height: ArenaSpacing.sm),
+                Text(
+                  widget.mandatory
+                      ? 'Choisis les jeux dont tu veux disputer des compétitions. '
+                          "On t'enverra les tournois qui correspondent. Tu peux "
+                          'en cocher plusieurs.'
+                      : 'Modifie les jeux dont tu veux disputer des '
+                          'compétitions. Au moins un jeu est requis.',
+                  style: ArenaText.body.copyWith(color: ArenaColors.silver),
+                ),
+                const SizedBox(height: ArenaSpacing.lg),
+                for (final game in GameType.values) ...[
+                  _GameTile(
+                    label: game.label,
+                    color: _colorFor(game),
+                    selected: _selected.contains(game),
+                    onTap: _submitting
+                        ? null
+                        : () => setState(() {
+                              if (!_selected.add(game)) _selected.remove(game);
+                            }),
+                  ),
+                  const SizedBox(height: ArenaSpacing.sm),
+                ],
+                if (_error != null) ...[
+                  const SizedBox(height: ArenaSpacing.xs),
+                  Text(
+                    _error!,
+                    style: ArenaText.small.copyWith(color: ArenaColors.neonRed),
+                  ),
+                ],
+                const SizedBox(height: ArenaSpacing.sm),
+                if (widget.mandatory)
+                  ArenaButton(
+                    label: 'Valider',
+                    fullWidth: true,
+                    isLoading: _submitting,
+                    // Désactivé tant qu'aucun jeu n'est coché (sondage = ≥1 jeu).
+                    onPressed: _selected.isEmpty ? null : _submit,
+                  )
+                else
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ArenaButton(
+                          label: 'Annuler',
+                          variant: ArenaButtonVariant.ghost,
+                          fullWidth: true,
+                          onPressed: _submitting
+                              ? null
+                              : () => Navigator.of(context).pop(),
+                        ),
+                      ),
+                      const SizedBox(width: ArenaSpacing.sm),
+                      Expanded(
+                        child: ArenaButton(
+                          label: 'Enregistrer',
+                          fullWidth: true,
+                          isLoading: _submitting,
+                          onPressed: _selected.isEmpty ? null : _submit,
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
           ),
         ),
       ),
@@ -230,23 +240,22 @@ class _GameTile extends StatelessWidget {
       borderRadius: BorderRadius.circular(ArenaRadius.md),
       child: Container(
         padding: const EdgeInsets.symmetric(
-          horizontal: ArenaSpacing.md,
-          vertical: ArenaSpacing.md,
+          horizontal: ArenaSpacing.lg,
+          vertical: ArenaSpacing.lg,
         ),
         decoration: BoxDecoration(
-          color: selected
-              ? color.withValues(alpha: 0.15)
-              : ArenaColors.void_,
+          color: selected ? color.withValues(alpha: 0.15) : ArenaColors.void_,
           borderRadius: BorderRadius.circular(ArenaRadius.md),
           border: Border.all(
             color: selected ? color : ArenaColors.border,
+            width: selected ? 2 : 1,
           ),
         ),
         child: Row(
           children: [
             Container(
-              width: 10,
-              height: 10,
+              width: 14,
+              height: 14,
               decoration: BoxDecoration(
                 color: color,
                 shape: BoxShape.circle,
@@ -256,7 +265,7 @@ class _GameTile extends StatelessWidget {
             Expanded(
               child: Text(
                 label,
-                style: ArenaText.small.copyWith(
+                style: ArenaText.body.copyWith(
                   fontWeight: FontWeight.w700,
                   color: selected ? ArenaColors.bone : ArenaColors.silver,
                 ),
@@ -265,7 +274,7 @@ class _GameTile extends StatelessWidget {
             Icon(
               selected ? Icons.check_circle : Icons.circle_outlined,
               color: selected ? color : ArenaColors.textMuted,
-              size: 20,
+              size: 26,
             ),
           ],
         ),
