@@ -1,4 +1,5 @@
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/admin/admin_users_repository.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -209,6 +210,41 @@ class DesktopAudienceFilters extends StatelessWidget {
               ],
             ),
           ],
+          const SizedBox(height: 12),
+          Text(
+            "Jeux d'intérêt (sondage · multi-sélection)",
+            style: GoogleFonts.spaceGrotesk(
+              color: ArenaColors.silver,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final g in GameType.values)
+                ToggleButton(
+                  checked: filter.games.contains(g),
+                  onChanged: (checked) {
+                    final games = [...filter.games];
+                    if (checked) {
+                      games.add(g);
+                    } else {
+                      games.remove(g);
+                    }
+                    onFilterChanged(
+                      filter.copyWith(
+                        games: games,
+                        resetGames: games.isEmpty,
+                      ),
+                    );
+                  },
+                  child: Text(g.label),
+                ),
+            ],
+          ),
         ],
       ),
     );

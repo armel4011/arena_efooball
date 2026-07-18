@@ -60,6 +60,8 @@ _$ProfileImpl _$$ProfileImplFromJson(Map<String, dynamic> json) =>
       adminAllowedSections: (json['admin_allowed_sections'] as List<dynamic>?)
           ?.map((e) => e as String)
           .toList(),
+      gameInterests: const GameInterestsConverter()
+          .fromJson(json['game_interests'] as List?),
       createdAt: json['created_at'] == null
           ? null
           : DateTime.parse(json['created_at'] as String),
@@ -115,6 +117,9 @@ Map<String, dynamic> _$$ProfileImplToJson(_$ProfileImpl instance) =>
         'admin_allowed_countries': value,
       if (instance.adminAllowedSections case final value?)
         'admin_allowed_sections': value,
+      if (const GameInterestsConverter().toJson(instance.gameInterests)
+          case final value?)
+        'game_interests': value,
       if (instance.createdAt?.toIso8601String() case final value?)
         'created_at': value,
       if (instance.updatedAt?.toIso8601String() case final value?)

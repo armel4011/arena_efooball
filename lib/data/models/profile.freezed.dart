@@ -64,7 +64,13 @@ mixin _$Profile {
 // est limité aux pays (ISO alpha-2) / sections listés. Propagé par l'EF
 // `register-admin` depuis `invitation_codes.allowed_*`.
   List<String>? get adminAllowedCountries => throw _privateConstructorUsedError;
-  List<String>? get adminAllowedSections => throw _privateConstructorUsedError;
+  List<String>? get adminAllowedSections =>
+      throw _privateConstructorUsedError; // Sondage « jeux d'intérêt » : jeux dont l'utilisateur veut disputer des
+// compétitions. NULL = n'a JAMAIS répondu (nouveau compte → déclenche le
+// dialogue obligatoire au 1er démarrage) ; liste (éventuellement vide) =
+// a répondu. Écrit une seule fois via le RPC `set_game_interests`.
+  @GameInterestsConverter()
+  List<GameType>? get gameInterests => throw _privateConstructorUsedError;
   DateTime? get createdAt => throw _privateConstructorUsedError;
   DateTime? get updatedAt => throw _privateConstructorUsedError;
 
@@ -116,6 +122,7 @@ abstract class $ProfileCopyWith<$Res> {
       String? referredBy,
       List<String>? adminAllowedCountries,
       List<String>? adminAllowedSections,
+      @GameInterestsConverter() List<GameType>? gameInterests,
       DateTime? createdAt,
       DateTime? updatedAt});
 }
@@ -168,6 +175,7 @@ class _$ProfileCopyWithImpl<$Res, $Val extends Profile>
     Object? referredBy = freezed,
     Object? adminAllowedCountries = freezed,
     Object? adminAllowedSections = freezed,
+    Object? gameInterests = freezed,
     Object? createdAt = freezed,
     Object? updatedAt = freezed,
   }) {
@@ -304,6 +312,10 @@ class _$ProfileCopyWithImpl<$Res, $Val extends Profile>
           ? _value.adminAllowedSections
           : adminAllowedSections // ignore: cast_nullable_to_non_nullable
               as List<String>?,
+      gameInterests: freezed == gameInterests
+          ? _value.gameInterests
+          : gameInterests // ignore: cast_nullable_to_non_nullable
+              as List<GameType>?,
       createdAt: freezed == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -357,6 +369,7 @@ abstract class _$$ProfileImplCopyWith<$Res> implements $ProfileCopyWith<$Res> {
       String? referredBy,
       List<String>? adminAllowedCountries,
       List<String>? adminAllowedSections,
+      @GameInterestsConverter() List<GameType>? gameInterests,
       DateTime? createdAt,
       DateTime? updatedAt});
 }
@@ -407,6 +420,7 @@ class __$$ProfileImplCopyWithImpl<$Res>
     Object? referredBy = freezed,
     Object? adminAllowedCountries = freezed,
     Object? adminAllowedSections = freezed,
+    Object? gameInterests = freezed,
     Object? createdAt = freezed,
     Object? updatedAt = freezed,
   }) {
@@ -543,6 +557,10 @@ class __$$ProfileImplCopyWithImpl<$Res>
           ? _value._adminAllowedSections
           : adminAllowedSections // ignore: cast_nullable_to_non_nullable
               as List<String>?,
+      gameInterests: freezed == gameInterests
+          ? _value._gameInterests
+          : gameInterests // ignore: cast_nullable_to_non_nullable
+              as List<GameType>?,
       createdAt: freezed == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -592,11 +610,13 @@ class _$ProfileImpl extends _Profile {
       this.referredBy,
       final List<String>? adminAllowedCountries,
       final List<String>? adminAllowedSections,
+      @GameInterestsConverter() final List<GameType>? gameInterests,
       this.createdAt,
       this.updatedAt})
       : _stats = stats,
         _adminAllowedCountries = adminAllowedCountries,
         _adminAllowedSections = adminAllowedSections,
+        _gameInterests = gameInterests,
         super._();
 
   factory _$ProfileImpl.fromJson(Map<String, dynamic> json) =>
@@ -721,6 +741,25 @@ class _$ProfileImpl extends _Profile {
     return EqualUnmodifiableListView(value);
   }
 
+// Sondage « jeux d'intérêt » : jeux dont l'utilisateur veut disputer des
+// compétitions. NULL = n'a JAMAIS répondu (nouveau compte → déclenche le
+// dialogue obligatoire au 1er démarrage) ; liste (éventuellement vide) =
+// a répondu. Écrit une seule fois via le RPC `set_game_interests`.
+  final List<GameType>? _gameInterests;
+// Sondage « jeux d'intérêt » : jeux dont l'utilisateur veut disputer des
+// compétitions. NULL = n'a JAMAIS répondu (nouveau compte → déclenche le
+// dialogue obligatoire au 1er démarrage) ; liste (éventuellement vide) =
+// a répondu. Écrit une seule fois via le RPC `set_game_interests`.
+  @override
+  @GameInterestsConverter()
+  List<GameType>? get gameInterests {
+    final value = _gameInterests;
+    if (value == null) return null;
+    if (_gameInterests is EqualUnmodifiableListView) return _gameInterests;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(value);
+  }
+
   @override
   final DateTime? createdAt;
   @override
@@ -728,7 +767,7 @@ class _$ProfileImpl extends _Profile {
 
   @override
   String toString() {
-    return 'Profile(id: $id, username: $username, countryCode: $countryCode, email: $email, avatarColor: $avatarColor, avatarUrl: $avatarUrl, role: $role, isActive: $isActive, permanentBan: $permanentBan, fcmToken: $fcmToken, stats: $stats, authProvider: $authProvider, authProviderId: $authProviderId, whatsappNumber: $whatsappNumber, preferredLanguage: $preferredLanguage, preferredCurrency: $preferredCurrency, timezone: $timezone, onboardingCompleted: $onboardingCompleted, onboardingCompletedAt: $onboardingCompletedAt, totpEnabled: $totpEnabled, cguAcceptedAt: $cguAcceptedAt, cguVersionAccepted: $cguVersionAccepted, privacyPolicyAcceptedAt: $privacyPolicyAcceptedAt, marketingConsent: $marketingConsent, accountDeletionRequestedAt: $accountDeletionRequestedAt, accountDeletionReason: $accountDeletionReason, deletedAt: $deletedAt, kycStatus: $kycStatus, kycVerifiedAt: $kycVerifiedAt, referralCode: $referralCode, referredBy: $referredBy, adminAllowedCountries: $adminAllowedCountries, adminAllowedSections: $adminAllowedSections, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'Profile(id: $id, username: $username, countryCode: $countryCode, email: $email, avatarColor: $avatarColor, avatarUrl: $avatarUrl, role: $role, isActive: $isActive, permanentBan: $permanentBan, fcmToken: $fcmToken, stats: $stats, authProvider: $authProvider, authProviderId: $authProviderId, whatsappNumber: $whatsappNumber, preferredLanguage: $preferredLanguage, preferredCurrency: $preferredCurrency, timezone: $timezone, onboardingCompleted: $onboardingCompleted, onboardingCompletedAt: $onboardingCompletedAt, totpEnabled: $totpEnabled, cguAcceptedAt: $cguAcceptedAt, cguVersionAccepted: $cguVersionAccepted, privacyPolicyAcceptedAt: $privacyPolicyAcceptedAt, marketingConsent: $marketingConsent, accountDeletionRequestedAt: $accountDeletionRequestedAt, accountDeletionReason: $accountDeletionReason, deletedAt: $deletedAt, kycStatus: $kycStatus, kycVerifiedAt: $kycVerifiedAt, referralCode: $referralCode, referredBy: $referredBy, adminAllowedCountries: $adminAllowedCountries, adminAllowedSections: $adminAllowedSections, gameInterests: $gameInterests, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -776,8 +815,7 @@ class _$ProfileImpl extends _Profile {
                 other.cguAcceptedAt == cguAcceptedAt) &&
             (identical(other.cguVersionAccepted, cguVersionAccepted) ||
                 other.cguVersionAccepted == cguVersionAccepted) &&
-            (identical(
-                    other.privacyPolicyAcceptedAt, privacyPolicyAcceptedAt) ||
+            (identical(other.privacyPolicyAcceptedAt, privacyPolicyAcceptedAt) ||
                 other.privacyPolicyAcceptedAt == privacyPolicyAcceptedAt) &&
             (identical(other.marketingConsent, marketingConsent) ||
                 other.marketingConsent == marketingConsent) &&
@@ -801,6 +839,8 @@ class _$ProfileImpl extends _Profile {
                 .equals(other._adminAllowedCountries, _adminAllowedCountries) &&
             const DeepCollectionEquality()
                 .equals(other._adminAllowedSections, _adminAllowedSections) &&
+            const DeepCollectionEquality()
+                .equals(other._gameInterests, _gameInterests) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
             (identical(other.updatedAt, updatedAt) ||
@@ -844,6 +884,7 @@ class _$ProfileImpl extends _Profile {
         referredBy,
         const DeepCollectionEquality().hash(_adminAllowedCountries),
         const DeepCollectionEquality().hash(_adminAllowedSections),
+        const DeepCollectionEquality().hash(_gameInterests),
         createdAt,
         updatedAt
       ]);
@@ -899,6 +940,7 @@ abstract class _Profile extends Profile {
       final String? referredBy,
       final List<String>? adminAllowedCountries,
       final List<String>? adminAllowedSections,
+      @GameInterestsConverter() final List<GameType>? gameInterests,
       final DateTime? createdAt,
       final DateTime? updatedAt}) = _$ProfileImpl;
   const _Profile._() : super._();
@@ -980,7 +1022,14 @@ abstract class _Profile extends Profile {
   @override
   List<String>? get adminAllowedCountries;
   @override
-  List<String>? get adminAllowedSections;
+  List<String>?
+      get adminAllowedSections; // Sondage « jeux d'intérêt » : jeux dont l'utilisateur veut disputer des
+// compétitions. NULL = n'a JAMAIS répondu (nouveau compte → déclenche le
+// dialogue obligatoire au 1er démarrage) ; liste (éventuellement vide) =
+// a répondu. Écrit une seule fois via le RPC `set_game_interests`.
+  @override
+  @GameInterestsConverter()
+  List<GameType>? get gameInterests;
   @override
   DateTime? get createdAt;
   @override

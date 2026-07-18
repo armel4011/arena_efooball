@@ -1,4 +1,6 @@
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/data/models/competition_enums.dart';
+import 'package:arena/data/repositories/admin/admin_users_repository.dart';
 import 'package:arena/data/repositories/admin/super_admin_dashboard_repository.dart';
 import 'package:arena/features_shared/admin/admin_formatters.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -24,6 +26,7 @@ class DesktopSuperDashboardPage extends ConsumerWidget {
     final countriesAsync = ref.watch(superAdminCountryBreakdownProvider);
     final signupsAsync = ref.watch(superAdminMonthlySignupsProvider);
     final monthlyRevenueAsync = ref.watch(superAdminMonthlyRevenueProvider);
+    final gameStatsAsync = ref.watch(gameInterestStatsProvider);
     final monthLabel =
         DateFormat('LLLL yyyy', 'fr').format(DateTime.now()).toUpperCase();
 
@@ -41,7 +44,8 @@ class DesktopSuperDashboardPage extends ConsumerWidget {
                 ..invalidate(superAdminTopPlayersProvider)
                 ..invalidate(superAdminCountryBreakdownProvider)
                 ..invalidate(superAdminMonthlySignupsProvider)
-                ..invalidate(superAdminMonthlyRevenueProvider),
+                ..invalidate(superAdminMonthlyRevenueProvider)
+                ..invalidate(gameInterestStatsProvider),
             ),
           ],
         ),
@@ -171,6 +175,13 @@ class DesktopSuperDashboardPage extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           _CountryBreakdown(async: countriesAsync),
+          const SizedBox(height: 32),
+          Text(
+            'INTÉRÊT JEUX (SONDAGE)',
+            style: _sectionStyle,
+          ),
+          const SizedBox(height: 12),
+          _GameInterestBreakdown(async: gameStatsAsync),
           const SizedBox(height: 32),
         ],
       ),
@@ -402,6 +413,104 @@ class _CountryBreakdown extends StatelessWidget {
                       ProgressBar(
                         value: (rows[i].ratio.clamp(0, 1) * 100).toDouble(),
                         activeColor: colors[i % colors.length],
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Résultats agrégés du sondage « jeux d'intérêt » (desktop) : répondants +
+/// part des répondants intéressés par chaque jeu. Les parts peuvent se cumuler
+/// au-delà de 100 % (multi-sélection).
+class _GameInterestBreakdown extends StatelessWidget {
+  const _GameInterestBreakdown({required this.async});
+
+  final AsyncValue<GameInterestStats> async;
+
+  static Color _colorFor(GameType g) => switch (g) {
+        GameType.draughts => ArenaColors.gameDraughts,
+        GameType.efootball => ArenaColors.gameEfoot,
+        GameType.eaSportsFc => ArenaColors.gameFc,
+        GameType.dreamLeague => ArenaColors.gameDream,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    return async.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.all(24),
+        child: Center(child: ProgressRing()),
+      ),
+      error: (e, _) => InfoBar(
+        title: const Text('Sondage jeux indisponible'),
+        content: Text('$e'),
+        severity: InfoBarSeverity.error,
+      ),
+      data: (stats) {
+        if (stats.respondents == 0) {
+          return const Card(
+            backgroundColor: ArenaColors.carbon,
+            padding: EdgeInsets.all(24),
+            child: Center(child: Text('Aucun répondant au sondage.')),
+          );
+        }
+        final games = [...GameType.values]
+          ..sort((a, b) => stats.countFor(b).compareTo(stats.countFor(a)));
+        return Card(
+          backgroundColor: ArenaColors.carbon,
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                '${stats.respondents} répondant'
+                '${stats.respondents > 1 ? 's' : ''}',
+                style: GoogleFonts.spaceGrotesk(
+                  color: ArenaColors.silver,
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(height: 12),
+              for (final g in games)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              g.label,
+                              style: GoogleFonts.spaceGrotesk(
+                                color: ArenaColors.silver,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            '${stats.countFor(g)} · '
+                            '${(stats.countFor(g) / stats.respondents * 100).round()}%',
+                            style: GoogleFonts.spaceGrotesk(
+                              color: ArenaColors.bone,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      ProgressBar(
+                        value: (stats.countFor(g) / stats.respondents)
+                            .clamp(0, 1)
+                            .toDouble() *
+                            100,
+                        activeColor: _colorFor(g),
                       ),
                     ],
                   ),

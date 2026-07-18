@@ -1,3 +1,4 @@
+import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/models/profile.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:flutter/foundation.dart';
@@ -36,6 +37,8 @@ class AdminUsersRepository {
         'p_guilty_min': f.guiltyMinCount,
         'p_competition_ids':
             f.competitionIds.isEmpty ? null : f.competitionIds,
+        'p_games':
+            f.games.isEmpty ? null : [for (final g in f.games) g.value],
         'p_limit': limit,
       },
     );
@@ -72,7 +75,51 @@ class AdminUsersRepository {
         'kyc_verified_at': DateTime.now().toUtc().toIso8601String(),
     }).eq('id', userId);
   }
+
+  /// Résultats agrégés du sondage « jeux d'intérêt » (RPC
+  /// `admin_game_interest_stats`, SECURITY DEFINER + cloisonnement pays).
+  /// Ne compte que les répondants réels. Un admin scopé ne voit que ses pays.
+  Future<GameInterestStats> gameInterestStats() async {
+    final json = await _client
+        .rpc<Map<String, dynamic>>('admin_game_interest_stats');
+    return GameInterestStats.fromJson(json);
+  }
 }
+
+/// Résultats agrégés du sondage : nombre de répondants + décompte par jeu.
+@immutable
+class GameInterestStats {
+  const GameInterestStats({required this.respondents, required this.counts});
+
+  factory GameInterestStats.fromJson(Map<String, dynamic> json) {
+    final rawCounts = (json['counts'] as Map<String, dynamic>?) ?? const {};
+    return GameInterestStats(
+      respondents: (json['respondents'] as num?)?.toInt() ?? 0,
+      counts: {
+        for (final entry in rawCounts.entries)
+          GameType.fromValue(entry.key): (entry.value as num).toInt(),
+      },
+    );
+  }
+
+  /// Nombre d'utilisateurs ayant répondu (game_interests non NULL et non vide),
+  /// dans le périmètre pays de l'admin.
+  final int respondents;
+
+  /// Décompte des intéressés par jeu. Les jeux sans aucun intéressé peuvent
+  /// être absents de la map → traiter l'absence comme 0.
+  final Map<GameType, int> counts;
+
+  /// Nombre d'intéressés pour [game] (0 si absent de la map).
+  int countFor(GameType game) => counts[game] ?? 0;
+}
+
+/// Charge les stats du sondage des jeux (auto-dispose : rafraîchi à chaque
+/// ouverture de l'écran admin qui l'affiche).
+final gameInterestStatsProvider =
+    FutureProvider.autoDispose<GameInterestStats>((ref) {
+  return ref.watch(adminUsersRepositoryProvider).gameInterestStats();
+});
 
 final adminUsersRepositoryProvider = Provider<AdminUsersRepository>((ref) {
   return AdminUsersRepository(ref.watch(supabaseClientProvider));
@@ -93,6 +140,7 @@ class AdminUsersFilter {
     this.hadDispute = false,
     this.guiltyMinCount,
     this.competitionIds = const <String>[],
+    this.games = const <GameType>[],
   }) : assert(
           guiltyMinCount == null ||
               guiltyMinCount == 1 ||
@@ -130,6 +178,10 @@ class AdminUsersFilter {
   /// MOINS UNE des compétitions listées. Liste vide = pas de filtre.
   final List<String> competitionIds;
 
+  /// Filtre « jeux d'intérêt » (sondage) : utilisateurs dont game_interests
+  /// recoupe AU MOINS UN des jeux listés. Liste vide = pas de filtre.
+  final List<GameType> games;
+
   AdminUsersFilter copyWith({
     String? countryCode,
     String? filter,
@@ -140,11 +192,13 @@ class AdminUsersFilter {
     bool? hadDispute,
     int? guiltyMinCount,
     List<String>? competitionIds,
+    List<GameType>? games,
     bool resetCountryCode = false,
     bool resetFilter = false,
     bool resetSearch = false,
     bool resetGuiltyMin = false,
     bool resetCompetitionIds = false,
+    bool resetGames = false,
   }) {
     return AdminUsersFilter(
       countryCode:
@@ -160,6 +214,7 @@ class AdminUsersFilter {
       competitionIds: resetCompetitionIds
           ? const <String>[]
           : (competitionIds ?? this.competitionIds),
+      games: resetGames ? const <GameType>[] : (games ?? this.games),
     );
   }
 
@@ -171,7 +226,8 @@ class AdminUsersFilter {
       receivedReward ||
       hadDispute ||
       guiltyMinCount != null ||
-      competitionIds.isNotEmpty;
+      competitionIds.isNotEmpty ||
+      games.isNotEmpty;
 
   @override
   bool operator ==(Object other) =>
@@ -184,7 +240,11 @@ class AdminUsersFilter {
       other.receivedReward == receivedReward &&
       other.hadDispute == hadDispute &&
       other.guiltyMinCount == guiltyMinCount &&
-      _listEquals(other.competitionIds, competitionIds);
+      _listEquals(other.competitionIds, competitionIds) &&
+      _listEquals(
+        [for (final g in other.games) g.value],
+        [for (final g in games) g.value],
+      );
 
   @override
   int get hashCode => Object.hash(
@@ -197,6 +257,7 @@ class AdminUsersFilter {
         hadDispute,
         guiltyMinCount,
         Object.hashAll(competitionIds),
+        Object.hashAll([for (final g in games) g.value]),
       );
 
   static bool _listEquals(List<String> a, List<String> b) {

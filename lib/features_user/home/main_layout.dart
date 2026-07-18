@@ -4,8 +4,11 @@ import 'package:arena/core/services/network_status_service.dart';
 import 'package:arena/core/services/realtime_resume_service.dart';
 import 'package:arena/core/services/sync_queue_service.dart';
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/data/models/profile.dart';
 import 'package:arena/data/repositories/app_update_repository.dart';
+import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
+import 'package:arena/features_shared/widgets/game_interests_dialog.dart';
 import 'package:arena/features_shared/widgets/miui_optimization_dialog.dart';
 import 'package:arena/features_shared/widgets/offline_banner.dart';
 import 'package:arena/features_user/chat/messages_inbox_page.dart';
@@ -41,6 +44,7 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
   int _currentIndex = 0;
   DateTime? _lastBackPressedAt;
   bool _updateChecked = false;
+  bool _surveyPrompted = false;
 
   static const _pages = <Widget>[
     HomePage(),
@@ -52,8 +56,29 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
   @override
   void initState() {
     super.initState();
-    // Vérifie une MAJ in-app au démarrage (Android, distribution APK directe).
-    WidgetsBinding.instance.addPostFrameCallback((_) => _maybePromptUpdate());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Cas « profil déjà chargé à l'arrivée » (relancement de l'app). Le cas
+      // « profil hydraté quelques ms après » (fin d'inscription) est couvert
+      // par l'écoute de `currentProfileProvider` dans build().
+      _maybePromptSurvey();
+      _maybePromptUpdate();
+    });
+  }
+
+  /// Affiche le sondage « jeux d'intérêt » OBLIGATOIRE une fois le compte
+  /// ENTIÈREMENT créé : on n'atteint MainLayout (`/`) qu'après onboarding +
+  /// auth + acceptation CGU (cf. redirect du router). Déclenché dès que le
+  /// profil est chargé avec `game_interests` NULL (jamais répondu) — robuste
+  /// au trou de timing juste après l'inscription, où `currentProfileProvider`
+  /// peut encore être en `AsyncLoading`. `_surveyPrompted` garantit un seul
+  /// affichage par session.
+  Future<void> _maybePromptSurvey() async {
+    if (_surveyPrompted) return;
+    final profile = ref.read(currentProfileProvider).valueOrNull;
+    if (profile == null || profile.hasAnsweredGameInterests) return;
+    _surveyPrompted = true;
+    if (!mounted) return;
+    await maybePromptGameInterests(context, ref);
   }
 
   /// Best-effort : propose une mise à jour si une version plus récente est
@@ -90,6 +115,12 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
         if (next == null) return;
         setState(() => _currentIndex = next);
         ref.read(mainTabRequestProvider.notifier).state = null;
+      })
+      // Sondage jeux : dès que le profil s'hydrate (typiquement juste après la
+      // création du compte), on tente l'affichage. `_maybePromptSurvey` est
+      // idempotent (garde `_surveyPrompted`).
+      ..listen<AsyncValue<Profile?>>(currentProfileProvider, (_, next) {
+        if (next.valueOrNull != null) _maybePromptSurvey();
       });
     return PopScope(
       // On gere le back system manuellement :

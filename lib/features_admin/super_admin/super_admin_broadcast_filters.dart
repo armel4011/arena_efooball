@@ -62,6 +62,14 @@ extension _BroadcastFilters on _SuperAdminBroadcastState {
             ),
         ],
       ),
+      ArenaFilterSection(
+        id: 'games',
+        title: "Jeux d'intérêt (sondage · multi-sélection)",
+        options: [
+          for (final g in GameType.values)
+            ArenaFilterOption(id: g.value, label: g.label),
+        ],
+      ),
     ];
   }
 
@@ -79,6 +87,7 @@ extension _BroadcastFilters on _SuperAdminBroadcastState {
         if (_filter.guiltyMinCount != null) '${_filter.guiltyMinCount}',
       ],
       'competition': _filter.competitionIds,
+      'games': [for (final g in _filter.games) g.value],
     };
   }
 
@@ -92,6 +101,10 @@ extension _BroadcastFilters on _SuperAdminBroadcastState {
     final activity = selection['activity'] ?? const <String>[];
     final guiltyStr = selection['guilty']?.firstOrNull;
     final competitions = selection['competition'] ?? const <String>[];
+    final games = [
+      for (final v in selection['games'] ?? const <String>[])
+        GameType.fromValue(v),
+    ];
 
     return _filter.copyWith(
       filter: status,
@@ -106,6 +119,8 @@ extension _BroadcastFilters on _SuperAdminBroadcastState {
       resetGuiltyMin: guiltyStr == null,
       competitionIds: competitions,
       resetCompetitionIds: competitions.isEmpty,
+      games: games,
+      resetGames: games.isEmpty,
     );
   }
 
@@ -119,6 +134,7 @@ extension _BroadcastFilters on _SuperAdminBroadcastState {
     if (_filter.hadDispute) n++;
     if (_filter.guiltyMinCount != null) n++;
     if (_filter.competitionIds.isNotEmpty) n++;
+    if (_filter.games.isNotEmpty) n++;
     return n;
   }
 }

@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/models/profile.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -31,7 +32,7 @@ class ProfileRepository {
       'marketing_consent, account_deletion_requested_at, '
       'account_deletion_reason, deleted_at, kyc_status, kyc_verified_at, '
       'referral_code, referred_by, admin_allowed_countries, '
-      'admin_allowed_sections, created_at, updated_at';
+      'admin_allowed_sections, game_interests, created_at, updated_at';
 
   /// Vue exposant uniquement les colonnes PUBLIQUES (sans PII). Toute
   /// lecture d'un profil d'AUTRE utilisateur passe par là — la table
@@ -152,6 +153,18 @@ class ProfileRepository {
   /// horodatés ne se réutilisent pas ; nettoyage éventuel via cron).
   Future<void> removeAvatar(String profileId) async {
     await _client.from(_table).update({'avatar_url': null}).eq('id', profileId);
+  }
+
+  /// Enregistre la réponse au sondage « jeux d'intérêt » de l'utilisateur
+  /// courant via le RPC `set_game_interests` (SECURITY DEFINER, agit sur sa
+  /// propre ligne). Écriture FIGÉE une seule fois : si `game_interests` a déjà
+  /// été renseigné, le RPC ne modifie rien. Exige au moins un jeu (sondage
+  /// obligatoire), sinon lève `at_least_one_game_required` côté serveur.
+  Future<void> setGameInterests(List<GameType> games) async {
+    await _client.rpc<void>(
+      'set_game_interests',
+      params: {'p_games': [for (final g in games) g.value]},
+    );
   }
 
   /// Soft-deletes the account: stamps `account_deletion_requested_at`,
