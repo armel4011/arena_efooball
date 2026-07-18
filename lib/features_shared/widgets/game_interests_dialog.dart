@@ -24,12 +24,42 @@ Future<void> maybePromptGameInterests(
   await showDialog<void>(
     context: context,
     barrierDismissible: false,
-    builder: (_) => const _GameInterestsDialog(),
+    builder: (_) => const _GameInterestsDialog(mandatory: true),
+  );
+}
+
+/// Éditeur des jeux d'intérêt depuis les réglages (choix MODIFIABLE, décision
+/// produit 2026-07-18). Dialogue annulable, pré-rempli avec la sélection
+/// courante. No-op si le profil n'est pas chargé. Écrit via le même RPC
+/// `set_game_interests` (devenu modifiable, migration ...170000).
+Future<void> showGameInterestsEditor(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  final profile = ref.read(currentProfileProvider).valueOrNull;
+  if (profile == null) return;
+  if (!context.mounted) return;
+  await showDialog<void>(
+    context: context,
+    builder: (_) => _GameInterestsDialog(
+      mandatory: false,
+      initial: profile.gameInterests ?? const <GameType>[],
+    ),
   );
 }
 
 class _GameInterestsDialog extends ConsumerStatefulWidget {
-  const _GameInterestsDialog();
+  const _GameInterestsDialog({
+    required this.mandatory,
+    this.initial = const <GameType>[],
+  });
+
+  /// `true` = sondage obligatoire (1er démarrage) : non dismissible, pas de
+  /// bouton Annuler. `false` = édition depuis les réglages : annulable.
+  final bool mandatory;
+
+  /// Sélection initiale (édition depuis les réglages). Vide pour le sondage.
+  final List<GameType> initial;
 
   @override
   ConsumerState<_GameInterestsDialog> createState() =>
@@ -37,7 +67,7 @@ class _GameInterestsDialog extends ConsumerStatefulWidget {
 }
 
 class _GameInterestsDialogState extends ConsumerState<_GameInterestsDialog> {
-  final Set<GameType> _selected = <GameType>{};
+  late final Set<GameType> _selected = {...widget.initial};
   bool _submitting = false;
   String? _error;
 
@@ -59,8 +89,8 @@ class _GameInterestsDialogState extends ConsumerState<_GameInterestsDialog> {
       await ref
           .read(profileRepositoryProvider)
           .setGameInterests(_selected.toList());
-      // Rafraîchit le profil courant → `hasAnsweredGameInterests` passe à true,
-      // le dialogue ne sera plus reproposé.
+      // Rafraîchit le profil courant → `hasAnsweredGameInterests` passe à true
+      // (sondage) et la nouvelle sélection se propage (réglages).
       ref.invalidate(currentProfileProvider);
       if (mounted) Navigator.of(context).pop();
     } catch (_) {
@@ -75,9 +105,9 @@ class _GameInterestsDialogState extends ConsumerState<_GameInterestsDialog> {
 
   @override
   Widget build(BuildContext context) {
-    // Bloque le back système : le sondage est obligatoire.
+    // Bloque le back système uniquement pour le sondage obligatoire.
     return PopScope(
-      canPop: false,
+      canPop: !widget.mandatory,
       child: Dialog(
         backgroundColor: ArenaColors.carbon,
         shape: RoundedRectangleBorder(
@@ -99,7 +129,9 @@ class _GameInterestsDialogState extends ConsumerState<_GameInterestsDialog> {
                   const SizedBox(width: ArenaSpacing.sm),
                   Expanded(
                     child: Text(
-                      "Quels jeux t'intéressent ?",
+                      widget.mandatory
+                          ? "Quels jeux t'intéressent ?"
+                          : "Mes jeux d'intérêt",
                       style:
                           ArenaText.body.copyWith(fontWeight: FontWeight.w800),
                     ),
@@ -108,9 +140,12 @@ class _GameInterestsDialogState extends ConsumerState<_GameInterestsDialog> {
               ),
               const SizedBox(height: ArenaSpacing.sm),
               Text(
-                'Choisis les jeux dont tu veux disputer des compétitions. '
-                "On t'enverra les tournois qui correspondent. Tu peux en "
-                'cocher plusieurs.',
+                widget.mandatory
+                    ? 'Choisis les jeux dont tu veux disputer des compétitions. '
+                        "On t'enverra les tournois qui correspondent. Tu peux "
+                        'en cocher plusieurs.'
+                    : 'Modifie les jeux dont tu veux disputer des '
+                        'compétitions. Au moins un jeu est requis.',
                 style: ArenaText.small.copyWith(color: ArenaColors.silver),
               ),
               const SizedBox(height: ArenaSpacing.md),
@@ -135,13 +170,38 @@ class _GameInterestsDialogState extends ConsumerState<_GameInterestsDialog> {
                 ),
               ],
               const SizedBox(height: ArenaSpacing.sm),
-              ArenaButton(
-                label: 'Valider',
-                fullWidth: true,
-                isLoading: _submitting,
-                // Désactivé tant qu'aucun jeu n'est coché (sondage = ≥1 jeu).
-                onPressed: _selected.isEmpty ? null : _submit,
-              ),
+              if (widget.mandatory)
+                ArenaButton(
+                  label: 'Valider',
+                  fullWidth: true,
+                  isLoading: _submitting,
+                  // Désactivé tant qu'aucun jeu n'est coché (sondage = ≥1 jeu).
+                  onPressed: _selected.isEmpty ? null : _submit,
+                )
+              else
+                Row(
+                  children: [
+                    Expanded(
+                      child: ArenaButton(
+                        label: 'Annuler',
+                        variant: ArenaButtonVariant.ghost,
+                        fullWidth: true,
+                        onPressed: _submitting
+                            ? null
+                            : () => Navigator.of(context).pop(),
+                      ),
+                    ),
+                    const SizedBox(width: ArenaSpacing.sm),
+                    Expanded(
+                      child: ArenaButton(
+                        label: 'Enregistrer',
+                        fullWidth: true,
+                        isLoading: _submitting,
+                        onPressed: _selected.isEmpty ? null : _submit,
+                      ),
+                    ),
+                  ],
+                ),
             ],
           ),
         ),

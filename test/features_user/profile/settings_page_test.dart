@@ -5,6 +5,7 @@
 // 4 entêtes de section et du titre d'app bar.
 
 import 'package:arena/core/services/onboarding_service.dart';
+import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/models/profile.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/profile/settings_page.dart';
@@ -75,5 +76,36 @@ void main() {
     expect(find.text('COMPTE'), findsOneWidget);
     expect(find.text('CONFIDENTIALITÉ'), findsOneWidget);
     expect(find.text('AIDE & INFOS'), findsOneWidget);
+  });
+
+  testWidgets(
+      "ligne « Mes jeux d'intérêt » affiche la sélection et ouvre l'éditeur",
+      (tester) async {
+    ignoreListTileBackgroundAssert(tester);
+    SharedPreferences.setMockInitialValues(const {});
+    final prefs = await SharedPreferences.getInstance();
+    await bumpViewport(tester);
+    await tester.pumpWidget(
+      _scoped(
+        _profile().copyWith(
+          gameInterests: const [GameType.efootball, GameType.draughts],
+        ),
+        prefs,
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    // La ligne montre les jeux sélectionnés en sous-titre.
+    expect(find.text("Mes jeux d'intérêt"), findsOneWidget);
+    expect(find.text('eFootball · Jeu de Dames'), findsOneWidget);
+
+    // Tap → l'éditeur (dialogue modifiable) s'ouvre : Annuler + Enregistrer.
+    await tester.tap(find.text("Mes jeux d'intérêt"));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(find.text('Annuler'), findsOneWidget);
+    expect(find.text('Enregistrer'), findsOneWidget);
   });
 }
