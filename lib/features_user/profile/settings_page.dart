@@ -6,6 +6,7 @@ import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_card.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
+import 'package:arena/features_shared/widgets/game_interests_dialog.dart';
 import 'package:arena/features_shared/widgets/language_switcher.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/profile/support_options_sheet.dart';
@@ -134,6 +135,31 @@ class _PreferencesSection extends ConsumerWidget {
             title: Text(l10n.settingsLanguageLabel),
             subtitle: const LanguageSwitcher(),
             dense: true,
+          ),
+          const _Divider(),
+          // Sondage « jeux d'intérêt » — choix modifiable (chaînes en dur en FR,
+          // cohérent avec le dialogue de la feature).
+          ListTile(
+            leading: const Icon(
+              Icons.sports_esports_outlined,
+              color: ArenaColors.textMuted,
+            ),
+            title: const Text("Mes jeux d'intérêt"),
+            subtitle: Text(
+              () {
+                final games = profile?.gameInterests;
+                return (games == null || games.isEmpty)
+                    ? 'À définir'
+                    : games.map((g) => g.label).join(' · ');
+              }(),
+              style: ArenaTypography.bodySmall.copyWith(
+                color: ArenaColors.textMuted,
+              ),
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: profile == null
+                ? null
+                : () => showGameInterestsEditor(context, ref),
           ),
           const _Divider(),
           ListTile(
