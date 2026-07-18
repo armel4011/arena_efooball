@@ -10,11 +10,13 @@
 //      super-admin (cf. RPC admin_filter_users dans [[admin-broadcast]]).
 //
 // Auth : pas de JWT (verify_jwt=false). Re-check du `WEBHOOK_SECRET`
-// pour empêcher qu'un curl anonyme déclenche n'importe quoi sur un
-// arbitrary chat_message.id.
+// pour empêcher qu'un curl anonyme déclenche la fonction.
 //
 // Inputs : payload Database Webhook standard `{type, table, schema,
 // record, old_record}` — on s'attend uniquement à `INSERT chat_messages`.
+// On ne fait confiance qu'à `record.id` : le contenu et surtout `sender_id`
+// (qui alimente le compteur d'abus 3-strikes) sont RE-LUS depuis la DB, pas
+// pris dans le payload — un webhook forgé ne peut donc pas piéger un tiers.
 // =============================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.108.2";
@@ -79,17 +81,15 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return jsonResponse({ ignored: true });
   }
 
-  const msg = payload.record;
-  if (!msg?.id || !msg.content || msg.is_moderated) {
-    // Déjà modéré (rare — collision avec un autre handler) ou payload
-    // foireux ; on no-op pour rester idempotent.
+  // Durcissement audit 2026-07-18 (P3) : on ne fait confiance qu'à l'`id` du
+  // payload. `sender_id` / `content` / `type` / `is_moderated` sont RE-LUS
+  // depuis la DB via service-role. Ainsi un webhook forgé (si le WEBHOOK_SECRET
+  // fuitait) ne peut PAS modérer un message tiers ni — surtout — logger un
+  // anti_cheat_events (qui alimente le compteur 3-strikes/ban) contre un
+  // `profile_id` arbitraire : le sender_id provient de la ligne réelle.
+  const recordId = payload.record?.id;
+  if (!recordId) {
     return jsonResponse({ ignored: true });
-  }
-  if (msg.type !== "text") {
-    // Seul le texte passe par la liste de mots. Les messages 'system'
-    // viennent du backend (résultats matchs, etc.) et 'image' n'a pas
-    // de payload texte à filtrer.
-    return jsonResponse({ skipped: "non_text" });
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -100,6 +100,29 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const sb = createClient(supabaseUrl, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+
+  // Source de vérité = la ligne réelle, jamais le payload du webhook.
+  const { data: msg, error: fetchErr } = await sb
+    .from("chat_messages")
+    .select("id, channel_id, sender_id, content, type, is_moderated")
+    .eq("id", recordId)
+    .maybeSingle();
+  if (fetchErr) {
+    return jsonResponse(
+      { error: "message_lookup_failed", detail: safeDetail(fetchErr.message, "moderate-chat-message") },
+      500,
+    );
+  }
+  if (!msg || !msg.content || msg.is_moderated) {
+    // Introuvable (supprimé entre-temps) / vide / déjà modéré → no-op idempotent.
+    return jsonResponse({ ignored: true });
+  }
+  if (msg.type !== "text") {
+    // Seul le texte passe par la liste de mots. Les messages 'system'
+    // viennent du backend (résultats matchs, etc.) et 'image' n'a pas
+    // de payload texte à filtrer.
+    return jsonResponse({ skipped: "non_text" });
+  }
 
   // On charge tous les banned_words. V1 = quelques dizaines max ;
   // si on dépasse 1000 il faudra passer à une lookup indexée trigram
