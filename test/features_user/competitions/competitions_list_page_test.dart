@@ -58,14 +58,15 @@ void main() {
     await tester.pumpAndSettle();
 
     // La liste est organisée en onglets — un par jeu, désormais ordonnés
-    // Dames · eFootball · EA FC (plus d'onglet « Tous »). L'onglet par
-    // défaut (Dames) sans compétition affiche un empty state dédié au jeu,
-    // et expose les filtres en chips directs (statut + tarif) au lieu de
-    // l'ancien menu groupé « FILTRES ».
+    // Dames · eFootball · Mobile FC · Dream League (plus d'onglet « Tous »).
+    // L'onglet par défaut (Dames) sans compétition affiche un empty state
+    // dédié au jeu, et expose les filtres en chips directs (statut + tarif)
+    // au lieu de l'ancien menu groupé « FILTRES ».
     expect(find.byType(TabBar), findsOneWidget);
-    // 3 onglets par jeu (Dames · eFootball · EA FC). Le « Prochain match »
-    // vit désormais sur chaque page de compétition, plus dans cette liste.
-    expect(find.byType(Tab), findsNWidgets(3));
+    // 4 onglets par jeu (Dames · eFootball · Mobile FC · Dream League). Le
+    // « Prochain match » vit désormais sur chaque page de compétition, plus
+    // dans cette liste.
+    expect(find.byType(Tab), findsNWidgets(4));
     expect(find.text('Aucune compétition sur Jeu de Dames'), findsOneWidget);
     // Chips de statut (À venir par défaut) + chip de tarif distinctif.
     expect(find.text('À venir'), findsOneWidget);
@@ -104,7 +105,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Le filtrage par jeu se fait désormais via les onglets : on bascule
-    // sur l'onglet « eFootball » (2e onglet, ordre Dames · eFootball · EA FC)
+    // sur l'onglet « eFootball » (2e onglet, ordre Dames · eFootball · Mobile FC · Dream League)
     // et l'empty state suit le jeu.
     await tester.tap(find.byType(Tab).at(1));
     await tester.pumpAndSettle();

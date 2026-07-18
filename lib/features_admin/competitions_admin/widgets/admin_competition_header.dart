@@ -100,6 +100,8 @@ class AdminCompetitionHeader extends StatelessWidget {
         return ArenaColors.bannerFc;
       case GameType.efootball:
         return ArenaColors.bannerEfoot;
+      case GameType.dreamLeague:
+        return ArenaColors.bannerDream;
     }
   }
 }

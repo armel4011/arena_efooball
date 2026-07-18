@@ -606,6 +606,7 @@ String _gameEmoji(GameType g) => switch (g) {
       GameType.efootball => '⚽',
       GameType.draughts => '🔴',
       GameType.eaSportsFc => '🎮',
+      GameType.dreamLeague => '🥅',
     };
 
 String _formatLabel(TournamentFormat f, AppLocalizations l10n) => switch (f) {

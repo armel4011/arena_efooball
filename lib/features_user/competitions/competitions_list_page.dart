@@ -44,6 +44,7 @@ const _orderedGames = <GameType>[
   GameType.draughts,
   GameType.efootball,
   GameType.eaSportsFc,
+  GameType.dreamLeague,
 ];
 
 /// Couleur d'accent par jeu (indicateur + label actif de l'onglet).
@@ -51,6 +52,7 @@ Color _gameAccent(GameType g) => switch (g) {
       GameType.draughts => ArenaColors.gameDraughts,
       GameType.efootball => ArenaColors.gameEfoot,
       GameType.eaSportsFc => ArenaColors.gameFc,
+      GameType.dreamLeague => ArenaColors.gameDream,
     };
 
 class _CompetitionsListPageState extends State<CompetitionsListPage>
@@ -127,11 +129,12 @@ class _CompetitionsListPageState extends State<CompetitionsListPage>
 }
 
 /// Libellé court et pro (sans emoji) pour l'onglet d'un jeu — `GameType.label`
-/// est trop long pour 3 onglets fixes (« EA SPORTS FC Mobile »).
+/// peut être long (« Dream League Soccer »).
 String _tabLabel(GameType g) => switch (g) {
       GameType.draughts => 'Dames',
       GameType.efootball => 'eFootball',
-      GameType.eaSportsFc => 'EA FC',
+      GameType.eaSportsFc => 'Mobile FC',
+      GameType.dreamLeague => 'Dream League',
     };
 
 /// Onglet d'un jeu : la liste filtrée d'un seul [GameType], avec son propre
@@ -449,6 +452,7 @@ String _gameEmoji(GameType g) => switch (g) {
       GameType.efootball => '⚽',
       GameType.draughts => '🔴',
       GameType.eaSportsFc => '🎮',
+      GameType.dreamLeague => '🥅',
     };
 
 String _formatLabel(AppLocalizations l10n, TournamentFormat f) => switch (f) {

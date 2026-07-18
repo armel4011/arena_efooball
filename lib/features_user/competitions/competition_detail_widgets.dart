@@ -58,6 +58,7 @@ class _PremiumBanner extends StatelessWidget {
         GameType.efootball => ArenaColors.bannerEfoot,
         GameType.draughts => ArenaColors.bannerDraughts,
         GameType.eaSportsFc => ArenaColors.bannerFc,
+        GameType.dreamLeague => ArenaColors.bannerDream,
       };
 
   static String _formatDateRange(DateTime start, DateTime? end) {

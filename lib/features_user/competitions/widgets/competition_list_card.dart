@@ -261,6 +261,7 @@ class CompetitionListCard extends StatelessWidget {
         GameType.efootball => '⚽',
         GameType.draughts => '🔴',
         GameType.eaSportsFc => '🎮',
+        GameType.dreamLeague => '🥅',
       };
 
   static String _money(double v) =>
