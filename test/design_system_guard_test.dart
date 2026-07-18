@@ -167,9 +167,9 @@ void main() {
   // obligatoire user (game_interests_dialog : pastilles de jeu colorées) +
   // filtre jeux admin (users/broadcast mobile + filtres desktop partagés) +
   // panneaux de résultats des dashboards super-admin mobile/desktop
-  // (_GameInterestBreakdown). 29 sont des tokens `ArenaColors.*` (game*/silver/
-  // carbon/void_/border/bone/neonRed) ; 1 seul vrai `Colors.white` (libellé du
-  // jeu sélectionné dans la pastille). check_colors.sh --strict = +1.
+  // (_GameInterestBreakdown). 30 tokens `ArenaColors.*` (game*/silver/carbon/
+  // void_/border/bone/neonRed) ; AUCUN vrai `Colors.*` (le libellé du jeu
+  // sélectionné utilise ArenaColors.bone). check_colors.sh --strict = 0.
   const colorsDotBaseline = 2592; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de

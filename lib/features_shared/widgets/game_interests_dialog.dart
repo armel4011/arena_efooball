@@ -198,7 +198,7 @@ class _GameTile extends StatelessWidget {
                 label,
                 style: ArenaText.small.copyWith(
                   fontWeight: FontWeight.w700,
-                  color: selected ? Colors.white : ArenaColors.silver,
+                  color: selected ? ArenaColors.bone : ArenaColors.silver,
                 ),
               ),
             ),
