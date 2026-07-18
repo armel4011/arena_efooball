@@ -5,6 +5,7 @@
 
 import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/models/competition.dart';
+import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/models/player_stats.dart';
 import 'package:arena/data/models/profile.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
@@ -16,11 +17,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+// `gameInterests` non-null = a déjà répondu au sondage jeux → le dialogue
+// obligatoire (déclenché quand game_interests IS NULL) ne s'ouvre pas par-dessus
+// le MainLayout et n'interfère pas avec les taps d'onglets.
 Profile _player() => const Profile(
       id: 'p-1',
       username: 'Maradona',
       email: 'm@arena.app',
       countryCode: 'CM',
+      gameInterests: [GameType.efootball],
     );
 
 Widget _scoped() => ProviderScope(

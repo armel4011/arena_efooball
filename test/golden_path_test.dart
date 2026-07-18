@@ -37,6 +37,7 @@ import 'package:arena/core/services/onboarding_service.dart';
 import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/models/arena_notification.dart';
 import 'package:arena/data/models/competition.dart';
+import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/models/match_stream.dart';
 import 'package:arena/data/models/player_stats.dart';
 import 'package:arena/data/models/profile.dart';
@@ -93,6 +94,9 @@ Profile _player({
       countryCode: 'CM',
       cguAcceptedAt: cguAcceptedAt ?? DateTime.utc(2026),
       permanentBan: permanentBan,
+      // A déjà répondu au sondage jeux → pas de dialogue obligatoire par-dessus
+      // MainLayout (déclenché uniquement si game_interests IS NULL).
+      gameInterests: const [GameType.efootball],
     );
 
 /// Builds the router-backed app under test with the requested auth state.
