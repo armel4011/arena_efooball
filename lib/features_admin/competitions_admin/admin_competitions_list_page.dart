@@ -158,7 +158,8 @@ class _GameChipsRow extends StatelessWidget {
     (null, 'Tous'),
     (GameType.efootball, 'eFoot'),
     (GameType.draughts, 'Dames'),
-    (GameType.eaSportsFc, 'FC Mobile'),
+    (GameType.eaSportsFc, 'Mobile FC'),
+    (GameType.dreamLeague, 'Dream League'),
   ];
 
   @override

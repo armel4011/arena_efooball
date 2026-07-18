@@ -49,7 +49,8 @@ class ArenaColors {
   // ─── Game colors (par jeu) ────────────────────────────────────────────────
   static const Color gameEfoot = Color(0xFF00B4D8);      // eFootball
   static const Color gameDraughts = Color(0xFFD62828);   // Jeu de Dames (rouge dames)
-  static const Color gameFc = Color(0xFFF77F00);         // EA SPORTS FC Mobile
+  static const Color gameFc = Color(0xFFF77F00);         // Mobile FC (EA SPORTS FC Mobile)
+  static const Color gameDream = Color(0xFF2A9D8F);      // Dream League Soccer (vert terrain)
 
   // ─── Borders ──────────────────────────────────────────────────────────────
   static const Color border = Color(0x0FFFFFFF);         // 6% white
@@ -100,6 +101,10 @@ class ArenaColors {
   );
   static const LinearGradient bannerFc = LinearGradient(
     colors: [Color(0xFFF77F00), Color(0xFF6A040F)],
+    begin: Alignment.topLeft, end: Alignment.bottomRight,
+  );
+  static const LinearGradient bannerDream = LinearGradient(
+    colors: [Color(0xFF2A9D8F), Color(0xFF14532D)],
     begin: Alignment.topLeft, end: Alignment.bottomRight,
   );
 

@@ -17,7 +17,7 @@ enum TargetGame {
   eaFcMobile(
     packageAndroid: 'com.ea.gp.fifamobile',
     bundleIos: 'com.ea.fifamobile',
-    displayName: 'EA SPORTS FC Mobile',
+    displayName: 'Mobile FC',
     publisher: 'Electronic Arts',
   );
 

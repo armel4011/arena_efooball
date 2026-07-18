@@ -34,7 +34,7 @@ const Map<GameType, String> kDefaultDescriptionTemplates = {
       '📋 Règles : prise obligatoire, dame volante, victoire au blocage '
       'ou à la capture de tous les pions adverses.\n'
       '🧠 Réfléchis, anticipe, et que le meilleur stratège gagne !',
-  GameType.eaSportsFc: '⚽ Tournoi EA SPORTS FC Mobile ARENA\n'
+  GameType.eaSportsFc: '⚽ Tournoi Mobile FC ARENA\n'
       '\n'
       "La compétition mobile ultime t'attend ! Compose ton équipe, "
       'enchaîne les victoires et vise le titre.\n'
@@ -42,6 +42,14 @@ const Map<GameType, String> kDefaultDescriptionTemplates = {
       '📋 Règles : matchs en 1v1, fair-play obligatoire, capture '
       "d'écran du score demandée en cas de litige.\n"
       '⏱️ Sois connecté 5 minutes avant ton match. À toi de jouer !',
+  GameType.dreamLeague: '🥅 Tournoi Dream League Soccer ARENA\n'
+      '\n'
+      'Bâtis ton club de rêve et affronte les meilleurs managers ! '
+      'Inscris-toi, gravis le bracket et vise le titre.\n'
+      '\n'
+      '📋 Règles : matchs en 1v1, fair-play obligatoire, capture '
+      "d'écran du score demandée en cas de litige.\n"
+      '⏱️ Sois connecté 5 minutes avant ton match. Bonne chance !',
 };
 
 /// Un modèle de description nommé, réutilisable pour n'importe quel jeu.

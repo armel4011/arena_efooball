@@ -151,7 +151,7 @@ class _BannerGallery extends StatelessWidget {
         SizedBox(height: ArenaSpacing.sm),
         ArenaBanner(
           game: ArenaBannerGame.fc,
-          title: 'EA SPORTS FC Mobile',
+          title: 'Mobile FC',
           subtitle: 'Bientôt · 64 places',
         ),
       ],

@@ -161,7 +161,9 @@ void main() {
   // « Règles par jeu » (mobile/desktop) et briefing de l'écran de verrouillage.
   // 2556 → 2559 le 2026-07-17 : +3 `ArenaColors.*` du dialogue d'intro de rôle
   // (DOMICILE/EXTÉRIEUR) à l'étape 1 du match.
-  const colorsDotBaseline = 2559; // occurrences de `Colors.`
+  // 2559 → 2562 le 2026-07-18 : +3 `ArenaColors.*` (gameDream ×1 + bannerDream ×2)
+  // du nouveau jeu Dream League Soccer.
+  const colorsDotBaseline = 2562; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.

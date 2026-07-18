@@ -1,12 +1,13 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-/// Mirror of Postgres enum `public.competitions.game`. Three games are
-/// supported in V1.0 — extending requires both a CHECK update and a
-/// new icon/asset on the client.
+/// Mirror of Postgres enum `public.competitions.game`. Four games are
+/// supported — extending requires both a CHECK update (migration) and a
+/// new couleur/emoji sur le client (pas de logo image : emoji + couleur).
 enum GameType {
   efootball('efootball', 'eFootball'),
   draughts('draughts', 'Jeu de Dames'),
-  eaSportsFc('ea_sports_fc', 'EA SPORTS FC Mobile');
+  eaSportsFc('ea_sports_fc', 'Mobile FC'),
+  dreamLeague('dream_league', 'Dream League Soccer');
 
   const GameType(this.value, this.label);
 

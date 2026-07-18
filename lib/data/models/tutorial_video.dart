@@ -95,7 +95,7 @@ extension TutorialPageWire on TutorialPage {
 /// formulaires admin mobile et desktop.
 List<GameType> gamesForTutorialPage(TutorialPage page) {
   return page == TutorialPage.matchRoleIntro
-      ? const [GameType.efootball, GameType.eaSportsFc]
+      ? const [GameType.efootball, GameType.eaSportsFc, GameType.dreamLeague]
       : GameType.values;
 }
 
