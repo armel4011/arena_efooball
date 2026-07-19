@@ -353,7 +353,7 @@ void main() {
       expect(out.last, const _Item('1', 'live'));
     });
 
-    test('cache vide + erreur source → PROPAGE', () async {
+    test('cache vide + erreur MÉTIER (RLS/401) → PROPAGE', () async {
       final stream = cache.hydrateSingle<_Item>(
         namespace: 'hs',
         source: Stream<_Item?>.error(Exception('401')),
@@ -361,6 +361,18 @@ void main() {
         toJson: _toJson,
       );
       await expectLater(stream.toList(), throwsA(isA<Exception>()));
+    });
+
+    test('cache vide + erreur OFFLINE → avalée (offline-first, pas propagée)',
+        () async {
+      final out = await cache.hydrateSingle<_Item>(
+        namespace: 'hs',
+        // isOfflineError matche 'SocketException' → doit rester avalée.
+        source: Stream<_Item?>.error(Exception('SocketException: host lookup')),
+        fromJson: _fromJson,
+        toJson: _toJson,
+      ).toList();
+      expect(out, isEmpty); // pas d'exception, aucune émission
     });
 
     test('cache présent + erreur source → avalée (reste sur le cache)',
@@ -424,7 +436,7 @@ void main() {
       expect(out, const [_Item('c', 'x')]);
     });
 
-    test('clearSecure supprime l\'entrée chiffrée', () async {
+    test("clearSecure supprime l'entrée chiffrée", () async {
       await cache.writeObjectSecure<_Item>('s', const _Item('1', 'a'), _toJson);
       expect(await cache.readObjectSecure<_Item>('s', _fromJson), isNotNull);
       await cache.clearSecure('s');

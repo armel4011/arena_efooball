@@ -277,13 +277,14 @@ class PersistentCache {
         unawaited(writeList<T>(namespace, list, toJson));
       }
     } catch (e, st) {
-      // Offline-safe : si on a deja emis (cache/live), on fige sur le dernier
-      // yield. Sinon on PROPAGE — fermer sans emission bloque le
-      // StreamProvider en AsyncLoading (spinner infini).
       if (kDebugMode) {
         debugPrint('[cache] hydrate($namespace) source error: $e\n$st');
       }
-      if (!emittedAny) rethrow;
+      // Erreur OFFLINE (réseau) → on continue de l'avaler (offline-first : on
+      // reste sur loader/cache). Erreur MÉTIER (RLS/401, parsing…) sans rien
+      // d'émis → on PROPAGE, sinon le StreamProvider reste bloqué en
+      // AsyncLoading (spinner infini — bug logout/token périmé).
+      if (!emittedAny && !isOfflineError(e)) rethrow;
     }
   }
 
@@ -313,9 +314,11 @@ class PersistentCache {
       if (kDebugMode) {
         debugPrint('[cache] hydrateSingle($namespace) source error: $e\n$st');
       }
-      // Voir hydrateSingleSecure : propager si rien n'a été émis, sinon le
-      // StreamProvider reste en AsyncLoading indéfiniment.
-      if (!emittedAny) rethrow;
+      // Erreur OFFLINE (réseau) → on continue de l'avaler (offline-first : on
+      // reste sur loader/cache). Erreur MÉTIER (RLS/401, parsing…) sans rien
+      // d'émis → on PROPAGE, sinon le StreamProvider reste bloqué en
+      // AsyncLoading (spinner infini — bug logout/token périmé).
+      if (!emittedAny && !isOfflineError(e)) rethrow;
     }
   }
 
@@ -393,7 +396,9 @@ class PersistentCache {
 
   /// Équivalent chiffré de [hydrateSingle] : émet d'abord le cache chiffré
   /// (si présent), puis chaque valeur de [source] (persistée chiffrée).
-  /// Offline-safe (erreur source avalée → l'UI reste figée sur le cache).
+  /// Offline-safe : une erreur RÉSEAU ([isOfflineError]) est avalée → l'UI
+  /// reste figée sur le cache/loader. Une erreur MÉTIER (RLS/401…) sans cache
+  /// est PROPAGÉE (sinon le StreamProvider resterait bloqué en AsyncLoading).
   Stream<T?> hydrateSingleSecure<T>({
     required String namespace,
     required Stream<T?> source,
@@ -420,11 +425,11 @@ class PersistentCache {
           '[cache] hydrateSingleSecure($namespace) source error: $e\n$st',
         );
       }
-      // Si RIEN n'a été émis (cache vide + source en erreur), on PROPAGE :
-      // fermer le stream sans aucune valeur laisse le StreamProvider bloqué
-      // en AsyncLoading (spinner infini — bug logout/token périmé). Avec une
-      // valeur déjà émise (cache), on reste offline-safe (on la conserve).
-      if (!emittedAny) rethrow;
+      // Erreur OFFLINE (réseau) → on continue de l'avaler (offline-first : on
+      // reste sur loader/cache). Erreur MÉTIER (RLS/401, parsing…) sans rien
+      // d'émis → on PROPAGE, sinon le StreamProvider reste bloqué en
+      // AsyncLoading (spinner infini — bug logout/token périmé).
+      if (!emittedAny && !isOfflineError(e)) rethrow;
     }
   }
 
@@ -465,7 +470,11 @@ class PersistentCache {
       if (kDebugMode) {
         debugPrint('[cache] hydratePairs($namespace) source error: $e\n$st');
       }
-      if (!emittedAny) rethrow;
+      // Erreur OFFLINE (réseau) → on continue de l'avaler (offline-first : on
+      // reste sur loader/cache). Erreur MÉTIER (RLS/401, parsing…) sans rien
+      // d'émis → on PROPAGE, sinon le StreamProvider reste bloqué en
+      // AsyncLoading (spinner infini — bug logout/token périmé).
+      if (!emittedAny && !isOfflineError(e)) rethrow;
     }
   }
 }
