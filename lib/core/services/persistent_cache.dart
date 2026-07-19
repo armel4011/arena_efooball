@@ -263,23 +263,28 @@ class PersistentCache {
     required Map<String, dynamic> Function(T) toJson,
   }) async* {
     final cached = readList<T>(namespace, fromJson);
+    var emittedAny = false;
     if (cached != null && cached.isNotEmpty) {
+      emittedAny = true;
       yield cached;
     }
     try {
       await for (final list in source) {
+        emittedAny = true;
         yield list;
         // Persist en arriere-plan ; pas besoin d'await — le yield
         // precedent a deja transmis a l'UI.
         unawaited(writeList<T>(namespace, list, toJson));
       }
     } catch (e, st) {
-      // Swallow — l'UI reste figee sur le dernier yield (cache ou
-      // derniere donnee live recue avant la coupure).
       if (kDebugMode) {
-        debugPrint(
-            '[cache] hydrate($namespace) source error swallowed: $e\n$st');
+        debugPrint('[cache] hydrate($namespace) source error: $e\n$st');
       }
+      // Erreur OFFLINE (réseau) → on continue de l'avaler (offline-first : on
+      // reste sur loader/cache). Erreur MÉTIER (RLS/401, parsing…) sans rien
+      // d'émis → on PROPAGE, sinon le StreamProvider reste bloqué en
+      // AsyncLoading (spinner infini — bug logout/token périmé).
+      if (!emittedAny && !isOfflineError(e)) rethrow;
     }
   }
 
@@ -292,9 +297,14 @@ class PersistentCache {
     required Map<String, dynamic> Function(T) toJson,
   }) async* {
     final cached = readObject<T>(namespace, fromJson);
-    if (cached != null) yield cached;
+    var emittedAny = false;
+    if (cached != null) {
+      emittedAny = true;
+      yield cached;
+    }
     try {
       await for (final value in source) {
+        emittedAny = true;
         yield value;
         if (value != null) {
           unawaited(writeObject<T>(namespace, value, toJson));
@@ -302,9 +312,13 @@ class PersistentCache {
       }
     } catch (e, st) {
       if (kDebugMode) {
-        debugPrint(
-            '[cache] hydrateSingle($namespace) source error swallowed: $e\n$st');
+        debugPrint('[cache] hydrateSingle($namespace) source error: $e\n$st');
       }
+      // Erreur OFFLINE (réseau) → on continue de l'avaler (offline-first : on
+      // reste sur loader/cache). Erreur MÉTIER (RLS/401, parsing…) sans rien
+      // d'émis → on PROPAGE, sinon le StreamProvider reste bloqué en
+      // AsyncLoading (spinner infini — bug logout/token périmé).
+      if (!emittedAny && !isOfflineError(e)) rethrow;
     }
   }
 
@@ -362,9 +376,29 @@ class PersistentCache {
     }
   }
 
+  /// Supprime l'entrée chiffrée d'un namespace. Utilisé au logout pour purger
+  /// le profil (`profile.<uid>`) — sinon un cache résiduel peut réhydrater un
+  /// état à moitié connecté au retour d'arrière-plan.
+  Future<void> clearSecure(String namespace) async {
+    try {
+      await _secure.delete(key: _secureKey(namespace));
+    } catch (e, st) {
+      unawaited(
+        reportError(
+          e,
+          st,
+          context: 'PersistentCache.clearSecure',
+          hint: 'namespace=$namespace',
+        ),
+      );
+    }
+  }
+
   /// Équivalent chiffré de [hydrateSingle] : émet d'abord le cache chiffré
   /// (si présent), puis chaque valeur de [source] (persistée chiffrée).
-  /// Offline-safe (erreur source avalée → l'UI reste figée sur le cache).
+  /// Offline-safe : une erreur RÉSEAU ([isOfflineError]) est avalée → l'UI
+  /// reste figée sur le cache/loader. Une erreur MÉTIER (RLS/401…) sans cache
+  /// est PROPAGÉE (sinon le StreamProvider resterait bloqué en AsyncLoading).
   Stream<T?> hydrateSingleSecure<T>({
     required String namespace,
     required Stream<T?> source,
@@ -372,9 +406,14 @@ class PersistentCache {
     required Map<String, dynamic> Function(T) toJson,
   }) async* {
     final cached = await readObjectSecure<T>(namespace, fromJson);
-    if (cached != null) yield cached;
+    var emittedAny = false;
+    if (cached != null) {
+      emittedAny = true;
+      yield cached;
+    }
     try {
       await for (final value in source) {
+        emittedAny = true;
         yield value;
         if (value != null) {
           unawaited(writeObjectSecure<T>(namespace, value, toJson));
@@ -383,9 +422,14 @@ class PersistentCache {
     } catch (e, st) {
       if (kDebugMode) {
         debugPrint(
-          '[cache] hydrateSingleSecure($namespace) source error swallowed: $e\n$st',
+          '[cache] hydrateSingleSecure($namespace) source error: $e\n$st',
         );
       }
+      // Erreur OFFLINE (réseau) → on continue de l'avaler (offline-first : on
+      // reste sur loader/cache). Erreur MÉTIER (RLS/401, parsing…) sans rien
+      // d'émis → on PROPAGE, sinon le StreamProvider reste bloqué en
+      // AsyncLoading (spinner infini — bug logout/token périmé).
+      if (!emittedAny && !isOfflineError(e)) rethrow;
     }
   }
 
@@ -405,11 +449,14 @@ class PersistentCache {
       final b = fromJsonB(json['b'] as Map<String, dynamic>);
       return (a, b);
     });
+    var emittedAny = false;
     if (cached != null && cached.isNotEmpty) {
+      emittedAny = true;
       yield cached;
     }
     try {
       await for (final list in source) {
+        emittedAny = true;
         yield list;
         unawaited(
           writeList<(A, B)>(
@@ -421,9 +468,13 @@ class PersistentCache {
       }
     } catch (e, st) {
       if (kDebugMode) {
-        debugPrint(
-            '[cache] hydratePairs($namespace) source error swallowed: $e\n$st');
+        debugPrint('[cache] hydratePairs($namespace) source error: $e\n$st');
       }
+      // Erreur OFFLINE (réseau) → on continue de l'avaler (offline-first : on
+      // reste sur loader/cache). Erreur MÉTIER (RLS/401, parsing…) sans rien
+      // d'émis → on PROPAGE, sinon le StreamProvider reste bloqué en
+      // AsyncLoading (spinner infini — bug logout/token périmé).
+      if (!emittedAny && !isOfflineError(e)) rethrow;
     }
   }
 }
