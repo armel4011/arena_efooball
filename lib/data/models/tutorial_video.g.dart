@@ -53,4 +53,5 @@ const _$TutorialPageEnumMap = {
   TutorialPage.matchLocked: 'match_locked',
   TutorialPage.matchRoleIntro: 'match_role_intro',
   TutorialPage.paymentTutorial: 'payment_tutorial',
+  TutorialPage.installCheck: 'install_check',
 };

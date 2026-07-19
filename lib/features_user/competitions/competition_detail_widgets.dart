@@ -224,10 +224,20 @@ class _GatedDetailView extends ConsumerWidget {
                   : ArenaButtonVariant.secondary,
               fullWidth: true,
               onPressed: canRegister
-                  ? () => context.push(
+                  ? () async {
+                      // Jeux EXTERNES : contrôle d'installation obligatoire
+                      // avant l'inscription (app à jour/uniforme + installable).
+                      // Les Dames sont in-app → pas de contrôle.
+                      if (c.game.isExternal) {
+                        final ok =
+                            await showAppCheckDialog(context, game: c.game);
+                        if (!ok || !context.mounted) return;
+                      }
+                      await context.push(
                         UserRoutes.registrationConfirmPath(c.id),
                         extra: _confirmArgsFor(c, l10n),
-                      )
+                      );
+                    }
                   : null,
             ),
           ),

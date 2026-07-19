@@ -20,6 +20,14 @@ enum GameType {
       orElse: () => GameType.efootball,
     );
   }
+
+  /// `true` si le jeu se joue DANS Arena (Dames). Les autres jeux se jouent
+  /// dans une app EXTERNE (eFootball, Mobile FC, Dream League) — d'où le
+  /// dialogue de contrôle d'installation avant inscription.
+  bool get isInApp => this == GameType.draughts;
+
+  /// `true` si le jeu requiert une app EXTERNE (tous sauf les Dames).
+  bool get isExternal => !isInApp;
 }
 
 /// Mirror of Postgres enum `public.competition_status`.

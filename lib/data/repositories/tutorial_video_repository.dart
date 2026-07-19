@@ -223,6 +223,19 @@ final matchRoleIntroVideoProvider = Provider.autoDispose
       );
 });
 
+/// Vidéo IN-APP active du dialogue de contrôle d'installation (avant
+/// inscription), pour un [GameType] externe. Dérivée du stream partagé.
+final installCheckVideoProvider = Provider.autoDispose
+    .family<AsyncValue<TutorialVideo?>, GameType>((ref, game) {
+  return ref.watch(_allTutorialBannersStreamProvider).whenData(
+        (all) => TutorialVideoRepository.activeContextualVideo(
+          all,
+          TutorialPage.installCheck,
+          gameWire: game.value,
+        ),
+      );
+});
+
 /// Vidéo IN-APP active du tuto paiement, pour un pays (ISO alpha-2). Dérivée
 /// du stream partagé.
 final paymentTutorialVideoProvider = Provider.autoDispose
