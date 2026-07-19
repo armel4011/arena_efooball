@@ -263,23 +263,27 @@ class PersistentCache {
     required Map<String, dynamic> Function(T) toJson,
   }) async* {
     final cached = readList<T>(namespace, fromJson);
+    var emittedAny = false;
     if (cached != null && cached.isNotEmpty) {
+      emittedAny = true;
       yield cached;
     }
     try {
       await for (final list in source) {
+        emittedAny = true;
         yield list;
         // Persist en arriere-plan ; pas besoin d'await — le yield
         // precedent a deja transmis a l'UI.
         unawaited(writeList<T>(namespace, list, toJson));
       }
     } catch (e, st) {
-      // Swallow — l'UI reste figee sur le dernier yield (cache ou
-      // derniere donnee live recue avant la coupure).
+      // Offline-safe : si on a deja emis (cache/live), on fige sur le dernier
+      // yield. Sinon on PROPAGE — fermer sans emission bloque le
+      // StreamProvider en AsyncLoading (spinner infini).
       if (kDebugMode) {
-        debugPrint(
-            '[cache] hydrate($namespace) source error swallowed: $e\n$st');
+        debugPrint('[cache] hydrate($namespace) source error: $e\n$st');
       }
+      if (!emittedAny) rethrow;
     }
   }
 
@@ -292,9 +296,14 @@ class PersistentCache {
     required Map<String, dynamic> Function(T) toJson,
   }) async* {
     final cached = readObject<T>(namespace, fromJson);
-    if (cached != null) yield cached;
+    var emittedAny = false;
+    if (cached != null) {
+      emittedAny = true;
+      yield cached;
+    }
     try {
       await for (final value in source) {
+        emittedAny = true;
         yield value;
         if (value != null) {
           unawaited(writeObject<T>(namespace, value, toJson));
@@ -302,9 +311,11 @@ class PersistentCache {
       }
     } catch (e, st) {
       if (kDebugMode) {
-        debugPrint(
-            '[cache] hydrateSingle($namespace) source error swallowed: $e\n$st');
+        debugPrint('[cache] hydrateSingle($namespace) source error: $e\n$st');
       }
+      // Voir hydrateSingleSecure : propager si rien n'a été émis, sinon le
+      // StreamProvider reste en AsyncLoading indéfiniment.
+      if (!emittedAny) rethrow;
     }
   }
 
@@ -362,6 +373,24 @@ class PersistentCache {
     }
   }
 
+  /// Supprime l'entrée chiffrée d'un namespace. Utilisé au logout pour purger
+  /// le profil (`profile.<uid>`) — sinon un cache résiduel peut réhydrater un
+  /// état à moitié connecté au retour d'arrière-plan.
+  Future<void> clearSecure(String namespace) async {
+    try {
+      await _secure.delete(key: _secureKey(namespace));
+    } catch (e, st) {
+      unawaited(
+        reportError(
+          e,
+          st,
+          context: 'PersistentCache.clearSecure',
+          hint: 'namespace=$namespace',
+        ),
+      );
+    }
+  }
+
   /// Équivalent chiffré de [hydrateSingle] : émet d'abord le cache chiffré
   /// (si présent), puis chaque valeur de [source] (persistée chiffrée).
   /// Offline-safe (erreur source avalée → l'UI reste figée sur le cache).
@@ -372,9 +401,14 @@ class PersistentCache {
     required Map<String, dynamic> Function(T) toJson,
   }) async* {
     final cached = await readObjectSecure<T>(namespace, fromJson);
-    if (cached != null) yield cached;
+    var emittedAny = false;
+    if (cached != null) {
+      emittedAny = true;
+      yield cached;
+    }
     try {
       await for (final value in source) {
+        emittedAny = true;
         yield value;
         if (value != null) {
           unawaited(writeObjectSecure<T>(namespace, value, toJson));
@@ -383,9 +417,14 @@ class PersistentCache {
     } catch (e, st) {
       if (kDebugMode) {
         debugPrint(
-          '[cache] hydrateSingleSecure($namespace) source error swallowed: $e\n$st',
+          '[cache] hydrateSingleSecure($namespace) source error: $e\n$st',
         );
       }
+      // Si RIEN n'a été émis (cache vide + source en erreur), on PROPAGE :
+      // fermer le stream sans aucune valeur laisse le StreamProvider bloqué
+      // en AsyncLoading (spinner infini — bug logout/token périmé). Avec une
+      // valeur déjà émise (cache), on reste offline-safe (on la conserve).
+      if (!emittedAny) rethrow;
     }
   }
 
@@ -405,11 +444,14 @@ class PersistentCache {
       final b = fromJsonB(json['b'] as Map<String, dynamic>);
       return (a, b);
     });
+    var emittedAny = false;
     if (cached != null && cached.isNotEmpty) {
+      emittedAny = true;
       yield cached;
     }
     try {
       await for (final list in source) {
+        emittedAny = true;
         yield list;
         unawaited(
           writeList<(A, B)>(
@@ -421,9 +463,9 @@ class PersistentCache {
       }
     } catch (e, st) {
       if (kDebugMode) {
-        debugPrint(
-            '[cache] hydratePairs($namespace) source error swallowed: $e\n$st');
+        debugPrint('[cache] hydratePairs($namespace) source error: $e\n$st');
       }
+      if (!emittedAny) rethrow;
     }
   }
 }

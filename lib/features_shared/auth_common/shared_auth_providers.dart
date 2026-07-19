@@ -91,10 +91,30 @@ Stream<Profile?> _fetchProfileOnce(Ref ref, String userId) async* {
 }
 
 /// Sign-out helper exposed as a callback so screens can wire it directly.
+///
+/// Déconnexion COMPLÈTE : purge la session (Supabase + Google natif, cf.
+/// [AuthRepository.signOut]) ET le cache profil chiffré `profile.<uid>`.
+/// Sans cette purge, un état résiduel (cache + session ressuscitée au resume)
+/// réhydrate un profil « fantôme » à moitié connecté (bug home « Joueur » +
+/// Profil en spinner infini). Le `finally` garantit invalidation + purge même
+/// si `signOut` lève.
 final signOutProvider = Provider<Future<void> Function()>((ref) {
   return () async {
-    await ref.read(authRepositoryProvider).signOut();
-    ref.invalidate(currentProfileProvider);
+    // Capture l'uid AVANT le signOut (après, currentUser est null).
+    final uid = ref.read(authRepositoryProvider).currentUser?.id;
+    try {
+      await ref.read(authRepositoryProvider).signOut();
+    } finally {
+      if (uid != null) {
+        try {
+          final cache = await ref.read(persistentCacheProvider.future);
+          await cache.clearSecure('profile.$uid');
+        } catch (_) {
+          // best-effort : la purge de session prime.
+        }
+      }
+      ref.invalidate(currentProfileProvider);
+    }
   };
 });
 

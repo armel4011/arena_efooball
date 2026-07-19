@@ -203,7 +203,31 @@ class AuthRepository {
     }
   }
 
-  Future<void> signOut() => _client.auth.signOut();
+  /// Déconnexion robuste et complète.
+  ///
+  /// 1. Déconnecte la session Google NATIVE : sans ça, elle reste autorisée et
+  ///    un re-tap « Continuer avec Google » ré-authentifie sans friction →
+  ///    effet « déjà connecté » après logout.
+  /// 2. Purge la session Supabase. Scope global (révoque le refresh token côté
+  ///    serveur) ; si l'appel échoue (offline), on garantit AU MOINS la purge
+  ///    LOCALE — sinon une session ressuscitable subsiste et réapparaît au
+  ///    prochain retour d'arrière-plan (auto-refresh gotrue).
+  Future<void> signOut() async {
+    try {
+      await GoogleSignIn().signOut();
+    } catch (_) {
+      // best-effort : pas de compte Google lié, ou plugin indispo.
+    }
+    try {
+      await _client.auth.signOut();
+    } catch (_) {
+      try {
+        await _client.auth.signOut(scope: SignOutScope.local);
+      } catch (_) {
+        // best-effort : la purge locale a au moins été tentée.
+      }
+    }
+  }
 
   /// Demande à Supabase d'envoyer un email contenant un code à 6 chiffres
   /// (`{{ .Token }}` dans le template recovery). L'utilisateur saisit
@@ -284,7 +308,8 @@ class AuthRepository {
 
   AuthFailure _mapApi(AuthApiException e) {
     final statusCode = e.statusCode;
-    final errorCode = e.code; // Supabase ErrorCode officiel (plus stable que le msg)
+    final errorCode =
+        e.code; // Supabase ErrorCode officiel (plus stable que le msg)
     final msg = e.message.toLowerCase();
 
     // ── Priorité 1 : code Supabase officiel (case-insensitive, locale-stable).

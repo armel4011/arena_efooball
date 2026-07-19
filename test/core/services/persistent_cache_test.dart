@@ -325,6 +325,19 @@ void main() {
       final out = await fut; // ne doit PAS throw
       expect(out.last, const [_Item('1', 'live')]);
     });
+
+    test('cache vide + erreur source → PROPAGE (pas de blocage AsyncLoading)',
+        () async {
+      final stream = cache.hydrate<_Item>(
+        namespace: 'h',
+        source: Stream<List<_Item>>.error(Exception('RLS 42501')),
+        fromJson: _fromJson,
+        toJson: _toJson,
+      );
+      // Sans cache ni émission, l'erreur DOIT remonter (sinon le
+      // StreamProvider resterait bloqué en chargement).
+      await expectLater(stream.toList(), throwsA(isA<Exception>()));
+    });
   });
 
   group('hydrateSingle (stream)', () {
@@ -338,6 +351,28 @@ void main() {
       ).toList();
       expect(out.first, const _Item('c', 'cache'));
       expect(out.last, const _Item('1', 'live'));
+    });
+
+    test('cache vide + erreur source → PROPAGE', () async {
+      final stream = cache.hydrateSingle<_Item>(
+        namespace: 'hs',
+        source: Stream<_Item?>.error(Exception('401')),
+        fromJson: _fromJson,
+        toJson: _toJson,
+      );
+      await expectLater(stream.toList(), throwsA(isA<Exception>()));
+    });
+
+    test('cache présent + erreur source → avalée (reste sur le cache)',
+        () async {
+      await cache.writeObject<_Item>('hs', const _Item('c', 'cache'), _toJson);
+      final out = await cache.hydrateSingle<_Item>(
+        namespace: 'hs',
+        source: Stream<_Item?>.error(Exception('offline')),
+        fromJson: _fromJson,
+        toJson: _toJson,
+      ).toList();
+      expect(out, const [_Item('c', 'cache')]); // pas d'exception
     });
   });
 
@@ -364,6 +399,36 @@ void main() {
       ).toList();
       expect(out.first, const _Item('c', 'x'));
       expect(out.last, const _Item('1', 'live'));
+    });
+
+    test('hydrateSingleSecure cache vide + erreur → PROPAGE (bug spinner)',
+        () async {
+      final stream = cache.hydrateSingleSecure<_Item>(
+        namespace: 'none',
+        source: Stream<_Item?>.error(Exception('token périmé')),
+        fromJson: _fromJson,
+        toJson: _toJson,
+      );
+      await expectLater(stream.toList(), throwsA(isA<Exception>()));
+    });
+
+    test('hydrateSingleSecure cache présent + erreur → reste sur le cache',
+        () async {
+      await cache.writeObjectSecure<_Item>('hs', const _Item('c', 'x'), _toJson);
+      final out = await cache.hydrateSingleSecure<_Item>(
+        namespace: 'hs',
+        source: Stream<_Item?>.error(Exception('offline')),
+        fromJson: _fromJson,
+        toJson: _toJson,
+      ).toList();
+      expect(out, const [_Item('c', 'x')]);
+    });
+
+    test('clearSecure supprime l\'entrée chiffrée', () async {
+      await cache.writeObjectSecure<_Item>('s', const _Item('1', 'a'), _toJson);
+      expect(await cache.readObjectSecure<_Item>('s', _fromJson), isNotNull);
+      await cache.clearSecure('s');
+      expect(await cache.readObjectSecure<_Item>('s', _fromJson), isNull);
     });
   });
 }
