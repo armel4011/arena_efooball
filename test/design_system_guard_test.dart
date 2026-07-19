@@ -173,7 +173,10 @@ void main() {
   // 2592 → 2594 le 2026-07-18 : +2 `ArenaColors.*` de l'édition des jeux
   // d'intérêt depuis les réglages (icône ListTile textMuted + branche éditeur
   // du dialogue). 0 vrai `Colors.*` (check_colors.sh --strict = 0).
-  const colorsDotBaseline = 2594; // occurrences de `Colors.`
+  // 2594 → 2600 le 2026-07-19 : +6 `ArenaColors.*` du dialogue de contrôle
+  // d'installation avant inscription (app_check_dialog : carbon/signalBlue/
+  // silver/textMuted + _CheckLine). 0 vrai `Colors.*` (check_colors --strict = 0).
+  const colorsDotBaseline = 2600; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.

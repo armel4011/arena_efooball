@@ -1,3 +1,4 @@
+import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/models/tutorial_video.dart';
 import 'package:arena/data/repositories/tutorial_video_repository.dart';
 import 'package:arena/features_user/home/widgets/tutorial_video_section.dart';
@@ -291,6 +292,49 @@ void main() {
         countryCode: 'SN',
       );
       expect(out?.id, 'sn');
+    });
+
+    test('install_check : match sur (cible, jeu) — inclut dream_league', () {
+      final dl = ctx(
+        id: 'dl',
+        page: TutorialPage.installCheck,
+        game: 'dream_league',
+      );
+      final ef = ctx(
+        id: 'ef',
+        page: TutorialPage.installCheck,
+        game: 'efootball',
+      );
+      final out = TutorialVideoRepository.activeContextualVideo(
+        [ef, dl],
+        TutorialPage.installCheck,
+        gameWire: 'dream_league',
+      );
+      expect(out?.id, 'dl');
+    });
+  });
+
+  group('TutorialPage.installCheck + GameType externe', () {
+    test('wire / isInApp / needsGame', () {
+      expect(TutorialPage.installCheck.wire, 'install_check');
+      expect(TutorialPage.installCheck.isInApp, isTrue);
+      expect(TutorialPage.installCheck.needsGame, isTrue);
+      expect(TutorialPage.installCheck.needsCountry, isFalse);
+    });
+
+    test('gamesForTutorialPage(installCheck) = jeux externes uniquement', () {
+      expect(
+        gamesForTutorialPage(TutorialPage.installCheck),
+        const [GameType.efootball, GameType.eaSportsFc, GameType.dreamLeague],
+      );
+    });
+
+    test('GameType.isExternal : draughts in-app, les autres externes', () {
+      expect(GameType.draughts.isExternal, isFalse);
+      expect(GameType.draughts.isInApp, isTrue);
+      expect(GameType.efootball.isExternal, isTrue);
+      expect(GameType.eaSportsFc.isExternal, isTrue);
+      expect(GameType.dreamLeague.isExternal, isTrue);
     });
   });
 

@@ -42,6 +42,12 @@ enum TutorialPage {
   /// [TutorialVideo.countryCode] requis (un système de paiement par pays).
   @JsonValue('payment_tutorial')
   paymentTutorial,
+
+  /// Dialogue de contrôle AVANT inscription (jeux externes uniquement) :
+  /// vérifier que son app est à jour/uniforme et installable. Discriminant
+  /// [TutorialVideo.game] requis (une vidéo par jeu externe).
+  @JsonValue('install_check')
+  installCheck,
 }
 
 /// Valeur "fil" (snake_case) attendue par la colonne `target_page` —
@@ -56,6 +62,7 @@ extension TutorialPageWire on TutorialPage {
         TutorialPage.matchLocked => 'match_locked',
         TutorialPage.matchRoleIntro => 'match_role_intro',
         TutorialPage.paymentTutorial => 'payment_tutorial',
+        TutorialPage.installCheck => 'install_check',
       };
 
   /// Libellé FR pour les écrans admin.
@@ -68,6 +75,7 @@ extension TutorialPageWire on TutorialPage {
         TutorialPage.matchLocked => 'Salle verrouillée (règles du jeu)',
         TutorialPage.matchRoleIntro => 'Intro du rôle (étape 1 du match)',
         TutorialPage.paymentTutorial => 'Tuto paiement (par pays)',
+        TutorialPage.installCheck => 'Contrôle appli (avant inscription)',
       };
 
   /// `true` si la vidéo est jouée IN-APP (via `ArenaYoutubePlayer`) plutôt
@@ -76,14 +84,18 @@ extension TutorialPageWire on TutorialPage {
   bool get isInApp => switch (this) {
         TutorialPage.matchLocked ||
         TutorialPage.matchRoleIntro ||
-        TutorialPage.paymentTutorial =>
+        TutorialPage.paymentTutorial ||
+        TutorialPage.installCheck =>
           true,
         _ => false,
       };
 
-  /// `true` si la cible se discrimine par JEU (règles / rôle par jeu).
+  /// `true` si la cible se discrimine par JEU (règles / rôle / contrôle appli
+  /// par jeu).
   bool get needsGame =>
-      this == TutorialPage.matchLocked || this == TutorialPage.matchRoleIntro;
+      this == TutorialPage.matchLocked ||
+      this == TutorialPage.matchRoleIntro ||
+      this == TutorialPage.installCheck;
 
   /// `true` si la cible se discrimine par PAYS (un tuto paiement par pays).
   bool get needsCountry => this == TutorialPage.paymentTutorial;
@@ -94,7 +106,10 @@ extension TutorialPageWire on TutorialPage {
 /// n'ont pas de rôle DOMICILE/EXTÉRIEUR). Logique domaine partagée par les
 /// formulaires admin mobile et desktop.
 List<GameType> gamesForTutorialPage(TutorialPage page) {
-  return page == TutorialPage.matchRoleIntro
+  // Cibles réservées aux jeux EXTERNES (football) : intro de rôle et contrôle
+  // d'installation (les Dames se jouent in-app, sans rôle ni app externe).
+  return (page == TutorialPage.matchRoleIntro ||
+          page == TutorialPage.installCheck)
       ? const [GameType.efootball, GameType.eaSportsFc, GameType.dreamLeague]
       : GameType.values;
 }
