@@ -102,11 +102,17 @@ select is((select result from _r where test='streams_admin_proof'), 'blocked',
   'P3 : admin simple NE PEUT PAS forger proof_hash_verified sur streams');
 select is((select result from _r where test='regfee_admin'), 'blocked',
   'P3 : admin simple NE PEUT PAS changer registration_fee');
+-- Depuis 2026-07-20 (consolidation perf), la policy ALL `app_release_config_write_admin`
+-- est éclatée en 3 policies write-only (insert/update/delete) — le SELECT reste
+-- couvert par la seule `_select`. On vérifie que TOUTES les policies d'écriture
+-- (polcmd a=insert, w=update, d=delete) restent super-admin-only, jamais is_admin().
 select is(
-  (select (pg_get_expr(polqual, polrelid) ilike '%is_super_admin%'
-           and pg_get_expr(polqual, polrelid) not ilike '%is_admin()%')::text
+  (select bool_and(
+      (coalesce(pg_get_expr(polqual, polrelid), '') || coalesce(pg_get_expr(polwithcheck, polrelid), '')) ilike '%is_super_admin%'
+      and (coalesce(pg_get_expr(polqual, polrelid), '') || coalesce(pg_get_expr(polwithcheck, polrelid), '')) not ilike '%is_admin()%'
+   )::text
    from pg_policy pol join pg_class c on c.oid=pol.polrelid
-   where c.relname='app_release_config' and pol.polname='app_release_config_write_admin'),
+   where c.relname='app_release_config' and pol.polcmd in ('a', 'w', 'd')),
   'true', 'P2 : app_release_config écriture réservée au super-admin (plus is_admin)');
 select is(
   (select count(*)::text from pg_indexes where schemaname='public'
