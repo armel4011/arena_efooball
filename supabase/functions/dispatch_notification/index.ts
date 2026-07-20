@@ -129,9 +129,15 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return jsonResponse({ ignored: true });
   }
 
-  const r = payload.record;
-  if (!r?.user_id) {
-    return jsonResponse({ error: 'missing_user_id' }, 400);
+  // On ne fait PAS confiance aux scalaires du payload webhook (`user_id`,
+  // `title`, `body`, `data`…). Un `WEBHOOK_SECRET` qui fuiterait permettrait
+  // sinon de pousser une notif arbitraire à un utilisateur arbitraire. On ne
+  // conserve du payload que l'`id` de la ligne, et on relit la source
+  // autoritaire depuis la DB — même durcissement que `moderate-chat-message`
+  // (audit 2026-07-18).
+  const recordId = payload.record?.id;
+  if (!recordId) {
+    return jsonResponse({ error: 'missing_id' }, 400);
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -142,6 +148,26 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const sb = createClient(supabaseUrl, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+
+  // Relecture autoritaire de la ligne réellement insérée (jamais le payload).
+  const { data: r, error: notifErr } = await sb
+    .from('notifications')
+    .select('id, user_id, type, title, body, data, image_url')
+    .eq('id', recordId)
+    .maybeSingle();
+  if (notifErr) {
+    return jsonResponse(
+      { error: 'notification_lookup_failed', detail: safeDetail(notifErr.message, 'dispatch_notification') },
+      500,
+    );
+  }
+  if (!r) {
+    // Ligne absente (supprimée entre-temps, ou id forgé) : rien à envoyer.
+    return jsonResponse({ ignored: 'notification_not_found' });
+  }
+  if (!r.user_id) {
+    return jsonResponse({ error: 'missing_user_id' }, 400);
+  }
 
   // Récupère les tokens push du destinataire (FCM Android + VoIP iOS).
   const { data: profile, error: profileErr } = await sb

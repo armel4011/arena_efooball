@@ -28,6 +28,7 @@
 // (cf. dispatch_notification pattern). Ici on retourne juste un statut.
 // =============================================================================
 
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.108.2";
 import { timingSafeEqual } from "../_shared/timing.ts";
 import { safeDetail } from "../_shared/errors.ts";
 
@@ -208,28 +209,130 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return jsonResponse({ error: "resend_not_configured" }, 500);
   }
 
-  let body: { kind?: unknown; recipient?: unknown; data?: unknown };
+  let body: {
+    kind?: unknown;
+    recipient?: unknown;
+    data?: unknown;
+    record_id?: unknown;
+  };
   try {
     body = await req.json();
   } catch (_) {
     return jsonResponse({ error: "bad_json" }, 400);
   }
   const kind = typeof body.kind === "string" ? body.kind : "";
-  const recipient = typeof body.recipient === "string"
-    ? body.recipient.trim()
-    : "";
-  const data: Record<string, unknown> = (body.data && typeof body.data === "object")
-    ? body.data as Record<string, unknown>
-    : {};
-  if (!kind || !recipient) {
+  const recordId = typeof body.record_id === "string" ? body.record_id : "";
+  if (!kind) {
     return jsonResponse({ error: "missing_fields" }, 400);
-  }
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(recipient)) {
-    return jsonResponse({ error: "bad_recipient" }, 400);
   }
   const renderer = TEMPLATES[kind];
   if (!renderer) {
     return jsonResponse({ error: "unknown_kind", kind }, 400);
+  }
+
+  // ─── Source autoritaire ────────────────────────────────────────────
+  // On ne fait PAS confiance au `recipient`/`data` du payload webhook : un
+  // `WEBHOOK_SECRET` qui fuiterait permettrait sinon d'envoyer un email
+  // Arena-brandé (faux code d'invitation, faux « gain validé ») à une adresse
+  // arbitraire. Pour les emails sensibles, on relit destinataire + variables
+  // depuis la ligne source, keyée par `record_id` — l'appelant ne choisit
+  // que QUELLE ligne, jamais le contenu. Même durcissement que
+  // `moderate-chat-message` / `dispatch_notification` (audit 2026-07-20).
+  let recipient: string;
+  let data: Record<string, unknown>;
+
+  if (kind === "test_plain") {
+    // Diagnostic uniquement (contenu fixe et bénin) — reste piloté par le
+    // payload pour pouvoir cibler une adresse de test ad hoc.
+    recipient = typeof body.recipient === "string" ? body.recipient.trim() : "";
+    data = (body.data && typeof body.data === "object")
+      ? body.data as Record<string, unknown>
+      : {};
+  } else {
+    if (!recordId) {
+      return jsonResponse({ error: "missing_record_id" }, 400);
+    }
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!supabaseUrl || !serviceKey) {
+      return jsonResponse({ error: "server_misconfigured" }, 500);
+    }
+    const sb = createClient(supabaseUrl, serviceKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+
+    if (kind === "admin_invitation") {
+      const { data: inv, error } = await sb
+        .from("invitation_codes")
+        .select("code, role, expires_at, target_email")
+        .eq("id", recordId)
+        .maybeSingle();
+      if (error) {
+        return jsonResponse(
+          { error: "invitation_lookup_failed", detail: safeDetail(error.message, "send-transactional-email") },
+          500,
+        );
+      }
+      if (!inv?.target_email) {
+        return jsonResponse({ ignored: "invitation_not_found" });
+      }
+      recipient = String(inv.target_email).trim();
+      data = { code: inv.code, role: inv.role, expires_at: inv.expires_at };
+    } else if (kind === "payout_validated") {
+      const { data: payout, error } = await sb
+        .from("payouts")
+        .select("user_id, amount_usd, amount_local, currency, payout_method, competition_id, status")
+        .eq("id", recordId)
+        .maybeSingle();
+      if (error) {
+        return jsonResponse(
+          { error: "payout_lookup_failed", detail: safeDetail(error.message, "send-transactional-email") },
+          500,
+        );
+      }
+      if (!payout) {
+        return jsonResponse({ ignored: "payout_not_found" });
+      }
+      // Ne jamais envoyer « gain validé » pour un payout qui ne l'est pas.
+      if (payout.status !== "validated") {
+        return jsonResponse({ ignored: "payout_not_validated" });
+      }
+      const { data: prof } = await sb
+        .from("profiles")
+        .select("email")
+        .eq("id", payout.user_id)
+        .maybeSingle();
+      if (!prof?.email) {
+        return jsonResponse({ ignored: "recipient_not_found" });
+      }
+      let competitionName: string | null = null;
+      if (payout.competition_id) {
+        const { data: comp } = await sb
+          .from("competitions")
+          .select("name")
+          .eq("id", payout.competition_id)
+          .maybeSingle();
+        competitionName = comp?.name ?? null;
+      }
+      recipient = String(prof.email).trim();
+      data = {
+        amount_usd: payout.amount_usd,
+        amount_local: payout.amount_local,
+        currency: payout.currency,
+        payout_method: payout.payout_method,
+        competition_name: competitionName,
+      };
+    } else {
+      // `renderer` existe mais pas de source autoritaire connue → refus.
+      return jsonResponse({ error: "unsupported_kind", kind }, 400);
+    }
+  }
+
+  if (!recipient) {
+    return jsonResponse({ error: "missing_recipient" }, 400);
+  }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(recipient)) {
+    return jsonResponse({ error: "bad_recipient" }, 400);
   }
 
   const tpl = renderer(data);
