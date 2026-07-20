@@ -1,6 +1,8 @@
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
+import 'package:arena/data/models/tutorial_video.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
+import 'package:arena/data/repositories/tutorial_video_repository.dart';
 import 'package:arena/features_user/competitions/competitions_list_page.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -31,6 +33,10 @@ Widget _scoped(List<Competition> items) => ProviderScope(
       overrides: [
         competitionsListProvider
             .overrideWith((ref, _) => Stream<List<Competition>>.value(items)),
+        // Pas de vidéo install_check → le dialogue de contrôle s'affiche sans
+        // WebView (non instanciable en test).
+        installCheckVideoProvider
+            .overrideWith((ref, game) => const AsyncData<TutorialVideo?>(null)),
       ],
       child: const MaterialApp(
         locale: Locale('fr'),
@@ -114,5 +120,37 @@ void main() {
       find.text('Aucune compétition sur eFootball'),
       findsOneWidget,
     );
+  });
+
+  testWidgets(
+      "s'inscrire depuis la carte (jeu externe) ouvre le dialogue de contrôle",
+      (tester) async {
+    // Régression : l'inscription depuis la CARTE de la liste contournait le
+    // dialogue de contrôle d'installation (seul le CTA de la page détail
+    // l'ouvrait). Le dialogue doit s'ouvrir AVANT toute navigation.
+    await bumpViewport(tester);
+    await tester.pumpWidget(
+      _scoped([_comp(id: 'c-ef', name: 'Ligue eFoot', game: GameType.efootball)]),
+    );
+    await tester.pumpAndSettle();
+
+    // Onglet eFootball (index 1 : Dames · eFootball · Mobile FC · Dream League).
+    await tester.tap(find.byType(Tab).at(1));
+    await tester.pumpAndSettle();
+
+    final registerBtn = find.text("S'INSCRIRE GRATUITEMENT");
+    expect(registerBtn, findsOneWidget);
+    await tester.ensureVisible(registerBtn);
+    await tester.tap(registerBtn);
+    await tester.pumpAndSettle();
+
+    // Le dialogue de contrôle est bien affiché (jeu externe).
+    expect(find.text("Avant de t'inscrire"), findsOneWidget);
+    expect(find.text('Ouvrir le store'), findsOneWidget);
+
+    // Annuler → le dialogue se ferme, aucune navigation (pas de routeur monté).
+    await tester.tap(find.text('Annuler'));
+    await tester.pumpAndSettle();
+    expect(find.text("Avant de t'inscrire"), findsNothing);
   });
 }
