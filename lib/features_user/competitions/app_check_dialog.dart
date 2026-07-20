@@ -47,8 +47,11 @@ class _AppCheckDialog extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // One-shot REST (pas le stream Realtime partagé) : le dialogue est
+    // transitoire et doit afficher la vidéo de façon fiable, même si la
+    // souscription Realtime n'a pas encore émis / reçu un INSERT admin récent.
     final videoUrl =
-        ref.watch(installCheckVideoProvider(game)).valueOrNull?.videoUrl;
+        ref.watch(installCheckVideoOnceProvider(game)).valueOrNull?.videoUrl;
     final player = ArenaYoutubePlayer.maybe(videoUrl);
     final hasStore = gameStoreUrl(game) != null;
 

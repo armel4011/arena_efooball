@@ -25,9 +25,7 @@ void main() {
   }) {
     return ProviderScope(
       overrides: [
-        installCheckVideoProvider.overrideWith(
-          (ref, g) => AsyncData<TutorialVideo?>(video),
-        ),
+        installCheckVideoOnceProvider.overrideWith((ref, g) => video),
       ],
       child: MaterialApp(
         home: Scaffold(
