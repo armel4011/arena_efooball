@@ -138,7 +138,7 @@ dependencies:
   # console admin desktop ne LIT jamais de vidéo (elle ne fait que saisir des
   # liens), mais le paquet doit tout de même compiler sur Windows — d'où le
   # spike de vérification avant d'écrire quoi que ce soit dessus.
-  youtube_player_iframe: ^5.2.0
+  youtube_player_flutter: ^9.0.0
 
   # ─── PHASE 12.5 — RGPD export (écrit le JSON dans Documents) ──
   path_provider: ^2.1.5

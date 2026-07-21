@@ -3,7 +3,7 @@ import 'package:arena/core/utils/youtube_url.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:youtube_player_iframe/youtube_player_iframe.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
 /// Ouvre une vidéo YouTube en PLEIN ÉCRAN (page dédiée) plutôt que dans un
 /// lecteur embarqué. Une WebView pleine page se monte de façon plus fiable
@@ -47,7 +47,8 @@ Future<void> _openYoutubeExternally(String videoId) async {
   await launchUrl(uri, mode: LaunchMode.externalApplication);
 }
 
-/// Lecteur YouTube IN-APP, à partir d'un lien saisi par l'admin.
+/// Lecteur YouTube IN-APP (paquet `youtube_player_flutter`), à partir d'un lien
+/// saisi par l'admin.
 ///
 /// Rend `null` (via [maybe]) si le lien n'est pas exploitable : un admin peut
 /// coller n'importe quoi, et un mauvais lien ne doit jamais casser l'écran.
@@ -55,9 +56,6 @@ Future<void> _openYoutubeExternally(String videoId) async {
 /// Sous le lecteur, un lien **« Ouvrir dans YouTube »** est TOUJOURS proposé :
 /// la WebView embarquée reste parfois noire (réseau/appareil), et ce filet
 /// garantit que la vidéo est toujours regardable.
-///
-/// ⚠️ Repose sur une WebView, donc **Android/iOS/Web uniquement**. La console
-/// admin desktop (Windows) ne LIT jamais de vidéo — le paquet y compile.
 class ArenaYoutubePlayer extends StatefulWidget {
   const ArenaYoutubePlayer({required this.videoId, super.key});
 
@@ -79,28 +77,28 @@ class ArenaYoutubePlayer extends StatefulWidget {
 
 class _ArenaYoutubePlayerState extends State<ArenaYoutubePlayer> {
   late final YoutubePlayerController _controller = YoutubePlayerController(
-    params: const YoutubePlayerParams(
+    initialVideoId: widget.videoId,
+    flags: const YoutubePlayerFlags(
       // Pas d'autoplay : un son surprise (salle de match / paiement) serait
-      // hostile. Coupe les annotations/suggestions de fin.
-      showFullscreenButton: true,
-      showVideoAnnotations: false,
+      // hostile.
+      autoPlay: false,
+      mute: false,
       enableCaption: false,
     ),
-  )..loadVideoById(videoId: widget.videoId);
+  );
 
   @override
   void didUpdateWidget(ArenaYoutubePlayer old) {
     super.didUpdateWidget(old);
-    // L'admin peut changer le lien (realtime) : recharger plutôt que recréer le
-    // contrôleur (qui relancerait la WebView).
+    // L'admin peut changer le lien (realtime) : charger la nouvelle vidéo.
     if (old.videoId != widget.videoId) {
-      _controller.loadVideoById(videoId: widget.videoId);
+      _controller.load(widget.videoId);
     }
   }
 
   @override
   void dispose() {
-    _controller.close();
+    _controller.dispose();
     super.dispose();
   }
 
@@ -111,12 +109,11 @@ class _ArenaYoutubePlayerState extends State<ArenaYoutubePlayer> {
       children: [
         ClipRRect(
           borderRadius: BorderRadius.circular(ArenaRadius.lg),
-          child: ColoredBox(
-            color: ArenaColors.void_,
-            child: YoutubePlayer(
-              controller: _controller,
-              aspectRatio: 16 / 9,
-            ),
+          child: YoutubePlayer(
+            controller: _controller,
+            aspectRatio: 16 / 9,
+            showVideoProgressIndicator: true,
+            progressIndicatorColor: ArenaColors.signalBlue,
           ),
         ),
         const SizedBox(height: ArenaSpacing.xs),
