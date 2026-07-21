@@ -52,7 +52,7 @@ class _AppCheckDialog extends ConsumerWidget {
     // souscription Realtime n'a pas encore émis / reçu un INSERT admin récent.
     final videoUrl =
         ref.watch(installCheckVideoOnceProvider(game)).valueOrNull?.videoUrl;
-    final player = ArenaYoutubePlayer.maybe(videoUrl);
+    final hasVideo = ArenaYoutubePlayer.maybe(videoUrl) != null;
     final hasStore = gameStoreUrl(game) != null;
 
     return Dialog(
@@ -107,17 +107,28 @@ class _AppCheckDialog extends ConsumerWidget {
                 text: "elle peut bien s'installer et se lancer sur ton "
                     'téléphone.',
               ),
-              if (player != null) ...[
+              if (hasVideo) ...[
                 const SizedBox(height: ArenaSpacing.md),
-                Text(
-                  'Guide vidéo',
-                  style: ArenaText.small.copyWith(
-                    color: ArenaColors.silverDim,
-                    fontWeight: FontWeight.w700,
+                // Lecture en PLEIN ÉCRAN (page dédiée), pas dans le dialogue :
+                // une WebView en overlay reste noire de façon intermittente.
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => openFullscreenYoutube(context, videoUrl),
+                    icon: const Icon(Icons.play_circle_outline, size: 20),
+                    label: const Text('Regarder le guide vidéo'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: ArenaColors.signalBlue,
+                      side: const BorderSide(color: ArenaColors.signalBlue),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: ArenaSpacing.md,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(ArenaRadius.md),
+                      ),
+                    ),
                   ),
                 ),
-                const SizedBox(height: ArenaSpacing.xs),
-                player,
               ],
               if (hasStore) ...[
                 const SizedBox(height: ArenaSpacing.md),
