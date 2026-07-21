@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:arena/core/services/agora_streaming_service.dart';
 import 'package:arena/core/services/anticheat/anticheat_config_service.dart';
 import 'package:arena/core/services/anticheat/anticheat_provider.dart';
+import 'package:arena/core/services/bring_to_front.dart';
 import 'package:arena/core/services/livekit_capture_service.dart';
 import 'package:arena/core/services/match_recording_coordinator.dart';
 import 'package:arena/core/services/native_lifecycle_events.dart';
@@ -17,6 +18,7 @@ import 'package:arena/data/repositories/match_repository.dart';
 import 'package:arena/data/repositories/match_stream_repository.dart';
 import 'package:arena/features_user/match_room/widgets/match_recording_actions_sheet.dart';
 import 'package:arena/features_user/recording/overlay/overlay_restricted_guide.dart';
+import 'package:arena/features_user/recording/overlay/recording_overlay_messages.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform, kDebugMode, kIsWeb;
@@ -145,9 +147,7 @@ class _MatchRecordingLifecycleState
   void _pushRoomCodeToNotification() {
     if (!_isAndroidNative || !_isPlayer) return;
     unawaited(
-      ref
-          .read(nativeLifecycleEventsProvider)
-          .updateRoomCodeNotification(
+      ref.read(nativeLifecycleEventsProvider).updateRoomCodeNotification(
             code: widget.match.roomCode,
             isHome: widget.match.homePlayerId == widget.selfId,
           ),
@@ -188,8 +188,8 @@ class _MatchRecordingLifecycleState
       // façon intermittente sur un match déjà joué.
       bool alreadySubmitted;
       try {
-        final submissions =
-            await ref.read(matchScoreSubmissionsProvider(widget.match.id).future);
+        final submissions = await ref
+            .read(matchScoreSubmissionsProvider(widget.match.id).future);
         alreadySubmitted =
             submissions.any((s) => s['created_by'] == widget.selfId);
       } catch (_) {
@@ -327,6 +327,11 @@ class _MatchRecordingLifecycleState
         playerId: widget.selfId!,
         opponentId: opp,
       );
+      // Autorise le volet pénaltys du mini-formulaire de score UNIQUEMENT en
+      // élimination directe (pas de groupId) : en poule, un score nul reste nul.
+      ref
+          .read(recordingOverlayControllerProvider)
+          .setAllowPenalties(widget.match.groupId == null);
       // Notif de contrôle native : pousse l'échange du code room selon le rôle
       // (HOME → réponse directe pour envoyer ; AWAY → code + Copier). Repli
       // universel du panneau overlay (marche même sans superposition, Pixel 9).
@@ -406,6 +411,66 @@ class _MatchRecordingLifecycleState
       await ref.read(recordingOverlayControllerProvider).stop();
     } catch (_) {}
     await _stopLiveKitIfRunning();
+  }
+
+  /// Score saisi depuis le mini-formulaire du bouton flottant. Mappe
+  /// mon/adverse → score1/score2 (+ pénaltys) selon le rôle du joueur courant,
+  /// SOUMET le score (`score_submitted`), puis scelle la preuve : l'arrêt propre
+  /// déclenche l'export MP4 + le commit anti-triche via le listener racine
+  /// (`_onRecordingStopped` dans `main_user.dart`), et ARENA repasse au premier
+  /// plan pour montrer le résultat.
+  ///
+  /// ⚠️ Ordre volontaire : on soumet AVANT d'arrêter la capture. Si la
+  /// soumission échoue (réseau), la capture CONTINUE pour permettre un nouvel
+  /// essai — on ne scelle jamais une vidéo sur un score non enregistré.
+  Future<void> _onOverlayScore(OverlayScore score) async {
+    final selfId = widget.selfId;
+    if (selfId == null) return;
+
+    final isPlayer1 = selfId == widget.match.player1Id;
+    final s1 = isPlayer1 ? score.my : score.opp;
+    final s2 = isPlayer1 ? score.opp : score.my;
+    final pen1 =
+        score.viaPenalties ? (isPlayer1 ? score.myPen : score.oppPen) : null;
+    final pen2 =
+        score.viaPenalties ? (isPlayer1 ? score.oppPen : score.myPen) : null;
+
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    try {
+      await ref.read(matchRepositoryProvider).submitScore(
+            matchId: widget.match.id,
+            byProfileId: selfId,
+            scoreP1: s1,
+            scoreP2: s2,
+            decidedByPenalties: score.viaPenalties,
+            penaltyP1: pen1,
+            penaltyP2: pen2,
+          );
+    } catch (e) {
+      // Échec réseau : garder la capture pour un nouvel essai.
+      messenger?.showSnackBar(
+        SnackBar(content: Text('${l10n.scoreFlowSubmitError}$e')),
+      );
+      return;
+    }
+
+    // Score enregistré → sceller la preuve. `stopCleanly()` fait basculer le
+    // coordinator en CoordinatorStopped, ce que le listener racine capte pour
+    // exporter le MP4 + engager le hash anti-triche.
+    final coord = ref.read(matchRecordingCoordinatorProvider);
+    if (coord.state is CoordinatorRecording ||
+        coord.state is CoordinatorPaused) {
+      try {
+        await coord.stopCleanly();
+      } catch (e) {
+        debugPrint('[recording] score stopCleanly failed: $e');
+      }
+    }
+    // Ramène ARENA au premier plan pour montrer l'écran de résultat.
+    try {
+      await ref.read(bringToFrontProvider).bringArenaToFront();
+    } catch (_) {}
   }
 
   /// Démarre Agora en broadcaster après que l'overlay a demandé "Live".
@@ -550,14 +615,22 @@ class _MatchRecordingLifecycleState
               ),
         );
       })
+      // Score saisi depuis le mini-formulaire du bouton flottant (« Score »
+      // remplace « Enregistrer & arrêter ») → soumission + scellement vidéo.
+      ..listen<AsyncValue<OverlayScore>>(overlayScoreSubmissionsProvider,
+          (_, next) {
+        final score = next.valueOrNull;
+        if (score == null) return;
+        unawaited(_onOverlayScore(score));
+      })
       ..listen(coordinatorFocusRequestsProvider, (_, __) {
         if (!mounted) return;
         // Tap sur le bouton flottant pendant l'enregistrement → feuille
         // d'actions. Hors enregistrement, il n'y a plus de bouton flottant (fermé
         // à l'arrêt) donc plus de focus à traiter : pas de relance.
         final coordState = ref.read(matchRecordingCoordinatorProvider).state;
-        final capturing =
-            coordState is CoordinatorRecording || coordState is CoordinatorPaused;
+        final capturing = coordState is CoordinatorRecording ||
+            coordState is CoordinatorPaused;
         if (capturing) {
           MatchRecordingActionsSheet.show(context);
         }

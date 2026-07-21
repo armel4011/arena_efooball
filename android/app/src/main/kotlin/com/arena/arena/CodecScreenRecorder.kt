@@ -2,8 +2,11 @@ package com.arena.arena
 
 import android.media.MediaCodec
 import android.media.MediaCodecInfo
+import android.media.MediaCodecList
 import android.media.MediaFormat
 import android.media.MediaMuxer
+import android.os.Build
+import android.os.Bundle
 import android.util.Log
 import android.view.Surface
 
@@ -44,6 +47,18 @@ class CodecScreenRecorder {
     var configuredHeight = 0
         private set
 
+    /**
+     * Nom de l'encodeur RÉELLEMENT utilisé (ex. `c2.qti.avc.encoder` matériel ou
+     * `c2.android.avc.encoder` logiciel). Exposé pour la télémétrie de dérive de
+     * débit. Vide tant que [start] n'a pas configuré le codec.
+     */
+    var encoderName: String = ""
+        private set
+
+    // Nom d'un encodeur AVC LOGICIEL à forcer (repli auto quand un modèle a déjà
+    // dépassé sa cible de débit) — `null` = encodeur par défaut (matériel).
+    private var forcedEncoderName: String? = null
+
     private var trackIndex = -1
     @Volatile private var muxerStarted = false
     @Volatile private var stopRequested = false
@@ -64,7 +79,14 @@ class CodecScreenRecorder {
         bitRate: Int,
         fps: Int,
         outputPath: String,
+        forceSoftware: Boolean = false,
     ): Surface {
+        // Repli auto : si un modèle a déjà dépassé sa cible avec l'encodeur
+        // matériel (télémétrie), on force ici l'encodeur LOGICIEL Google
+        // (`c2.android.avc.encoder`) qui respecte TOUJOURS la cible CBR. À 360p/
+        // 20 fps le coût CPU est négligeable. `null` si aucun SW trouvé → défaut.
+        forcedEncoderName = if (forceSoftware) softwareAvcEncoderName() else null
+
         // ── Sondage des capacités (best-effort : si le sondage échoue, on garde
         //    les valeurs demandées et on tente CBR puis VBR) ───────────────────
         var w = width
@@ -75,7 +97,7 @@ class CodecScreenRecorder {
         var supportsVbr = true
         var probe: MediaCodec? = null
         try {
-            probe = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
+            probe = makeEncoder()
             val caps = probe.codecInfo
                 .getCapabilitiesForType(MediaFormat.MIMETYPE_VIDEO_AVC)
             val enc = caps.encoderCapabilities
@@ -165,26 +187,85 @@ class CodecScreenRecorder {
             setInteger(MediaFormat.KEY_FRAME_RATE, fps)
             setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 2)
             setInteger(MediaFormat.KEY_BITRATE_MODE, bitrateMode)
+            // Plafond DUR du débit crête. De nombreux encodeurs matériels
+            // Qualcomm (observé SD888 / `c2.qti.avc`) DÉPASSENT largement la
+            // cible CBR sur une entrée-surface (screen capture) — le fichier
+            // sort 4–9× trop lourd. KEY_MAX_BITRATE agit comme plafond que le
+            // HW respecte même quand son contrôle de débit CBR dérive.
+            // `KEY_MAX_BITRATE` est @hide → on pose la clé littérale ("max-bitrate").
+            setInteger("max-bitrate", bitRate)
         }
 
-        val c = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
+        val c = makeEncoder()
         codec = c
+        encoderName = c.name
         c.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
         inputSurface = c.createInputSurface()
         c.start()
+
+        // Ré-assertion du débit APRÈS start(). Certains encodeurs Qualcomm ne
+        // VERROUILLENT la cible qu'au premier `setParameters` : sans ça, ils
+        // démarrent à leur débit par défaut (bien plus haut) et n'y reviennent
+        // jamais. Idempotent et sans effet là où la cible est déjà respectée.
+        try {
+            c.setParameters(
+                Bundle().apply {
+                    putInt(MediaCodec.PARAMETER_KEY_VIDEO_BITRATE, bitRate)
+                },
+            )
+        } catch (_: Exception) {}
 
         muxer = MediaMuxer(outputPath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
 
         drainThread = Thread({ drainLoop() }, "arena-codec-drain").apply { start() }
         val modeName =
             if (bitrateMode == MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_CBR) "CBR" else "VBR"
-        Log.d("ArenaRecorder", "MediaCodec $modeName ${bitRate / 1000}kbps ${width}x$height/${fps}fps")
+        // Log.i (PAS Log.d : proguard-android-optimize STRIPPE Log.d/v en
+        // release) — sert à vérifier sur l'appareil quel encodeur/mode a servi.
+        Log.i(
+            "ArenaRecorder",
+            "MediaCodec $modeName ${bitRate / 1000}kbps ${width}x$height/${fps}fps codec=${c.name}",
+        )
         return inputSurface!!
     }
 
     private fun alignDown(value: Int, alignment: Int): Int {
         if (alignment <= 1) return value
         return value - (value % alignment)
+    }
+
+    /** Crée l'encodeur AVC : logiciel forcé ([forcedEncoderName]) sinon défaut. */
+    private fun makeEncoder(): MediaCodec {
+        val name = forcedEncoderName
+        return if (name != null) {
+            MediaCodec.createByCodecName(name)
+        } else {
+            MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
+        }
+    }
+
+    /**
+     * Cherche un encodeur AVC LOGICIEL (Google : `c2.android.avc.encoder` /
+     * `OMX.google.*`). Ces encodeurs respectent fidèlement la cible CBR, là où
+     * certains encodeurs matériels dérivent. `null` si aucun (rare).
+     */
+    private fun softwareAvcEncoderName(): String? {
+        return try {
+            MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos.firstOrNull { info ->
+                info.isEncoder &&
+                    info.supportedTypes.any {
+                        it.equals(MediaFormat.MIMETYPE_VIDEO_AVC, ignoreCase = true)
+                    } &&
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        info.isSoftwareOnly
+                    } else {
+                        val n = info.name.lowercase()
+                        n.startsWith("omx.google.") || n.startsWith("c2.android.")
+                    }
+            }?.name
+        } catch (_: Exception) {
+            null
+        }
     }
 
     /** Relâche best-effort l'état alloué par [start] en cas d'échec de config. */

@@ -175,7 +175,7 @@ void main() {
     });
 
     testWidgets(
-        'roomCode reçu (AWAY) → code porté par la clé, plus de puce « CODE SALLE »',
+        'roomCode reçu (AWAY) replié : PAS de pastille permanente du code',
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -193,10 +193,41 @@ void main() {
         ),
       );
 
-      // Le code est rendu dans la pastille « clé » (AnimatedOpacity le garde
-      // dans l'arbre même replié). L'ancienne étiquette de la puce a disparu.
-      expect(find.text('ABC12'), findsOneWidget);
+      // Nouveau design : le code n'est plus une pastille toujours visible ; il
+      // ne s'affiche que dans la carte ouverte par la clé (cf. test suivant).
+      expect(find.text('ABC12'), findsNothing);
       expect(find.text('CODE SALLE'), findsNothing);
+    });
+
+    testWidgets(
+        'roomCode reçu (AWAY) + saisie ouverte → champ LECTURE SEULE avec le code',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: RecordingOverlayButton(
+              tick: const OverlayTick(
+                elapsedSeconds: 5,
+                isWarning: false,
+                isCodeEntry: true,
+                roomCode: 'ABC12',
+              ),
+              onSubmitCode: (_) {},
+              onFieldFocusChange: (_) async {},
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // Même carte que le HOME, mais lecture seule : titre « Code reçu de
+      // l'hôte », pas d'ENVOYER, juste Fermer ; le code est dans le champ.
+      expect(find.text("Code reçu de l'hôte"), findsOneWidget);
+      expect(find.text('ENVOYER'), findsNothing);
+      expect(find.text('Fermer'), findsOneWidget);
+      final field = tester.widget<TextField>(find.byType(TextField));
+      expect(field.readOnly, isTrue);
+      expect(field.controller?.text, 'ABC12');
     });
   });
 }

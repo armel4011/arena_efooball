@@ -49,6 +49,13 @@ class _FakeOverlayPlatform implements OverlayPlatform {
     resizedToCodeEntry = true;
   }
 
+  bool resizedToScoreEntry = false;
+
+  @override
+  Future<void> resizeToScoreEntry() async {
+    resizedToScoreEntry = true;
+  }
+
   bool movedToTop = false;
 
   @override
@@ -334,7 +341,8 @@ void main() {
       platform.sharedData.clear();
       controller.setDisplayedRoomCode('NEW222');
       expect(platform.sharedData.any((d) => tickRoomCode(d, 'NEW222')), isTrue);
-      expect(platform.sharedData.any((d) => tickRoomCode(d, 'OLD111')), isFalse);
+      expect(
+          platform.sharedData.any((d) => tickRoomCode(d, 'OLD111')), isFalse,);
     });
 
     test('code vide/null → aucune clé roomCode dans le tick', () async {

@@ -33,11 +33,11 @@ import java.io.File
  * `flutter_screen_recording` plugin so we can pick our own
  * resolution / bitrate / framerate.
  *
- * PROFIL ALLÉGÉ UNIFORME (toute la flotte, cible ≈30 MB / 25 min — upload
+ * PROFIL ALLÉGÉ UNIFORME (toute la flotte, cible ≈45 MB / 25 min — upload
  * mobile money-friendly ET livrable dans une fenêtre background étroite) :
- *   360p (axe court, ratio préservé), 160 kbps H.264, 20 fps. 360p garde le
- *   HUD (score, chrono) lisible pour l'arbitrage ; 20 fps suffit à relire un
- *   eFootball / Jeu de Dames.
+ *   360p (axe court, ratio préservé), 240 kbps H.264, 24 fps. 360p + 240 kbps
+ *   gardent le HUD (score, chrono) BIEN lisible pour l'arbitrage ; 24 fps
+ *   fluidifie la relecture d'un eFootball / Jeu de Dames.
  *
  * ENCODEUR + FILET DE SÉCURITÉ (uniforme sur toute la flotte) :
  *   * PRIMAIRE : [CodecScreenRecorder] (MediaCodec en CBR) sur TOUS les
@@ -112,6 +112,20 @@ class ArenaRecorderService : Service() {
         @Volatile
         var onStopRequested: (() -> Unit)? = null
 
+        // Prefs du repli encodeur : mémorise qu'un modèle a déjà DÉPASSÉ sa
+        // cible de débit avec l'encodeur matériel → on force l'encodeur logiciel
+        // aux captures suivantes (auto-réparation, persiste entre sessions).
+        private const val PREFS = "arena_recorder"
+        private const val KEY_FORCE_SW = "force_sw_encoder"
+
+        // Télémétrie : invoqué à l'arrêt quand le débit RÉEL du fichier dépasse
+        // largement la cible (encodeur qui dérive). Set par MainActivity →
+        // poussé à Dart (EventChannel) → Sentry. Rend visibles en PROD les
+        // modèles fautifs sans avoir à les posséder. Payload : model, encoder,
+        // targetKbps, actualKbps, sizeBytes, durationMs, switchedToSoftware.
+        @Volatile
+        var onRecorderDrift: ((Map<String, Any?>) -> Unit)? = null
+
         // True while the foreground service is hosting a recording.
         @Volatile
         var isActive: Boolean = false
@@ -182,6 +196,12 @@ class ArenaRecorderService : Service() {
     private var roomCode: String? = null
     // Vrai côté HOME (celui qui crée la room et ENVOIE le code).
     private var isHome: Boolean = false
+    // Cible de débit demandée (kbps×1000) + encodeur réellement utilisé +
+    // si on forçait déjà le logiciel — mémorisés au démarrage pour la
+    // détection de dérive à l'arrêt (teardown).
+    private var targetBitRate: Int = 240_000
+    private var usedEncoderName: String = ""
+    private var forcedSoftware: Boolean = false
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
@@ -316,11 +336,12 @@ class ArenaRecorderService : Service() {
         }
 
         // Profil d'encodage ALLÉGÉ, UNIFORME sur toute la flotte :
-        //   360p / 160 kbps / 20 fps → ≈30 MB pour 25 min (upload mobile-
-        //   friendly). 360p garde le HUD (score, chrono) lisible pour l'arbitrage.
+        //   360p / 240 kbps / 24 fps → ≈45 MB pour 25 min (upload mobile-
+        //   friendly). 360p + 240 kbps gardent le HUD (score, chrono) BIEN lisible
+        //   pour l'arbitrage ; 24 fps fluidifie la relecture d'un eFootball.
         val targetShort = 360
-        val videoBitRate = 160_000
-        val videoFps = 20
+        val videoBitRate = 240_000
+        val videoFps = 24
 
         // Cible `targetShort` sur l'axe COURT, ratio préservé, dimensions
         // alignées sur un multiple de 16 (contrainte encodeur H.264).
@@ -328,7 +349,8 @@ class ArenaRecorderService : Service() {
         val scale = targetShort.toDouble() / shorter
         val outW = ((realW * scale).toInt()) and -16
         val outH = ((realH * scale).toInt()) and -16
-        Log.d(
+        // Log.i (PAS Log.d : strippé en release par proguard-android-optimize).
+        Log.i(
             TAG,
             "recording at ${outW}x${outH} @ ${videoBitRate / 1000}kbps/${videoFps}fps " +
                 "(screen ${realW}x${realH} @ ${density}dpi, " +
@@ -348,18 +370,30 @@ class ArenaRecorderService : Service() {
         // FILET : si l'init MediaCodec échoue (CBR non supporté sur une puce
         // ancienne/bas de gamme, dimensions refusées…), on retombe sur
         // MediaRecorder — une preuve plus lourde vaut mieux qu'aucune preuve.
+        // Mémorise la cible pour la détection de dérive à l'arrêt (teardown).
+        targetBitRate = videoBitRate
+        // Repli auto : ce modèle a-t-il DÉJÀ dépassé sa cible avec l'encodeur
+        // matériel lors d'une capture précédente ? Si oui, on force le logiciel.
+        forcedSoftware = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getBoolean(KEY_FORCE_SW, false)
+
         var codecSurface: Surface? = null
         try {
             val cr = CodecScreenRecorder()
-            codecSurface = cr.start(outW, outH, videoBitRate, videoFps, outFile.absolutePath)
+            codecSurface = cr.start(
+                outW, outH, videoBitRate, videoFps, outFile.absolutePath,
+                forceSoftware = forcedSoftware,
+            )
             codecRecorder = cr
+            usedEncoderName = cr.encoderName
         } catch (e: Exception) {
             Log.w(TAG, "MediaCodec CBR init failed — fallback MediaRecorder", e)
             codecRecorder = null
+            usedEncoderName = "MediaRecorder"
         }
         val encoderSurface: Surface = codecSurface
             ?: buildMediaRecorder(outW, outH, videoBitRate, videoFps, outFile.absolutePath)
-        Log.d(TAG, "encoder = ${if (codecSurface != null) "MediaCodec" else "MediaRecorder (fallback)"}")
+        Log.i(TAG, "encoder = ${if (codecSurface != null) "MediaCodec" else "MediaRecorder (fallback)"}")
 
         // Le VirtualDisplay doit rendre AUX dimensions réellement configurées par
         // l'encodeur : CodecScreenRecorder a pu ajuster outW/outH aux contraintes
@@ -489,7 +523,59 @@ class ArenaRecorderService : Service() {
             try { path?.let { File(it).delete() } } catch (_: Exception) {}
             null
         }
+        maybeReportBitrateDrift(finalPath)
         publishOutput(finalPath)
+    }
+
+    /**
+     * DÉTECTION DE DÉRIVE DE DÉBIT (robustesse prod). Certains encodeurs
+     * matériels ne respectent pas la cible CBR (observé Samsung SD888 : ×4–9).
+     * On mesure le débit RÉEL du fichier fini et, s'il dépasse largement la
+     * cible, on (1) REMONTE une télémétrie (→ Sentry via Dart) pour repérer le
+     * modèle fautif en prod, et (2) ACTIVE le repli encodeur LOGICIEL pour les
+     * captures suivantes (auto-réparation persistante). Ne lève jamais.
+     */
+    private fun maybeReportBitrateDrift(path: String?) {
+        if (path == null) return
+        try {
+            val sizeBytes = File(path).length()
+            val durMs = System.currentTimeMillis() - recordStartMillis
+            // Trop court / vide → non significatif (overhead conteneur domine).
+            if (durMs < 3000 || sizeBytes <= 0) return
+            // bits / ms = kbits/s = kbps.
+            val actualKbps = (sizeBytes * 8 / durMs).toInt()
+            val targetKbps = targetBitRate / 1000
+            // Seuil > 2× la cible = dérive nette (le cas Samsung sortait à 4–9×).
+            // En dessous : variance normale (audio, overhead) → on ne fait rien.
+            if (actualKbps <= targetKbps * 2) return
+
+            // Auto-réparation : si on n'était pas déjà en logiciel, on l'active
+            // pour les prochaines captures de ce modèle (persistant entre runs).
+            val switched = !forcedSoftware
+            if (switched) {
+                getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+                    .putBoolean(KEY_FORCE_SW, true).apply()
+            }
+            Log.w(
+                TAG,
+                "bitrate drift: ${actualKbps}kbps vs target ${targetKbps}kbps " +
+                    "(${Build.MANUFACTURER}/${Build.MODEL}, enc=$usedEncoderName, " +
+                    "switchedToSoftware=$switched)",
+            )
+            onRecorderDrift?.invoke(
+                mapOf(
+                    "model" to "${Build.MANUFACTURER}/${Build.MODEL}",
+                    "encoder" to usedEncoderName,
+                    "targetKbps" to targetKbps,
+                    "actualKbps" to actualKbps,
+                    "sizeBytes" to sizeBytes,
+                    "durationMs" to durMs,
+                    "switchedToSoftware" to switched,
+                ),
+            )
+        } catch (_: Exception) {
+            // Télémétrie best-effort : ne jamais casser le teardown.
+        }
     }
 
     // Flags PendingIntent : FLAG_IMMUTABLE est OBLIGATOIRE sur Android 12+ (S)
