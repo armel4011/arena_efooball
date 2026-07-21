@@ -111,22 +111,6 @@ class MainActivity : FlutterActivity() {
                         startActivity(intent)
                         result.success(true)
                     }
-                    "showScoreDialog" -> {
-                        // Dialogue de score UNIFIÉ : le bouton « Score » de
-                        // l'overlay ouvre LE MÊME ScoreInputActivity que la notif.
-                        // L'app a SYSTEM_ALERT_WINDOW (l'overlay tourne) → le
-                        // démarrage d'activité en arrière-plan est autorisé.
-                        val intent = Intent(
-                            applicationContext, ScoreInputActivity::class.java,
-                        ).apply {
-                            addFlags(
-                                Intent.FLAG_ACTIVITY_NEW_TASK or
-                                    Intent.FLAG_ACTIVITY_CLEAR_TOP,
-                            )
-                        }
-                        applicationContext.startActivity(intent)
-                        result.success(true)
-                    }
                     "saveVideoToGallery" -> {
                         val path = call.argument<String>("path")
                         if (path.isNullOrBlank()) {

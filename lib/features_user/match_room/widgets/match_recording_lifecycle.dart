@@ -634,12 +634,6 @@ class _MatchRecordingLifecycleState
         if (score == null) return;
         unawaited(_onOverlayScore(score));
       })
-      // Tap « Score » sur le bouton flottant → ouvre LE MÊME dialogue natif que
-      // la notif (ScoreInputActivity). Unifie les deux points d'entrée : un seul
-      // dialogue de saisie de score.
-      ..listen<AsyncValue<void>>(overlayScoreEntryRequestsProvider, (_, __) {
-        unawaited(ref.read(nativeLifecycleEventsProvider).showScoreDialog());
-      })
       ..listen(coordinatorFocusRequestsProvider, (_, __) {
         if (!mounted) return;
         // Tap sur le bouton flottant pendant l'enregistrement → feuille

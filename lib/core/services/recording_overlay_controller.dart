@@ -44,9 +44,6 @@ class RecordingOverlayController {
   final _roomCodes = StreamController<String>.broadcast();
   // Scores validés depuis le formulaire overlay (mon/adverse + pénaltys).
   final _scores = StreamController<OverlayScore>.broadcast();
-  // Demande d'ouvrir le dialogue de score (tap « Score » du bouton flottant).
-  // Le lifecycle l'écoute et ouvre le ScoreInputActivity natif UNIFIÉ.
-  final _scoreEntryRequests = StreamController<void>.broadcast();
   // Vrai entre un show* et le stop() : permet au cycle de vie de choisir
   // entre morphToRecording (overlay déjà ouvert) et start (rien d'ouvert).
   bool _overlayShown = false;
@@ -98,11 +95,6 @@ class RecordingOverlayController {
   /// Scores validés depuis le formulaire overlay. Le lifecycle s'y abonne pour
   /// mapper (mon/adverse→joueur1/2), arrêter+sceller la vidéo, puis submitScore.
   Stream<OverlayScore> get scoreSubmissions => _scores.stream;
-
-  /// Émis quand le joueur tape « Score » sur le bouton flottant. Le lifecycle
-  /// l'écoute pour ouvrir le dialogue de score natif UNIFIÉ (le même que la
-  /// notif), au lieu d'un formulaire dans l'overlay.
-  Stream<void> get scoreEntryRequests => _scoreEntryRequests.stream;
 
   /// Vrai tant qu'un overlay (code-sender OU recording) est affiché. Le
   /// cycle de vie l'inspecte : si `true` au passage in_progress, on
@@ -459,7 +451,6 @@ class RecordingOverlayController {
     await _actions.close();
     await _roomCodes.close();
     await _scores.close();
-    await _scoreEntryRequests.close();
   }
 
   /// Route un événement overlay→main : soit une soumission de code room
@@ -489,14 +480,15 @@ class RecordingOverlayController {
       unawaited(exitCodeEntry());
       return;
     }
-    // Mini « Score » : demande d'ouvrir le DIALOGUE DE SCORE UNIFIÉ (le même
-    // ScoreInputActivity natif que la notif) — plus de formulaire in-overlay.
-    // Le lifecycle capte ce signal et invoke `showScoreDialog` côté natif.
+    // Mini « Score » : ouvre le formulaire de score IN-OVERLAY (Flutter). Le
+    // bouton flottant utilise SON dialogue (garanti de s'ouvrir puisque
+    // l'overlay tourne ; pas de démarrage d'activité en arrière-plan). La notif,
+    // elle, ouvre le dialogue natif ScoreInputActivity (cas Pixel 9 sans overlay).
     if (_isMessage(event, RecordingOverlayMessages.askEnterScoreType)) {
-      _scoreEntryRequests.add(null);
+      unawaited(enterScoreEntry());
       return;
     }
-    // « Fermer » du formulaire de score inline (legacy, plus émis) : no-op sûr.
+    // « Fermer » du formulaire de score inline : referme sans valider.
     if (_isMessage(event, RecordingOverlayMessages.askExitScoreType)) {
       unawaited(exitScoreEntry());
       return;
@@ -701,10 +693,13 @@ class _DefaultOverlayPlatform implements OverlayPlatform {
   @override
   Future<void> resizeToScoreEntry() async {
     final dpr = PlatformDispatcher.instance.views.first.devicePixelRatio;
-    // Un peu plus haut que la saisie de code : 2 champs + pénaltys + Valider.
+    // Assez HAUT pour le cas le plus grand (~290 dp de contenu) : titre +
+    // 2 scores + case pénaltys + 2 champs TAB + Valider/Fermer. À 240 dp, ces
+    // derniers débordaient hors de la fenêtre quand le volet pénaltys s'ouvrait
+    // (boutons invisibles). 380 dp les garde visibles.
     await FlutterOverlayWindow.resizeOverlay(
       (360 * dpr).round(),
-      (240 * dpr).round(),
+      (380 * dpr).round(),
       false,
     );
   }
@@ -750,12 +745,4 @@ final recordingOverlayControllerProvider =
 final overlayScoreSubmissionsProvider = StreamProvider<OverlayScore>((ref) {
   final controller = ref.watch(recordingOverlayControllerProvider);
   return controller.scoreSubmissions;
-});
-
-/// Émet quand le joueur tape « Score » sur le bouton flottant → le lifecycle
-/// ouvre le dialogue de score natif UNIFIÉ (`ScoreInputActivity`, le même que
-/// la notif) via `showScoreDialog`.
-final overlayScoreEntryRequestsProvider = StreamProvider<void>((ref) {
-  final controller = ref.watch(recordingOverlayControllerProvider);
-  return controller.scoreEntryRequests;
 });
