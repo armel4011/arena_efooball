@@ -248,6 +248,28 @@ class MainActivity : FlutterActivity() {
                 }
             }
         }
+
+        // Étape B — score saisi dans la notif (ScoreInputActivity) → Dart mappe
+        // selon le rôle, soumet le score et scelle la vidéo (même chemin que le
+        // score de l'overlay).
+        ArenaRecorderService.onScoreSubmitted = { my, opp, viaPen, penMy, penOpp ->
+            runOnUiThread {
+                try {
+                    nativeEventSink?.success(
+                        mapOf(
+                            "event" to "recorder_score_submitted",
+                            "my" to my,
+                            "opp" to opp,
+                            "viaPenalties" to viaPen,
+                            "myPen" to penMy,
+                            "oppPen" to penOpp,
+                        ),
+                    )
+                } catch (e: Exception) {
+                    Log.w(TAG, "nativeEventSink.success (score) failed", e)
+                }
+            }
+        }
     }
 
     override fun onDestroy() {
@@ -257,6 +279,7 @@ class MainActivity : FlutterActivity() {
         ArenaRecorderService.onRoomCodeSubmitted = null
         ArenaRecorderService.onStopRequested = null
         ArenaRecorderService.onRecorderDrift = null
+        ArenaRecorderService.onScoreSubmitted = null
         LivekitCaptureFgsService.onStopRequested = null
         nativeEventSink = null
         super.onDestroy()

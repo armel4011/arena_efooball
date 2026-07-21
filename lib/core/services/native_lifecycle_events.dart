@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:arena/core/utils/error_reporter.dart';
+import 'package:arena/features_user/recording/overlay/recording_overlay_messages.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -45,6 +46,9 @@ class NativeLifecycleEvents {
   final _controller = StreamController<NativeLifecycleEvent>.broadcast();
   // Code room tapé par le HOME dans la réponse directe de la notif de contrôle.
   final _codeController = StreamController<String>.broadcast();
+  // Score saisi dans la notif (ScoreInputActivity, Étape B) — même type que le
+  // score de l'overlay pour réutiliser le handler `_onOverlayScore`.
+  final _scoreController = StreamController<OverlayScore>.broadcast();
 
   // Canal method pour POUSSER vers le natif (mise à jour de la notif de code).
   static const MethodChannel _method = MethodChannel('arena/native');
@@ -54,6 +58,11 @@ class NativeLifecycleEvents {
   /// Le HOME a envoyé le code room via la réponse directe de la notification
   /// (repli Pixel 9 du panneau overlay). Le listener écrit `matches.room_code`.
   Stream<String> get roomCodeSubmitted => _codeController.stream;
+
+  /// Score saisi depuis le bouton « Score » de la notif de contrôle (Étape B).
+  /// Le listener (MatchRecordingLifecycle) le route vers `_onOverlayScore` :
+  /// mappe selon le rôle, soumet le score et scelle la vidéo.
+  Stream<OverlayScore> get scoreSubmitted => _scoreController.stream;
 
   /// Met à jour l'échange de code room dans la notif de contrôle native :
   ///   * [isHome] true → pastille « Envoyer » (puis « Renvoyer » une fois [code]
@@ -88,6 +97,22 @@ class NativeLifecycleEvents {
         if (code is String && code.isNotEmpty) _codeController.add(code);
       case 'recorder_bitrate_drift':
         _reportBitrateDrift(raw);
+      case 'recorder_score_submitted':
+        final my = raw['my'];
+        final opp = raw['opp'];
+        if (my is int && opp is int) {
+          final myPen = raw['myPen'];
+          final oppPen = raw['oppPen'];
+          _scoreController.add(
+            OverlayScore(
+              my: my,
+              opp: opp,
+              viaPenalties: raw['viaPenalties'] == true,
+              myPen: myPen is int ? myPen : null,
+              oppPen: oppPen is int ? oppPen : null,
+            ),
+          );
+        }
     }
   }
 
@@ -130,6 +155,7 @@ class NativeLifecycleEvents {
     await _subscription.cancel();
     await _controller.close();
     await _codeController.close();
+    await _scoreController.close();
   }
 }
 
@@ -151,4 +177,10 @@ final nativeLifecycleEventsStreamProvider =
 /// contrôle → à écrire dans `matches.room_code` par le listener.
 final nativeRoomCodeSubmittedProvider = StreamProvider<String>((ref) {
   return ref.watch(nativeLifecycleEventsProvider).roomCodeSubmitted;
+});
+
+/// Score saisi depuis le bouton « Score » de la notif de contrôle (Étape B) →
+/// routé par `MatchRecordingLifecycle` vers `_onOverlayScore` (submit + scelle).
+final nativeScoreSubmittedProvider = StreamProvider<OverlayScore>((ref) {
+  return ref.watch(nativeLifecycleEventsProvider).scoreSubmitted;
 });

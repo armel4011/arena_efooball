@@ -119,6 +119,18 @@
             android:theme="@style/RoomCodeDialogTheme"
             android:windowSoftInputMode="adjustResize" />
 
+        <!-- Étape B — dialogue de saisie du SCORE, lancé depuis le bouton
+             « Score » de la notif de contrôle (repli universel du bouton
+             flottant). Même thème translucide que la saisie du code. -->
+        <activity
+            android:name=".ScoreInputActivity"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:theme="@style/RoomCodeDialogTheme"
+            android:windowSoftInputMode="adjustResize" />
+
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

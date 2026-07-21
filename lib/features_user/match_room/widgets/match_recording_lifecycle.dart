@@ -428,12 +428,14 @@ class _MatchRecordingLifecycleState
     if (selfId == null) return;
 
     final isPlayer1 = selfId == widget.match.player1Id;
+    // Pénaltys valides UNIQUEMENT en élimination directe (pas de groupId) : en
+    // poule un score nul reste nul. Garde-fou pour les deux sources (overlay +
+    // notif), au cas où le formulaire aurait proposé les tirs au but.
+    final viaPen = score.viaPenalties && widget.match.groupId == null;
     final s1 = isPlayer1 ? score.my : score.opp;
     final s2 = isPlayer1 ? score.opp : score.my;
-    final pen1 =
-        score.viaPenalties ? (isPlayer1 ? score.myPen : score.oppPen) : null;
-    final pen2 =
-        score.viaPenalties ? (isPlayer1 ? score.oppPen : score.myPen) : null;
+    final pen1 = viaPen ? (isPlayer1 ? score.myPen : score.oppPen) : null;
+    final pen2 = viaPen ? (isPlayer1 ? score.oppPen : score.myPen) : null;
 
     final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.maybeOf(context);
@@ -443,7 +445,7 @@ class _MatchRecordingLifecycleState
             byProfileId: selfId,
             scoreP1: s1,
             scoreP2: s2,
-            decidedByPenalties: score.viaPenalties,
+            decidedByPenalties: viaPen,
             penaltyP1: pen1,
             penaltyP2: pen2,
           );
@@ -618,6 +620,15 @@ class _MatchRecordingLifecycleState
       // Score saisi depuis le mini-formulaire du bouton flottant (« Score »
       // remplace « Enregistrer & arrêter ») → soumission + scellement vidéo.
       ..listen<AsyncValue<OverlayScore>>(overlayScoreSubmissionsProvider,
+          (_, next) {
+        final score = next.valueOrNull;
+        if (score == null) return;
+        unawaited(_onOverlayScore(score));
+      })
+      // Étape B — MÊME score, saisi depuis le bouton « Score » de la NOTIF de
+      // contrôle (ScoreInputActivity) : repli universel là où l'overlay est
+      // bloqué (Pixel 9 / Android 15). Même handler.
+      ..listen<AsyncValue<OverlayScore>>(nativeScoreSubmittedProvider,
           (_, next) {
         final score = next.valueOrNull;
         if (score == null) return;
