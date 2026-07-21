@@ -179,7 +179,10 @@ void main() {
   // 2600 → 2603 le 2026-07-21 : +3 `ArenaColors.*` du dialogue de contrôle
   // d'installation passé en CLAIR (ArenaColors.paper + void_ + signalBlue×2 du
   // bouton store contour). check_colors.sh --strict = 0 (aucun vrai Colors.*).
-  const colorsDotBaseline = 2603; // occurrences de `Colors.`
+  // 2603 → 2606 le 2026-07-21 : +3 `ArenaColors.*` de la fiabilisation vidéo
+  // (page plein écran void_ + bouton « Ouvrir dans YouTube » signalBlue + bouton
+  // vidéo du dialogue signalBlue). check_colors.sh --strict = 0 (aucun vrai Colors.*).
+  const colorsDotBaseline = 2606; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.
