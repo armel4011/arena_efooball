@@ -693,13 +693,14 @@ class _DefaultOverlayPlatform implements OverlayPlatform {
   @override
   Future<void> resizeToScoreEntry() async {
     final dpr = PlatformDispatcher.instance.views.first.devicePixelRatio;
-    // Assez HAUT pour le cas le plus grand (~290 dp de contenu) : titre +
-    // 2 scores + case pénaltys + 2 champs TAB + Valider/Fermer. À 240 dp, ces
-    // derniers débordaient hors de la fenêtre quand le volet pénaltys s'ouvrait
-    // (boutons invisibles). 380 dp les garde visibles.
+    // 300 dp : tient dans un écran en PAYSAGE (eFootball) — une fenêtre trop
+    // haute (380) sortait de l'écran, coupant Valider/Fermer. Le formulaire gère
+    // le reste : champs scrollables + boutons en pied FIXE + padding clavier
+    // (viewInsets) → Valider/Fermer restent atteignables même clavier ouvert et
+    // volet pénaltys déployé. Cf. ScoreEntryField.build.
     await FlutterOverlayWindow.resizeOverlay(
       (360 * dpr).round(),
-      (380 * dpr).round(),
+      (300 * dpr).round(),
       false,
     );
   }
