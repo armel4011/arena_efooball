@@ -33,11 +33,11 @@ import java.io.File
  * `flutter_screen_recording` plugin so we can pick our own
  * resolution / bitrate / framerate.
  *
- * PROFIL ALLÉGÉ UNIFORME (toute la flotte, cible ≈30 MB / 25 min — upload
+ * PROFIL ALLÉGÉ UNIFORME (toute la flotte, cible ≈45 MB / 25 min — upload
  * mobile money-friendly ET livrable dans une fenêtre background étroite) :
- *   360p (axe court, ratio préservé), 160 kbps H.264, 20 fps. 360p garde le
- *   HUD (score, chrono) lisible pour l'arbitrage ; 20 fps suffit à relire un
- *   eFootball / Jeu de Dames.
+ *   360p (axe court, ratio préservé), 240 kbps H.264, 24 fps. 360p + 240 kbps
+ *   gardent le HUD (score, chrono) BIEN lisible pour l'arbitrage ; 24 fps
+ *   fluidifie la relecture d'un eFootball / Jeu de Dames.
  *
  * ENCODEUR + FILET DE SÉCURITÉ (uniforme sur toute la flotte) :
  *   * PRIMAIRE : [CodecScreenRecorder] (MediaCodec en CBR) sur TOUS les
@@ -199,7 +199,7 @@ class ArenaRecorderService : Service() {
     // Cible de débit demandée (kbps×1000) + encodeur réellement utilisé +
     // si on forçait déjà le logiciel — mémorisés au démarrage pour la
     // détection de dérive à l'arrêt (teardown).
-    private var targetBitRate: Int = 160_000
+    private var targetBitRate: Int = 240_000
     private var usedEncoderName: String = ""
     private var forcedSoftware: Boolean = false
 
@@ -336,11 +336,12 @@ class ArenaRecorderService : Service() {
         }
 
         // Profil d'encodage ALLÉGÉ, UNIFORME sur toute la flotte :
-        //   360p / 160 kbps / 20 fps → ≈30 MB pour 25 min (upload mobile-
-        //   friendly). 360p garde le HUD (score, chrono) lisible pour l'arbitrage.
+        //   360p / 240 kbps / 24 fps → ≈45 MB pour 25 min (upload mobile-
+        //   friendly). 360p + 240 kbps gardent le HUD (score, chrono) BIEN lisible
+        //   pour l'arbitrage ; 24 fps fluidifie la relecture d'un eFootball.
         val targetShort = 360
-        val videoBitRate = 160_000
-        val videoFps = 20
+        val videoBitRate = 240_000
+        val videoFps = 24
 
         // Cible `targetShort` sur l'axe COURT, ratio préservé, dimensions
         // alignées sur un multiple de 16 (contrainte encodeur H.264).
