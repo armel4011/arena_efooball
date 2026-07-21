@@ -1,5 +1,6 @@
 import 'package:arena/core/router/router_refresh.dart';
 import 'package:arena/core/services/onboarding_service.dart';
+import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/models/competition_payment_option.dart';
 import 'package:arena/dev/bracket_showcase_page.dart';
 import 'package:arena/dev/design_showcase_page.dart';
@@ -400,6 +401,7 @@ final userRouterProvider = Provider<GoRouter>((ref) {
           return RegistrationConfirmPage(
             competitionId: state.pathParameters['id'] ?? '',
             competitionName: extra?.competitionName ?? 'Compétition',
+            game: extra?.game,
             gameLabel: extra?.gameLabel ?? '',
             gameEmoji: extra?.gameEmoji ?? '🎮',
             dateLabel: extra?.dateLabel ?? '',
@@ -673,6 +675,7 @@ class PayoutKycArgs {
 class RegistrationConfirmArgs {
   const RegistrationConfirmArgs({
     required this.competitionName,
+    required this.game,
     required this.gameLabel,
     required this.gameEmoji,
     required this.dateLabel,
@@ -685,6 +688,10 @@ class RegistrationConfirmArgs {
   });
 
   final String competitionName;
+
+  /// Jeu de la compétition — sert au dialogue de contrôle d'installation
+  /// (jeux externes) affiché AU-DESSUS du checkout.
+  final GameType game;
   final String gameLabel;
   final String gameEmoji;
   final String dateLabel;

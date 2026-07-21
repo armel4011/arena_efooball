@@ -13,7 +13,6 @@ import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:arena/features_shared/widgets/error_state.dart';
 import 'package:arena/features_user/bracket/bracket_view_page.dart';
 import 'package:arena/features_user/bracket/group_standings_page.dart';
-import 'package:arena/features_user/competitions/app_check_dialog.dart';
 import 'package:arena/features_user/competitions/competition_schedule_view.dart';
 import 'package:arena/features_user/competitions/widgets/competition_phase_ui.dart';
 import 'package:arena/features_user/competitions/widgets/referral_progress_card.dart';

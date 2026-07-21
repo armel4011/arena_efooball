@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/core/utils/date_formatter.dart';
@@ -11,7 +9,6 @@ import 'package:arena/data/repositories/payment_repository.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:arena/features_shared/widgets/error_state.dart';
-import 'package:arena/features_user/competitions/app_check_dialog.dart';
 import 'package:arena/features_user/competitions/widgets/competition_filter_chips.dart';
 import 'package:arena/features_user/competitions/widgets/competition_list_card.dart';
 import 'package:arena/features_user/home/widgets/tutorial_video_section.dart';
@@ -408,7 +405,7 @@ void _onRegisterTap(
     _resumeProcessing(context, c, pending);
     return;
   }
-  unawaited(_openInscriptionFlow(context, c));
+  _openInscriptionFlow(context, c);
 }
 
 void _resumeProcessing(
@@ -431,21 +428,16 @@ void _resumeProcessing(
   );
 }
 
-Future<void> _openInscriptionFlow(BuildContext context, Competition c) async {
-  // Jeux EXTERNES : contrôle d'installation obligatoire avant l'inscription
-  // (app à jour/uniforme + installable). Les Dames sont in-app → pas de contrôle.
-  // Même garde que la page détail (competition_detail_widgets) : sans ça,
-  // l'inscription depuis la CARTE de la liste contournait le dialogue.
-  if (c.game.isExternal) {
-    final ok = await showAppCheckDialog(context, game: c.game);
-    if (!ok || !context.mounted) return;
-  }
+void _openInscriptionFlow(BuildContext context, Competition c) {
+  // Le contrôle d'installation (jeux externes) est affiché AU-DESSUS du
+  // checkout (RegistrationConfirmPage), plus depuis la liste.
   final l10n = AppLocalizations.of(context);
   final dateLabel = formatRelativeDate(c.startDate);
-  await context.push(
+  context.push(
     UserRoutes.registrationConfirmPath(c.id),
     extra: RegistrationConfirmArgs(
       competitionName: c.name,
+      game: c.game,
       gameLabel: c.game.label,
       gameEmoji: _gameEmoji(c.game),
       dateLabel: dateLabel,

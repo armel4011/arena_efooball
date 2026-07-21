@@ -56,7 +56,7 @@ void main() {
     expect(find.text("Avant de t'inscrire"), findsOneWidget);
     expect(find.textContaining('à jour et identique'), findsOneWidget);
     expect(find.textContaining("s'installer"), findsOneWidget);
-    expect(find.text('Ouvrir le store'), findsOneWidget);
+    expect(find.text("Vérification dans l'App Store"), findsOneWidget);
     // Sans vidéo réglée : pas de bloc "Guide vidéo".
     expect(find.text('Guide vidéo'), findsNothing);
     expect(find.text('Annuler'), findsOneWidget);
@@ -92,6 +92,6 @@ void main() {
     await open(tester);
 
     expect(find.text("Avant de t'inscrire"), findsOneWidget);
-    expect(find.text('Ouvrir le store'), findsNothing);
+    expect(find.text("Vérification dans l'App Store"), findsNothing);
   });
 }
