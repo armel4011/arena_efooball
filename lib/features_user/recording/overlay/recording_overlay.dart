@@ -162,12 +162,19 @@ class RoomCodeField extends StatefulWidget {
     required this.onFocusChange,
     this.timerLabel,
     this.onClose,
+    this.readOnlyCode,
     super.key,
   });
 
   /// Called with the normalised (trimmed, upper-cased) code when the user
   /// taps "Envoyer" and the code passes the 4–12 length check.
   final void Function(String code) onSubmit;
+
+  /// Côté EXTÉRIEUR : le code REÇU de l'hôte. Non nul ⇒ le champ passe en
+  /// **lecture seule** (même carte que le HOME, mais texte non modifiable et
+  /// pas de bouton « Envoyer » — juste « Fermer »). Nul ⇒ champ de saisie
+  /// normal (le HOME tape et envoie son code).
+  final String? readOnlyCode;
 
   /// Called when the text field gains / loses focus, so the host can flip
   /// the overlay window flag (focusPointer ↔ defaultFlag). Positional bool
@@ -191,6 +198,25 @@ class _RoomCodeFieldState extends State<RoomCodeField> {
   final _controller = TextEditingController();
   String? _sentCode;
   bool _tooShort = false;
+
+  bool get _readOnly => widget.readOnlyCode != null;
+
+  @override
+  void initState() {
+    super.initState();
+    // EXTÉRIEUR : pré-remplit le champ (lecture seule) avec le code reçu.
+    if (widget.readOnlyCode != null) _controller.text = widget.readOnlyCode!;
+  }
+
+  @override
+  void didUpdateWidget(RoomCodeField old) {
+    super.didUpdateWidget(old);
+    // L'hôte peut changer le code (realtime) → rafraîchir le champ lecture seule.
+    if (widget.readOnlyCode != null &&
+        widget.readOnlyCode != old.readOnlyCode) {
+      _controller.text = widget.readOnlyCode!;
+    }
+  }
 
   @override
   void dispose() {
@@ -256,11 +282,11 @@ class _RoomCodeFieldState extends State<RoomCodeField> {
                     ),
                     const SizedBox(width: 10),
                   ],
-                  const Flexible(
+                  Flexible(
                     child: Text(
-                      'Code de la room',
+                      _readOnly ? "Code reçu de l'hôte" : 'Code de la room',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w700,
                         fontSize: 14,
@@ -271,11 +297,13 @@ class _RoomCodeFieldState extends State<RoomCodeField> {
               ),
               if (!compact) ...[
                 const SizedBox(height: 4),
-                const Text(
-                  'Tape le code eFootball et envoie-le à ton adversaire, '
-                  'sans quitter le jeu.',
+                Text(
+                  _readOnly
+                      ? 'Ouvre eFootball et rejoins la room avec ce code.'
+                      : 'Tape le code eFootball et envoie-le à ton adversaire, '
+                          'sans quitter le jeu.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white60, fontSize: 11),
+                  style: const TextStyle(color: Colors.white60, fontSize: 11),
                 ),
               ],
               SizedBox(height: compact ? 8 : 10),
@@ -284,6 +312,8 @@ class _RoomCodeFieldState extends State<RoomCodeField> {
                 child: TextField(
                   controller: _controller,
                   autofocus: false,
+                  readOnly: _readOnly,
+                  showCursor: !_readOnly,
                   maxLength: 12,
                   textAlign: TextAlign.center,
                   textCapitalization: TextCapitalization.characters,
@@ -295,7 +325,7 @@ class _RoomCodeFieldState extends State<RoomCodeField> {
                   ),
                   decoration: InputDecoration(
                     counterText: '',
-                    hintText: 'ABC123',
+                    hintText: _readOnly ? null : 'ABC123',
                     hintStyle: const TextStyle(
                       color: Colors.white24,
                       letterSpacing: 3,
@@ -331,59 +361,87 @@ class _RoomCodeFieldState extends State<RoomCodeField> {
                 ),
               ],
               SizedBox(height: compact ? 8 : 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: ArenaColors.gameEfoot,
-                        borderRadius: BorderRadius.circular(10),
+              // EXTÉRIEUR (lecture seule) : pas d'« Envoyer », juste « Fermer »
+              // pleine largeur. HOME : « Envoyer » (+ « Fermer » si fourni).
+              if (_readOnly)
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Colors.white10,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: widget.onClose,
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 10),
+                        child: Text(
+                          'Fermer',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                          ),
+                        ),
                       ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: _submit,
-                          child: const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 10),
-                            child: Text(
-                              'ENVOYER',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 14,
+                    ),
+                  ),
+                )
+              else
+                Row(
+                  children: [
+                    Expanded(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: ArenaColors.gameEfoot,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: _submit,
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 10),
+                              child: Text(
+                                'ENVOYER',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 14,
+                                ),
                               ),
                             ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                  if (widget.onClose != null) ...[
-                    const SizedBox(width: 8),
-                    Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: widget.onClose,
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                          child: Text(
-                            'Fermer',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
+                    if (widget.onClose != null) ...[
+                      const SizedBox(width: 8),
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: widget.onClose,
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            child: Text(
+                              'Fermer',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
+                    ],
                   ],
-                ],
-              ),
+                ),
               if (_sentCode != null) ...[
                 const SizedBox(height: 6),
                 Container(
@@ -477,18 +535,11 @@ class _RecordingOverlayButtonState extends State<RecordingOverlayButton> {
   static const double _miniRadius = 64;
 
   bool _expanded = false;
-  // Côté AWAY : affichage on/off de la pastille du code reçu, piloté par le
-  // mini-bouton clé (symétrique du bouton clé d'ENVOI côté HOME).
-  bool _showAwayCode = false;
 
   OverlayTick get _tick => widget.tick;
 
   void _onMainTap() {
-    setState(() {
-      _expanded = !_expanded;
-      // On referme aussi la pastille code en repliant le menu.
-      if (!_expanded) _showAwayCode = false;
-    });
+    setState(() => _expanded = !_expanded);
   }
 
   Future<void> _onMiniTap(String message) async {
@@ -535,6 +586,9 @@ class _RecordingOverlayButtonState extends State<RecordingOverlayButton> {
         onFocusChange: widget.onFieldFocusChange,
         timerLabel: _tick.formatted,
         onClose: () => sendToMain(RecordingOverlayMessages.askExitCodeType),
+        // EXTÉRIEUR : `roomCode` reçu ⇒ champ en LECTURE SEULE (affiche le code).
+        // HOME : `roomCode` null ⇒ champ de SAISIE (tape + envoie).
+        readOnlyCode: _tick.roomCode,
       );
     }
     return SizedBox(
@@ -546,26 +600,16 @@ class _RecordingOverlayButtonState extends State<RecordingOverlayButton> {
           // SW « envoyer le code » — nouveau flux : le HOME, déjà en train
           // d'enregistrer, ouvre la saisie du code room. Masqué en mode simple
           // (LiveKit egress n'a pas de bouton flottant de code).
+          // SW « code room » — MÊME clé et MÊME geste des deux côtés : elle ouvre
+          // la carte du code. HOME → champ de SAISIE (tape + envoie) ; EXTÉRIEUR
+          // (roomCode reçu) → même carte en LECTURE SEULE (affiche le code reçu).
+          // Masquée en mode simple (LiveKit egress n'a pas de code room).
           _MiniButton(
-            // HOME uniquement : ouvre la saisie pour ENVOYER le code. Côté AWAY
-            // (roomCode reçu), la clé devient l'AFFICHAGE du code — pastille
-            // « 🔑 + code » rendue ci-dessous, pas ce bouton d'envoi.
-            visible: _expanded && !_tick.isSimple && _tick.roomCode == null,
+            visible: _expanded && !_tick.isSimple,
             offset: const Offset(-_miniRadius * 0.707, _miniRadius * 0.707),
             icon: Icons.vpn_key,
             color: ArenaColors.gameEfoot,
             onTap: () => _onMiniTap(RecordingOverlayMessages.askEnterCodeType),
-          ),
-          // SW « afficher le code » — côté AWAY : mini-bouton clé IDENTIQUE à
-          // celui du HOME (même position, même icône), mais son tap AFFICHE /
-          // masque la pastille du code REÇU (ci-dessous) au lieu d'ouvrir une
-          // saisie. Toggle LOCAL : ne ferme pas le menu, n'envoie rien au main.
-          _MiniButton(
-            visible: _expanded && !_tick.isSimple && _tick.roomCode != null,
-            offset: const Offset(-_miniRadius * 0.707, _miniRadius * 0.707),
-            icon: Icons.vpn_key,
-            color: ArenaColors.gameEfoot,
-            onTap: () => setState(() => _showAwayCode = !_showAwayCode),
           ),
           // 4 cardinals — N pause / E focus / S save+stop / W forfeit.
           // IgnorePointer + opacity 0 while collapsed so they don't eat
@@ -672,71 +716,6 @@ class _RecordingOverlayButtonState extends State<RecordingOverlayButton> {
                     ),
                   ],
                 ),
-              ),
-            ),
-          ),
-          // Code de salle reçu de l'hôte (côté AWAY) : PORTÉ PAR LA CLÉ du
-          // bouton flottant — pastille « 🔑 + code » ancrée sous le cluster,
-          // visible quand le bouton est déployé (elle remplace, côté AWAY, le
-          // bouton clé d'envoi réservé au HOME). Le presse-papier est impossible
-          // depuis l'overlay (MIUI) → lecture + saisie manuelle. Se met à jour
-          // si l'hôte change le code (le main repropage `roomCode` dans chaque
-          // tick).
-          // La pastille du code reçu ne s'affiche QUE lorsque le joueur a tapé
-          // le mini-bouton clé AWAY (`_showAwayCode`), symétrique du HOME qui
-          // tape la clé pour OUVRIR la saisie.
-          if (_tick.roomCode != null)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: IgnorePointer(
-                child: AnimatedOpacity(
-                  duration: const Duration(milliseconds: 160),
-                  opacity: (_expanded && _showAwayCode) ? 1 : 0,
-                  child: Center(child: _RoomCodeKey(code: _tick.roomCode!)),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Pastille « clé » affichant le code de salle reçu par l'AWAY, portée par le
-/// bouton overlay (icône clé + code sur une ligne, cf. maquette « 🔑 4F7K2 »).
-/// TextStyle natif : l'isolate overlay n'a pas GoogleFonts (cf. le chrono).
-class _RoomCodeKey extends StatelessWidget {
-  const _RoomCodeKey({required this.code});
-
-  final String code;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      constraints: const BoxConstraints(maxWidth: 200),
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.82),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: ArenaColors.iceCyan, width: 1.5),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.vpn_key, color: ArenaColors.iceCyan, size: 13),
-          const SizedBox(width: 6),
-          Flexible(
-            child: Text(
-              code,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
-                fontSize: 14,
-                letterSpacing: 1,
               ),
             ),
           ),
