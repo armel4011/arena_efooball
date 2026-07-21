@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import android.view.WindowManager
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
@@ -30,6 +31,9 @@ class ScoreInputActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_score_input)
+        // Clavier ouvert d'emblée (comme RoomCodeInputActivity) : le joueur vient
+        // de finir son match, il a juste à saisir son score.
+        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
 
         val my = findViewById<EditText>(R.id.score_my)
         val opp = findViewById<EditText>(R.id.score_opp)

@@ -82,6 +82,18 @@ class NativeLifecycleEvents {
     }
   }
 
+  /// Ouvre le dialogue de score natif (`ScoreInputActivity`) — LE MÊME que le
+  /// bouton « Score » de la notif. Appelé quand le joueur tape « Score » sur le
+  /// bouton flottant : l'app a SYSTEM_ALERT_WINDOW (overlay actif) donc peut
+  /// démarrer l'activité en arrière-plan. Unifie les deux points d'entrée.
+  Future<void> showScoreDialog() async {
+    try {
+      await _method.invokeMethod<void>('showScoreDialog');
+    } catch (_) {
+      // Canal down / autre OS — non bloquant.
+    }
+  }
+
   void _onNative(dynamic raw) {
     if (raw is! Map) return;
     final name = raw['event'];

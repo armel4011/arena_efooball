@@ -44,6 +44,9 @@ class RecordingOverlayController {
   final _roomCodes = StreamController<String>.broadcast();
   // Scores validés depuis le formulaire overlay (mon/adverse + pénaltys).
   final _scores = StreamController<OverlayScore>.broadcast();
+  // Demande d'ouvrir le dialogue de score (tap « Score » du bouton flottant).
+  // Le lifecycle l'écoute et ouvre le ScoreInputActivity natif UNIFIÉ.
+  final _scoreEntryRequests = StreamController<void>.broadcast();
   // Vrai entre un show* et le stop() : permet au cycle de vie de choisir
   // entre morphToRecording (overlay déjà ouvert) et start (rien d'ouvert).
   bool _overlayShown = false;
@@ -95,6 +98,11 @@ class RecordingOverlayController {
   /// Scores validés depuis le formulaire overlay. Le lifecycle s'y abonne pour
   /// mapper (mon/adverse→joueur1/2), arrêter+sceller la vidéo, puis submitScore.
   Stream<OverlayScore> get scoreSubmissions => _scores.stream;
+
+  /// Émis quand le joueur tape « Score » sur le bouton flottant. Le lifecycle
+  /// l'écoute pour ouvrir le dialogue de score natif UNIFIÉ (le même que la
+  /// notif), au lieu d'un formulaire dans l'overlay.
+  Stream<void> get scoreEntryRequests => _scoreEntryRequests.stream;
 
   /// Vrai tant qu'un overlay (code-sender OU recording) est affiché. Le
   /// cycle de vie l'inspecte : si `true` au passage in_progress, on
@@ -451,6 +459,7 @@ class RecordingOverlayController {
     await _actions.close();
     await _roomCodes.close();
     await _scores.close();
+    await _scoreEntryRequests.close();
   }
 
   /// Route un événement overlay→main : soit une soumission de code room
@@ -480,12 +489,14 @@ class RecordingOverlayController {
       unawaited(exitCodeEntry());
       return;
     }
-    // Mini « Score » : ouvre le formulaire de score inline.
+    // Mini « Score » : demande d'ouvrir le DIALOGUE DE SCORE UNIFIÉ (le même
+    // ScoreInputActivity natif que la notif) — plus de formulaire in-overlay.
+    // Le lifecycle capte ce signal et invoke `showScoreDialog` côté natif.
     if (_isMessage(event, RecordingOverlayMessages.askEnterScoreType)) {
-      unawaited(enterScoreEntry());
+      _scoreEntryRequests.add(null);
       return;
     }
-    // « Fermer » du formulaire de score : referme sans valider.
+    // « Fermer » du formulaire de score inline (legacy, plus émis) : no-op sûr.
     if (_isMessage(event, RecordingOverlayMessages.askExitScoreType)) {
       unawaited(exitScoreEntry());
       return;
@@ -739,4 +750,12 @@ final recordingOverlayControllerProvider =
 final overlayScoreSubmissionsProvider = StreamProvider<OverlayScore>((ref) {
   final controller = ref.watch(recordingOverlayControllerProvider);
   return controller.scoreSubmissions;
+});
+
+/// Émet quand le joueur tape « Score » sur le bouton flottant → le lifecycle
+/// ouvre le dialogue de score natif UNIFIÉ (`ScoreInputActivity`, le même que
+/// la notif) via `showScoreDialog`.
+final overlayScoreEntryRequestsProvider = StreamProvider<void>((ref) {
+  final controller = ref.watch(recordingOverlayControllerProvider);
+  return controller.scoreEntryRequests;
 });
