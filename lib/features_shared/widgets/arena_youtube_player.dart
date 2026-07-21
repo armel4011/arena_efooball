@@ -1,7 +1,63 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/core/utils/youtube_url.dart';
+import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
+
+/// Ouvre une vidéo YouTube en PLEIN ÉCRAN (page dédiée) plutôt que dans un
+/// lecteur embarqué. Une WebView pleine page se monte de façon fiable, alors
+/// qu'un lecteur DANS un dialogue overlay (surtout affiché pendant une
+/// transition de route) reste noir/vide de façon intermittente sur Android.
+/// No-op si l'URL n'est pas exploitable.
+Future<void> openFullscreenYoutube(BuildContext context, String? url) async {
+  final id = youtubeVideoId(url);
+  if (id == null) return;
+  await Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      fullscreenDialog: true,
+      builder: (_) => _FullscreenYoutubePage(videoId: id),
+    ),
+  );
+}
+
+class _FullscreenYoutubePage extends StatefulWidget {
+  const _FullscreenYoutubePage({required this.videoId});
+
+  final String videoId;
+
+  @override
+  State<_FullscreenYoutubePage> createState() => _FullscreenYoutubePageState();
+}
+
+class _FullscreenYoutubePageState extends State<_FullscreenYoutubePage> {
+  late final YoutubePlayerController _controller = YoutubePlayerController(
+    params: const YoutubePlayerParams(
+      showFullscreenButton: true,
+      showVideoAnnotations: false,
+      enableCaption: false,
+    ),
+  )..loadVideoById(videoId: widget.videoId);
+
+  @override
+  void dispose() {
+    _controller.close();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: ArenaColors.void_,
+      appBar: const ArenaAppBar(title: 'GUIDE VIDÉO'),
+      body: Center(
+        child: YoutubePlayer(
+          controller: _controller,
+          aspectRatio: 16 / 9,
+        ),
+      ),
+    );
+  }
+}
 
 /// Lecteur YouTube IN-APP, à partir d'un lien saisi par l'admin.
 ///
