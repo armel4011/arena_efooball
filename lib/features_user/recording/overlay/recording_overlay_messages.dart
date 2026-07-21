@@ -86,6 +86,21 @@ abstract final class RecordingOverlayMessages {
   /// pousse un tick `codeEntry:false` → retour au bouton d'enregistrement.
   static const String askExitCodeType = 'ask_exit_code';
 
+  /// `overlay → main` — depuis le bouton d'enregistrement, l'utilisateur tape le
+  /// mini « Score » (remplace « Enregistrer & arrêter »). Le main agrandit
+  /// l'overlay (`resizeToScoreEntry`) et pousse un tick `scoreEntry:true` → le
+  /// bouton affiche le formulaire de score inline.
+  static const String askEnterScoreType = 'ask_enter_score';
+
+  /// `overlay → main` — referme le formulaire de score sans valider.
+  static const String askExitScoreType = 'ask_exit_score';
+
+  /// `overlay → main` — l'utilisateur a VALIDÉ le score. Payload :
+  /// `{type, my, opp, viaPenalties, myPen?, oppPen?}`. Le main mappe
+  /// mon/adverse → joueur1/2 (selon le rôle), arrête + scelle la vidéo (preuve),
+  /// puis appelle `submitScore`. Score = fin du match.
+  static const String submitScoreType = 'submit_score';
+
   /// Construit le message `main → overlay` de bascule en mode code-sender.
   static Map<String, dynamic> modeCodeSender() => {'type': modeCodeSenderType};
 
@@ -96,6 +111,24 @@ abstract final class RecordingOverlayMessages {
   static Map<String, dynamic> submitRoomCode(String code) => {
         'type': submitRoomCodeType,
         'code': code,
+      };
+
+  /// Construit le message `overlay → main` portant le score saisi (mon score /
+  /// score adverse, + pénaltys optionnels en cas d'égalité).
+  static Map<String, dynamic> submitScore({
+    required int my,
+    required int opp,
+    bool viaPenalties = false,
+    int? myPen,
+    int? oppPen,
+  }) =>
+      {
+        'type': submitScoreType,
+        'my': my,
+        'opp': opp,
+        'viaPenalties': viaPenalties,
+        if (viaPenalties) 'myPen': myPen,
+        if (viaPenalties) 'oppPen': oppPen,
       };
 
   /// Builds a tick payload. Kept as a free function so both ends
@@ -125,6 +158,8 @@ abstract final class RecordingOverlayMessages {
     bool liveAvailable = false,
     bool simple = false,
     bool codeEntry = false,
+    bool scoreEntry = false,
+    bool allowPenalties = false,
     String? roomCode,
   }) {
     final type = paused
@@ -138,6 +173,8 @@ abstract final class RecordingOverlayMessages {
       'liveAvailable': liveAvailable,
       'simple': simple,
       'codeEntry': codeEntry,
+      'scoreEntry': scoreEntry,
+      'allowPenalties': allowPenalties,
       if (roomCode != null && roomCode.isNotEmpty) 'roomCode': roomCode,
     };
   }
@@ -153,6 +190,8 @@ class OverlayTick {
     this.isLiveAvailable = false,
     this.isSimple = false,
     this.isCodeEntry = false,
+    this.isScoreEntry = false,
+    this.allowPenalties = false,
     this.roomCode,
   });
 
@@ -165,6 +204,8 @@ class OverlayTick {
     final liveAvailable = raw['liveAvailable'];
     final simple = raw['simple'];
     final codeEntry = raw['codeEntry'];
+    final scoreEntry = raw['scoreEntry'];
+    final allowPenalties = raw['allowPenalties'];
     final roomCode = raw['roomCode'];
     return OverlayTick(
       elapsedSeconds: elapsed is int ? elapsed : 0,
@@ -173,6 +214,8 @@ class OverlayTick {
       isLiveAvailable: liveAvailable == true,
       isSimple: simple == true,
       isCodeEntry: codeEntry == true,
+      isScoreEntry: scoreEntry == true,
+      allowPenalties: allowPenalties == true,
       roomCode: roomCode is String && roomCode.isNotEmpty ? roomCode : null,
     );
   }
@@ -189,6 +232,13 @@ class OverlayTick {
   /// Le bouton d'enregistrement affiche le champ de saisie du code room
   /// inline (nouveau flux : le HOME envoie son code depuis le bouton rouge).
   final bool isCodeEntry;
+
+  /// Le bouton affiche le formulaire de SCORE inline (mon/adverse + pénaltys).
+  final bool isScoreEntry;
+
+  /// Match en KO (groupId null) → le formulaire de score autorise les pénaltys
+  /// en cas d'égalité. Propagé par le main (seul à connaître le match).
+  final bool allowPenalties;
 
   /// Mode « simplifié » (capture LiveKit Track Egress) : l'overlay ne
   /// montre que « ouvrir ARENA » + « stop » — pause / forfait / Live sont
@@ -243,4 +293,41 @@ String? roomCodeFromMessage(Object? raw) {
   if (raw['type'] != RecordingOverlayMessages.submitRoomCodeType) return null;
   final code = raw['code'];
   return code is String ? code : null;
+}
+
+/// Score saisi côté overlay, parsé d'un message `overlay → main`.
+class OverlayScore {
+  const OverlayScore({
+    required this.my,
+    required this.opp,
+    this.viaPenalties = false,
+    this.myPen,
+    this.oppPen,
+  });
+
+  final int my;
+  final int opp;
+  final bool viaPenalties;
+  final int? myPen;
+  final int? oppPen;
+}
+
+/// Extrait le score d'un message `overlay → main`, ou `null` si ce n'en est
+/// pas un / s'il est malformé.
+OverlayScore? scoreFromMessage(Object? raw) {
+  if (raw is! Map) return null;
+  if (raw['type'] != RecordingOverlayMessages.submitScoreType) return null;
+  final my = raw['my'];
+  final opp = raw['opp'];
+  if (my is! int || opp is! int) return null;
+  final via = raw['viaPenalties'] == true;
+  final myPen = raw['myPen'];
+  final oppPen = raw['oppPen'];
+  return OverlayScore(
+    my: my,
+    opp: opp,
+    viaPenalties: via,
+    myPen: myPen is int ? myPen : null,
+    oppPen: oppPen is int ? oppPen : null,
+  );
 }

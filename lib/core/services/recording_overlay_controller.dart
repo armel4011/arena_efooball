@@ -42,6 +42,8 @@ class RecordingOverlayController {
   final _actions = StreamController<OverlayAction>.broadcast();
   // Codes room tapés par le HOME dans le panneau overlay code-sender.
   final _roomCodes = StreamController<String>.broadcast();
+  // Scores validés depuis le formulaire overlay (mon/adverse + pénaltys).
+  final _scores = StreamController<OverlayScore>.broadcast();
   // Vrai entre un show* et le stop() : permet au cycle de vie de choisir
   // entre morphToRecording (overlay déjà ouvert) et start (rien d'ouvert).
   bool _overlayShown = false;
@@ -72,6 +74,12 @@ class RecordingOverlayController {
   // d'enregistrement pour que le joueur le tape. Mémorisé ici et repropagé dans
   // CHAQUE tick (sinon il disparaîtrait au premier tick périodique qui l'omet).
   String? _displayedRoomCode;
+  // Vrai quand le formulaire de SCORE inline est ouvert. Propagé dans CHAQUE
+  // tick (comme _codeEntry) sinon le premier tick périodique le refermerait.
+  bool _scoreEntry = false;
+  // Match en KO → le formulaire de score autorise les pénaltys si égalité.
+  // Poussé par le lifecycle (setAllowPenalties). Propagé dans chaque tick.
+  bool _allowPenalties = false;
 
   /// Total length of a recording — must match `RecordingService.maxDuration`.
   /// Used by the overlay to flash a warning in the last 30 s.
@@ -83,6 +91,10 @@ class RecordingOverlayController {
   /// Codes room soumis depuis le panneau overlay code-sender (HOME).
   /// L'écran de partage du code s'y abonne pour appeler `setRoomCode`.
   Stream<String> get roomCodeSubmissions => _roomCodes.stream;
+
+  /// Scores validés depuis le formulaire overlay. Le lifecycle s'y abonne pour
+  /// mapper (mon/adverse→joueur1/2), arrêter+sceller la vidéo, puis submitScore.
+  Stream<OverlayScore> get scoreSubmissions => _scores.stream;
 
   /// Vrai tant qu'un overlay (code-sender OU recording) est affiché. Le
   /// cycle de vie l'inspecte : si `true` au passage in_progress, on
@@ -113,6 +125,8 @@ class RecordingOverlayController {
           liveAvailable: _liveAvailable,
           simple: _simpleMode,
           codeEntry: _codeEntry,
+          scoreEntry: _scoreEntry,
+          allowPenalties: _allowPenalties,
           roomCode: _displayedRoomCode,
         ),
       ),
@@ -140,6 +154,8 @@ class RecordingOverlayController {
           liveAvailable: _liveAvailable,
           simple: _simpleMode,
           codeEntry: _codeEntry,
+          scoreEntry: _scoreEntry,
+          allowPenalties: _allowPenalties,
           roomCode: _displayedRoomCode,
         ),
       ),
@@ -292,6 +308,34 @@ class RecordingOverlayController {
     _pushTickNow();
   }
 
+  /// Bascule l'autorisation des pénaltys (KO) — poussée par le lifecycle. Push
+  /// immédiat pour que le formulaire de score en tienne compte sans attendre.
+  // ignore: avoid_positional_boolean_parameters
+  void setAllowPenalties(bool value) {
+    if (_allowPenalties == value) return;
+    _allowPenalties = value;
+    if (_startedAt != null) _pushTickNow();
+  }
+
+  /// Ouvre le formulaire de SCORE dans le bouton d'enregistrement (remplace
+  /// « Enregistrer & arrêter »). Agrandit l'overlay + tick `scoreEntry:true`.
+  Future<void> enterScoreEntry() async {
+    if (_scoreEntry) return;
+    _scoreEntry = true;
+    await _platform.resizeToScoreEntry();
+    await _platform.moveToTop();
+    _pushTickNow();
+  }
+
+  /// Referme le formulaire de score : redonne au bouton sa taille + tick
+  /// `scoreEntry:false`.
+  Future<void> exitScoreEntry() async {
+    if (!_scoreEntry) return;
+    _scoreEntry = false;
+    await _platform.resizeToRecording();
+    _pushTickNow();
+  }
+
   /// Pousse immédiatement un tick reflétant l'état courant (chrono +
   /// `codeEntry`), sans attendre le prochain Timer périodique. Utilisé par
   /// enter/exitCodeEntry pour un affichage instantané du champ / du bouton.
@@ -309,6 +353,8 @@ class RecordingOverlayController {
           liveAvailable: _liveAvailable,
           simple: _simpleMode,
           codeEntry: _codeEntry,
+          scoreEntry: _scoreEntry,
+          allowPenalties: _allowPenalties,
           roomCode: _displayedRoomCode,
         ),
       ),
@@ -343,6 +389,8 @@ class RecordingOverlayController {
     _liveAvailable = false;
     _simpleMode = false;
     _codeEntry = false;
+    _scoreEntry = false;
+    _allowPenalties = false;
     _displayedRoomCode = null;
     await _listener?.cancel();
     _listener = null;
@@ -402,6 +450,7 @@ class RecordingOverlayController {
     await stop();
     await _actions.close();
     await _roomCodes.close();
+    await _scores.close();
   }
 
   /// Route un événement overlay→main : soit une soumission de code room
@@ -414,6 +463,12 @@ class RecordingOverlayController {
       unawaited(exitCodeEntry());
       return;
     }
+    final score = scoreFromMessage(event);
+    if (score != null) {
+      _scores.add(score);
+      unawaited(exitScoreEntry());
+      return;
+    }
     // Le mini « envoyer le code » du bouton : affaire interne overlay/resize,
     // pas une OverlayAction (pause/forfait/…). On ouvre la saisie inline.
     if (_isMessage(event, RecordingOverlayMessages.askEnterCodeType)) {
@@ -423,6 +478,16 @@ class RecordingOverlayController {
     // Bouton « Fermer » de la saisie : on referme sans envoyer.
     if (_isMessage(event, RecordingOverlayMessages.askExitCodeType)) {
       unawaited(exitCodeEntry());
+      return;
+    }
+    // Mini « Score » : ouvre le formulaire de score inline.
+    if (_isMessage(event, RecordingOverlayMessages.askEnterScoreType)) {
+      unawaited(enterScoreEntry());
+      return;
+    }
+    // « Fermer » du formulaire de score : referme sans valider.
+    if (_isMessage(event, RecordingOverlayMessages.askExitScoreType)) {
+      unawaited(exitScoreEntry());
       return;
     }
     _actions.add(_parseAction(event));
@@ -478,6 +543,8 @@ class RecordingOverlayController {
           liveAvailable: _liveAvailable,
           simple: _simpleMode,
           codeEntry: _codeEntry,
+          scoreEntry: _scoreEntry,
+          allowPenalties: _allowPenalties,
           roomCode: _displayedRoomCode,
         ),
       );
@@ -524,6 +591,10 @@ abstract class OverlayPlatform {
   /// grande, NON draggable pour ne pas voler les taps du champ/bouton —
   /// quirk #3) — utilisé quand le HOME ouvre la saisie depuis le bouton rouge.
   Future<void> resizeToCodeEntry();
+
+  /// Redimensionne l'overlay AFFICHÉ au format formulaire de SCORE (fenêtre plus
+  /// grande, non draggable — mêmes contraintes que la saisie de code).
+  Future<void> resizeToScoreEntry();
 
   /// Repositionne l'overlay en haut de l'écran (centré horizontalement) —
   /// utilisé à l'ouverture de la saisie pour que le clavier ne recouvre pas
@@ -617,6 +688,17 @@ class _DefaultOverlayPlatform implements OverlayPlatform {
   }
 
   @override
+  Future<void> resizeToScoreEntry() async {
+    final dpr = PlatformDispatcher.instance.views.first.devicePixelRatio;
+    // Un peu plus haut que la saisie de code : 2 champs + pénaltys + Valider.
+    await FlutterOverlayWindow.resizeOverlay(
+      (360 * dpr).round(),
+      (240 * dpr).round(),
+      false,
+    );
+  }
+
+  @override
   Future<void> moveToTop() async {
     final view = PlatformDispatcher.instance.views.first;
     final dpr = view.devicePixelRatio;
@@ -648,4 +730,13 @@ final recordingOverlayControllerProvider =
   final controller = RecordingOverlayController();
   ref.onDispose(controller.dispose);
   return controller;
+});
+
+/// Émet chaque score saisi depuis le mini-formulaire du bouton flottant
+/// (`submit_score`). `MatchRecordingLifecycle` s'y abonne pour mapper
+/// mon/adverse → score1/score2 (+ pénaltys), soumettre le score et sceller
+/// la vidéo (arrêt de capture → export + commit anti-triche).
+final overlayScoreSubmissionsProvider = StreamProvider<OverlayScore>((ref) {
+  final controller = ref.watch(recordingOverlayControllerProvider);
+  return controller.scoreSubmissions;
 });

@@ -182,7 +182,12 @@ void main() {
   // 2603 → 2606 le 2026-07-21 : +3 `ArenaColors.*` de la fiabilisation vidéo
   // (page plein écran void_ + bouton « Ouvrir dans YouTube » signalBlue + bouton
   // vidéo du dialogue signalBlue). check_colors.sh --strict = 0 (aucun vrai Colors.*).
-  const colorsDotBaseline = 2606; // occurrences de `Colors.`
+  // 2606 → 2623 le 2026-07-21 : +17 `ArenaColors.*` du mini-formulaire de score
+  // du bouton flottant anti-triche (ScoreEntryField : champs bone/void_, séparateur
+  // et libellés bone, case pénaltys signalBlue, erreurs danger, boutons
+  // Valider/Annuler signalBlue/bone dans recording_overlay.dart).
+  // check_colors.sh --strict = 0 (aucun vrai Colors.* — isolate overlay sans thème).
+  const colorsDotBaseline = 2623; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.

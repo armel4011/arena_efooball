@@ -512,6 +512,23 @@ class _RecordingOverlayButtonState extends State<RecordingOverlayButton> {
     // Saisie du code inline (le HOME envoie son code depuis le bouton rouge).
     // L'overlay a été agrandi côté main (resizeToCodeEntry) ; on rend la même
     // carte que le panneau, avec le chrono en tête.
+    if (_tick.isScoreEntry) {
+      return ScoreEntryField(
+        allowPenalties: _tick.allowPenalties,
+        timerLabel: _tick.formatted,
+        onFocusChange: widget.onFieldFocusChange,
+        onClose: () => sendToMain(RecordingOverlayMessages.askExitScoreType),
+        onSubmit: (my, opp, viaPen, myPen, oppPen) => sendToMain(
+          RecordingOverlayMessages.submitScore(
+            my: my,
+            opp: opp,
+            viaPenalties: viaPen,
+            myPen: myPen,
+            oppPen: oppPen,
+          ),
+        ),
+      );
+    }
     if (_tick.isCodeEntry) {
       return RoomCodeField(
         onSubmit: widget.onSubmitCode,
@@ -574,14 +591,19 @@ class _RecordingOverlayButtonState extends State<RecordingOverlayButton> {
             color: ArenaColors.signalBlue,
             onTap: () => _onMiniTap(RecordingOverlayMessages.focusMainType),
           ),
-          // S stop — natif : « enregistrer & arrêter » (icône save) ; simple
-          // (LiveKit) : « arrêter » (icône stop). Même message askSaveStop.
+          // S — natif : « Score » → ouvre le formulaire (score = fin du match :
+          // le main arrête + scelle la preuve + envoie le score). Simple
+          // (LiveKit egress) : « arrêter » (askSaveStop, pas de saisie de score).
           _MiniButton(
             visible: _expanded,
             offset: const Offset(0, _miniRadius),
-            icon: _tick.isSimple ? Icons.stop : Icons.save_alt,
+            icon: _tick.isSimple ? Icons.stop : Icons.scoreboard_outlined,
             color: _tick.isSimple ? ArenaColors.danger : ArenaColors.success,
-            onTap: () => _onMiniTap(RecordingOverlayMessages.askSaveStopType),
+            onTap: () => _onMiniTap(
+              _tick.isSimple
+                  ? RecordingOverlayMessages.askSaveStopType
+                  : RecordingOverlayMessages.askEnterScoreType,
+            ),
           ),
           // W forfait — natif uniquement. Masqué en mode simple.
           _MiniButton(
@@ -719,6 +741,295 @@ class _RoomCodeKey extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Formulaire de SCORE inline dans le bouton flottant (natif) : mon score /
+/// score adversaire + tirs au but optionnels (KO, si égalité). À la validation,
+/// le main arrête + scelle la vidéo (preuve) puis appelle `submitScore`.
+/// Couleurs = `ArenaColors` (l'isolate overlay n'a ni GoogleFonts ni ArenaText —
+/// on garde des `TextStyle` natifs minimaux, cf. le chrono).
+class ScoreEntryField extends StatefulWidget {
+  const ScoreEntryField({
+    required this.onSubmit,
+    required this.onFocusChange,
+    required this.onClose,
+    required this.allowPenalties,
+    required this.timerLabel,
+    super.key,
+  });
+
+  // ignore: avoid_positional_boolean_parameters
+  final void Function(int my, int opp, bool viaPen, int? myPen, int? oppPen)
+      onSubmit;
+
+  // ignore: avoid_positional_boolean_parameters
+  final Future<void> Function(bool hasFocus) onFocusChange;
+  final VoidCallback onClose;
+  final bool allowPenalties;
+  final String timerLabel;
+
+  @override
+  State<ScoreEntryField> createState() => _ScoreEntryFieldState();
+}
+
+class _ScoreEntryFieldState extends State<ScoreEntryField> {
+  final _my = TextEditingController();
+  final _opp = TextEditingController();
+  final _myPen = TextEditingController();
+  final _oppPen = TextEditingController();
+  bool _viaPen = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _my.dispose();
+    _opp.dispose();
+    _myPen.dispose();
+    _oppPen.dispose();
+    super.dispose();
+  }
+
+  bool get _isTie {
+    final m = int.tryParse(_my.text.trim());
+    final o = int.tryParse(_opp.text.trim());
+    return m != null && o != null && m == o;
+  }
+
+  void _submit() {
+    final my = int.tryParse(_my.text.trim());
+    final opp = int.tryParse(_opp.text.trim());
+    if (my == null || opp == null || my < 0 || my > 99 || opp < 0 || opp > 99) {
+      setState(() => _error = 'Score invalide (0 à 99).');
+      return;
+    }
+    int? myPen;
+    int? oppPen;
+    if (_viaPen) {
+      if (my != opp) {
+        setState(() => _error = 'Tirs au but : le score doit être à égalité.');
+        return;
+      }
+      myPen = int.tryParse(_myPen.text.trim());
+      oppPen = int.tryParse(_oppPen.text.trim());
+      if (myPen == null ||
+          oppPen == null ||
+          myPen < 0 ||
+          oppPen < 0 ||
+          myPen > 30 ||
+          oppPen > 30) {
+        setState(() => _error = 'Tirs au but invalides (0 à 30).');
+        return;
+      }
+      if (myPen == oppPen) {
+        setState(
+          () => _error = 'Les tirs au but ne peuvent pas être à égalité.',
+        );
+        return;
+      }
+    }
+    widget.onSubmit(my, opp, _viaPen, myPen, oppPen);
+  }
+
+  Widget _numField(TextEditingController c, String label) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: ArenaColors.bone.withValues(alpha: 0.65),
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 3),
+        SizedBox(
+          width: 58,
+          child: TextField(
+            controller: c,
+            keyboardType: TextInputType.number,
+            textAlign: TextAlign.center,
+            maxLength: 2,
+            onChanged: (_) => setState(() {}),
+            style: const TextStyle(
+              color: ArenaColors.bone,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+            ),
+            decoration: InputDecoration(
+              counterText: '',
+              hintText: '0',
+              hintStyle:
+                  TextStyle(color: ArenaColors.bone.withValues(alpha: 0.2)),
+              isDense: true,
+              filled: true,
+              fillColor: ArenaColors.bone.withValues(alpha: 0.08),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final canPen = widget.allowPenalties && _isTie;
+    const sep = Padding(
+      padding: EdgeInsets.symmetric(horizontal: 10),
+      child: Text(
+        ':',
+        style: TextStyle(
+          color: ArenaColors.bone,
+          fontSize: 22,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+    return Focus(
+      onFocusChange: widget.onFocusChange,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: ArenaColors.void_.withValues(alpha: 0.92),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: ArenaColors.danger, width: 1.5),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'SCORE DU MATCH',
+                  style: TextStyle(
+                    color: ArenaColors.bone,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                Text(
+                  widget.timerLabel,
+                  style: TextStyle(
+                    color: ArenaColors.bone.withValues(alpha: 0.7),
+                    fontSize: 12,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _numField(_my, 'MOI'),
+                sep,
+                _numField(_opp, 'ADVERSAIRE'),
+              ],
+            ),
+            if (canPen) ...[
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: () => setState(() => _viaPen = !_viaPen),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _viaPen ? Icons.check_box : Icons.check_box_outline_blank,
+                      color: ArenaColors.signalBlue,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 6),
+                    const Text(
+                      'Décidé aux tirs au but',
+                      style: TextStyle(color: ArenaColors.bone, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              if (_viaPen)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _numField(_myPen, 'MES TAB'),
+                      sep,
+                      _numField(_oppPen, 'SES TAB'),
+                    ],
+                  ),
+                ),
+            ],
+            if (_error != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _error!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: ArenaColors.danger,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: _submit,
+                    child: Container(
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: ArenaColors.signalBlue,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Center(
+                        child: Text(
+                          'VALIDER',
+                          style: TextStyle(
+                            color: ArenaColors.bone,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: widget.onClose,
+                  child: Container(
+                    height: 40,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: ArenaColors.bone.withValues(alpha: 0.24),
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Center(
+                      child: Text(
+                        'Fermer',
+                        style: TextStyle(
+                          color: ArenaColors.bone.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

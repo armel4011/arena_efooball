@@ -4,6 +4,7 @@ import 'package:arena/core/services/bring_to_front.dart';
 import 'package:arena/core/services/livekit_capture_service.dart';
 import 'package:arena/core/services/livekit_token_client.dart';
 import 'package:arena/core/services/recording_overlay_controller.dart';
+import 'package:arena/features_user/recording/overlay/recording_overlay_messages.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -89,6 +90,19 @@ class _FakeOverlay implements RecordingOverlayController {
 
   @override
   Stream<String> get roomCodeSubmissions => const Stream<String>.empty();
+
+  @override
+  Stream<OverlayScore> get scoreSubmissions =>
+      const Stream<OverlayScore>.empty();
+
+  @override
+  void setAllowPenalties(bool value) {}
+
+  @override
+  Future<void> enterScoreEntry() async {}
+
+  @override
+  Future<void> exitScoreEntry() async {}
 
   @override
   bool get isShowing => false;
