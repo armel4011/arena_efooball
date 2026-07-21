@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:arena/core/utils/error_reporter.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -34,9 +35,9 @@ class NativeLifecycleEvents {
   NativeLifecycleEvents({EventChannel? channel})
       : _channel = channel ?? const EventChannel('arena/native/events') {
     _subscription = _channel.receiveBroadcastStream().listen(
-          _onNative,
-          onError: (_) {/* le canal peut être down côté CI / autres OS */},
-        );
+      _onNative,
+      onError: (_) {/* le canal peut être down côté CI / autres OS */},
+    );
   }
 
   final EventChannel _channel;
@@ -85,7 +86,44 @@ class NativeLifecycleEvents {
       case 'room_code_submitted':
         final code = raw['code'];
         if (code is String && code.isNotEmpty) _codeController.add(code);
+      case 'recorder_bitrate_drift':
+        _reportBitrateDrift(raw);
     }
+  }
+
+  /// Télémétrie prod : l'encodeur natif a produit un fichier au débit très
+  /// supérieur à la cible (encodeur matériel qui ne respecte pas le CBR, cf.
+  /// Samsung SD888). Remonté à Sentry pour repérer les MODÈLES fautifs sans
+  /// avoir à les posséder. Le natif a déjà activé le repli logiciel pour ce
+  /// modèle (`switchedToSoftware`) — c'est un signal d'observabilité, pas un
+  /// crash. Voir `ArenaRecorderService.maybeReportBitrateDrift`.
+  void _reportBitrateDrift(Map<dynamic, dynamic> raw) {
+    final model = raw['model'];
+    final actual = raw['actualKbps'];
+    final target = raw['targetKbps'];
+    final switched = raw['switchedToSoftware'] == true;
+    unawaited(
+      reportError(
+        'Recorder bitrate drift: ${actual}kbps vs target ${target}kbps '
+        'on $model',
+        StackTrace.current,
+        context: 'ArenaRecorder.bitrateDrift',
+        extra: {
+          'recorder_drift': {
+            'model': raw['model'],
+            'encoder': raw['encoder'],
+            'targetKbps': raw['targetKbps'],
+            'actualKbps': raw['actualKbps'],
+            'sizeBytes': raw['sizeBytes'],
+            'durationMs': raw['durationMs'],
+            'switchedToSoftware': switched,
+          },
+        },
+        hint: switched
+            ? 'repli encodeur logiciel activé pour les prochaines captures'
+            : 'déjà en logiciel — dérive persistante (à investiguer)',
+      ),
+    );
   }
 
   Future<void> dispose() async {

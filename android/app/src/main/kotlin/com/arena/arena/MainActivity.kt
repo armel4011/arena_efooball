@@ -234,6 +234,20 @@ class MainActivity : FlutterActivity() {
                 }
             }
         }
+
+        // Dérive de débit d'encodage détectée à l'arrêt (robustesse prod) → on
+        // remonte à Dart, qui l'envoie à Sentry (repérage des modèles fautifs).
+        ArenaRecorderService.onRecorderDrift = { info ->
+            runOnUiThread {
+                try {
+                    nativeEventSink?.success(
+                        mapOf("event" to "recorder_bitrate_drift") + info,
+                    )
+                } catch (e: Exception) {
+                    Log.w(TAG, "nativeEventSink.success (bitrate drift) failed", e)
+                }
+            }
+        }
     }
 
     override fun onDestroy() {
@@ -242,6 +256,7 @@ class MainActivity : FlutterActivity() {
         ArenaRecorderService.onProjectionDied = null
         ArenaRecorderService.onRoomCodeSubmitted = null
         ArenaRecorderService.onStopRequested = null
+        ArenaRecorderService.onRecorderDrift = null
         LivekitCaptureFgsService.onStopRequested = null
         nativeEventSink = null
         super.onDestroy()

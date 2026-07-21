@@ -112,6 +112,20 @@ class ArenaRecorderService : Service() {
         @Volatile
         var onStopRequested: (() -> Unit)? = null
 
+        // Prefs du repli encodeur : mémorise qu'un modèle a déjà DÉPASSÉ sa
+        // cible de débit avec l'encodeur matériel → on force l'encodeur logiciel
+        // aux captures suivantes (auto-réparation, persiste entre sessions).
+        private const val PREFS = "arena_recorder"
+        private const val KEY_FORCE_SW = "force_sw_encoder"
+
+        // Télémétrie : invoqué à l'arrêt quand le débit RÉEL du fichier dépasse
+        // largement la cible (encodeur qui dérive). Set par MainActivity →
+        // poussé à Dart (EventChannel) → Sentry. Rend visibles en PROD les
+        // modèles fautifs sans avoir à les posséder. Payload : model, encoder,
+        // targetKbps, actualKbps, sizeBytes, durationMs, switchedToSoftware.
+        @Volatile
+        var onRecorderDrift: ((Map<String, Any?>) -> Unit)? = null
+
         // True while the foreground service is hosting a recording.
         @Volatile
         var isActive: Boolean = false
@@ -182,6 +196,12 @@ class ArenaRecorderService : Service() {
     private var roomCode: String? = null
     // Vrai côté HOME (celui qui crée la room et ENVOIE le code).
     private var isHome: Boolean = false
+    // Cible de débit demandée (kbps×1000) + encodeur réellement utilisé +
+    // si on forçait déjà le logiciel — mémorisés au démarrage pour la
+    // détection de dérive à l'arrêt (teardown).
+    private var targetBitRate: Int = 160_000
+    private var usedEncoderName: String = ""
+    private var forcedSoftware: Boolean = false
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
@@ -349,14 +369,26 @@ class ArenaRecorderService : Service() {
         // FILET : si l'init MediaCodec échoue (CBR non supporté sur une puce
         // ancienne/bas de gamme, dimensions refusées…), on retombe sur
         // MediaRecorder — une preuve plus lourde vaut mieux qu'aucune preuve.
+        // Mémorise la cible pour la détection de dérive à l'arrêt (teardown).
+        targetBitRate = videoBitRate
+        // Repli auto : ce modèle a-t-il DÉJÀ dépassé sa cible avec l'encodeur
+        // matériel lors d'une capture précédente ? Si oui, on force le logiciel.
+        forcedSoftware = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getBoolean(KEY_FORCE_SW, false)
+
         var codecSurface: Surface? = null
         try {
             val cr = CodecScreenRecorder()
-            codecSurface = cr.start(outW, outH, videoBitRate, videoFps, outFile.absolutePath)
+            codecSurface = cr.start(
+                outW, outH, videoBitRate, videoFps, outFile.absolutePath,
+                forceSoftware = forcedSoftware,
+            )
             codecRecorder = cr
+            usedEncoderName = cr.encoderName
         } catch (e: Exception) {
             Log.w(TAG, "MediaCodec CBR init failed — fallback MediaRecorder", e)
             codecRecorder = null
+            usedEncoderName = "MediaRecorder"
         }
         val encoderSurface: Surface = codecSurface
             ?: buildMediaRecorder(outW, outH, videoBitRate, videoFps, outFile.absolutePath)
@@ -490,7 +522,59 @@ class ArenaRecorderService : Service() {
             try { path?.let { File(it).delete() } } catch (_: Exception) {}
             null
         }
+        maybeReportBitrateDrift(finalPath)
         publishOutput(finalPath)
+    }
+
+    /**
+     * DÉTECTION DE DÉRIVE DE DÉBIT (robustesse prod). Certains encodeurs
+     * matériels ne respectent pas la cible CBR (observé Samsung SD888 : ×4–9).
+     * On mesure le débit RÉEL du fichier fini et, s'il dépasse largement la
+     * cible, on (1) REMONTE une télémétrie (→ Sentry via Dart) pour repérer le
+     * modèle fautif en prod, et (2) ACTIVE le repli encodeur LOGICIEL pour les
+     * captures suivantes (auto-réparation persistante). Ne lève jamais.
+     */
+    private fun maybeReportBitrateDrift(path: String?) {
+        if (path == null) return
+        try {
+            val sizeBytes = File(path).length()
+            val durMs = System.currentTimeMillis() - recordStartMillis
+            // Trop court / vide → non significatif (overhead conteneur domine).
+            if (durMs < 3000 || sizeBytes <= 0) return
+            // bits / ms = kbits/s = kbps.
+            val actualKbps = (sizeBytes * 8 / durMs).toInt()
+            val targetKbps = targetBitRate / 1000
+            // Seuil > 2× la cible = dérive nette (le cas Samsung sortait à 4–9×).
+            // En dessous : variance normale (audio, overhead) → on ne fait rien.
+            if (actualKbps <= targetKbps * 2) return
+
+            // Auto-réparation : si on n'était pas déjà en logiciel, on l'active
+            // pour les prochaines captures de ce modèle (persistant entre runs).
+            val switched = !forcedSoftware
+            if (switched) {
+                getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+                    .putBoolean(KEY_FORCE_SW, true).apply()
+            }
+            Log.w(
+                TAG,
+                "bitrate drift: ${actualKbps}kbps vs target ${targetKbps}kbps " +
+                    "(${Build.MANUFACTURER}/${Build.MODEL}, enc=$usedEncoderName, " +
+                    "switchedToSoftware=$switched)",
+            )
+            onRecorderDrift?.invoke(
+                mapOf(
+                    "model" to "${Build.MANUFACTURER}/${Build.MODEL}",
+                    "encoder" to usedEncoderName,
+                    "targetKbps" to targetKbps,
+                    "actualKbps" to actualKbps,
+                    "sizeBytes" to sizeBytes,
+                    "durationMs" to durMs,
+                    "switchedToSoftware" to switched,
+                ),
+            )
+        } catch (_: Exception) {
+            // Télémétrie best-effort : ne jamais casser le teardown.
+        }
     }
 
     // Flags PendingIntent : FLAG_IMMUTABLE est OBLIGATOIRE sur Android 12+ (S)
