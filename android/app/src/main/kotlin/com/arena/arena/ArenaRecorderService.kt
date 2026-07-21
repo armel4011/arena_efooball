@@ -328,7 +328,8 @@ class ArenaRecorderService : Service() {
         val scale = targetShort.toDouble() / shorter
         val outW = ((realW * scale).toInt()) and -16
         val outH = ((realH * scale).toInt()) and -16
-        Log.d(
+        // Log.i (PAS Log.d : strippé en release par proguard-android-optimize).
+        Log.i(
             TAG,
             "recording at ${outW}x${outH} @ ${videoBitRate / 1000}kbps/${videoFps}fps " +
                 "(screen ${realW}x${realH} @ ${density}dpi, " +
@@ -359,7 +360,7 @@ class ArenaRecorderService : Service() {
         }
         val encoderSurface: Surface = codecSurface
             ?: buildMediaRecorder(outW, outH, videoBitRate, videoFps, outFile.absolutePath)
-        Log.d(TAG, "encoder = ${if (codecSurface != null) "MediaCodec" else "MediaRecorder (fallback)"}")
+        Log.i(TAG, "encoder = ${if (codecSurface != null) "MediaCodec" else "MediaRecorder (fallback)"}")
 
         // Le VirtualDisplay doit rendre AUX dimensions réellement configurées par
         // l'encodeur : CodecScreenRecorder a pu ajuster outW/outH aux contraintes
