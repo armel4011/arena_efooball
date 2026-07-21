@@ -91,12 +91,17 @@ class _ArenaOverlayRootState extends State<ArenaOverlayRoot> {
         : null;
     final modeChanged = mode != null && mode != _mode;
 
-    // Pendant la saisie du code inline, un tick chrono arrive chaque seconde.
-    // Reconstruire le TextField à chaque tick lui ferait perdre focus/clavier
-    // (champ figé). On met donc à jour `_tick` SANS setState tant que la
-    // saisie reste ouverte ; on ne rebuild que si `codeEntry` (ou le mode)
-    // change réellement (ouverture / fermeture du champ).
-    if (tick != null && !modeChanged && _tick.isCodeEntry && tick.isCodeEntry) {
+    // Pendant la saisie du code OU du score, un tick chrono arrive chaque
+    // seconde. Reconstruire les TextField à chaque tick leur ferait perdre
+    // focus/clavier (champ figé, impossible d'y taper deux valeurs) — et côté
+    // score, ne jamais pouvoir poser un score à ÉGALITÉ ⇒ le volet pénaltys
+    // (qui n'apparaît qu'à égalité) ne sortait JAMAIS. On met donc à jour
+    // `_tick` SANS setState tant que la saisie reste ouverte ; on ne rebuild
+    // qu'à l'ouverture / fermeture (transition du flag ou changement de mode).
+    if (tick != null &&
+        !modeChanged &&
+        ((_tick.isCodeEntry && tick.isCodeEntry) ||
+            (_tick.isScoreEntry && tick.isScoreEntry))) {
       _tick = tick;
       return;
     }

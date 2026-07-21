@@ -230,4 +230,42 @@ void main() {
       expect(field.controller?.text, 'ABC12');
     });
   });
+
+  group('ScoreEntryField (pénaltys)', () {
+    Widget wrap({required bool allowPenalties}) => MaterialApp(
+          home: Scaffold(
+            body: ScoreEntryField(
+              allowPenalties: allowPenalties,
+              timerLabel: '00:10',
+              onSubmit: (_, __, ___, ____, _____) {},
+              onFocusChange: (_) async {},
+              onClose: () {},
+            ),
+          ),
+        );
+
+    testWidgets('KO + score à égalité → le volet tirs au but apparaît',
+        (tester) async {
+      await tester.pumpWidget(wrap(allowPenalties: true));
+      // Pas d'égalité encore → pas de volet.
+      expect(find.text('Décidé aux tirs au but'), findsNothing);
+      final fields = find.byType(TextField);
+      await tester.enterText(fields.at(0), '2');
+      await tester.enterText(fields.at(1), '2');
+      await tester.pump();
+      // Égalité 2-2 en KO → le volet pénaltys s'affiche.
+      expect(find.text('Décidé aux tirs au but'), findsOneWidget);
+    });
+
+    testWidgets(
+        'poule (allowPenalties=false) → jamais de volet, même à égalité',
+        (tester) async {
+      await tester.pumpWidget(wrap(allowPenalties: false));
+      final fields = find.byType(TextField);
+      await tester.enterText(fields.at(0), '1');
+      await tester.enterText(fields.at(1), '1');
+      await tester.pump();
+      expect(find.text('Décidé aux tirs au but'), findsNothing);
+    });
+  });
 }
