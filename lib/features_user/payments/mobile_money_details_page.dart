@@ -150,13 +150,6 @@ class _MobileMoneyDetailsPageState
                 const SizedBox(height: ArenaSpacing.lg),
                 _CrossBorderStepsCard(hasNumber: _paymentNumber.isNotEmpty),
               ],
-              // Tuto vidéo par pays — pour TOUS les pays (pas seulement le
-              // transfrontalier), affiché uniquement si l'admin a publié une
-              // vidéo pour ce pays.
-              if (tutorialPlayer != null) ...[
-                const SizedBox(height: ArenaSpacing.md),
-                _PaymentTutorialCard(player: tutorialPlayer),
-              ],
               const SizedBox(height: ArenaSpacing.lg),
               Text(
                 l10n.mobileMoneyCountryLabel,
@@ -217,6 +210,13 @@ class _MobileMoneyDetailsPageState
                     duration: ArenaDurations.medium,
                   ),
               const SizedBox(height: ArenaSpacing.xl),
+              // Tuto vidéo par pays — placé en AVANT-DERNIÈRE position (sous le
+              // champ de saisie du numéro), juste avant le bouton de
+              // confirmation. Affiché si l'admin a publié une vidéo pour ce pays.
+              if (tutorialPlayer != null) ...[
+                _PaymentTutorialCard(player: tutorialPlayer),
+                const SizedBox(height: ArenaSpacing.lg),
+              ],
               ArenaButton(
                 label: _submitting
                     ? l10n.mobileMoneySubmitSending
