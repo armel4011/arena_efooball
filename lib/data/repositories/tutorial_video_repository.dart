@@ -47,11 +47,13 @@ class TutorialVideoRepository {
     TutorialPage target, {
     String? gameWire,
     String? countryCode,
+    String? roleSide,
   }) {
     for (final v in videos) {
       if (!v.isActive || v.targetPage != target) continue;
       if (target.needsGame && v.game != gameWire) continue;
       if (target.needsCountry && v.countryCode != countryCode) continue;
+      if (target.needsRoleSide && v.roleSide != roleSide) continue;
       return v;
     }
     return null;
@@ -63,10 +65,8 @@ class TutorialVideoRepository {
   /// ouvrait son propre canal Realtime sur la même (petite) table : 4 canaux
   /// redondants → 1, ce qui allège chaque rafale de reconnexion/resume.
   Stream<List<TutorialVideo>> watchAllRaw() {
-    return _client
-        .from(_table)
-        .stream(primaryKey: ['id'])
-        .map((rows) => rows.map(TutorialVideo.fromJson).toList());
+    return _client.from(_table).stream(primaryKey: ['id']).map(
+        (rows) => rows.map(TutorialVideo.fromJson).toList(),);
   }
 
   /// Realtime stream de TOUTES les bannières (actives ou non), triées par
@@ -106,6 +106,7 @@ class TutorialVideoRepository {
     required int displayDays,
     String? game,
     String? countryCode,
+    String? roleSide,
     String? updatedBy,
   }) async {
     await _client.from(_table).insert({
@@ -116,6 +117,7 @@ class TutorialVideoRepository {
       'display_days': displayDays,
       'game': game,
       'country_code': countryCode,
+      'role_side': roleSide,
       if (updatedBy != null) 'updated_by': updatedBy,
     });
   }
@@ -132,6 +134,7 @@ class TutorialVideoRepository {
     required bool isActive,
     String? game,
     String? countryCode,
+    String? roleSide,
     String? updatedBy,
   }) async {
     await _client.from(_table).update({
@@ -142,6 +145,7 @@ class TutorialVideoRepository {
       'is_active': isActive,
       'game': game,
       'country_code': countryCode,
+      'role_side': roleSide,
       'updated_at': _now(),
       if (updatedBy != null) 'updated_by': updatedBy,
     }).eq('id', id);
@@ -182,7 +186,8 @@ class TutorialVideoRepository {
   static String _now() => DateTime.now().toUtc().toIso8601String();
 }
 
-final tutorialVideoRepositoryProvider = Provider<TutorialVideoRepository>((ref) {
+final tutorialVideoRepositoryProvider =
+    Provider<TutorialVideoRepository>((ref) {
   return TutorialVideoRepository(ref.watch(supabaseClientProvider));
 });
 
@@ -227,17 +232,21 @@ final matchLockedVideoProvider = Provider.autoDispose
 });
 
 /// Vidéo IN-APP active de l'intro de rôle (étape 1), pour un [GameType]
-/// (football uniquement). Dérivée du stream partagé.
+/// (football uniquement) ET un CÔTÉ (Domicile/Extérieur) : chaque rôle a sa
+/// propre vidéo. Dérivée du stream partagé.
 final matchRoleIntroVideoProvider = Provider.autoDispose
-    .family<AsyncValue<TutorialVideo?>, GameType>((ref, game) {
-  return ref.watch(_allTutorialBannersStreamProvider).whenData(
-        (all) => TutorialVideoRepository.activeContextualVideo(
-          all,
-          TutorialPage.matchRoleIntro,
-          gameWire: game.value,
-        ),
-      );
-});
+    .family<AsyncValue<TutorialVideo?>, ({GameType game, MatchRoleSide side})>(
+  (ref, key) {
+    return ref.watch(_allTutorialBannersStreamProvider).whenData(
+          (all) => TutorialVideoRepository.activeContextualVideo(
+            all,
+            TutorialPage.matchRoleIntro,
+            gameWire: key.game.value,
+            roleSide: key.side.wire,
+          ),
+        );
+  },
+);
 
 /// Vidéo IN-APP active du dialogue de contrôle d'installation (avant
 /// inscription), pour un [GameType] externe. Dérivée du stream partagé.
@@ -256,9 +265,11 @@ final installCheckVideoProvider = Provider.autoDispose
 /// dialogue d'inscription. Fiable même quand la souscription Realtime partagée
 /// n'a pas encore émis / n'a pas reçu un INSERT admin récent. Le dialogue est
 /// transitoire → aucune mise à jour live nécessaire.
-final installCheckVideoOnceProvider = FutureProvider.autoDispose
-    .family<TutorialVideo?, GameType>((ref, game) {
-  return ref.watch(tutorialVideoRepositoryProvider).fetchInstallCheckVideo(game);
+final installCheckVideoOnceProvider =
+    FutureProvider.autoDispose.family<TutorialVideo?, GameType>((ref, game) {
+  return ref
+      .watch(tutorialVideoRepositoryProvider)
+      .fetchInstallCheckVideo(game);
 });
 
 /// Vidéo IN-APP active du tuto paiement, pour un pays (ISO alpha-2). Dérivée

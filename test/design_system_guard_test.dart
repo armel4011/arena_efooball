@@ -187,7 +187,9 @@ void main() {
   // et libellés bone, case pénaltys signalBlue, erreurs danger, boutons
   // Valider/Annuler signalBlue/bone dans recording_overlay.dart).
   // check_colors.sh --strict = 0 (aucun vrai Colors.* — isolate overlay sans thème).
-  const colorsDotBaseline = 2623; // occurrences de `Colors.`
+  // 2623 → 2624 le 2026-07-22 : +1 `ArenaColors.*` net du sélecteur Domicile/
+  // Extérieur de l'intro de rôle (dropdown _RoleSideDropdown, admin vidéo).
+  const colorsDotBaseline = 2624; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.
