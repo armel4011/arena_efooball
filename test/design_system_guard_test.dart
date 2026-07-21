@@ -176,7 +176,10 @@ void main() {
   // 2594 → 2600 le 2026-07-19 : +6 `ArenaColors.*` du dialogue de contrôle
   // d'installation avant inscription (app_check_dialog : carbon/signalBlue/
   // silver/textMuted + _CheckLine). 0 vrai `Colors.*` (check_colors --strict = 0).
-  const colorsDotBaseline = 2600; // occurrences de `Colors.`
+  // 2600 → 2603 le 2026-07-21 : +3 `ArenaColors.*` du dialogue de contrôle
+  // d'installation passé en CLAIR (ArenaColors.paper + void_ + signalBlue×2 du
+  // bouton store contour). check_colors.sh --strict = 0 (aucun vrai Colors.*).
+  const colorsDotBaseline = 2603; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.

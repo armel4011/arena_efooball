@@ -217,6 +217,11 @@ class ArenaColors {
   static const Color text = bone;
   static const Color textMuted = silver;
   static const Color textFaint = silverDim;
+
+  /// Fond CLAIR — dérogation ponctuelle au thème sombre, réservée aux surfaces
+  /// explicitement demandées en clair (dialogue de contrôle d'installation
+  /// avant inscription). Ne pas généraliser : l'app reste sombre par défaut.
+  static const Color paper = Color(0xFFEDEEF2);
 }
 
 // ────────────────────────────────────────────────────────────────────────────
