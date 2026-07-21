@@ -267,5 +267,42 @@ void main() {
       await tester.pump();
       expect(find.text('Décidé aux tirs au but'), findsNothing);
     });
+
+    testWidgets(
+        'tirs au but égaux → Valider DÉSACTIVÉ (onSubmit non appelé), '
+        'puis réactivé si corrigés', (tester) async {
+      var submitted = false;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ScoreEntryField(
+              allowPenalties: true,
+              timerLabel: '00:10',
+              onSubmit: (_, __, ___, ____, _____) => submitted = true,
+              onFocusChange: (_) async {},
+              onClose: () {},
+            ),
+          ),
+        ),
+      );
+      await tester.enterText(find.byType(TextField).at(0), '2');
+      await tester.enterText(find.byType(TextField).at(1), '2');
+      await tester.pump();
+      await tester.tap(find.text('Décidé aux tirs au but'));
+      await tester.pump();
+      // TAB égaux → invalide → Valider ignoré.
+      await tester.enterText(find.byType(TextField).at(2), '3');
+      await tester.enterText(find.byType(TextField).at(3), '3');
+      await tester.pump();
+      await tester.tap(find.text('VALIDER'));
+      await tester.pump();
+      expect(submitted, isFalse);
+      // Corrigés → Valider actif.
+      await tester.enterText(find.byType(TextField).at(3), '4');
+      await tester.pump();
+      await tester.tap(find.text('VALIDER'));
+      await tester.pump();
+      expect(submitted, isTrue);
+    });
   });
 }

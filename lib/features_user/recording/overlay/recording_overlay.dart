@@ -765,7 +765,6 @@ class _ScoreEntryFieldState extends State<ScoreEntryField> {
   final _myPen = TextEditingController();
   final _oppPen = TextEditingController();
   bool _viaPen = false;
-  String? _error;
 
   @override
   void dispose() {
@@ -782,38 +781,33 @@ class _ScoreEntryFieldState extends State<ScoreEntryField> {
     return m != null && o != null && m == o;
   }
 
-  void _submit() {
+  /// Formulaire valide ? On DÉSACTIVE Valider quand ça ne l'est pas (au lieu
+  /// d'un message d'erreur qui agrandirait la carte). Règles : scores 0–99 ;
+  /// si tirs au but → score à égalité, TAB 0–30 et TAB NON égaux.
+  bool get _isValid {
     final my = int.tryParse(_my.text.trim());
     final opp = int.tryParse(_opp.text.trim());
     if (my == null || opp == null || my < 0 || my > 99 || opp < 0 || opp > 99) {
-      setState(() => _error = 'Score invalide (0 à 99).');
-      return;
+      return false;
     }
-    int? myPen;
-    int? oppPen;
     if (_viaPen) {
-      if (my != opp) {
-        setState(() => _error = 'Tirs au but : le score doit être à égalité.');
-        return;
+      if (my != opp) return false;
+      final pm = int.tryParse(_myPen.text.trim());
+      final po = int.tryParse(_oppPen.text.trim());
+      if (pm == null || po == null || pm < 0 || pm > 30 || po < 0 || po > 30) {
+        return false;
       }
-      myPen = int.tryParse(_myPen.text.trim());
-      oppPen = int.tryParse(_oppPen.text.trim());
-      if (myPen == null ||
-          oppPen == null ||
-          myPen < 0 ||
-          oppPen < 0 ||
-          myPen > 30 ||
-          oppPen > 30) {
-        setState(() => _error = 'Tirs au but invalides (0 à 30).');
-        return;
-      }
-      if (myPen == oppPen) {
-        setState(
-          () => _error = 'Les tirs au but ne peuvent pas être à égalité.',
-        );
-        return;
-      }
+      if (pm == po) return false; // pas de tirs au but à égalité
     }
+    return true;
+  }
+
+  void _submit() {
+    if (!_isValid) return; // Valider est déjà désactivé, garde-fou.
+    final my = int.parse(_my.text.trim());
+    final opp = int.parse(_opp.text.trim());
+    final myPen = _viaPen ? int.parse(_myPen.text.trim()) : null;
+    final oppPen = _viaPen ? int.parse(_oppPen.text.trim()) : null;
     widget.onSubmit(my, opp, _viaPen, myPen, oppPen);
   }
 
@@ -964,35 +958,30 @@ class _ScoreEntryFieldState extends State<ScoreEntryField> {
                     ),
                   ),
               ],
-              if (_error != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  _error!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: ArenaColors.danger,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
               const SizedBox(height: 8),
               Row(
                 children: [
                   Expanded(
+                    // Valider DÉSACTIVÉ tant que le formulaire est invalide (ex.
+                    // tirs au but à égalité) : grisé + tap ignoré. Pas de message
+                    // d'erreur (il agrandirait la carte). Cf. `_isValid`.
                     child: GestureDetector(
-                      onTap: _submit,
+                      onTap: _isValid ? _submit : null,
                       child: Container(
                         height: 36,
                         decoration: BoxDecoration(
-                          color: ArenaColors.signalBlue,
+                          color: _isValid
+                              ? ArenaColors.signalBlue
+                              : ArenaColors.signalBlue.withValues(alpha: 0.35),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Center(
+                        child: Center(
                           child: Text(
                             'VALIDER',
                             style: TextStyle(
-                              color: ArenaColors.bone,
+                              color: ArenaColors.bone.withValues(
+                                alpha: _isValid ? 1 : 0.5,
+                              ),
                               fontWeight: FontWeight.w800,
                             ),
                           ),
