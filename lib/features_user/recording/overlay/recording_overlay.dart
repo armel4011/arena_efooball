@@ -477,11 +477,18 @@ class _RecordingOverlayButtonState extends State<RecordingOverlayButton> {
   static const double _miniRadius = 64;
 
   bool _expanded = false;
+  // Côté AWAY : affichage on/off de la pastille du code reçu, piloté par le
+  // mini-bouton clé (symétrique du bouton clé d'ENVOI côté HOME).
+  bool _showAwayCode = false;
 
   OverlayTick get _tick => widget.tick;
 
   void _onMainTap() {
-    setState(() => _expanded = !_expanded);
+    setState(() {
+      _expanded = !_expanded;
+      // On referme aussi la pastille code en repliant le menu.
+      if (!_expanded) _showAwayCode = false;
+    });
   }
 
   Future<void> _onMiniTap(String message) async {
@@ -531,6 +538,17 @@ class _RecordingOverlayButtonState extends State<RecordingOverlayButton> {
             icon: Icons.vpn_key,
             color: ArenaColors.gameEfoot,
             onTap: () => _onMiniTap(RecordingOverlayMessages.askEnterCodeType),
+          ),
+          // SW « afficher le code » — côté AWAY : mini-bouton clé IDENTIQUE à
+          // celui du HOME (même position, même icône), mais son tap AFFICHE /
+          // masque la pastille du code REÇU (ci-dessous) au lieu d'ouvrir une
+          // saisie. Toggle LOCAL : ne ferme pas le menu, n'envoie rien au main.
+          _MiniButton(
+            visible: _expanded && !_tick.isSimple && _tick.roomCode != null,
+            offset: const Offset(-_miniRadius * 0.707, _miniRadius * 0.707),
+            icon: Icons.vpn_key,
+            color: ArenaColors.gameEfoot,
+            onTap: () => setState(() => _showAwayCode = !_showAwayCode),
           ),
           // 4 cardinals — N pause / E focus / S save+stop / W forfeit.
           // IgnorePointer + opacity 0 while collapsed so they don't eat
@@ -642,6 +660,9 @@ class _RecordingOverlayButtonState extends State<RecordingOverlayButton> {
           // depuis l'overlay (MIUI) → lecture + saisie manuelle. Se met à jour
           // si l'hôte change le code (le main repropage `roomCode` dans chaque
           // tick).
+          // La pastille du code reçu ne s'affiche QUE lorsque le joueur a tapé
+          // le mini-bouton clé AWAY (`_showAwayCode`), symétrique du HOME qui
+          // tape la clé pour OUVRIR la saisie.
           if (_tick.roomCode != null)
             Positioned(
               bottom: 0,
@@ -650,7 +671,7 @@ class _RecordingOverlayButtonState extends State<RecordingOverlayButton> {
               child: IgnorePointer(
                 child: AnimatedOpacity(
                   duration: const Duration(milliseconds: 160),
-                  opacity: _expanded ? 1 : 0,
+                  opacity: (_expanded && _showAwayCode) ? 1 : 0,
                   child: Center(child: _RoomCodeKey(code: _tick.roomCode!)),
                 ),
               ),
