@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:arena/core/services/agora_streaming_service.dart';
 import 'package:arena/core/services/anticheat/anticheat_config_service.dart';
 import 'package:arena/core/services/anticheat/anticheat_provider.dart';
-import 'package:arena/core/services/bring_to_front.dart';
 import 'package:arena/core/services/livekit_capture_service.dart';
 import 'package:arena/core/services/match_recording_coordinator.dart';
 import 'package:arena/core/services/native_lifecycle_events.dart';
@@ -460,6 +459,12 @@ class _MatchRecordingLifecycleState
     // Score enregistré → sceller la preuve. `stopCleanly()` fait basculer le
     // coordinator en CoordinatorStopped, ce que le listener racine capte pour
     // exporter le MP4 + engager le hash anti-triche.
+    //
+    // On NE ramène PLUS ARENA au premier plan ici : eFootball est devant et
+    // Android a tué l'activité d'ARENA en arrière-plan → `bringArenaToFront`
+    // la RECRÉAIT à froid (« redémarrage » / parfois arrêt brutal). Le score et
+    // la vidéo sont déjà sauvegardés (awaités ci-dessus) ; l'utilisateur rouvre
+    // ARENA quand il veut et y voit le résultat, sans redémarrage forcé.
     final coord = ref.read(matchRecordingCoordinatorProvider);
     if (coord.state is CoordinatorRecording ||
         coord.state is CoordinatorPaused) {
@@ -469,10 +474,6 @@ class _MatchRecordingLifecycleState
         debugPrint('[recording] score stopCleanly failed: $e');
       }
     }
-    // Ramène ARENA au premier plan pour montrer l'écran de résultat.
-    try {
-      await ref.read(bringToFrontProvider).bringArenaToFront();
-    } catch (_) {}
   }
 
   /// Démarre Agora en broadcaster après que l'overlay a demandé "Live".
