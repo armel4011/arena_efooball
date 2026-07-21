@@ -47,13 +47,18 @@ class _AppCheckDialog extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // One-shot REST (pas le stream Realtime partagé) : le dialogue est
+    // transitoire et doit afficher la vidéo de façon fiable, même si la
+    // souscription Realtime n'a pas encore émis / reçu un INSERT admin récent.
     final videoUrl =
-        ref.watch(installCheckVideoProvider(game)).valueOrNull?.videoUrl;
+        ref.watch(installCheckVideoOnceProvider(game)).valueOrNull?.videoUrl;
     final player = ArenaYoutubePlayer.maybe(videoUrl);
     final hasStore = gameStoreUrl(game) != null;
 
     return Dialog(
-      backgroundColor: ArenaColors.carbon,
+      // Dialogue volontairement en CLAIR (demande produit) — dérogation au
+      // thème sombre de l'app, avec des couleurs lisibles sur fond gris clair.
+      backgroundColor: ArenaColors.paper,
       insetPadding: const EdgeInsets.symmetric(
         horizontal: ArenaSpacing.md,
         vertical: ArenaSpacing.xl,
@@ -79,7 +84,10 @@ class _AppCheckDialog extends ConsumerWidget {
                   Expanded(
                     child: Text(
                       "Avant de t'inscrire",
-                      style: ArenaText.h3.copyWith(fontWeight: FontWeight.w800),
+                      style: ArenaText.h3.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: ArenaColors.void_,
+                      ),
                     ),
                   ),
                 ],
@@ -88,7 +96,7 @@ class _AppCheckDialog extends ConsumerWidget {
               Text(
                 '${game.label} se joue sur une application externe. Avant de '
                 "t'inscrire, vérifie que :",
-                style: ArenaText.body.copyWith(color: ArenaColors.silver),
+                style: ArenaText.body.copyWith(color: ArenaColors.silverDim),
               ),
               const SizedBox(height: ArenaSpacing.sm),
               const _CheckLine(
@@ -104,7 +112,7 @@ class _AppCheckDialog extends ConsumerWidget {
                 Text(
                   'Guide vidéo',
                   style: ArenaText.small.copyWith(
-                    color: ArenaColors.textMuted,
+                    color: ArenaColors.silverDim,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -113,12 +121,25 @@ class _AppCheckDialog extends ConsumerWidget {
               ],
               if (hasStore) ...[
                 const SizedBox(height: ArenaSpacing.md),
-                ArenaButton(
-                  label: 'Ouvrir le store',
-                  variant: ArenaButtonVariant.secondary,
-                  icon: Icons.storefront_outlined,
-                  fullWidth: true,
-                  onPressed: () => _openStore(context),
+                // Bouton contour bleu — lisible sur fond clair (le variant
+                // `secondary` d'ArenaButton a un texte clair invisible ici).
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _openStore(context),
+                    icon: const Icon(Icons.storefront_outlined, size: 18),
+                    label: const Text('Ouvrir le store'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: ArenaColors.signalBlue,
+                      side: const BorderSide(color: ArenaColors.signalBlue),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: ArenaSpacing.md,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(ArenaRadius.md),
+                      ),
+                    ),
+                  ),
                 ),
               ],
               const SizedBox(height: ArenaSpacing.md),
@@ -174,7 +195,7 @@ class _CheckLine extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: ArenaText.small.copyWith(color: ArenaColors.silver),
+              style: ArenaText.small.copyWith(color: ArenaColors.silverDim),
             ),
           ),
         ],

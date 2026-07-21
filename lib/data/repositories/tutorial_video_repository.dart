@@ -79,6 +79,22 @@ class TutorialVideoRepository {
         .map((rows) => rows.map(TutorialVideo.fromJson).toList());
   }
 
+  /// Récupération ONE-SHOT (REST, sans Realtime) de la vidéo `install_check`
+  /// active d'un jeu. Le dialogue de contrôle d'installation est transitoire :
+  /// il ne doit PAS dépendre de l'état de la souscription Realtime partagée
+  /// (souvent en (re)connexion à l'ouverture, ou n'ayant pas reçu un INSERT
+  /// admin récent) — sinon la vidéo « n'apparaît pas » alors qu'elle existe.
+  Future<TutorialVideo?> fetchInstallCheckVideo(GameType game) async {
+    final rows = await _client
+        .from(_table)
+        .select()
+        .eq('target_page', TutorialPage.installCheck.wire)
+        .eq('game', game.value)
+        .eq('is_active', true)
+        .limit(1);
+    return rows.isEmpty ? null : TutorialVideo.fromJson(rows.first);
+  }
+
   /// Crée une nouvelle bannière / vidéo contextuelle active. [game] (valeur
   /// fil) et [countryCode] sont les discriminants des cibles contextuelles ;
   /// on écrit toujours les deux (NULL compris) pour respecter le CHECK de
@@ -234,6 +250,15 @@ final installCheckVideoProvider = Provider.autoDispose
           gameWire: game.value,
         ),
       );
+});
+
+/// Variante ONE-SHOT (REST) de [installCheckVideoProvider], utilisée par le
+/// dialogue d'inscription. Fiable même quand la souscription Realtime partagée
+/// n'a pas encore émis / n'a pas reçu un INSERT admin récent. Le dialogue est
+/// transitoire → aucune mise à jour live nécessaire.
+final installCheckVideoOnceProvider = FutureProvider.autoDispose
+    .family<TutorialVideo?, GameType>((ref, game) {
+  return ref.watch(tutorialVideoRepositoryProvider).fetchInstallCheckVideo(game);
 });
 
 /// Vidéo IN-APP active du tuto paiement, pour un pays (ISO alpha-2). Dérivée

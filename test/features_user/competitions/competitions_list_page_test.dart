@@ -1,6 +1,5 @@
 import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
-import 'package:arena/data/models/tutorial_video.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
 import 'package:arena/data/repositories/tutorial_video_repository.dart';
 import 'package:arena/features_user/competitions/competitions_list_page.dart';
@@ -35,8 +34,7 @@ Widget _scoped(List<Competition> items) => ProviderScope(
             .overrideWith((ref, _) => Stream<List<Competition>>.value(items)),
         // Pas de vidéo install_check → le dialogue de contrôle s'affiche sans
         // WebView (non instanciable en test).
-        installCheckVideoProvider
-            .overrideWith((ref, game) => const AsyncData<TutorialVideo?>(null)),
+        installCheckVideoOnceProvider.overrideWith((ref, game) => null),
       ],
       child: const MaterialApp(
         locale: Locale('fr'),
