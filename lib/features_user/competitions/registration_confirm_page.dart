@@ -1,6 +1,7 @@
 import 'package:arena/core/router/user_router.dart';
 import 'package:arena/core/services/sync_queue_service.dart';
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/models/competition_payment_option.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
 import 'package:arena/data/repositories/referral_repository.dart';
@@ -10,6 +11,7 @@ import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_divider.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
+import 'package:arena/features_user/competitions/app_check_dialog.dart';
 import 'package:arena/features_user/competitions/widgets/country_pick_dialog.dart';
 import 'package:arena/features_user/competitions/widgets/referral_progress_card.dart';
 import 'package:arena/features_user/payments/payment_method.dart';
@@ -56,6 +58,7 @@ class RegistrationConfirmPage extends ConsumerStatefulWidget {
     required this.entryFeeXaf,
     required this.totalPrizeXaf,
     required this.prizeDistribution,
+    this.game,
     this.androidStoreUrl,
     this.iosStoreUrl,
     super.key,
@@ -63,6 +66,10 @@ class RegistrationConfirmPage extends ConsumerStatefulWidget {
 
   final String competitionId;
   final String competitionName;
+
+  /// Jeu de la compétition — pour le dialogue de contrôle d'installation
+  /// (jeux externes) affiché AU-DESSUS de ce checkout. `null` = pas de contrôle.
+  final GameType? game;
   final String gameLabel;
   final String gameEmoji;
   final String dateLabel;
@@ -86,6 +93,22 @@ class _RegistrationConfirmPageState
     extends ConsumerState<RegistrationConfirmPage> {
   bool _ack = false;
   bool _submitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Le dialogue de contrôle d'installation (jeux externes) s'affiche
+    // AU-DESSUS du checkout : on l'ouvre au premier frame. Annuler → on quitte
+    // le checkout (retour arrière) ; Continuer → il se referme, on reste.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowAppCheck());
+  }
+
+  Future<void> _maybeShowAppCheck() async {
+    final game = widget.game;
+    if (game == null || !game.isExternal || !mounted) return;
+    final ok = await showAppCheckDialog(context, game: game);
+    if (!ok && mounted) await Navigator.of(context).maybePop();
+  }
 
   bool get _isFree => widget.entryFeeXaf == 0;
 

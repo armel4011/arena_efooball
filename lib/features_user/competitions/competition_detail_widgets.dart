@@ -223,21 +223,13 @@ class _GatedDetailView extends ConsumerWidget {
                   ? ArenaButtonVariant.primary
                   : ArenaButtonVariant.secondary,
               fullWidth: true,
+              // Le contrôle d'installation (jeux externes) est désormais
+              // affiché AU-DESSUS du checkout (RegistrationConfirmPage), pas ici.
               onPressed: canRegister
-                  ? () async {
-                      // Jeux EXTERNES : contrôle d'installation obligatoire
-                      // avant l'inscription (app à jour/uniforme + installable).
-                      // Les Dames sont in-app → pas de contrôle.
-                      if (c.game.isExternal) {
-                        final ok =
-                            await showAppCheckDialog(context, game: c.game);
-                        if (!ok || !context.mounted) return;
-                      }
-                      await context.push(
+                  ? () => context.push(
                         UserRoutes.registrationConfirmPath(c.id),
                         extra: _confirmArgsFor(c, l10n),
-                      );
-                    }
+                      )
                   : null,
             ),
           ),
@@ -254,6 +246,7 @@ class _GatedDetailView extends ConsumerWidget {
         DateFormat('d MMM yyyy · HH:mm', 'fr').format(c.startDate.toLocal());
     return RegistrationConfirmArgs(
       competitionName: c.name,
+      game: c.game,
       gameLabel: c.game.label,
       gameEmoji: _gameEmoji(c.game),
       dateLabel: dateLabel,

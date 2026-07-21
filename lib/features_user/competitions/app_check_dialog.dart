@@ -128,7 +128,7 @@ class _AppCheckDialog extends ConsumerWidget {
                   child: OutlinedButton.icon(
                     onPressed: () => _openStore(context),
                     icon: const Icon(Icons.storefront_outlined, size: 18),
-                    label: const Text('Ouvrir le store'),
+                    label: const Text("Vérification dans l'App Store"),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: ArenaColors.signalBlue,
                       side: const BorderSide(color: ArenaColors.signalBlue),
