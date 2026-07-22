@@ -189,7 +189,10 @@ void main() {
   // check_colors.sh --strict = 0 (aucun vrai Colors.* — isolate overlay sans thème).
   // 2623 → 2624 le 2026-07-22 : +1 `ArenaColors.*` net du sélecteur Domicile/
   // Extérieur de l'intro de rôle (dropdown _RoleSideDropdown, admin vidéo).
-  const colorsDotBaseline = 2624; // occurrences de `Colors.`
+  // 2624 → 2629 le 2026-07-22 : +5 `ArenaColors.*` de l'écran de réveil du rappel
+  // de match (MatchAlarmScreen : fond void_, icône/bouton signalBlue, titre bone,
+  // sous-titre/Ignorer silver).
+  const colorsDotBaseline = 2629; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.
