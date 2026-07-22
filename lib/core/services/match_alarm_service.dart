@@ -38,6 +38,16 @@ class MatchAlarmService {
     sound: UriAndroidNotificationSound('content://settings/system/alarm_alert'),
   );
 
+  /// Scopes de `call_invite` qui sont en réalité des RÉVEILS de match (pas des
+  /// appels personne-à-personne) : le rappel T-5 min (`match_reminder`) ET
+  /// l'ouverture de la salle de match (`match_activated`, « Ta salle de match
+  /// est ouverte »). Tous deux présentés en ALARME plein écran, jamais en
+  /// écran d'appel CallKit.
+  static const alarmScopes = {'match_reminder', 'match_activated'};
+
+  /// `true` si [scope] désigne un réveil de match (→ alarme, pas appel).
+  static bool isAlarmScope(String? scope) => alarmScopes.contains(scope);
+
   /// Route de l'écran d'alarme Flutter pour un match donné.
   static String routeFor(String matchId) => '/match-alarm/$matchId';
 

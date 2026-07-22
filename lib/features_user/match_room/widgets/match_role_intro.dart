@@ -157,11 +157,14 @@ class _MatchRoleIntroDialogState extends ConsumerState<_MatchRoleIntroDialog> {
     // Vidéo DIFFÉRENTE selon le côté : Domicile (envoie le code) vs Extérieur
     // (le reçoit). L'admin publie une vidéo par côté.
     final side = isHome ? MatchRoleSide.home : MatchRoleSide.away;
-    final video = ref
+    final videoUrl = ref
         .watch(matchRoleIntroVideoProvider((game: game, side: side)))
-        .valueOrNull;
-    final player =
-        video == null ? null : ArenaYoutubePlayer.maybe(video.videoUrl);
+        .valueOrNull
+        ?.videoUrl;
+    // Comme le dialogue de contrôle avant inscription : PAS de lecteur inline
+    // (une WebView en overlay reste noire par intermittence). On propose un
+    // bouton qui ouvre la vidéo en PLEIN ÉCRAN (page dédiée).
+    final hasVideo = ArenaYoutubePlayer.maybe(videoUrl) != null;
 
     return PopScope(
       // Le back matériel ne doit PAS contourner la confirmation.
@@ -184,9 +187,26 @@ class _MatchRoleIntroDialogState extends ConsumerState<_MatchRoleIntroDialog> {
                       ? l10n.roleIntroHomeBody(game.label)
                       : l10n.roleIntroAwayBody(game.label),
                 ),
-                if (player != null) ...[
-                  const SizedBox(height: ArenaSpacing.lg),
-                  player,
+                if (hasVideo) ...[
+                  const SizedBox(height: ArenaSpacing.md),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => openFullscreenYoutube(context, videoUrl),
+                      icon: const Icon(Icons.play_circle_outline, size: 20),
+                      label: const Text('Regarder le guide vidéo'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: ArenaColors.signalBlue,
+                        side: const BorderSide(color: ArenaColors.signalBlue),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: ArenaSpacing.md,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(ArenaRadius.md),
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
                 const SizedBox(height: ArenaSpacing.md),
                 // Case de confirmation OBLIGATOIRE : déverrouille « J'ai compris ».
@@ -198,6 +218,13 @@ class _MatchRoleIntroDialogState extends ConsumerState<_MatchRoleIntroDialog> {
                       Checkbox(
                         value: _confirmed,
                         activeColor: ArenaColors.signalBlue,
+                        // Coche blanche + bordure sombre : sans ça, la case vide
+                        // est invisible sur le fond blanc du dialogue.
+                        checkColor: ArenaColors.bone,
+                        side: const BorderSide(
+                          color: ArenaColors.silverDim,
+                          width: 2,
+                        ),
                         onChanged: (v) =>
                             setState(() => _confirmed = v ?? false),
                       ),
