@@ -197,7 +197,9 @@ void main() {
   // désactivé silverDim dans match_role_intro.dart).
   // 2632 → 2634 le 2026-07-22 : +2 `ArenaColors.*` du rendu par étapes de l'intro
   // de rôle (avertissement danger + description silver dans _bodyLines).
-  const colorsDotBaseline = 2634; // occurrences de `Colors.`
+  // 2634 → 2637 le 2026-07-22 : +3 `ArenaColors.carbon` (couleurs de texte sombres
+  // pour le dialogue d'intro de rôle passé en fond BLANC : titre + libellés étape).
+  const colorsDotBaseline = 2637; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.

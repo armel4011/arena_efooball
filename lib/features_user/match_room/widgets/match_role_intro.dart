@@ -120,25 +120,28 @@ class _MatchRoleIntroDialogState extends ConsumerState<_MatchRoleIntroDialog> {
                   // Libellé « Étape N » au style du titre.
                   TextSpan(
                     text: line.substring(0, sep).trim(),
-                    style: ArenaText.h3,
+                    style: ArenaText.h3.copyWith(color: ArenaColors.carbon),
                   ),
                   TextSpan(
                     text: ' : ${line.substring(sep + 1).trim()}',
-                    style: ArenaText.body.copyWith(color: ArenaColors.silver),
+                    style:
+                        ArenaText.body.copyWith(color: ArenaColors.silverDim),
                   ),
                 ],
               ),
             ),
           );
         } else {
-          widgets.add(Text(line, style: ArenaText.h3));
+          widgets.add(
+            Text(line, style: ArenaText.h3.copyWith(color: ArenaColors.carbon)),
+          );
         }
       } else {
         // Paragraphe d'intro + ligne « NB : … ».
         widgets.add(
           Text(
             line,
-            style: ArenaText.body.copyWith(color: ArenaColors.silver),
+            style: ArenaText.body.copyWith(color: ArenaColors.carbon),
           ),
         );
       }
@@ -164,10 +167,10 @@ class _MatchRoleIntroDialogState extends ConsumerState<_MatchRoleIntroDialog> {
       // Le back matériel ne doit PAS contourner la confirmation.
       canPop: false,
       child: AlertDialog(
-        backgroundColor: ArenaColors.carbon,
+        backgroundColor: ArenaColors.bone,
         title: Text(
           isHome ? l10n.roleIntroHomeTitle : l10n.roleIntroAwayTitle,
-          style: ArenaText.h3,
+          style: ArenaText.h3.copyWith(color: ArenaColors.carbon),
         ),
         content: SizedBox(
           width: double.maxFinite,
@@ -205,7 +208,7 @@ class _MatchRoleIntroDialogState extends ConsumerState<_MatchRoleIntroDialog> {
                           child: Text(
                             l10n.roleIntroConfirmLaunched(game.label),
                             style: ArenaText.body
-                                .copyWith(color: ArenaColors.bone),
+                                .copyWith(color: ArenaColors.carbon),
                           ),
                         ),
                       ),
