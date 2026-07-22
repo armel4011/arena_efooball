@@ -376,6 +376,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get registerCountryLabel => 'الدولة';
 
   @override
+  String get registerCountryHint => 'اختر دولتك';
+
+  @override
   String get registerSuccessTitle => 'تم إنشاء\nالحساب';
 
   @override

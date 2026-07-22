@@ -232,12 +232,14 @@ void main() {
       String? game,
       String? country,
       String? roleSide,
+      String? operatorCode,
       bool isActive = true,
     }) {
       final row = videoRow(id: id, isActive: isActive, targetPage: page.wire);
       row['game'] = game;
       row['country_code'] = country;
       row['role_side'] = roleSide;
+      row['operator_code'] = operatorCode;
       return TutorialVideo.fromJson(row);
     }
 
@@ -336,6 +338,63 @@ void main() {
         countryCode: 'SN',
       );
       expect(out?.id, 'sn');
+    });
+
+    test('tuto paiement : vidéo PROPRE à l\'opérateur prioritaire', () {
+      final def = ctx(
+        id: 'def',
+        page: TutorialPage.paymentTutorial,
+        country: 'CM',
+      );
+      final om = ctx(
+        id: 'om',
+        page: TutorialPage.paymentTutorial,
+        country: 'CM',
+        operatorCode: 'ORANGE_MONEY',
+      );
+      final out = TutorialVideoRepository.activePaymentTutorial(
+        [def, om],
+        countryCode: 'CM',
+        operatorCode: 'ORANGE_MONEY',
+      );
+      expect(out?.id, 'om');
+    });
+
+    test('tuto paiement : repli sur la vidéo par défaut du pays', () {
+      final def = ctx(
+        id: 'def',
+        page: TutorialPage.paymentTutorial,
+        country: 'CM',
+      );
+      final om = ctx(
+        id: 'om',
+        page: TutorialPage.paymentTutorial,
+        country: 'CM',
+        operatorCode: 'ORANGE_MONEY',
+      );
+      // MTN n'a pas de vidéo propre → repli sur la vidéo par défaut (op NULL).
+      final out = TutorialVideoRepository.activePaymentTutorial(
+        [def, om],
+        countryCode: 'CM',
+        operatorCode: 'MTN_MOMO',
+      );
+      expect(out?.id, 'def');
+    });
+
+    test('tuto paiement : aucune vidéo par défaut → null pour opérateur inconnu',
+        () {
+      final om = ctx(
+        id: 'om',
+        page: TutorialPage.paymentTutorial,
+        country: 'CM',
+        operatorCode: 'ORANGE_MONEY',
+      );
+      final out = TutorialVideoRepository.activePaymentTutorial(
+        [om],
+        countryCode: 'CM',
+        operatorCode: 'WAVE',
+      );
+      expect(out, isNull);
     });
 
     test('install_check : match sur (cible, jeu) — inclut dream_league', () {

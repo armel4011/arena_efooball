@@ -34,6 +34,12 @@ mixin _$TutorialVideo {
   /// Pays ciblé (ISO alpha-2) pour la cible `payment_tutorial`. `null` sinon.
   String? get countryCode => throw _privateConstructorUsedError;
 
+  /// Opérateur ciblé (slug MAJUSCULE, ex. `ORANGE_MONEY`) pour la cible
+  /// `payment_tutorial`. OPTIONNEL : `null` = vidéo par défaut du pays (repli
+  /// si aucune vidéo propre à l'opérateur du joueur). `null` pour les autres
+  /// cibles.
+  String? get operatorCode => throw _privateConstructorUsedError;
+
   /// Côté ciblé (`home`/`away`) pour la cible `match_role_intro` : Domicile et
   /// Extérieur ont chacun leur vidéo. `null` pour toutes les autres cibles.
   String? get roleSide => throw _privateConstructorUsedError;
@@ -66,6 +72,7 @@ abstract class $TutorialVideoCopyWith<$Res> {
       TutorialPage targetPage,
       String? game,
       String? countryCode,
+      String? operatorCode,
       String? roleSide,
       String? updatedBy,
       DateTime? createdAt,
@@ -95,6 +102,7 @@ class _$TutorialVideoCopyWithImpl<$Res, $Val extends TutorialVideo>
     Object? targetPage = null,
     Object? game = freezed,
     Object? countryCode = freezed,
+    Object? operatorCode = freezed,
     Object? roleSide = freezed,
     Object? updatedBy = freezed,
     Object? createdAt = freezed,
@@ -133,6 +141,10 @@ class _$TutorialVideoCopyWithImpl<$Res, $Val extends TutorialVideo>
           ? _value.countryCode
           : countryCode // ignore: cast_nullable_to_non_nullable
               as String?,
+      operatorCode: freezed == operatorCode
+          ? _value.operatorCode
+          : operatorCode // ignore: cast_nullable_to_non_nullable
+              as String?,
       roleSide: freezed == roleSide
           ? _value.roleSide
           : roleSide // ignore: cast_nullable_to_non_nullable
@@ -170,6 +182,7 @@ abstract class _$$TutorialVideoImplCopyWith<$Res>
       TutorialPage targetPage,
       String? game,
       String? countryCode,
+      String? operatorCode,
       String? roleSide,
       String? updatedBy,
       DateTime? createdAt,
@@ -197,6 +210,7 @@ class __$$TutorialVideoImplCopyWithImpl<$Res>
     Object? targetPage = null,
     Object? game = freezed,
     Object? countryCode = freezed,
+    Object? operatorCode = freezed,
     Object? roleSide = freezed,
     Object? updatedBy = freezed,
     Object? createdAt = freezed,
@@ -235,6 +249,10 @@ class __$$TutorialVideoImplCopyWithImpl<$Res>
           ? _value.countryCode
           : countryCode // ignore: cast_nullable_to_non_nullable
               as String?,
+      operatorCode: freezed == operatorCode
+          ? _value.operatorCode
+          : operatorCode // ignore: cast_nullable_to_non_nullable
+              as String?,
       roleSide: freezed == roleSide
           ? _value.roleSide
           : roleSide // ignore: cast_nullable_to_non_nullable
@@ -267,6 +285,7 @@ class _$TutorialVideoImpl extends _TutorialVideo {
       this.targetPage = TutorialPage.home,
       this.game,
       this.countryCode,
+      this.operatorCode,
       this.roleSide,
       this.updatedBy,
       this.createdAt,
@@ -301,6 +320,13 @@ class _$TutorialVideoImpl extends _TutorialVideo {
   @override
   final String? countryCode;
 
+  /// Opérateur ciblé (slug MAJUSCULE, ex. `ORANGE_MONEY`) pour la cible
+  /// `payment_tutorial`. OPTIONNEL : `null` = vidéo par défaut du pays (repli
+  /// si aucune vidéo propre à l'opérateur du joueur). `null` pour les autres
+  /// cibles.
+  @override
+  final String? operatorCode;
+
   /// Côté ciblé (`home`/`away`) pour la cible `match_role_intro` : Domicile et
   /// Extérieur ont chacun leur vidéo. `null` pour toutes les autres cibles.
   @override
@@ -314,7 +340,7 @@ class _$TutorialVideoImpl extends _TutorialVideo {
 
   @override
   String toString() {
-    return 'TutorialVideo(id: $id, title: $title, videoUrl: $videoUrl, isActive: $isActive, displayDays: $displayDays, targetPage: $targetPage, game: $game, countryCode: $countryCode, roleSide: $roleSide, updatedBy: $updatedBy, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'TutorialVideo(id: $id, title: $title, videoUrl: $videoUrl, isActive: $isActive, displayDays: $displayDays, targetPage: $targetPage, game: $game, countryCode: $countryCode, operatorCode: $operatorCode, roleSide: $roleSide, updatedBy: $updatedBy, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -335,6 +361,8 @@ class _$TutorialVideoImpl extends _TutorialVideo {
             (identical(other.game, game) || other.game == game) &&
             (identical(other.countryCode, countryCode) ||
                 other.countryCode == countryCode) &&
+            (identical(other.operatorCode, operatorCode) ||
+                other.operatorCode == operatorCode) &&
             (identical(other.roleSide, roleSide) ||
                 other.roleSide == roleSide) &&
             (identical(other.updatedBy, updatedBy) ||
@@ -357,6 +385,7 @@ class _$TutorialVideoImpl extends _TutorialVideo {
       targetPage,
       game,
       countryCode,
+      operatorCode,
       roleSide,
       updatedBy,
       createdAt,
@@ -388,6 +417,7 @@ abstract class _TutorialVideo extends TutorialVideo {
       final TutorialPage targetPage,
       final String? game,
       final String? countryCode,
+      final String? operatorCode,
       final String? roleSide,
       final String? updatedBy,
       final DateTime? createdAt,
@@ -418,6 +448,13 @@ abstract class _TutorialVideo extends TutorialVideo {
   /// Pays ciblé (ISO alpha-2) pour la cible `payment_tutorial`. `null` sinon.
   @override
   String? get countryCode;
+
+  /// Opérateur ciblé (slug MAJUSCULE, ex. `ORANGE_MONEY`) pour la cible
+  /// `payment_tutorial`. OPTIONNEL : `null` = vidéo par défaut du pays (repli
+  /// si aucune vidéo propre à l'opérateur du joueur). `null` pour les autres
+  /// cibles.
+  @override
+  String? get operatorCode;
 
   /// Côté ciblé (`home`/`away`) pour la cible `match_role_intro` : Domicile et
   /// Extérieur ont chacun leur vidéo. `null` pour toutes les autres cibles.

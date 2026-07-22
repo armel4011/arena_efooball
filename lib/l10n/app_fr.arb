@@ -134,6 +134,7 @@
   "registerMarketingConsent": "J'accepte de recevoir les communications marketing (optionnel)",
   "registerCreateAccountButton": "CRÉER MON COMPTE",
   "registerCountryLabel": "PAYS",
+  "registerCountryHint": "Choisis ton pays",
   "registerSuccessTitle": "COMPTE\nCRÉÉ",
   "registerSuccessSubtitle": "Bienvenue sur ARENA. Tu es prêt à rejoindre les tournois.",
   "registerSuccessContinueButton": "CONTINUER",

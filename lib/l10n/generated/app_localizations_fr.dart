@@ -380,6 +380,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get registerCountryLabel => 'PAYS';
 
   @override
+  String get registerCountryHint => 'Choisis ton pays';
+
+  @override
   String get registerSuccessTitle => 'COMPTE\nCRÉÉ';
 
   @override

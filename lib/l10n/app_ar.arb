@@ -114,6 +114,7 @@
   "registerMarketingConsent": "أوافق على تلقي الرسائل التسويقية (اختياري)",
   "registerCreateAccountButton": "إنشاء حسابي",
   "registerCountryLabel": "الدولة",
+  "registerCountryHint": "اختر دولتك",
   "registerSuccessTitle": "تم إنشاء\nالحساب",
   "registerSuccessSubtitle": "مرحبًا بك في ARENA. أنت جاهز للانضمام إلى البطولات.",
   "registerSuccessContinueButton": "متابعة",
