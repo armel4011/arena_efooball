@@ -214,10 +214,10 @@ class _ArenaUserAppState extends ConsumerState<ArenaUserApp> {
   }
 
   /// Résout le nom de l'appelant puis présente l'UI d'appel native — SAUF pour
-  /// un rappel de match (`scope=match_reminder`), présenté en ALARME/réveil
-  /// plein écran (pas un appel).
+  /// un réveil de match (`match_reminder` = rappel T-5, `match_activated` =
+  /// salle ouverte), présenté en ALARME/réveil plein écran (pas un appel).
   Future<void> _presentIncomingCall(CallRecord call) async {
-    if (call.scope == 'match_reminder') {
+    if (MatchAlarmService.isAlarmScope(call.scope)) {
       await MatchAlarmService.show(matchId: call.scopeId);
       return;
     }
@@ -279,10 +279,11 @@ class _ArenaUserAppState extends ConsumerState<ArenaUserApp> {
     final scope = extra['scope'] as String? ?? '';
     final scopeId = extra['scope_id'] as String? ?? '';
     await CallkitService.end(callId);
-    // F3 - rappel match T-5 min : ce n'est pas un vrai appel, juste une
-    // sonnerie de rappel. Tap "Décrocher" = ouvrir la page du match,
-    // pas de joinChannel Agora, pas de markAccepted en DB.
-    if (scope == 'match_reminder') {
+    // Réveil de match (rappel T-5 `match_reminder` ou salle ouverte
+    // `match_activated`) : ce n'est pas un vrai appel. Tap "Décrocher" =
+    // ouvrir la page du match, pas de joinChannel Agora ni markAccepted en DB.
+    // (Filet : ces scopes passent normalement par l'alarme, pas CallKit.)
+    if (MatchAlarmService.isAlarmScope(scope)) {
       if (scopeId.isNotEmpty) {
         ref.read(userRouterProvider).go('/match/$scopeId');
       }

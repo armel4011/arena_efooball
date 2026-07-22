@@ -59,6 +59,9 @@ class _MatchRoleIntroGateState extends ConsumerState<MatchRoleIntroGate> {
 
     await showDialog<void>(
       context: context,
+      // BLOQUANT : ni tap hors dialogue, ni back ne le ferment. On ne sort que
+      // par « J'ai compris », lui-même déverrouillé par la case de confirmation.
+      barrierDismissible: false,
       builder: (_) => _MatchRoleIntroDialog(
         isHome: isHome,
         game: widget.game,
@@ -72,58 +75,192 @@ class _MatchRoleIntroGateState extends ConsumerState<MatchRoleIntroGate> {
 
 /// Contenu du dialogue : rôle (DOMICILE/EXTÉRIEUR), déroulé jusqu'à la saisie du
 /// score, et vidéo explicative si l'admin en a publié une pour ce jeu.
-class _MatchRoleIntroDialog extends ConsumerWidget {
+///
+/// BLOQUANT : le joueur ne peut sortir qu'après avoir coché la case confirmant
+/// qu'il a DÉJÀ lancé le jeu (menu principal). Le bouton « J'ai compris » reste
+/// désactivé tant que la case n'est pas cochée.
+class _MatchRoleIntroDialog extends ConsumerStatefulWidget {
   const _MatchRoleIntroDialog({required this.isHome, required this.game});
 
   final bool isHome;
   final GameType game;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_MatchRoleIntroDialog> createState() =>
+      _MatchRoleIntroDialogState();
+}
+
+class _MatchRoleIntroDialogState extends ConsumerState<_MatchRoleIntroDialog> {
+  bool _confirmed = false;
+
+  /// Découpe le corps localisé en lignes espacées : les libellés « Étape N » et
+  /// la ligne d'avertissement adoptent le style du titre (h3) ; les descriptions
+  /// restent en corps. Un léger espacement sépare chaque ligne.
+  List<Widget> _bodyLines(String body) {
+    // Détecte un début d'étape dans les 3 langues (Étape / Step / الخطوة).
+    final stepRe = RegExp(r'^(Étape|Step|الخطوة)\s*\d+', unicode: true);
+    final widgets = <Widget>[];
+    for (final raw in body.split('\n')) {
+      final line = raw.trim();
+      if (line.isEmpty) continue;
+      if (widgets.isNotEmpty) {
+        widgets.add(const SizedBox(height: ArenaSpacing.sm));
+      }
+      if (line.startsWith('⚠')) {
+        widgets.add(
+          Text(line, style: ArenaText.h3.copyWith(color: ArenaColors.danger)),
+        );
+      } else if (stepRe.hasMatch(line)) {
+        final sep = line.indexOf(':');
+        if (sep > 0) {
+          widgets.add(
+            Text.rich(
+              TextSpan(
+                children: [
+                  // Libellé « Étape N » au style du titre.
+                  TextSpan(
+                    text: line.substring(0, sep).trim(),
+                    style: ArenaText.h3.copyWith(color: ArenaColors.carbon),
+                  ),
+                  TextSpan(
+                    text: ' : ${line.substring(sep + 1).trim()}',
+                    style:
+                        ArenaText.body.copyWith(color: ArenaColors.silverDim),
+                  ),
+                ],
+              ),
+            ),
+          );
+        } else {
+          widgets.add(
+            Text(line, style: ArenaText.h3.copyWith(color: ArenaColors.carbon)),
+          );
+        }
+      } else {
+        // Paragraphe d'intro + ligne « NB : … ».
+        widgets.add(
+          Text(
+            line,
+            style: ArenaText.body.copyWith(color: ArenaColors.carbon),
+          ),
+        );
+      }
+    }
+    return widgets;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final isHome = widget.isHome;
+    final game = widget.game;
     // Vidéo DIFFÉRENTE selon le côté : Domicile (envoie le code) vs Extérieur
     // (le reçoit). L'admin publie une vidéo par côté.
     final side = isHome ? MatchRoleSide.home : MatchRoleSide.away;
-    final video = ref
+    final videoUrl = ref
         .watch(matchRoleIntroVideoProvider((game: game, side: side)))
-        .valueOrNull;
-    final player =
-        video == null ? null : ArenaYoutubePlayer.maybe(video.videoUrl);
+        .valueOrNull
+        ?.videoUrl;
+    // Comme le dialogue de contrôle avant inscription : PAS de lecteur inline
+    // (une WebView en overlay reste noire par intermittence). On propose un
+    // bouton qui ouvre la vidéo en PLEIN ÉCRAN (page dédiée).
+    final hasVideo = ArenaYoutubePlayer.maybe(videoUrl) != null;
 
-    return AlertDialog(
-      backgroundColor: ArenaColors.carbon,
-      title: Text(
-        isHome ? l10n.roleIntroHomeTitle : l10n.roleIntroAwayTitle,
-        style: ArenaText.h3,
-      ),
-      content: SizedBox(
-        width: double.maxFinite,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                isHome ? l10n.roleIntroHomeBody : l10n.roleIntroAwayBody,
-                style: ArenaText.body.copyWith(color: ArenaColors.silver),
-              ),
-              if (player != null) ...[
-                const SizedBox(height: ArenaSpacing.lg),
-                player,
+    return PopScope(
+      // Le back matériel ne doit PAS contourner la confirmation.
+      canPop: false,
+      child: AlertDialog(
+        backgroundColor: ArenaColors.bone,
+        title: Text(
+          isHome ? l10n.roleIntroHomeTitle : l10n.roleIntroAwayTitle,
+          style: ArenaText.h3.copyWith(color: ArenaColors.carbon),
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ..._bodyLines(
+                  isHome
+                      ? l10n.roleIntroHomeBody(game.label)
+                      : l10n.roleIntroAwayBody(game.label),
+                ),
+                if (hasVideo) ...[
+                  const SizedBox(height: ArenaSpacing.md),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => openFullscreenYoutube(context, videoUrl),
+                      icon: const Icon(Icons.play_circle_outline, size: 20),
+                      label: const Text('Regarder le guide vidéo'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: ArenaColors.signalBlue,
+                        side: const BorderSide(color: ArenaColors.signalBlue),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: ArenaSpacing.md,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(ArenaRadius.md),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: ArenaSpacing.md),
+                // Case de confirmation OBLIGATOIRE : déverrouille « J'ai compris ».
+                InkWell(
+                  onTap: () => setState(() => _confirmed = !_confirmed),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Checkbox(
+                        value: _confirmed,
+                        activeColor: ArenaColors.signalBlue,
+                        // Coche blanche + bordure sombre : sans ça, la case vide
+                        // est invisible sur le fond blanc du dialogue.
+                        checkColor: ArenaColors.bone,
+                        side: const BorderSide(
+                          color: ArenaColors.silverDim,
+                          width: 2,
+                        ),
+                        onChanged: (v) =>
+                            setState(() => _confirmed = v ?? false),
+                      ),
+                      Expanded(
+                        child: Padding(
+                          padding:
+                              const EdgeInsets.only(top: ArenaSpacing.sm),
+                          child: Text(
+                            l10n.roleIntroConfirmLaunched(game.label),
+                            style: ArenaText.body
+                                .copyWith(color: ArenaColors.carbon),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
-            ],
+            ),
           ),
         ),
+        actions: [
+          TextButton(
+            // Désactivé tant que la case n'est pas cochée.
+            onPressed:
+                _confirmed ? () => Navigator.of(context).pop() : null,
+            child: Text(
+              l10n.roleIntroGotIt,
+              style: ArenaText.body.copyWith(
+                color:
+                    _confirmed ? ArenaColors.signalBlue : ArenaColors.silverDim,
+              ),
+            ),
+          ),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(
-            l10n.roleIntroGotIt,
-            style: ArenaText.body.copyWith(color: ArenaColors.signalBlue),
-          ),
-        ),
-      ],
     );
   }
 }

@@ -335,11 +335,12 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   }
   final type = message.data['notification_type'];
   if (type == 'call_invite') {
-    // Le rappel de match arrive comme un `call_invite` (scope=match_reminder)
-    // pour réutiliser le canal DATA haute priorité, mais ce n'est PAS un appel :
-    // on l'affiche en ALARME plein écran (réveil), pas en écran d'appel CallKit.
+    // Les réveils de match (rappel T-5 `match_reminder` ET ouverture de salle
+    // `match_activated`) arrivent comme des `call_invite` pour réutiliser le
+    // canal DATA haute priorité, mais ce ne sont PAS des appels : on les
+    // affiche en ALARME plein écran (réveil), pas en écran d'appel CallKit.
     final scope = message.data['scope'] as String? ?? '';
-    if (scope == 'match_reminder') {
+    if (MatchAlarmService.isAlarmScope(scope)) {
       await MatchAlarmService.show(
         matchId: message.data['scope_id'] as String? ?? '',
         label: message.data['caller_name'] as String?,
