@@ -2485,26 +2485,26 @@ abstract class AppLocalizations {
   /// No description provided for @roleIntroHomeTitle.
   ///
   /// In fr, this message translates to:
-  /// **'Ton rôle : DOMICILE'**
+  /// **'TU ES LE JOUEUR À DOMICILE'**
   String get roleIntroHomeTitle;
 
   /// No description provided for @roleIntroAwayTitle.
   ///
   /// In fr, this message translates to:
-  /// **'Ton rôle : EXTÉRIEUR'**
+  /// **'TU ES LE JOUEUR À L\'EXTÉRIEUR'**
   String get roleIntroAwayTitle;
 
   /// No description provided for @roleIntroHomeBody.
   ///
   /// In fr, this message translates to:
-  /// **'En tant que DOMICILE, tu crées la salle dans le jeu et communiques le code à ton adversaire. Lance le match, puis à la fin saisis le score et valide-le.'**
-  String get roleIntroHomeBody;
+  /// **'En tant que joueur à DOMICILE, tu dois recevoir le joueur EXTÉRIEUR : c\'est à toi de créer le code de la salle.\n\n👉 Étape 1 : démarre {game} jusqu\'au menu principal et sélectionne ton équipe.\n👉 Étape 2 : reviens sur ton match dans Arena et saisis le nom de ton équipe.\n👉 Étape 3 : lance l\'enregistrement du match depuis Arena en sélectionnant {game}.\nNB : L\'ENREGISTREMENT DU MATCH EST OBLIGATOIRE.\n👉 Étape 4 : une fois l\'enregistrement lancé, crée le code de la salle et envoie-le au joueur EXTÉRIEUR via le bouton flottant rouge ou la notification Arena, puis patiente qu\'il rejoigne la salle sans quitter {game}.\n👉 Faites le match. À la fin de la rencontre, saisis le score via le bouton rouge ou la notification Arena, sans sortir de {game}.'**
+  String roleIntroHomeBody(String game);
 
   /// No description provided for @roleIntroAwayBody.
   ///
   /// In fr, this message translates to:
-  /// **'En tant qu\'EXTÉRIEUR, tu rejoins la salle avec le code que ton adversaire te donne. Joue le match, puis à la fin saisis le score et valide-le.'**
-  String get roleIntroAwayBody;
+  /// **'En tant que joueur à l\'EXTÉRIEUR, tu seras reçu par le joueur DOMICILE : il t\'enverra un code de salle.\n\n👉 Étape 1 : démarre {game} jusqu\'au menu principal et sélectionne ton équipe.\n👉 Étape 2 : reviens sur ton match dans Arena, copie le code de la salle et saisis le nom de ton équipe.\n👉 Étape 3 : lance l\'enregistrement du match depuis Arena en sélectionnant {game}.\nNB : L\'ENREGISTREMENT DU MATCH EST OBLIGATOIRE.\n👉 Étape 4 : une fois l\'enregistrement lancé, rejoins le joueur DOMICILE dans la salle avec le code qu\'il t\'a envoyé (tu peux retrouver ce code à tout moment dans le bouton flottant rouge).\n👉 Faites le match. À la fin de la rencontre, saisis le score via le bouton rouge ou la notification Arena, sans sortir de {game}.'**
+  String roleIntroAwayBody(String game);
 
   /// No description provided for @roleIntroGotIt.
   ///

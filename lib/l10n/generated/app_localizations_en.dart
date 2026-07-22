@@ -1254,18 +1254,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get matchRulesVideoTitle => 'Watch before you play';
 
   @override
-  String get roleIntroHomeTitle => 'Your role: HOME';
+  String get roleIntroHomeTitle => 'YOU ARE THE HOME PLAYER';
 
   @override
-  String get roleIntroAwayTitle => 'Your role: AWAY';
+  String get roleIntroAwayTitle => 'YOU ARE THE AWAY PLAYER';
 
   @override
-  String get roleIntroHomeBody =>
-      'As HOME, you create the room in the game and share the code with your opponent. Start the match, then enter and confirm the score at the end.';
+  String roleIntroHomeBody(String game) {
+    return 'As the HOME player, you host the AWAY player: it\'s up to you to create the room code.\n\n👉 Step 1: launch $game up to the main menu and pick your team.\n👉 Step 2: come back to your match in Arena and enter your team name.\n👉 Step 3: start the match recording from Arena by selecting $game.\nNB: RECORDING THE MATCH IS MANDATORY.\n👉 Step 4: once recording has started, create the room code and send it to the AWAY player via the red floating button or the Arena notification, then wait for them to join the room without leaving $game.\n👉 Play the match. At the end, enter the score via the red button or the Arena notification, without leaving $game.';
+  }
 
   @override
-  String get roleIntroAwayBody =>
-      'As AWAY, you join the room with the code your opponent gives you. Play the match, then enter and confirm the score at the end.';
+  String roleIntroAwayBody(String game) {
+    return 'As the AWAY player, you are hosted by the HOME player: they will send you a room code.\n\n👉 Step 1: launch $game up to the main menu and pick your team.\n👉 Step 2: come back to your match in Arena, copy the room code and enter your team name.\n👉 Step 3: start the match recording from Arena by selecting $game.\nNB: RECORDING THE MATCH IS MANDATORY.\n👉 Step 4: once recording has started, join the HOME player in the room with the code they sent you (you can find this code any time in the red floating button).\n👉 Play the match. At the end, enter the score via the red button or the Arena notification, without leaving $game.';
+  }
 
   @override
   String get roleIntroGotIt => 'Got it';

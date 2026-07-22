@@ -104,7 +104,9 @@ class _MatchRoleIntroDialog extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                isHome ? l10n.roleIntroHomeBody : l10n.roleIntroAwayBody,
+                isHome
+                    ? l10n.roleIntroHomeBody(game.label)
+                    : l10n.roleIntroAwayBody(game.label),
                 style: ArenaText.body.copyWith(color: ArenaColors.silver),
               ),
               if (player != null) ...[
