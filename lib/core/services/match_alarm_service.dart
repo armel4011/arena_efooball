@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -39,6 +40,24 @@ class MatchAlarmService {
 
   /// Route de l'écran d'alarme Flutter pour un match donné.
   static String routeFor(String matchId) => '/match-alarm/$matchId';
+
+  static const _nativeChannel = MethodChannel('arena/native');
+
+  /// Démarre la sonnerie de réveil EN BOUCLE côté natif (flux ALARM). La notif
+  /// (FLAG_INSISTENT) ne loope pas de façon fiable sur certains OEM (MIUI) — on
+  /// s'appuie donc sur un vrai lecteur natif tant que l'écran d'alarme est là.
+  static Future<void> startRinging() async {
+    try {
+      await _nativeChannel.invokeMethod<void>('startAlarmSound');
+    } catch (_) {/* canal down / autre OS */}
+  }
+
+  /// Coupe la sonnerie de réveil native.
+  static Future<void> stopRinging() async {
+    try {
+      await _nativeChannel.invokeMethod<void>('stopAlarmSound');
+    } catch (_) {/* canal down / autre OS */}
+  }
 
   /// Affiche l'alarme plein écran pour [matchId]. [label] = sous-titre (ex.
   /// « vs Adversaire »). Mémorise le rappel en attente (cold-start).

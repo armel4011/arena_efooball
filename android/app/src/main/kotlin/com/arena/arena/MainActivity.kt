@@ -5,6 +5,9 @@ import android.content.ComponentName
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.media.AudioAttributes
+import android.media.MediaPlayer
+import android.media.RingtoneManager
 import android.media.projection.MediaProjectionManager
 import android.net.Uri
 import android.os.Build
@@ -47,6 +50,49 @@ class MainActivity : FlutterActivity() {
     // n'est branché. Préservé entre les vies d'activité pour pouvoir
     // pousser un évènement même si l'app est en background.
     private var nativeEventSink: EventChannel.EventSink? = null
+
+    // Lecteur de la sonnerie de réveil (rappel de match) — boucle jusqu'à
+    // stopAlarmSound. Sur le flux ALARM pour passer même en mode silencieux.
+    private var alarmPlayer: MediaPlayer? = null
+
+    /** Démarre la sonnerie d'alarme EN BOUCLE (son d'alarme système). */
+    private fun startAlarmSound() {
+        stopAlarmSound()
+        try {
+            val uri = RingtoneManager.getActualDefaultRingtoneUri(
+                this, RingtoneManager.TYPE_ALARM,
+            ) ?: RingtoneManager.getActualDefaultRingtoneUri(
+                this, RingtoneManager.TYPE_RINGTONE,
+            ) ?: Settings.System.DEFAULT_ALARM_ALERT_URI
+            alarmPlayer = MediaPlayer().apply {
+                setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_ALARM)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build(),
+                )
+                setDataSource(this@MainActivity, uri)
+                isLooping = true
+                prepare()
+                start()
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "startAlarmSound failed", e)
+            stopAlarmSound()
+        }
+    }
+
+    /** Coupe la sonnerie de réveil. Idempotent. */
+    private fun stopAlarmSound() {
+        try {
+            alarmPlayer?.let {
+                if (it.isPlaying) it.stop()
+                it.release()
+            }
+        } catch (_: Exception) {
+        }
+        alarmPlayer = null
+    }
 
     // Pending state during the system MediaProjection dialog. The
     // Flutter call is async — we stash the result + the requested
@@ -109,6 +155,16 @@ class MainActivity : FlutterActivity() {
                             )
                         }
                         startActivity(intent)
+                        result.success(true)
+                    }
+                    "startAlarmSound" -> {
+                        // Sonnerie de RÉVEIL en boucle (écran d'alarme du rappel
+                        // de match) — flux ALARM, à couper via stopAlarmSound.
+                        startAlarmSound()
+                        result.success(true)
+                    }
+                    "stopAlarmSound" -> {
+                        stopAlarmSound()
                         result.success(true)
                     }
                     "saveVideoToGallery" -> {
@@ -282,6 +338,7 @@ class MainActivity : FlutterActivity() {
         ArenaRecorderService.onScoreSubmitted = null
         LivekitCaptureFgsService.onStopRequested = null
         nativeEventSink = null
+        stopAlarmSound()
         super.onDestroy()
     }
 
