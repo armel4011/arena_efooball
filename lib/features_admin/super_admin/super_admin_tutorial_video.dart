@@ -7,6 +7,7 @@ import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/tutorial_video_repository.dart';
 import 'package:arena/features_admin/auth_admin/widgets/totp_gate.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
+import 'package:arena/features_shared/payment_operator_slug.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
@@ -232,7 +233,13 @@ String _bannerContextLabel(TutorialVideo v) {
   if (v.targetPage.needsCountry) {
     final c =
         kSupportedCountries.where((e) => e.code == v.countryCode).firstOrNull;
-    return '🌍 ${c == null ? (v.countryCode ?? '—') : '${c.flag} ${c.name}'}';
+    final country =
+        c == null ? (v.countryCode ?? '—') : '${c.flag} ${c.name}';
+    // Opérateur si spécifié, sinon « tous les opérateurs ».
+    final op = v.operatorCode == null
+        ? 'tous opérateurs'
+        : operatorReadableFromCode(v.operatorCode!);
+    return '🌍 $country · 📶 $op';
   }
   return '⏳ ${v.displayDays} jour${v.displayDays > 1 ? 's' : ''}';
 }
@@ -358,6 +365,9 @@ class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
   GameType? _game;
   String? _country;
   MatchRoleSide? _roleSide;
+  // Opérateur du tuto paiement (optionnel) — saisi en libellé libre, converti
+  // en slug à l'enregistrement ; vide = vidéo par défaut du pays.
+  late final TextEditingController _operatorCtrl;
   bool _saving = false;
 
   bool get _isEdit => widget.existing != null;
@@ -373,6 +383,17 @@ class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
     _game = e?.gameType;
     _country = e?.countryCode;
     _roleSide = _sideFromWire(e?.roleSide);
+    _operatorCtrl = TextEditingController(
+      text: e?.operatorCode == null
+          ? ''
+          : operatorReadableFromCode(e!.operatorCode!),
+    );
+  }
+
+  /// Slug d'opérateur saisi (MAJUSCULE), ou `null` si le champ est vide.
+  String? get _operatorSlug {
+    final raw = _operatorCtrl.text.trim();
+    return raw.isEmpty ? null : operatorSlugForLabel(raw);
   }
 
   static MatchRoleSide? _sideFromWire(String? wire) {
@@ -391,6 +412,7 @@ class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
       if (!p.needsGame) _game = null;
       if (!p.needsCountry) _country = null;
       if (!p.needsRoleSide) _roleSide = null;
+      if (!p.supportsOperator) _operatorCtrl.clear();
       // L'intro de rôle n'accepte pas les Dames : on force une resélection.
       if (p.needsGame && !gamesForTutorialPage(p).contains(_game)) _game = null;
     });
@@ -401,6 +423,7 @@ class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
     _titleCtrl.dispose();
     _urlCtrl.dispose();
     _daysCtrl.dispose();
+    _operatorCtrl.dispose();
     super.dispose();
   }
 
@@ -463,6 +486,7 @@ class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
     final gameWire = _page.needsGame ? _game?.value : null;
     final country = _page.needsCountry ? _country : null;
     final roleSide = _page.needsRoleSide ? _roleSide?.wire : null;
+    final operatorCode = _page.supportsOperator ? _operatorSlug : null;
     final repo = ref.read(tutorialVideoRepositoryProvider);
     final audit = ref.read(adminAuditLogRepositoryProvider);
     try {
@@ -478,6 +502,7 @@ class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
           game: gameWire,
           countryCode: country,
           roleSide: roleSide,
+          operatorCode: operatorCode,
           updatedBy: adminId,
         );
         await audit.record(
@@ -493,6 +518,7 @@ class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
             'game': before.game,
             'country_code': before.countryCode,
             'role_side': before.roleSide,
+            'operator_code': before.operatorCode,
           },
           afterState: {
             'title': _title,
@@ -502,6 +528,7 @@ class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
             'game': gameWire,
             'country_code': country,
             'role_side': roleSide,
+            'operator_code': operatorCode,
           },
         );
       } else {
@@ -513,6 +540,7 @@ class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
           game: gameWire,
           countryCode: country,
           roleSide: roleSide,
+          operatorCode: operatorCode,
           updatedBy: adminId,
         );
         await audit.record(
@@ -527,6 +555,7 @@ class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
             'game': gameWire,
             'country_code': country,
             'role_side': roleSide,
+            'operator_code': operatorCode,
           },
         );
       }
@@ -631,6 +660,19 @@ class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
                     value: _country,
                     onChanged: (c) => setState(() => _country = c),
                   ),
+                  if (_page.supportsOperator) ...[
+                    const SizedBox(height: ArenaSpacing.lg),
+                    Text('📶 OPÉRATEUR (OPTIONNEL)', style: ArenaText.inputLabel),
+                    const SizedBox(height: ArenaSpacing.sm),
+                    ArenaTextField(
+                      controller: _operatorCtrl,
+                      hint: 'Orange Money, MTN MoMo, Wave…',
+                      helper: 'Laisse vide pour une vidéo valable pour TOUS les '
+                          'opérateurs du pays. Renseigne un opérateur pour une '
+                          'vidéo qui ne concerne que lui.',
+                      onChanged: (_) => setState(() {}),
+                    ),
+                  ],
                   const SizedBox(height: ArenaSpacing.lg),
                 ] else ...[
                   Text(

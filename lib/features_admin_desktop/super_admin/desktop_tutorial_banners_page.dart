@@ -8,6 +8,7 @@ import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/tutorial_video_repository.dart';
 import 'package:arena/features_admin_desktop/shared/desktop_totp_gate.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
+import 'package:arena/features_shared/payment_operator_slug.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -116,7 +117,12 @@ String _bannerContextLabel(TutorialVideo v) {
   if (v.targetPage.needsCountry) {
     final c =
         kSupportedCountries.where((e) => e.code == v.countryCode).firstOrNull;
-    return '🌍 ${c == null ? (v.countryCode ?? '—') : '${c.flag} ${c.name}'}';
+    final country =
+        c == null ? (v.countryCode ?? '—') : '${c.flag} ${c.name}';
+    final op = v.operatorCode == null
+        ? 'tous opérateurs'
+        : operatorReadableFromCode(v.operatorCode!);
+    return '🌍 $country · 📶 $op';
   }
   return '${v.displayDays} jour${v.displayDays > 1 ? 's' : ''}';
 }
@@ -336,9 +342,17 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
   GameType? _game;
   String? _country;
   MatchRoleSide? _roleSide;
+  // Opérateur du tuto paiement (optionnel) — libellé libre → slug à la sauvegarde.
+  late final TextEditingController _operatorCtrl;
   bool _saving = false;
 
   bool get _isEdit => widget.existing != null;
+
+  /// Slug d'opérateur saisi (MAJUSCULE), ou `null` si le champ est vide.
+  String? get _operatorSlug {
+    final raw = _operatorCtrl.text.trim();
+    return raw.isEmpty ? null : operatorSlugForLabel(raw);
+  }
 
   @override
   void initState() {
@@ -351,6 +365,11 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
     _game = e?.gameType;
     _country = e?.countryCode;
     _roleSide = _sideFromWire(e?.roleSide);
+    _operatorCtrl = TextEditingController(
+      text: e?.operatorCode == null
+          ? ''
+          : operatorReadableFromCode(e!.operatorCode!),
+    );
   }
 
   static MatchRoleSide? _sideFromWire(String? wire) {
@@ -369,6 +388,7 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
       if (!p.needsGame) _game = null;
       if (!p.needsCountry) _country = null;
       if (!p.needsRoleSide) _roleSide = null;
+      if (!p.supportsOperator) _operatorCtrl.clear();
       if (p.needsGame && !gamesForTutorialPage(p).contains(_game)) _game = null;
     });
   }
@@ -378,6 +398,7 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
     _titleCtrl.dispose();
     _urlCtrl.dispose();
     _daysCtrl.dispose();
+    _operatorCtrl.dispose();
     super.dispose();
   }
 
@@ -437,6 +458,7 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
     final gameWire = _page.needsGame ? _game?.value : null;
     final country = _page.needsCountry ? _country : null;
     final roleSide = _page.needsRoleSide ? _roleSide?.wire : null;
+    final operatorCode = _page.supportsOperator ? _operatorSlug : null;
     final repo = ref.read(tutorialVideoRepositoryProvider);
     final audit = ref.read(adminAuditLogRepositoryProvider);
     try {
@@ -452,6 +474,7 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
           game: gameWire,
           countryCode: country,
           roleSide: roleSide,
+          operatorCode: operatorCode,
           updatedBy: adminId,
         );
         await audit.record(
@@ -467,6 +490,7 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
             'game': before.game,
             'country_code': before.countryCode,
             'role_side': before.roleSide,
+            'operator_code': before.operatorCode,
           },
           afterState: {
             'title': _title,
@@ -476,6 +500,7 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
             'game': gameWire,
             'country_code': country,
             'role_side': roleSide,
+            'operator_code': operatorCode,
           },
         );
       } else {
@@ -487,6 +512,7 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
           game: gameWire,
           countryCode: country,
           roleSide: roleSide,
+          operatorCode: operatorCode,
           updatedBy: adminId,
         );
         await audit.record(
@@ -501,6 +527,7 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
             'game': gameWire,
             'country_code': country,
             'role_side': roleSide,
+            'operator_code': operatorCode,
           },
         );
       }
@@ -615,7 +642,7 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
                       : (g) => g == null ? null : setState(() => _game = g),
                 ),
               )
-            else if (_page.needsCountry)
+            else if (_page.needsCountry) ...[
               InfoLabel(
                 label: 'Pays',
                 child: ComboBox<String>(
@@ -633,8 +660,30 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
                       ? null
                       : (c) => c == null ? null : setState(() => _country = c),
                 ),
-              )
-            else ...[
+              ),
+              if (_page.supportsOperator) ...[
+                const SizedBox(height: 16),
+                InfoLabel(
+                  label: 'Opérateur (optionnel)',
+                  child: TextBox(
+                    controller: _operatorCtrl,
+                    placeholder: 'Orange Money, MTN MoMo, Wave…',
+                    enabled: !_saving,
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Laisse vide pour une vidéo valable pour TOUS les opérateurs '
+                  'du pays. Renseigne un opérateur pour une vidéo qui ne '
+                  'concerne que lui.',
+                  style: GoogleFonts.spaceGrotesk(
+                    color: ArenaColors.silverDim,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ] else ...[
               InfoLabel(
                 label: "Durée d'affichage pour les nouveaux (jours)",
                 child: TextBox(

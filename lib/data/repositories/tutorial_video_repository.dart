@@ -59,6 +59,28 @@ class TutorialVideoRepository {
     return null;
   }
 
+  /// Filtre pur : la vidéo de tuto paiement active pour un [countryCode] et un
+  /// [operatorCode] (slug). Deux niveaux : on privilégie la vidéo PROPRE à
+  /// l'opérateur, à défaut la vidéo PAR DÉFAUT du pays (`operator_code` NULL).
+  /// Retourne `null` si aucune.
+  static TutorialVideo? activePaymentTutorial(
+    List<TutorialVideo> videos, {
+    required String countryCode,
+    required String operatorCode,
+  }) {
+    TutorialVideo? countryDefault;
+    for (final v in videos) {
+      if (!v.isActive ||
+          v.targetPage != TutorialPage.paymentTutorial ||
+          v.countryCode != countryCode) {
+        continue;
+      }
+      if (v.operatorCode == operatorCode) return v; // match opérateur exact
+      if (v.operatorCode == null) countryDefault ??= v; // repli pays
+    }
+    return countryDefault;
+  }
+
   /// Realtime stream de TOUTES les bannières (brut, actives ou non). UNE seule
   /// souscription partagée par les 4 pages user — le filtrage par page se fait
   /// en Dart côté provider via [filterActiveForPage]. Avant, chaque page
@@ -107,6 +129,7 @@ class TutorialVideoRepository {
     String? game,
     String? countryCode,
     String? roleSide,
+    String? operatorCode,
     String? updatedBy,
   }) async {
     await _client.from(_table).insert({
@@ -118,6 +141,7 @@ class TutorialVideoRepository {
       'game': game,
       'country_code': countryCode,
       'role_side': roleSide,
+      'operator_code': operatorCode,
       if (updatedBy != null) 'updated_by': updatedBy,
     });
   }
@@ -135,6 +159,7 @@ class TutorialVideoRepository {
     String? game,
     String? countryCode,
     String? roleSide,
+    String? operatorCode,
     String? updatedBy,
   }) async {
     await _client.from(_table).update({
@@ -146,6 +171,7 @@ class TutorialVideoRepository {
       'game': game,
       'country_code': countryCode,
       'role_side': roleSide,
+      'operator_code': operatorCode,
       'updated_at': _now(),
       if (updatedBy != null) 'updated_by': updatedBy,
     }).eq('id', id);
@@ -272,15 +298,17 @@ final installCheckVideoOnceProvider =
       .fetchInstallCheckVideo(game);
 });
 
-/// Vidéo IN-APP active du tuto paiement, pour un pays (ISO alpha-2). Dérivée
-/// du stream partagé.
-final paymentTutorialVideoProvider = Provider.autoDispose
-    .family<AsyncValue<TutorialVideo?>, String>((ref, countryCode) {
+/// Vidéo IN-APP active du tuto paiement, pour un pays (ISO alpha-2) ET un
+/// opérateur (slug). On privilégie la vidéo propre à l'opérateur, à défaut la
+/// vidéo par défaut du pays. Dérivée du stream partagé.
+final paymentTutorialVideoProvider = Provider.autoDispose.family<
+    AsyncValue<TutorialVideo?>,
+    ({String country, String operatorCode})>((ref, key) {
   return ref.watch(_allTutorialBannersStreamProvider).whenData(
-        (all) => TutorialVideoRepository.activeContextualVideo(
+        (all) => TutorialVideoRepository.activePaymentTutorial(
           all,
-          TutorialPage.paymentTutorial,
-          countryCode: countryCode,
+          countryCode: key.country,
+          operatorCode: key.operatorCode,
         ),
       );
 });

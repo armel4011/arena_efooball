@@ -376,6 +376,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get registerCountryLabel => 'COUNTRY';
 
   @override
+  String get registerCountryHint => 'Choose your country';
+
+  @override
   String get registerSuccessTitle => 'ACCOUNT\nCREATED';
 
   @override

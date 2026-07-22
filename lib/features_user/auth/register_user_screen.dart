@@ -35,7 +35,9 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
   final _usernameCtrl = TextEditingController();
   final _whatsappCtrl = TextEditingController();
 
-  String _countryCode = 'CM';
+  // Aucun pays imposé par défaut : le joueur DOIT choisir lui-même son pays
+  // (la sélection est obligatoire pour valider l'étape profil).
+  String _countryCode = '';
   ArenaAvatarColor _avatarColor = ArenaAvatarColor.blue;
   bool _cguAccepted = false;
   bool _privacyAccepted = false;
@@ -361,13 +363,16 @@ class _ProfileStep extends StatelessWidget {
   final VoidCallback onSubmit;
   final bool isLoading;
 
-  String get _dialCode => dialCodeFor(countryCode);
+  // Tant qu'aucun pays n'est choisi, pas d'indicatif affiché (pas de défaut).
+  String get _dialCode => countryCode.isEmpty ? '' : dialCodeFor(countryCode);
 
   bool get _isWhatsappValid => isLocalPhoneValid(whatsappCtrl.text);
 
   bool get _canSubmit =>
       cgu &&
       privacy &&
+      // Pays obligatoire : aucune valeur par défaut, le joueur doit choisir.
+      countryCode.isNotEmpty &&
       usernameCtrl.text.trim().length >= 3 &&
       usernameCtrl.text.trim().length <= 20 &&
       _isWhatsappValid;
@@ -527,9 +532,15 @@ class _CountryPicker extends StatelessWidget {
         Text(l10n.registerCountryLabel, style: ArenaTypography.labelMedium),
         const SizedBox(height: ArenaSpacing.sm),
         DropdownButtonFormField<String>(
-          initialValue: selected,
+          // `null` tant qu'aucun pays n'est choisi → le hint s'affiche (pas de
+          // pays présélectionné).
+          initialValue: selected.isEmpty ? null : selected,
           isExpanded: true,
           dropdownColor: ArenaColors.surfaceLight,
+          hint: Text(
+            l10n.registerCountryHint,
+            style: ArenaTypography.bodyLarge.copyWith(color: ArenaColors.silver),
+          ),
           onChanged: isLoading ? null : (v) => v == null ? null : onSelect(v),
           items: [
             for (final c in options)

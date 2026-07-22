@@ -100,6 +100,10 @@ extension TutorialPageWire on TutorialPage {
   /// `true` si la cible se discrimine par PAYS (un tuto paiement par pays).
   bool get needsCountry => this == TutorialPage.paymentTutorial;
 
+  /// `true` si la cible accepte un OPÉRATEUR optionnel (tuto paiement : une
+  /// vidéo par opérateur en plus de la vidéo par défaut du pays).
+  bool get supportsOperator => this == TutorialPage.paymentTutorial;
+
   /// `true` si la cible se discrimine par CÔTÉ (Domicile/Extérieur) : l'intro de
   /// rôle a une vidéo différente selon que le joueur reçoit ou envoie le code.
   bool get needsRoleSide => this == TutorialPage.matchRoleIntro;
@@ -151,6 +155,12 @@ sealed class TutorialVideo with _$TutorialVideo {
 
     /// Pays ciblé (ISO alpha-2) pour la cible `payment_tutorial`. `null` sinon.
     String? countryCode,
+
+    /// Opérateur ciblé (slug MAJUSCULE, ex. `ORANGE_MONEY`) pour la cible
+    /// `payment_tutorial`. OPTIONNEL : `null` = vidéo par défaut du pays (repli
+    /// si aucune vidéo propre à l'opérateur du joueur). `null` pour les autres
+    /// cibles.
+    String? operatorCode,
 
     /// Côté ciblé (`home`/`away`) pour la cible `match_role_intro` : Domicile et
     /// Extérieur ont chacun leur vidéo. `null` pour toutes les autres cibles.

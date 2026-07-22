@@ -202,7 +202,9 @@ void main() {
   // 2637 → 2641 le 2026-07-22 : +4 `ArenaColors.*` de l'intro de rôle (bouton
   // « Regarder le guide vidéo » signalBlue×2 + case à cocher checkColor bone /
   // bordure silverDim, visibles sur fond blanc).
-  const colorsDotBaseline = 2641; // occurrences de `Colors.`
+  // 2641 → 2643 le 2026-07-22 : +2 `ArenaColors.*` (hint pays silver à
+  // l'inscription + aide opérateur silverDim du tuto paiement admin desktop).
+  const colorsDotBaseline = 2643; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.
@@ -243,7 +245,9 @@ void main() {
   // 226 → 230 le 2026-07-18 : +4 `GoogleFonts.spaceGrotesk` du panneau de
   // résultats du sondage « jeux d'intérêt » du super-dashboard desktop
   // (_GameInterestBreakdown). Même convention Fluent. À migrer vers ArenaText.
-  const googleFontsBaseline = 230; // occurrences de `GoogleFonts.`
+  // 230 → 231 le 2026-07-22 : +1 `GoogleFonts.spaceGrotesk` de l'aide « opérateur »
+  // du tuto paiement admin desktop (parité Fluent). À migrer vers ArenaText.
+  const googleFontsBaseline = 231; // occurrences de `GoogleFonts.`
 
   final colorsDotRe = RegExp(r'Colors\.');
   final colorHexRe = RegExp(r'Color\(0x');

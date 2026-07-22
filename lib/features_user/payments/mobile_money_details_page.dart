@@ -103,11 +103,15 @@ class _MobileMoneyDetailsPageState
     final hasCode = _transferCode.trim().isNotEmpty;
     // Disabled, read-only field — nom du pays de l'opérateur.
     _countryCtrl.text = _countryDisplay;
-    // Tuto vidéo de paiement IN-APP, propre au pays de l'opérateur. Chaque pays
-    // a son système : l'admin publie une vidéo par pays. Absent → rien ne
-    // s'affiche (plus de lien de recherche externe en dur).
+    // Tuto vidéo de paiement IN-APP, propre au pays ET à l'opérateur : l'admin
+    // publie une vidéo par opérateur (repli sur la vidéo par défaut du pays si
+    // aucune vidéo propre à l'opérateur). Absent → rien ne s'affiche.
     final tutorialVideo = ref
-        .watch(paymentTutorialVideoProvider(operator.countryCode))
+        .watch(
+          paymentTutorialVideoProvider(
+            (country: operator.countryCode, operatorCode: operator.code),
+          ),
+        )
         .valueOrNull;
     final tutorialPlayer = tutorialVideo == null
         ? null
@@ -205,18 +209,18 @@ class _MobileMoneyDetailsPageState
                       ArenaText.bodyMuted.copyWith(color: ArenaColors.statusOk),
                 ),
               ],
+              // Tuto vidéo — placé JUSTE SOUS le champ de saisie du numéro de
+              // téléphone. Affiché si l'admin a publié une vidéo pour ce pays
+              // (et cet opérateur, sinon repli pays).
+              if (tutorialPlayer != null) ...[
+                const SizedBox(height: ArenaSpacing.lg),
+                _PaymentTutorialCard(player: tutorialPlayer),
+              ],
               const SizedBox(height: ArenaSpacing.lg),
               const _Disclaimer().animate(delay: 100.ms).fadeIn(
                     duration: ArenaDurations.medium,
                   ),
               const SizedBox(height: ArenaSpacing.xl),
-              // Tuto vidéo par pays — placé en AVANT-DERNIÈRE position (sous le
-              // champ de saisie du numéro), juste avant le bouton de
-              // confirmation. Affiché si l'admin a publié une vidéo pour ce pays.
-              if (tutorialPlayer != null) ...[
-                _PaymentTutorialCard(player: tutorialPlayer),
-                const SizedBox(height: ArenaSpacing.lg),
-              ],
               ArenaButton(
                 label: _submitting
                     ? l10n.mobileMoneySubmitSending

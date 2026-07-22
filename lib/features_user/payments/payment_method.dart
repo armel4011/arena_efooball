@@ -1,5 +1,6 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/competition_payment_option.dart';
+import 'package:arena/features_shared/payment_operator_slug.dart';
 import 'package:flutter/material.dart';
 
 /// Opérateur de paiement Mobile Money **libre** (paiement P2P manuel).
@@ -98,36 +99,12 @@ class PaymentOperator {
   /// Couleur de texte sur le badge coloré.
   Color get foreground => ArenaColors.bone;
 
-  /// Dérive un slug MAJUSCULE depuis un libellé libre. Les 2 opérateurs
-  /// connus gardent leur slug canonique ; sinon "Wave" → "WAVE",
-  /// "Free Money" → "FREE_MONEY".
-  static String slugForLabel(String label) {
-    final l = label.toLowerCase();
-    if (l.contains('mtn')) return 'MTN_MOMO';
-    if (l.contains('orange')) return 'ORANGE_MONEY';
-    final slug = label
-        .toUpperCase()
-        .replaceAll(RegExp('[^A-Z0-9]+'), '_')
-        .replaceAll(RegExp(r'^_+|_+$'), '');
-    return slug.isEmpty ? 'OPERATOR' : slug;
-  }
+  /// Dérive un slug MAJUSCULE depuis un libellé libre. Délègue à l'util partagé
+  /// [operatorSlugForLabel] (source unique, réutilisée aussi côté admin).
+  static String slugForLabel(String label) => operatorSlugForLabel(label);
 
   /// Repli lisible d'un slug (ex. `FREE_MONEY` → "Free Money").
-  static String readableFromCode(String code) {
-    switch (code) {
-      case 'MTN_MOMO':
-        return 'MTN MoMo';
-      case 'ORANGE_MONEY':
-        return 'Orange Money';
-      default:
-        final words = code
-            .split('_')
-            .where((w) => w.isNotEmpty)
-            .map((w) => w[0].toUpperCase() + w.substring(1).toLowerCase());
-        final joined = words.join(' ');
-        return joined.isEmpty ? code : joined;
-    }
-  }
+  static String readableFromCode(String code) => operatorReadableFromCode(code);
 }
 
 /// Carré coloré aux initiales de l'opérateur. Réutilisé par le picker (P1),
