@@ -1270,6 +1270,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String roleIntroConfirmLaunched(String game) {
+    return 'I confirm I have already launched $game and reached the main menu.';
+  }
+
+  @override
   String get roleIntroGotIt => 'Got it';
 
   @override

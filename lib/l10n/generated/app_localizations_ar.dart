@@ -1265,6 +1265,11 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String roleIntroConfirmLaunched(String game) {
+    return 'أؤكد أنني قد شغّلت $game بالفعل ووصلت إلى القائمة الرئيسية.';
+  }
+
+  @override
   String get roleIntroGotIt => 'فهمت';
 
   @override

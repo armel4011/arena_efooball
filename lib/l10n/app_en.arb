@@ -416,6 +416,12 @@
       "game": { "type": "String" }
     }
   },
+  "roleIntroConfirmLaunched": "I confirm I have already launched {game} and reached the main menu.",
+  "@roleIntroConfirmLaunched": {
+    "placeholders": {
+      "game": { "type": "String" }
+    }
+  },
   "roleIntroGotIt": "Got it",
   "manualUploadButtonLabel": "Send a proof video",
   "manualUploadSuccess": "Video sent. Thank you!",

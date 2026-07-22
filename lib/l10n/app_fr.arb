@@ -436,6 +436,12 @@
       "game": { "type": "String" }
     }
   },
+  "roleIntroConfirmLaunched": "Je confirme avoir déjà lancé {game} et être arrivé au menu principal.",
+  "@roleIntroConfirmLaunched": {
+    "placeholders": {
+      "game": { "type": "String" }
+    }
+  },
   "roleIntroGotIt": "J'ai compris",
   "manualUploadButtonLabel": "Envoyer une vidéo de preuve",
   "manualUploadSuccess": "Vidéo envoyée. Merci !",

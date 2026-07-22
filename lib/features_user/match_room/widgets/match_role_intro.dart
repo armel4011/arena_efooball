@@ -59,6 +59,9 @@ class _MatchRoleIntroGateState extends ConsumerState<MatchRoleIntroGate> {
 
     await showDialog<void>(
       context: context,
+      // BLOQUANT : ni tap hors dialogue, ni back ne le ferment. On ne sort que
+      // par « J'ai compris », lui-même déverrouillé par la case de confirmation.
+      barrierDismissible: false,
       builder: (_) => _MatchRoleIntroDialog(
         isHome: isHome,
         game: widget.game,
@@ -72,15 +75,29 @@ class _MatchRoleIntroGateState extends ConsumerState<MatchRoleIntroGate> {
 
 /// Contenu du dialogue : rôle (DOMICILE/EXTÉRIEUR), déroulé jusqu'à la saisie du
 /// score, et vidéo explicative si l'admin en a publié une pour ce jeu.
-class _MatchRoleIntroDialog extends ConsumerWidget {
+///
+/// BLOQUANT : le joueur ne peut sortir qu'après avoir coché la case confirmant
+/// qu'il a DÉJÀ lancé le jeu (menu principal). Le bouton « J'ai compris » reste
+/// désactivé tant que la case n'est pas cochée.
+class _MatchRoleIntroDialog extends ConsumerStatefulWidget {
   const _MatchRoleIntroDialog({required this.isHome, required this.game});
 
   final bool isHome;
   final GameType game;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_MatchRoleIntroDialog> createState() =>
+      _MatchRoleIntroDialogState();
+}
+
+class _MatchRoleIntroDialogState extends ConsumerState<_MatchRoleIntroDialog> {
+  bool _confirmed = false;
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final isHome = widget.isHome;
+    final game = widget.game;
     // Vidéo DIFFÉRENTE selon le côté : Domicile (envoie le code) vs Extérieur
     // (le reçoit). L'admin publie une vidéo par côté.
     final side = isHome ? MatchRoleSide.home : MatchRoleSide.away;
@@ -90,42 +107,78 @@ class _MatchRoleIntroDialog extends ConsumerWidget {
     final player =
         video == null ? null : ArenaYoutubePlayer.maybe(video.videoUrl);
 
-    return AlertDialog(
-      backgroundColor: ArenaColors.carbon,
-      title: Text(
-        isHome ? l10n.roleIntroHomeTitle : l10n.roleIntroAwayTitle,
-        style: ArenaText.h3,
-      ),
-      content: SizedBox(
-        width: double.maxFinite,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                isHome
-                    ? l10n.roleIntroHomeBody(game.label)
-                    : l10n.roleIntroAwayBody(game.label),
-                style: ArenaText.body.copyWith(color: ArenaColors.silver),
-              ),
-              if (player != null) ...[
-                const SizedBox(height: ArenaSpacing.lg),
-                player,
+    return PopScope(
+      // Le back matériel ne doit PAS contourner la confirmation.
+      canPop: false,
+      child: AlertDialog(
+        backgroundColor: ArenaColors.carbon,
+        title: Text(
+          isHome ? l10n.roleIntroHomeTitle : l10n.roleIntroAwayTitle,
+          style: ArenaText.h3,
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  isHome
+                      ? l10n.roleIntroHomeBody(game.label)
+                      : l10n.roleIntroAwayBody(game.label),
+                  style: ArenaText.body.copyWith(color: ArenaColors.silver),
+                ),
+                if (player != null) ...[
+                  const SizedBox(height: ArenaSpacing.lg),
+                  player,
+                ],
+                const SizedBox(height: ArenaSpacing.md),
+                // Case de confirmation OBLIGATOIRE : déverrouille « J'ai compris ».
+                InkWell(
+                  onTap: () => setState(() => _confirmed = !_confirmed),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Checkbox(
+                        value: _confirmed,
+                        activeColor: ArenaColors.signalBlue,
+                        onChanged: (v) =>
+                            setState(() => _confirmed = v ?? false),
+                      ),
+                      Expanded(
+                        child: Padding(
+                          padding:
+                              const EdgeInsets.only(top: ArenaSpacing.sm),
+                          child: Text(
+                            l10n.roleIntroConfirmLaunched(game.label),
+                            style: ArenaText.body
+                                .copyWith(color: ArenaColors.bone),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
-            ],
+            ),
           ),
         ),
+        actions: [
+          TextButton(
+            // Désactivé tant que la case n'est pas cochée.
+            onPressed:
+                _confirmed ? () => Navigator.of(context).pop() : null,
+            child: Text(
+              l10n.roleIntroGotIt,
+              style: ArenaText.body.copyWith(
+                color:
+                    _confirmed ? ArenaColors.signalBlue : ArenaColors.silverDim,
+              ),
+            ),
+          ),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(
-            l10n.roleIntroGotIt,
-            style: ArenaText.body.copyWith(color: ArenaColors.signalBlue),
-          ),
-        ),
-      ],
     );
   }
 }

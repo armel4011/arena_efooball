@@ -192,7 +192,10 @@ void main() {
   // 2624 → 2629 le 2026-07-22 : +5 `ArenaColors.*` de l'écran de réveil du rappel
   // de match (MatchAlarmScreen : fond void_, icône/bouton signalBlue, titre bone,
   // sous-titre/Ignorer silver).
-  const colorsDotBaseline = 2629; // occurrences de `Colors.`
+  // 2629 → 2632 le 2026-07-22 : +3 `ArenaColors.*` de la case de confirmation
+  // bloquante de l'intro de rôle (checkbox signalBlue, libellé bone, bouton
+  // désactivé silverDim dans match_role_intro.dart).
+  const colorsDotBaseline = 2632; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.
