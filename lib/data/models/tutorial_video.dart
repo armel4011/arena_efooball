@@ -99,6 +99,21 @@ extension TutorialPageWire on TutorialPage {
 
   /// `true` si la cible se discrimine par PAYS (un tuto paiement par pays).
   bool get needsCountry => this == TutorialPage.paymentTutorial;
+
+  /// `true` si la cible se discrimine par CÔTÉ (Domicile/Extérieur) : l'intro de
+  /// rôle a une vidéo différente selon que le joueur reçoit ou envoie le code.
+  bool get needsRoleSide => this == TutorialPage.matchRoleIntro;
+}
+
+/// Côté d'un match pour l'intro de rôle. Valeur fil `home`/`away` (colonne
+/// `tutorial_video.role_side`).
+enum MatchRoleSide {
+  home('home', 'Domicile'),
+  away('away', 'Extérieur');
+
+  const MatchRoleSide(this.wire, this.labelFr);
+  final String wire;
+  final String labelFr;
 }
 
 /// Jeux proposables pour une cible discriminée par jeu : toutes pour la salle
@@ -136,6 +151,10 @@ sealed class TutorialVideo with _$TutorialVideo {
 
     /// Pays ciblé (ISO alpha-2) pour la cible `payment_tutorial`. `null` sinon.
     String? countryCode,
+
+    /// Côté ciblé (`home`/`away`) pour la cible `match_role_intro` : Domicile et
+    /// Extérieur ont chacun leur vidéo. `null` pour toutes les autres cibles.
+    String? roleSide,
     String? updatedBy,
     DateTime? createdAt,
     DateTime? updatedAt,

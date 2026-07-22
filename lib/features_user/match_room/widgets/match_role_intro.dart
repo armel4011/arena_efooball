@@ -1,10 +1,12 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/models/competition_enums.dart';
+import 'package:arena/data/models/tutorial_video.dart';
 import 'package:arena/data/repositories/onboarding_flags_repository.dart';
 import 'package:arena/data/repositories/tutorial_video_repository.dart';
 import 'package:arena/features_shared/widgets/arena_youtube_player.dart';
-import 'package:arena/features_user/match_room/match_room_page.dart' show MatchRole;
+import 'package:arena/features_user/match_room/match_room_page.dart'
+    show MatchRole;
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -79,7 +81,12 @@ class _MatchRoleIntroDialog extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final video = ref.watch(matchRoleIntroVideoProvider(game)).valueOrNull;
+    // Vidéo DIFFÉRENTE selon le côté : Domicile (envoie le code) vs Extérieur
+    // (le reçoit). L'admin publie une vidéo par côté.
+    final side = isHome ? MatchRoleSide.home : MatchRoleSide.away;
+    final video = ref
+        .watch(matchRoleIntroVideoProvider((game: game, side: side)))
+        .valueOrNull;
     final player =
         video == null ? null : ArenaYoutubePlayer.maybe(video.videoUrl);
 

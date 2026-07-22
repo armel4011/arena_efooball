@@ -108,7 +108,10 @@ Future<void> _openForm(
 /// paiement) ou durée d'affichage (bannières de page).
 String _bannerContextLabel(TutorialVideo v) {
   if (v.targetPage.needsGame) {
-    return '🎮 ${v.gameType?.label ?? '—'}';
+    final side = v.targetPage.needsRoleSide
+        ? ' · ${v.roleSide == MatchRoleSide.away.wire ? MatchRoleSide.away.labelFr : MatchRoleSide.home.labelFr}'
+        : '';
+    return '🎮 ${v.gameType?.label ?? '—'}$side';
   }
   if (v.targetPage.needsCountry) {
     final c =
@@ -332,6 +335,7 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
   late TutorialPage _page;
   GameType? _game;
   String? _country;
+  MatchRoleSide? _roleSide;
   bool _saving = false;
 
   bool get _isEdit => widget.existing != null;
@@ -346,6 +350,15 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
     _page = e?.targetPage ?? TutorialPage.home;
     _game = e?.gameType;
     _country = e?.countryCode;
+    _roleSide = _sideFromWire(e?.roleSide);
+  }
+
+  static MatchRoleSide? _sideFromWire(String? wire) {
+    if (wire == null) return null;
+    for (final s in MatchRoleSide.values) {
+      if (s.wire == wire) return s;
+    }
+    return null;
   }
 
   /// Change de cible et réinitialise les discriminants devenus hors-sujet, pour
@@ -355,6 +368,7 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
       _page = p;
       if (!p.needsGame) _game = null;
       if (!p.needsCountry) _country = null;
+      if (!p.needsRoleSide) _roleSide = null;
       if (p.needsGame && !gamesForTutorialPage(p).contains(_game)) _game = null;
     });
   }
@@ -387,11 +401,14 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
         uri.host.isNotEmpty;
   }
 
-  /// Discriminant requis présent selon la cible (jeu / pays / durée).
+  /// Discriminant(s) requis présent(s) selon la cible. L'intro de rôle exige À
+  /// LA FOIS un jeu ET un côté (Domicile/Extérieur).
   bool get _contextValid {
-    if (_page.needsGame) return _game != null;
-    if (_page.needsCountry) return _country != null;
-    return _displayDays != null;
+    if (_page.needsGame && _game == null) return false;
+    if (_page.needsCountry && _country == null) return false;
+    if (_page.needsRoleSide && _roleSide == null) return false;
+    if (!_page.needsGame && !_page.needsCountry) return _displayDays != null;
+    return true;
   }
 
   bool get _canSave =>
@@ -419,6 +436,7 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
     final days = _displayDays ?? 7;
     final gameWire = _page.needsGame ? _game?.value : null;
     final country = _page.needsCountry ? _country : null;
+    final roleSide = _page.needsRoleSide ? _roleSide?.wire : null;
     final repo = ref.read(tutorialVideoRepositoryProvider);
     final audit = ref.read(adminAuditLogRepositoryProvider);
     try {
@@ -433,6 +451,7 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
           isActive: before.isActive,
           game: gameWire,
           countryCode: country,
+          roleSide: roleSide,
           updatedBy: adminId,
         );
         await audit.record(
@@ -447,6 +466,7 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
             'display_days': before.displayDays,
             'game': before.game,
             'country_code': before.countryCode,
+            'role_side': before.roleSide,
           },
           afterState: {
             'title': _title,
@@ -455,6 +475,7 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
             'display_days': days,
             'game': gameWire,
             'country_code': country,
+            'role_side': roleSide,
           },
         );
       } else {
@@ -465,6 +486,7 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
           displayDays: days,
           game: gameWire,
           countryCode: country,
+          roleSide: roleSide,
           updatedBy: adminId,
         );
         await audit.record(
@@ -478,6 +500,7 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
             'display_days': days,
             'game': gameWire,
             'country_code': country,
+            'role_side': roleSide,
           },
         );
       }
@@ -644,6 +667,26 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
                   severity: InfoBarSeverity.warning,
                 ),
               ],
+            ],
+            // Intro de rôle : EN PLUS du jeu, choisir le côté (Domicile et
+            // Extérieur ont chacun leur vidéo).
+            if (_page.needsRoleSide) ...[
+              const SizedBox(height: 16),
+              InfoLabel(
+                label: 'Côté (Domicile / Extérieur)',
+                child: ComboBox<MatchRoleSide>(
+                  value: _roleSide,
+                  isExpanded: true,
+                  placeholder: const Text('Choisir un côté'),
+                  items: [
+                    for (final s in MatchRoleSide.values)
+                      ComboBoxItem(value: s, child: Text(s.labelFr)),
+                  ],
+                  onChanged: _saving
+                      ? null
+                      : (s) => s == null ? null : setState(() => _roleSide = s),
+                ),
+              ),
             ],
           ],
         ),

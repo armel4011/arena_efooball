@@ -48,7 +48,8 @@
         android:baselineAligned="false"
         android:orientation="horizontal">
 
-        <!-- Arrêter (rouge) -->
+        <!-- Score (rouge) — Étape B : ouvre la saisie du score (finit le match :
+             soumet + scelle la vidéo). Repli universel du bouton flottant. -->
         <LinearLayout
             android:id="@+id/notif_btn_stop"
             android:layout_width="0dp"
@@ -71,7 +72,7 @@
                 android:layout_marginStart="6dp"
                 android:ellipsize="end"
                 android:maxLines="1"
-                android:text="Arrêter"
+                android:text="Score"
                 android:textColor="@color/notif_btn_label"
                 android:textSize="13sp"
                 android:textStyle="bold" />

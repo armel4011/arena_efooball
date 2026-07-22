@@ -48,8 +48,8 @@ class SuperAdminTutorialVideo extends ConsumerWidget {
                 padding: const EdgeInsets.all(ArenaSpacing.lg),
                 child: Text(
                   'Erreur : $e',
-                  style: ArenaText.bodyMuted
-                      .copyWith(color: ArenaColors.neonRed),
+                  style:
+                      ArenaText.bodyMuted.copyWith(color: ArenaColors.neonRed),
                 ),
               ),
             ),
@@ -80,8 +80,7 @@ class SuperAdminTutorialVideo extends ConsumerWidget {
                     const SizedBox(height: ArenaSpacing.md),
                 itemBuilder: (_, i) => _BannerCard(
                   banner: list[i],
-                  onEdit: () =>
-                      _openForm(context, ref, existing: list[i]),
+                  onEdit: () => _openForm(context, ref, existing: list[i]),
                   onToggle: () => _toggleActive(context, ref, list[i]),
                   onDelete: () => _delete(context, ref, list[i]),
                 ),
@@ -124,16 +123,20 @@ class SuperAdminTutorialVideo extends ConsumerWidget {
     );
     if (!totpOk) return;
     try {
-      await ref.read(tutorialVideoRepositoryProvider).setActive(banner.id, next);
+      await ref
+          .read(tutorialVideoRepositoryProvider)
+          .setActive(banner.id, next);
       await ref.read(adminAuditLogRepositoryProvider).record(
         adminId: adminId,
-        action: next ? 'tutorial_video_activated' : 'tutorial_video_deactivated',
+        action:
+            next ? 'tutorial_video_activated' : 'tutorial_video_deactivated',
         targetType: 'tutorial_video',
         targetId: banner.id,
         beforeState: {'is_active': banner.isActive},
         afterState: {'is_active': next},
       );
-      _snack(messenger, next ? '✓ Bannière activée.' : '✓ Bannière désactivée.');
+      _snack(
+          messenger, next ? '✓ Bannière activée.' : '✓ Bannière désactivée.',);
     } catch (e) {
       _snack(messenger, '✗ Erreur : $e', error: true);
     }
@@ -220,12 +223,15 @@ class SuperAdminTutorialVideo extends ConsumerWidget {
 /// salle/l'intro de rôle, pays pour le tuto paiement, durée pour les bannières.
 String _bannerContextLabel(TutorialVideo v) {
   if (v.targetPage.needsGame) {
-    return '🎮 ${v.gameType?.label ?? '—'}';
+    // Intro de rôle : préciser le côté (Domicile/Extérieur), 2 vidéos par jeu.
+    final side = v.targetPage.needsRoleSide
+        ? ' · ${v.roleSide == MatchRoleSide.away.wire ? MatchRoleSide.away.labelFr : MatchRoleSide.home.labelFr}'
+        : '';
+    return '🎮 ${v.gameType?.label ?? '—'}$side';
   }
   if (v.targetPage.needsCountry) {
-    final c = kSupportedCountries
-        .where((e) => e.code == v.countryCode)
-        .firstOrNull;
+    final c =
+        kSupportedCountries.where((e) => e.code == v.countryCode).firstOrNull;
     return '🌍 ${c == null ? (v.countryCode ?? '—') : '${c.flag} ${c.name}'}';
   }
   return '⏳ ${v.displayDays} jour${v.displayDays > 1 ? 's' : ''}';
@@ -351,6 +357,7 @@ class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
   late TutorialPage _page;
   GameType? _game;
   String? _country;
+  MatchRoleSide? _roleSide;
   bool _saving = false;
 
   bool get _isEdit => widget.existing != null;
@@ -365,6 +372,15 @@ class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
     _page = e?.targetPage ?? TutorialPage.home;
     _game = e?.gameType;
     _country = e?.countryCode;
+    _roleSide = _sideFromWire(e?.roleSide);
+  }
+
+  static MatchRoleSide? _sideFromWire(String? wire) {
+    if (wire == null) return null;
+    for (final s in MatchRoleSide.values) {
+      if (s.wire == wire) return s;
+    }
+    return null;
   }
 
   /// Change de cible et réinitialise les discriminants devenus hors-sujet, pour
@@ -374,6 +390,7 @@ class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
       _page = p;
       if (!p.needsGame) _game = null;
       if (!p.needsCountry) _country = null;
+      if (!p.needsRoleSide) _roleSide = null;
       // L'intro de rôle n'accepte pas les Dames : on force une resélection.
       if (p.needsGame && !gamesForTutorialPage(p).contains(_game)) _game = null;
     });
@@ -408,11 +425,15 @@ class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
         uri.host.isNotEmpty;
   }
 
-  /// Discriminant requis présent selon la cible (jeu / pays / rien).
+  /// Discriminant(s) requis présent(s) selon la cible (jeu / pays / côté). Note :
+  /// l'intro de rôle exige À LA FOIS un jeu ET un côté (Domicile/Extérieur).
   bool get _contextValid {
-    if (_page.needsGame) return _game != null;
-    if (_page.needsCountry) return _country != null;
-    return _displayDays != null;
+    if (_page.needsGame && _game == null) return false;
+    if (_page.needsCountry && _country == null) return false;
+    if (_page.needsRoleSide && _roleSide == null) return false;
+    // Bannières de page (ni jeu ni pays) : fenêtre d'affichage valide requise.
+    if (!_page.needsGame && !_page.needsCountry) return _displayDays != null;
+    return true;
   }
 
   bool get _canSave =>
@@ -441,6 +462,7 @@ class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
     final days = _displayDays ?? 7;
     final gameWire = _page.needsGame ? _game?.value : null;
     final country = _page.needsCountry ? _country : null;
+    final roleSide = _page.needsRoleSide ? _roleSide?.wire : null;
     final repo = ref.read(tutorialVideoRepositoryProvider);
     final audit = ref.read(adminAuditLogRepositoryProvider);
     try {
@@ -455,6 +477,7 @@ class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
           isActive: before.isActive,
           game: gameWire,
           countryCode: country,
+          roleSide: roleSide,
           updatedBy: adminId,
         );
         await audit.record(
@@ -469,6 +492,7 @@ class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
             'display_days': before.displayDays,
             'game': before.game,
             'country_code': before.countryCode,
+            'role_side': before.roleSide,
           },
           afterState: {
             'title': _title,
@@ -477,6 +501,7 @@ class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
             'display_days': days,
             'game': gameWire,
             'country_code': country,
+            'role_side': roleSide,
           },
         );
       } else {
@@ -487,6 +512,7 @@ class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
           displayDays: days,
           game: gameWire,
           countryCode: country,
+          roleSide: roleSide,
           updatedBy: adminId,
         );
         await audit.record(
@@ -500,6 +526,7 @@ class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
             'display_days': days,
             'game': gameWire,
             'country_code': country,
+            'role_side': roleSide,
           },
         );
       }
@@ -535,7 +562,8 @@ class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
       child: Container(
         decoration: const BoxDecoration(
           color: ArenaColors.carbon2,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(ArenaRadius.lg)),
+          borderRadius:
+              BorderRadius.vertical(top: Radius.circular(ArenaRadius.lg)),
         ),
         child: SafeArea(
           top: false,
@@ -625,6 +653,21 @@ class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
                         ? 'Entrez un nombre entre 1 et 365.'
                         : null,
                     onChanged: (_) => setState(() {}),
+                  ),
+                  const SizedBox(height: ArenaSpacing.lg),
+                ],
+
+                // Intro de rôle : EN PLUS du jeu, choisir le côté — Domicile et
+                // Extérieur ont chacun leur vidéo.
+                if (_page.needsRoleSide) ...[
+                  Text(
+                    '🏠 CÔTÉ (DOMICILE / EXTÉRIEUR)',
+                    style: ArenaText.inputLabel,
+                  ),
+                  const SizedBox(height: ArenaSpacing.sm),
+                  _RoleSideDropdown(
+                    value: _roleSide,
+                    onChanged: (s) => setState(() => _roleSide = s),
                   ),
                   const SizedBox(height: ArenaSpacing.lg),
                 ],
@@ -753,6 +796,41 @@ class _CountryDropdown extends StatelessWidget {
           ],
           onChanged: (c) {
             if (c != null) onChanged(c);
+          },
+        ),
+      ),
+    );
+  }
+}
+
+/// Sélecteur de côté (Domicile / Extérieur) pour l'intro de rôle.
+class _RoleSideDropdown extends StatelessWidget {
+  const _RoleSideDropdown({required this.value, required this.onChanged});
+  final MatchRoleSide? value;
+  final ValueChanged<MatchRoleSide> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: ArenaSpacing.md),
+      decoration: BoxDecoration(
+        color: ArenaColors.carbon,
+        borderRadius: BorderRadius.circular(ArenaRadius.md),
+        border: Border.all(color: ArenaColors.border),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<MatchRoleSide>(
+          value: value,
+          isExpanded: true,
+          dropdownColor: ArenaColors.carbon,
+          style: ArenaText.body,
+          hint: Text('Choisir un côté', style: ArenaText.bodyMuted),
+          items: [
+            for (final s in MatchRoleSide.values)
+              DropdownMenuItem(value: s, child: Text(s.labelFr)),
+          ],
+          onChanged: (s) {
+            if (s != null) onChanged(s);
           },
         ),
       ),

@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:arena/core/services/agora_streaming_service.dart';
 import 'package:arena/core/services/anticheat/anticheat_config_service.dart';
 import 'package:arena/core/services/anticheat/anticheat_provider.dart';
-import 'package:arena/core/services/bring_to_front.dart';
 import 'package:arena/core/services/livekit_capture_service.dart';
 import 'package:arena/core/services/match_recording_coordinator.dart';
 import 'package:arena/core/services/native_lifecycle_events.dart';
@@ -428,12 +427,14 @@ class _MatchRecordingLifecycleState
     if (selfId == null) return;
 
     final isPlayer1 = selfId == widget.match.player1Id;
+    // Pénaltys valides UNIQUEMENT en élimination directe (pas de groupId) : en
+    // poule un score nul reste nul. Garde-fou pour les deux sources (overlay +
+    // notif), au cas où le formulaire aurait proposé les tirs au but.
+    final viaPen = score.viaPenalties && widget.match.groupId == null;
     final s1 = isPlayer1 ? score.my : score.opp;
     final s2 = isPlayer1 ? score.opp : score.my;
-    final pen1 =
-        score.viaPenalties ? (isPlayer1 ? score.myPen : score.oppPen) : null;
-    final pen2 =
-        score.viaPenalties ? (isPlayer1 ? score.oppPen : score.myPen) : null;
+    final pen1 = viaPen ? (isPlayer1 ? score.myPen : score.oppPen) : null;
+    final pen2 = viaPen ? (isPlayer1 ? score.oppPen : score.myPen) : null;
 
     final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.maybeOf(context);
@@ -443,7 +444,7 @@ class _MatchRecordingLifecycleState
             byProfileId: selfId,
             scoreP1: s1,
             scoreP2: s2,
-            decidedByPenalties: score.viaPenalties,
+            decidedByPenalties: viaPen,
             penaltyP1: pen1,
             penaltyP2: pen2,
           );
@@ -458,6 +459,12 @@ class _MatchRecordingLifecycleState
     // Score enregistré → sceller la preuve. `stopCleanly()` fait basculer le
     // coordinator en CoordinatorStopped, ce que le listener racine capte pour
     // exporter le MP4 + engager le hash anti-triche.
+    //
+    // On NE ramène PLUS ARENA au premier plan ici : eFootball est devant et
+    // Android a tué l'activité d'ARENA en arrière-plan → `bringArenaToFront`
+    // la RECRÉAIT à froid (« redémarrage » / parfois arrêt brutal). Le score et
+    // la vidéo sont déjà sauvegardés (awaités ci-dessus) ; l'utilisateur rouvre
+    // ARENA quand il veut et y voit le résultat, sans redémarrage forcé.
     final coord = ref.read(matchRecordingCoordinatorProvider);
     if (coord.state is CoordinatorRecording ||
         coord.state is CoordinatorPaused) {
@@ -467,10 +474,6 @@ class _MatchRecordingLifecycleState
         debugPrint('[recording] score stopCleanly failed: $e');
       }
     }
-    // Ramène ARENA au premier plan pour montrer l'écran de résultat.
-    try {
-      await ref.read(bringToFrontProvider).bringArenaToFront();
-    } catch (_) {}
   }
 
   /// Démarre Agora en broadcaster après que l'overlay a demandé "Live".
@@ -618,6 +621,15 @@ class _MatchRecordingLifecycleState
       // Score saisi depuis le mini-formulaire du bouton flottant (« Score »
       // remplace « Enregistrer & arrêter ») → soumission + scellement vidéo.
       ..listen<AsyncValue<OverlayScore>>(overlayScoreSubmissionsProvider,
+          (_, next) {
+        final score = next.valueOrNull;
+        if (score == null) return;
+        unawaited(_onOverlayScore(score));
+      })
+      // Étape B — MÊME score, saisi depuis le bouton « Score » de la NOTIF de
+      // contrôle (ScoreInputActivity) : repli universel là où l'overlay est
+      // bloqué (Pixel 9 / Android 15). Même handler.
+      ..listen<AsyncValue<OverlayScore>>(nativeScoreSubmittedProvider,
           (_, next) {
         final score = next.valueOrNull;
         if (score == null) return;

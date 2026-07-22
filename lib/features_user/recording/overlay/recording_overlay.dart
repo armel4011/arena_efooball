@@ -91,12 +91,17 @@ class _ArenaOverlayRootState extends State<ArenaOverlayRoot> {
         : null;
     final modeChanged = mode != null && mode != _mode;
 
-    // Pendant la saisie du code inline, un tick chrono arrive chaque seconde.
-    // Reconstruire le TextField à chaque tick lui ferait perdre focus/clavier
-    // (champ figé). On met donc à jour `_tick` SANS setState tant que la
-    // saisie reste ouverte ; on ne rebuild que si `codeEntry` (ou le mode)
-    // change réellement (ouverture / fermeture du champ).
-    if (tick != null && !modeChanged && _tick.isCodeEntry && tick.isCodeEntry) {
+    // Pendant la saisie du code OU du score, un tick chrono arrive chaque
+    // seconde. Reconstruire les TextField à chaque tick leur ferait perdre
+    // focus/clavier (champ figé, impossible d'y taper deux valeurs) — et côté
+    // score, ne jamais pouvoir poser un score à ÉGALITÉ ⇒ le volet pénaltys
+    // (qui n'apparaît qu'à égalité) ne sortait JAMAIS. On met donc à jour
+    // `_tick` SANS setState tant que la saisie reste ouverte ; on ne rebuild
+    // qu'à l'ouverture / fermeture (transition du flag ou changement de mode).
+    if (tick != null &&
+        !modeChanged &&
+        ((_tick.isCodeEntry && tick.isCodeEntry) ||
+            (_tick.isScoreEntry && tick.isScoreEntry))) {
       _tick = tick;
       return;
     }
@@ -760,7 +765,6 @@ class _ScoreEntryFieldState extends State<ScoreEntryField> {
   final _myPen = TextEditingController();
   final _oppPen = TextEditingController();
   bool _viaPen = false;
-  String? _error;
 
   @override
   void dispose() {
@@ -777,38 +781,33 @@ class _ScoreEntryFieldState extends State<ScoreEntryField> {
     return m != null && o != null && m == o;
   }
 
-  void _submit() {
+  /// Formulaire valide ? On DÉSACTIVE Valider quand ça ne l'est pas (au lieu
+  /// d'un message d'erreur qui agrandirait la carte). Règles : scores 0–99 ;
+  /// si tirs au but → score à égalité, TAB 0–30 et TAB NON égaux.
+  bool get _isValid {
     final my = int.tryParse(_my.text.trim());
     final opp = int.tryParse(_opp.text.trim());
     if (my == null || opp == null || my < 0 || my > 99 || opp < 0 || opp > 99) {
-      setState(() => _error = 'Score invalide (0 à 99).');
-      return;
+      return false;
     }
-    int? myPen;
-    int? oppPen;
     if (_viaPen) {
-      if (my != opp) {
-        setState(() => _error = 'Tirs au but : le score doit être à égalité.');
-        return;
+      if (my != opp) return false;
+      final pm = int.tryParse(_myPen.text.trim());
+      final po = int.tryParse(_oppPen.text.trim());
+      if (pm == null || po == null || pm < 0 || pm > 30 || po < 0 || po > 30) {
+        return false;
       }
-      myPen = int.tryParse(_myPen.text.trim());
-      oppPen = int.tryParse(_oppPen.text.trim());
-      if (myPen == null ||
-          oppPen == null ||
-          myPen < 0 ||
-          oppPen < 0 ||
-          myPen > 30 ||
-          oppPen > 30) {
-        setState(() => _error = 'Tirs au but invalides (0 à 30).');
-        return;
-      }
-      if (myPen == oppPen) {
-        setState(
-          () => _error = 'Les tirs au but ne peuvent pas être à égalité.',
-        );
-        return;
-      }
+      if (pm == po) return false; // pas de tirs au but à égalité
     }
+    return true;
+  }
+
+  void _submit() {
+    if (!_isValid) return; // Valider est déjà désactivé, garde-fou.
+    final my = int.parse(_my.text.trim());
+    final opp = int.parse(_opp.text.trim());
+    final myPen = _viaPen ? int.parse(_myPen.text.trim()) : null;
+    final oppPen = _viaPen ? int.parse(_oppPen.text.trim()) : null;
     widget.onSubmit(my, opp, _viaPen, myPen, oppPen);
   }
 
@@ -820,13 +819,13 @@ class _ScoreEntryFieldState extends State<ScoreEntryField> {
           label,
           style: TextStyle(
             color: ArenaColors.bone.withValues(alpha: 0.65),
-            fontSize: 10,
+            fontSize: 9,
             fontWeight: FontWeight.w700,
           ),
         ),
-        const SizedBox(height: 3),
+        const SizedBox(height: 2),
         SizedBox(
-          width: 58,
+          width: 52,
           child: TextField(
             controller: c,
             keyboardType: TextInputType.number,
@@ -835,7 +834,7 @@ class _ScoreEntryFieldState extends State<ScoreEntryField> {
             onChanged: (_) => setState(() {}),
             style: const TextStyle(
               color: ArenaColors.bone,
-              fontSize: 20,
+              fontSize: 18,
               fontWeight: FontWeight.w800,
             ),
             decoration: InputDecoration(
@@ -844,6 +843,8 @@ class _ScoreEntryFieldState extends State<ScoreEntryField> {
               hintStyle:
                   TextStyle(color: ArenaColors.bone.withValues(alpha: 0.2)),
               isDense: true,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               filled: true,
               fillColor: ArenaColors.bone.withValues(alpha: 0.08),
               border: OutlineInputBorder(
@@ -861,153 +862,159 @@ class _ScoreEntryFieldState extends State<ScoreEntryField> {
   Widget build(BuildContext context) {
     final canPen = widget.allowPenalties && _isTie;
     const sep = Padding(
-      padding: EdgeInsets.symmetric(horizontal: 10),
+      padding: EdgeInsets.symmetric(horizontal: 8),
       child: Text(
         ':',
         style: TextStyle(
           color: ArenaColors.bone,
-          fontSize: 22,
+          fontSize: 18,
           fontWeight: FontWeight.w800,
         ),
       ),
     );
+    // COMPACT & NON scrollable : tout tient d'un coup dans la fenêtre (360 dp).
+    // `viewInsets.bottom` remonte la carte au-dessus du clavier. Éléments réduits
+    // pour que titre + scores + pénaltys + Valider/Fermer soient visibles
+    // ensemble, sans défilement.
     return Focus(
       onFocusChange: widget.onFocusChange,
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: ArenaColors.void_.withValues(alpha: 0.92),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: ArenaColors.danger, width: 1.5),
+      child: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'SCORE DU MATCH',
-                  style: TextStyle(
-                    color: ArenaColors.bone,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 13,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                Text(
-                  widget.timerLabel,
-                  style: TextStyle(
-                    color: ArenaColors.bone.withValues(alpha: 0.7),
-                    fontSize: 12,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _numField(_my, 'MOI'),
-                sep,
-                _numField(_opp, 'ADVERSAIRE'),
-              ],
-            ),
-            if (canPen) ...[
-              const SizedBox(height: 8),
-              GestureDetector(
-                onTap: () => setState(() => _viaPen = !_viaPen),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      _viaPen ? Icons.check_box : Icons.check_box_outline_blank,
-                      color: ArenaColors.signalBlue,
-                      size: 18,
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: ArenaColors.void_.withValues(alpha: 0.92),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: ArenaColors.danger, width: 1.5),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'SCORE DU MATCH',
+                    style: TextStyle(
+                      color: ArenaColors.bone,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 12,
+                      letterSpacing: 0.5,
                     ),
-                    const SizedBox(width: 6),
-                    const Text(
-                      'Décidé aux tirs au but',
-                      style: TextStyle(color: ArenaColors.bone, fontSize: 12),
+                  ),
+                  Text(
+                    widget.timerLabel,
+                    style: TextStyle(
+                      color: ArenaColors.bone.withValues(alpha: 0.7),
+                      fontSize: 11,
+                      fontFeatures: const [FontFeature.tabularFigures()],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              if (_viaPen)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
+              const SizedBox(height: 6),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _numField(_my, 'MOI'),
+                  sep,
+                  _numField(_opp, 'ADVERSAIRE'),
+                ],
+              ),
+              if (canPen) ...[
+                const SizedBox(height: 6),
+                GestureDetector(
+                  onTap: () => setState(() => _viaPen = !_viaPen),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      _numField(_myPen, 'MES TAB'),
-                      sep,
-                      _numField(_oppPen, 'SES TAB'),
+                      Icon(
+                        _viaPen
+                            ? Icons.check_box
+                            : Icons.check_box_outline_blank,
+                        color: ArenaColors.signalBlue,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 6),
+                      const Text(
+                        'Décidé aux tirs au but',
+                        style: TextStyle(color: ArenaColors.bone, fontSize: 11),
+                      ),
                     ],
                   ),
                 ),
-            ],
-            if (_error != null) ...[
+                if (_viaPen)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _numField(_myPen, 'MES TAB'),
+                        sep,
+                        _numField(_oppPen, 'SES TAB'),
+                      ],
+                    ),
+                  ),
+              ],
               const SizedBox(height: 8),
-              Text(
-                _error!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: ArenaColors.danger,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: _submit,
-                    child: Container(
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: ArenaColors.signalBlue,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Center(
-                        child: Text(
-                          'VALIDER',
-                          style: TextStyle(
-                            color: ArenaColors.bone,
-                            fontWeight: FontWeight.w800,
+              Row(
+                children: [
+                  Expanded(
+                    // Valider DÉSACTIVÉ tant que le formulaire est invalide (ex.
+                    // tirs au but à égalité) : grisé + tap ignoré. Pas de message
+                    // d'erreur (il agrandirait la carte). Cf. `_isValid`.
+                    child: GestureDetector(
+                      onTap: _isValid ? _submit : null,
+                      child: Container(
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: _isValid
+                              ? ArenaColors.signalBlue
+                              : ArenaColors.signalBlue.withValues(alpha: 0.35),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Center(
+                          child: Text(
+                            'VALIDER',
+                            style: TextStyle(
+                              color: ArenaColors.bone.withValues(
+                                alpha: _isValid ? 1 : 0.5,
+                              ),
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: widget.onClose,
-                  child: Container(
-                    height: 40,
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: ArenaColors.bone.withValues(alpha: 0.24),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: widget.onClose,
+                    child: Container(
+                      height: 36,
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: ArenaColors.bone.withValues(alpha: 0.24),
+                        ),
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Center(
-                      child: Text(
-                        'Fermer',
-                        style: TextStyle(
-                          color: ArenaColors.bone.withValues(alpha: 0.7),
+                      child: Center(
+                        child: Text(
+                          'Fermer',
+                          style: TextStyle(
+                            color: ArenaColors.bone.withValues(alpha: 0.7),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

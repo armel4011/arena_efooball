@@ -480,12 +480,15 @@ class RecordingOverlayController {
       unawaited(exitCodeEntry());
       return;
     }
-    // Mini « Score » : ouvre le formulaire de score inline.
+    // Mini « Score » : ouvre le formulaire de score IN-OVERLAY (Flutter). Le
+    // bouton flottant utilise SON dialogue (garanti de s'ouvrir puisque
+    // l'overlay tourne ; pas de démarrage d'activité en arrière-plan). La notif,
+    // elle, ouvre le dialogue natif ScoreInputActivity (cas Pixel 9 sans overlay).
     if (_isMessage(event, RecordingOverlayMessages.askEnterScoreType)) {
       unawaited(enterScoreEntry());
       return;
     }
-    // « Fermer » du formulaire de score : referme sans valider.
+    // « Fermer » du formulaire de score inline : referme sans valider.
     if (_isMessage(event, RecordingOverlayMessages.askExitScoreType)) {
       unawaited(exitScoreEntry());
       return;
@@ -690,10 +693,12 @@ class _DefaultOverlayPlatform implements OverlayPlatform {
   @override
   Future<void> resizeToScoreEntry() async {
     final dpr = PlatformDispatcher.instance.views.first.devicePixelRatio;
-    // Un peu plus haut que la saisie de code : 2 champs + pénaltys + Valider.
+    // 360 dp : assez pour afficher le formulaire COMPACT en entier (titre +
+    // scores + volet pénaltys + Valider/Fermer) SANS défilement. `viewInsets`
+    // (dans ScoreEntryField.build) remonte la carte au-dessus du clavier.
     await FlutterOverlayWindow.resizeOverlay(
       (360 * dpr).round(),
-      (240 * dpr).round(),
+      (360 * dpr).round(),
       false,
     );
   }

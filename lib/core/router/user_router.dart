@@ -24,6 +24,7 @@ import 'package:arena/features_user/competitions/competition_detail_page.dart';
 import 'package:arena/features_user/competitions/registration_confirm_page.dart';
 import 'package:arena/features_user/draughts/ui/draughts_game_screen.dart';
 import 'package:arena/features_user/home/main_layout.dart';
+import 'package:arena/features_user/match_room/match_alarm_screen.dart';
 import 'package:arena/features_user/match_room/match_room_page.dart';
 import 'package:arena/features_user/notifications/notifications_page.dart';
 import 'package:arena/features_user/onboarding/onboarding_page.dart';
@@ -70,6 +71,7 @@ abstract final class UserRoutes {
   static const banned = '/banned';
   static const competitionDetail = '/competitions/:id';
   static const matchRoom = '/match/:id';
+  static const matchAlarm = '/match-alarm/:id';
   static const matchChat = '/chat/match/:id';
   static const friendChat = '/chat/friend/:friendshipId';
   static const liveStreams = '/streams';
@@ -112,6 +114,9 @@ abstract final class UserRoutes {
 
   /// Builds the concrete `/match/<id>` URL.
   static String matchPath(String id) => '/match/$id';
+
+  /// Builds the concrete `/match-alarm/<id>` URL (écran de réveil du rappel).
+  static String matchAlarmPath(String id) => '/match-alarm/$id';
 
   /// Builds the concrete `/chat/match/<id>` URL.
   static String matchChatPath(String matchId) => '/chat/match/$matchId';
@@ -331,6 +336,13 @@ final userRouterProvider = Provider<GoRouter>((ref) {
         path: UserRoutes.matchRoom,
         name: 'user.matchRoom',
         builder: (context, state) => MatchRoomPage(
+          matchId: state.pathParameters['id'] ?? '',
+        ),
+      ),
+      GoRoute(
+        path: UserRoutes.matchAlarm,
+        name: 'user.matchAlarm',
+        builder: (context, state) => MatchAlarmScreen(
           matchId: state.pathParameters['id'] ?? '',
         ),
       ),

@@ -33,6 +33,10 @@ mixin _$TutorialVideo {
 
   /// Pays ciblé (ISO alpha-2) pour la cible `payment_tutorial`. `null` sinon.
   String? get countryCode => throw _privateConstructorUsedError;
+
+  /// Côté ciblé (`home`/`away`) pour la cible `match_role_intro` : Domicile et
+  /// Extérieur ont chacun leur vidéo. `null` pour toutes les autres cibles.
+  String? get roleSide => throw _privateConstructorUsedError;
   String? get updatedBy => throw _privateConstructorUsedError;
   DateTime? get createdAt => throw _privateConstructorUsedError;
   DateTime? get updatedAt => throw _privateConstructorUsedError;
@@ -62,6 +66,7 @@ abstract class $TutorialVideoCopyWith<$Res> {
       TutorialPage targetPage,
       String? game,
       String? countryCode,
+      String? roleSide,
       String? updatedBy,
       DateTime? createdAt,
       DateTime? updatedAt});
@@ -90,6 +95,7 @@ class _$TutorialVideoCopyWithImpl<$Res, $Val extends TutorialVideo>
     Object? targetPage = null,
     Object? game = freezed,
     Object? countryCode = freezed,
+    Object? roleSide = freezed,
     Object? updatedBy = freezed,
     Object? createdAt = freezed,
     Object? updatedAt = freezed,
@@ -127,6 +133,10 @@ class _$TutorialVideoCopyWithImpl<$Res, $Val extends TutorialVideo>
           ? _value.countryCode
           : countryCode // ignore: cast_nullable_to_non_nullable
               as String?,
+      roleSide: freezed == roleSide
+          ? _value.roleSide
+          : roleSide // ignore: cast_nullable_to_non_nullable
+              as String?,
       updatedBy: freezed == updatedBy
           ? _value.updatedBy
           : updatedBy // ignore: cast_nullable_to_non_nullable
@@ -160,6 +170,7 @@ abstract class _$$TutorialVideoImplCopyWith<$Res>
       TutorialPage targetPage,
       String? game,
       String? countryCode,
+      String? roleSide,
       String? updatedBy,
       DateTime? createdAt,
       DateTime? updatedAt});
@@ -186,6 +197,7 @@ class __$$TutorialVideoImplCopyWithImpl<$Res>
     Object? targetPage = null,
     Object? game = freezed,
     Object? countryCode = freezed,
+    Object? roleSide = freezed,
     Object? updatedBy = freezed,
     Object? createdAt = freezed,
     Object? updatedAt = freezed,
@@ -223,6 +235,10 @@ class __$$TutorialVideoImplCopyWithImpl<$Res>
           ? _value.countryCode
           : countryCode // ignore: cast_nullable_to_non_nullable
               as String?,
+      roleSide: freezed == roleSide
+          ? _value.roleSide
+          : roleSide // ignore: cast_nullable_to_non_nullable
+              as String?,
       updatedBy: freezed == updatedBy
           ? _value.updatedBy
           : updatedBy // ignore: cast_nullable_to_non_nullable
@@ -251,6 +267,7 @@ class _$TutorialVideoImpl extends _TutorialVideo {
       this.targetPage = TutorialPage.home,
       this.game,
       this.countryCode,
+      this.roleSide,
       this.updatedBy,
       this.createdAt,
       this.updatedAt})
@@ -283,6 +300,11 @@ class _$TutorialVideoImpl extends _TutorialVideo {
   /// Pays ciblé (ISO alpha-2) pour la cible `payment_tutorial`. `null` sinon.
   @override
   final String? countryCode;
+
+  /// Côté ciblé (`home`/`away`) pour la cible `match_role_intro` : Domicile et
+  /// Extérieur ont chacun leur vidéo. `null` pour toutes les autres cibles.
+  @override
+  final String? roleSide;
   @override
   final String? updatedBy;
   @override
@@ -292,7 +314,7 @@ class _$TutorialVideoImpl extends _TutorialVideo {
 
   @override
   String toString() {
-    return 'TutorialVideo(id: $id, title: $title, videoUrl: $videoUrl, isActive: $isActive, displayDays: $displayDays, targetPage: $targetPage, game: $game, countryCode: $countryCode, updatedBy: $updatedBy, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'TutorialVideo(id: $id, title: $title, videoUrl: $videoUrl, isActive: $isActive, displayDays: $displayDays, targetPage: $targetPage, game: $game, countryCode: $countryCode, roleSide: $roleSide, updatedBy: $updatedBy, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -313,6 +335,8 @@ class _$TutorialVideoImpl extends _TutorialVideo {
             (identical(other.game, game) || other.game == game) &&
             (identical(other.countryCode, countryCode) ||
                 other.countryCode == countryCode) &&
+            (identical(other.roleSide, roleSide) ||
+                other.roleSide == roleSide) &&
             (identical(other.updatedBy, updatedBy) ||
                 other.updatedBy == updatedBy) &&
             (identical(other.createdAt, createdAt) ||
@@ -333,6 +357,7 @@ class _$TutorialVideoImpl extends _TutorialVideo {
       targetPage,
       game,
       countryCode,
+      roleSide,
       updatedBy,
       createdAt,
       updatedAt);
@@ -363,6 +388,7 @@ abstract class _TutorialVideo extends TutorialVideo {
       final TutorialPage targetPage,
       final String? game,
       final String? countryCode,
+      final String? roleSide,
       final String? updatedBy,
       final DateTime? createdAt,
       final DateTime? updatedAt}) = _$TutorialVideoImpl;
@@ -392,6 +418,11 @@ abstract class _TutorialVideo extends TutorialVideo {
   /// Pays ciblé (ISO alpha-2) pour la cible `payment_tutorial`. `null` sinon.
   @override
   String? get countryCode;
+
+  /// Côté ciblé (`home`/`away`) pour la cible `match_role_intro` : Domicile et
+  /// Extérieur ont chacun leur vidéo. `null` pour toutes les autres cibles.
+  @override
+  String? get roleSide;
   @override
   String? get updatedBy;
   @override

@@ -100,10 +100,26 @@ class ArenaRecorderService : Service() {
         // Code saisi par le HOME dans RoomCodeInputActivity.
         const val EXTRA_TYPED_CODE = "typed_code"
 
+        // Étape B — score saisi dans ScoreInputActivity (bouton « Score » de la
+        // notif). Renvoyé au service (ACTION_SUBMIT_SCORE) qui forwarde à Dart.
+        const val ACTION_SUBMIT_SCORE = "com.arena.arena.recorder.SUBMIT_SCORE"
+        const val EXTRA_SCORE_MY = "score_my"
+        const val EXTRA_SCORE_OPP = "score_opp"
+        const val EXTRA_SCORE_VIA_PEN = "score_via_pen"
+        const val EXTRA_SCORE_PEN_MY = "score_pen_my"
+        const val EXTRA_SCORE_PEN_OPP = "score_pen_opp"
+
         // Callback : le HOME a tapé le code depuis la notif (mini-dialogue).
         // Set par MainActivity ; forwardé à Dart (→ écrit matches.room_code).
         @Volatile
         var onRoomCodeSubmitted: ((String) -> Unit)? = null
+
+        // Callback : score saisi dans ScoreInputActivity (Étape B). Set par
+        // MainActivity ; forwardé à Dart → même chemin que le score de l'overlay
+        // (mappe selon le rôle, soumet + scelle la vidéo). Args : my, opp,
+        // viaPenalties, myPen?, oppPen?.
+        @Volatile
+        var onScoreSubmitted: ((Int, Int, Boolean, Int?, Int?) -> Unit)? = null
 
         // Callback : l'utilisateur a tapé « Arrêter » sur la notif. Set par
         // MainActivity ; forwardé à Dart → coordinator.stopCleanly() (arrêt
@@ -273,6 +289,27 @@ class ArenaRecorderService : Service() {
                     roomCode = typed
                     try { onRoomCodeSubmitted?.invoke(typed) } catch (_: Exception) {}
                     refreshNotification()
+                }
+                return START_STICKY
+            }
+            ACTION_SUBMIT_SCORE -> {
+                // Étape B — score validé dans ScoreInputActivity. On forwarde à
+                // Dart, qui mappe selon le rôle, SOUMET le score et SCELLE la
+                // vidéo (même chemin que le score de l'overlay). Le natif ne
+                // stoppe PAS lui-même : Dart orchestre (submit → stopCleanly).
+                val my = intent.getIntExtra(EXTRA_SCORE_MY, -1)
+                val opp = intent.getIntExtra(EXTRA_SCORE_OPP, -1)
+                if (my in 0..99 && opp in 0..99) {
+                    val viaPen = intent.getBooleanExtra(EXTRA_SCORE_VIA_PEN, false)
+                    val penMy = if (viaPen) intent.getIntExtra(EXTRA_SCORE_PEN_MY, -1) else -1
+                    val penOpp = if (viaPen) intent.getIntExtra(EXTRA_SCORE_PEN_OPP, -1) else -1
+                    try {
+                        onScoreSubmitted?.invoke(
+                            my, opp, viaPen,
+                            penMy.takeIf { it >= 0 },
+                            penOpp.takeIf { it >= 0 },
+                        )
+                    } catch (_: Exception) {}
                 }
                 return START_STICKY
             }
@@ -654,12 +691,14 @@ class ArenaRecorderService : Service() {
             )
         }
         val openPending = PendingIntent.getActivity(this, 0, openIntent, pendingFlags())
-        // « Arrêter » passe par le coordinator Dart (arrêt coordonné des deux
-        // surfaces), pas par ACTION_STOP direct.
-        val stopIntent = Intent(this, ArenaRecorderService::class.java).apply {
-            action = ACTION_STOP_REQUESTED
+        // Étape B — le bouton « Score » ouvre la saisie du score par-dessus le
+        // jeu (ScoreInputActivity). À la validation, Dart soumet le score ET
+        // scelle la vidéo (= fin du match), comme le bouton « Score » de
+        // l'overlay. Repli universel : marche là où la superposition est bloquée.
+        val stopIntent = Intent(this, ScoreInputActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         }
-        val stopPending = PendingIntent.getService(this, 1, stopIntent, pendingFlags())
+        val stopPending = PendingIntent.getActivity(this, 1, stopIntent, pendingFlags())
         val copyIntent = Intent(this, ArenaRecorderService::class.java).apply {
             action = ACTION_COPY_CODE
         }
