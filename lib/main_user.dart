@@ -8,6 +8,7 @@ import 'package:arena/core/services/bootstrap.dart';
 import 'package:arena/core/services/callkit_service.dart';
 import 'package:arena/core/services/deep_link_service.dart';
 import 'package:arena/core/services/gallery_exporter.dart';
+import 'package:arena/core/services/match_alarm_service.dart';
 import 'package:arena/core/services/match_recording_coordinator.dart';
 import 'package:arena/core/services/notification_service.dart';
 import 'package:arena/core/services/proof_claim_service.dart';
@@ -26,6 +27,7 @@ import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_callkit_incoming/entities/entities.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 Future<void> main() async {
   await bootstrap(
@@ -126,7 +128,21 @@ class _ArenaUserAppState extends ConsumerState<ArenaUserApp> {
       // ne se déclenche pas pour la valeur initiale → on lance le rattrapage
       // des réclamations ici aussi (dédup interne).
       _reconcileProofClaims(ref.read(currentSessionProvider)?.user.id);
+      // Réveillé à froid par l'alarme de rappel (full-screen intent sans
+      // payload délivré) : on atterrit sur l'écran de réveil.
+      unawaited(_maybeShowPendingMatchAlarm(router));
     });
+  }
+
+  /// Ouvre l'écran de réveil si un rappel de match est EN ATTENTE (posé par
+  /// [MatchAlarmService] quand la notif alarme a réveillé l'appareil app tuée).
+  /// Ne consomme le rappel que si une session est ouverte — sinon on le laisse
+  /// pour après la connexion.
+  Future<void> _maybeShowPendingMatchAlarm(GoRouter router) async {
+    if (ref.read(currentSessionProvider) == null) return;
+    final matchId = await MatchAlarmService.consumePending();
+    if (matchId == null || matchId.isEmpty || !mounted) return;
+    unawaited(router.push(UserRoutes.matchAlarmPath(matchId)));
   }
 
   @override
@@ -152,6 +168,9 @@ class _ArenaUserAppState extends ConsumerState<ArenaUserApp> {
       // (alimente le MAU/DAU du dashboard super-admin).
       unawaited(_pingHeartbeat());
       unawaited(service.attach(userId));
+      // Session restaurée APRÈS le postFrame (ou app rouverte après login) :
+      // rattrape un éventuel rappel de match en attente → écran de réveil.
+      unawaited(_maybeShowPendingMatchAlarm(ref.read(userRouterProvider)));
       // Token VoIP reçu avant la connexion : on le persiste maintenant.
       if (_voipToken != null) {
         unawaited(_persistVoipToken(userId, _voipToken));
@@ -194,8 +213,14 @@ class _ArenaUserAppState extends ConsumerState<ArenaUserApp> {
     }
   }
 
-  /// Résout le nom de l'appelant puis présente l'UI d'appel native.
+  /// Résout le nom de l'appelant puis présente l'UI d'appel native — SAUF pour
+  /// un rappel de match (`scope=match_reminder`), présenté en ALARME/réveil
+  /// plein écran (pas un appel).
   Future<void> _presentIncomingCall(CallRecord call) async {
+    if (call.scope == 'match_reminder') {
+      await MatchAlarmService.show(matchId: call.scopeId);
+      return;
+    }
     String name;
     try {
       name = await ref.read(callRepositoryProvider).usernameOf(call.callerId);
@@ -351,7 +376,8 @@ class _ArenaUserAppState extends ConsumerState<ArenaUserApp> {
     final messenger = rootScaffoldMessengerKey.currentState;
     final l10n =
         messenger == null ? null : AppLocalizations.of(messenger.context);
-    final uri = await ref.read(galleryExporterProvider).saveVideoToGallery(path);
+    final uri =
+        await ref.read(galleryExporterProvider).saveVideoToGallery(path);
     if (messenger == null || l10n == null) return;
     messenger.showSnackBar(
       SnackBar(
@@ -375,11 +401,8 @@ class _ArenaUserAppState extends ConsumerState<ArenaUserApp> {
     required String callerId,
     required String peerName,
   }) {
-    final nav = ref
-        .read(userRouterProvider)
-        .routerDelegate
-        .navigatorKey
-        .currentState;
+    final nav =
+        ref.read(userRouterProvider).routerDelegate.navigatorKey.currentState;
     if (nav == null) {
       WidgetsBinding.instance.addPostFrameCallback(
         (_) => _openCallScreen(

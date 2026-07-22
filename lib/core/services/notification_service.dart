@@ -6,6 +6,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:arena/core/services/callkit_service.dart';
+import 'package:arena/core/services/match_alarm_service.dart';
 import 'package:arena/core/services/proof_file_store.dart';
 import 'package:arena/core/services/secure_local_storage.dart';
 // sync_queue_service expose generateUuidV4 + ProofUploadAction (part
@@ -334,10 +335,23 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   }
   final type = message.data['notification_type'];
   if (type == 'call_invite') {
+    // Le rappel de match arrive comme un `call_invite` (scope=match_reminder)
+    // pour réutiliser le canal DATA haute priorité, mais ce n'est PAS un appel :
+    // on l'affiche en ALARME plein écran (réveil), pas en écran d'appel CallKit.
+    final scope = message.data['scope'] as String? ?? '';
+    if (scope == 'match_reminder') {
+      await MatchAlarmService.show(
+        matchId: message.data['scope_id'] as String? ?? '',
+        label: message.data['caller_name'] as String?,
+        // Isolate FCM background : le plugin natif n'est pas encore initialisé.
+        initialize: true,
+      );
+      return;
+    }
     await CallkitService.showIncoming(
       callId: message.data['call_id'] as String? ?? '',
       callerName: message.data['caller_name'] as String? ?? '',
-      scope: message.data['scope'] as String? ?? '',
+      scope: scope,
       scopeId: message.data['scope_id'] as String? ?? '',
       callerId: message.data['caller_id'] as String? ?? '',
     );
