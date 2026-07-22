@@ -93,6 +93,59 @@ class _MatchRoleIntroDialog extends ConsumerStatefulWidget {
 class _MatchRoleIntroDialogState extends ConsumerState<_MatchRoleIntroDialog> {
   bool _confirmed = false;
 
+  /// Découpe le corps localisé en lignes espacées : les libellés « Étape N » et
+  /// la ligne d'avertissement adoptent le style du titre (h3) ; les descriptions
+  /// restent en corps. Un léger espacement sépare chaque ligne.
+  List<Widget> _bodyLines(String body) {
+    // Détecte un début d'étape dans les 3 langues (Étape / Step / الخطوة).
+    final stepRe = RegExp(r'^(Étape|Step|الخطوة)\s*\d+', unicode: true);
+    final widgets = <Widget>[];
+    for (final raw in body.split('\n')) {
+      final line = raw.trim();
+      if (line.isEmpty) continue;
+      if (widgets.isNotEmpty) {
+        widgets.add(const SizedBox(height: ArenaSpacing.sm));
+      }
+      if (line.startsWith('⚠')) {
+        widgets.add(
+          Text(line, style: ArenaText.h3.copyWith(color: ArenaColors.danger)),
+        );
+      } else if (stepRe.hasMatch(line)) {
+        final sep = line.indexOf(':');
+        if (sep > 0) {
+          widgets.add(
+            Text.rich(
+              TextSpan(
+                children: [
+                  // Libellé « Étape N » au style du titre.
+                  TextSpan(
+                    text: line.substring(0, sep).trim(),
+                    style: ArenaText.h3,
+                  ),
+                  TextSpan(
+                    text: ' : ${line.substring(sep + 1).trim()}',
+                    style: ArenaText.body.copyWith(color: ArenaColors.silver),
+                  ),
+                ],
+              ),
+            ),
+          );
+        } else {
+          widgets.add(Text(line, style: ArenaText.h3));
+        }
+      } else {
+        // Paragraphe d'intro + ligne « NB : … ».
+        widgets.add(
+          Text(
+            line,
+            style: ArenaText.body.copyWith(color: ArenaColors.silver),
+          ),
+        );
+      }
+    }
+    return widgets;
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -123,11 +176,10 @@ class _MatchRoleIntroDialogState extends ConsumerState<_MatchRoleIntroDialog> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
+                ..._bodyLines(
                   isHome
                       ? l10n.roleIntroHomeBody(game.label)
                       : l10n.roleIntroAwayBody(game.label),
-                  style: ArenaText.body.copyWith(color: ArenaColors.silver),
                 ),
                 if (player != null) ...[
                   const SizedBox(height: ArenaSpacing.lg),

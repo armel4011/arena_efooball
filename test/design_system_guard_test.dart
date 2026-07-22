@@ -195,7 +195,9 @@ void main() {
   // 2629 → 2632 le 2026-07-22 : +3 `ArenaColors.*` de la case de confirmation
   // bloquante de l'intro de rôle (checkbox signalBlue, libellé bone, bouton
   // désactivé silverDim dans match_role_intro.dart).
-  const colorsDotBaseline = 2632; // occurrences de `Colors.`
+  // 2632 → 2634 le 2026-07-22 : +2 `ArenaColors.*` du rendu par étapes de l'intro
+  // de rôle (avertissement danger + description silver dans _bodyLines).
+  const colorsDotBaseline = 2634; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.
