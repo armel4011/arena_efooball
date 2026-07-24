@@ -2552,6 +2552,18 @@ abstract class AppLocalizations {
   /// **'Match nul.'**
   String get outcomeDraw;
 
+  /// No description provided for @outcomeYouWon.
+  ///
+  /// In fr, this message translates to:
+  /// **'TU AS GAGNÉ'**
+  String get outcomeYouWon;
+
+  /// No description provided for @outcomeYouLost.
+  ///
+  /// In fr, this message translates to:
+  /// **'TU AS PERDU'**
+  String get outcomeYouLost;
+
   /// No description provided for @outcomeEditMyScore.
   ///
   /// In fr, this message translates to:
@@ -4657,6 +4669,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'PARAMÈTRES'**
   String get playerProfileSettingsButton;
+
+  /// No description provided for @playerProfileHistoryButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'HISTORIQUE DES MATCHS'**
+  String get playerProfileHistoryButton;
 
   /// No description provided for @playerProfileSignOutButton.
   ///

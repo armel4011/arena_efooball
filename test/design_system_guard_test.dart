@@ -204,7 +204,9 @@ void main() {
   // bordure silverDim, visibles sur fond blanc).
   // 2641 → 2643 le 2026-07-22 : +2 `ArenaColors.*` (hint pays silver à
   // l'inscription + aide opérateur silverDim du tuto paiement admin desktop).
-  const colorsDotBaseline = 2643; // occurrences de `Colors.`
+  // 2643 → 2646 le 2026-07-24 : +3 `ArenaColors.*` du résultat de match coloré
+  // (CompletedView : vert gagné / rouge perdu / neutre — texte + icône + carte).
+  const colorsDotBaseline = 2646; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.

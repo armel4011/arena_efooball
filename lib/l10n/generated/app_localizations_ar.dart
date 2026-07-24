@@ -1288,6 +1288,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get outcomeDraw => 'تعادل.';
 
   @override
+  String get outcomeYouWon => 'لقد فزت';
+
+  @override
+  String get outcomeYouLost => 'لقد خسرت';
+
+  @override
   String get outcomeEditMyScore => 'تعديل نتيجتي';
 
   @override
@@ -2408,6 +2414,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get playerProfileSettingsButton => 'الإعدادات';
+
+  @override
+  String get playerProfileHistoryButton => 'سجل المباريات';
 
   @override
   String get playerProfileSignOutButton => 'تسجيل الخروج';

@@ -34,21 +34,70 @@ class CompletedView extends StatelessWidget {
       selfId != null &&
       (selfId == match.player1Id || selfId == match.player2Id);
 
+  /// `true` = joueur gagnant ; `false` = perdant ; `null` = nul OU observateur.
+  bool? get _didWin {
+    if (!_isPlayer || match.winnerId == null) return null;
+    return match.winnerId == selfId;
+  }
+
+  /// Couleur du résultat du point de vue du joueur : VERT gagné / ROUGE perdu /
+  /// doré pour un observateur ou un nul (neutre festif). Sert au texte, à
+  /// l'icône ET au fond de la carte pour rester cohérent.
+  Color get _outcomeColor => switch (_didWin) {
+        true => ArenaColors.statusOk,
+        false => ArenaColors.neonRed,
+        null => _isPlayer ? ArenaColors.silver : ArenaColors.statusWarn,
+      };
+
+  IconData get _outcomeIcon => switch (_didWin) {
+        true => Icons.emoji_events,
+        false => Icons.sentiment_very_dissatisfied,
+        null => _isPlayer && match.winnerId == null
+            ? Icons.handshake
+            : Icons.emoji_events,
+      };
+
+  /// Ligne de résultat : « TU AS GAGNÉ » / « TU AS PERDU » / « Match nul » pour
+  /// le joueur ; libellé générique du gagnant pour un observateur.
+  Widget _resultLine(AppLocalizations l10n) {
+    if (!_isPlayer) {
+      return Text(
+        match.winnerId == null
+            ? l10n.outcomeDraw
+            : l10n.outcomeWinner(match.winnerId!.substring(0, 6)),
+        style: ArenaText.bodyMuted,
+      );
+    }
+    final label = switch (_didWin) {
+      true => l10n.outcomeYouWon,
+      false => l10n.outcomeYouLost,
+      null => l10n.outcomeDraw,
+    };
+    return Text(
+      label,
+      textAlign: TextAlign.center,
+      style: ArenaText.bigNumber.copyWith(fontSize: 30, color: _outcomeColor),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final s1 = match.score1 ?? 0;
     final s2 = match.score2 ?? 0;
+    final color = _outcomeColor;
     return Container(
       padding: const EdgeInsets.all(ArenaSpacing.xl),
-      decoration: arenaSuccessCardDecoration(),
+      // Fond/bordure teintés du résultat (vert gagné / rouge perdu / neutre) —
+      // cohérent avec le texte et l'icône, comme les cartes de l'historique.
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(ArenaRadius.lg),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
       child: Column(
         children: [
-          const Icon(
-            Icons.emoji_events,
-            color: ArenaColors.statusWarn,
-            size: 56,
-          ),
+          Icon(_outcomeIcon, color: color, size: 56),
           const SizedBox(height: ArenaSpacing.sm),
           Text(l10n.outcomeFinalScore, style: ArenaText.inputLabel),
           const SizedBox(height: ArenaSpacing.sm),
@@ -57,12 +106,7 @@ class CompletedView extends StatelessWidget {
             style: ArenaText.bigNumber.copyWith(fontSize: 48),
           ),
           const SizedBox(height: ArenaSpacing.sm),
-          Text(
-            match.winnerId == null
-                ? l10n.outcomeDraw
-                : l10n.outcomeWinner(match.winnerId!.substring(0, 6)),
-            style: ArenaText.bodyMuted,
-          ),
+          _resultLine(l10n),
           if (_isPlayer && !isDraughts) ...[
             const SizedBox(height: ArenaSpacing.lg),
             ManualUploadButton(matchId: match.id, playerId: selfId!),
