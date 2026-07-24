@@ -8,6 +8,7 @@ import 'package:flutter/widgets.dart';
 enum SupportedLocale {
   fr(Locale('fr'), 'Français', TextDirection.ltr),
   en(Locale('en'), 'English', TextDirection.ltr),
+  es(Locale('es'), 'Español', TextDirection.ltr),
   ar(Locale('ar'), 'العربية', TextDirection.rtl);
 
   const SupportedLocale(this.locale, this.displayName, this.textDirection);

@@ -27,7 +27,14 @@ class FeatureFlags {
   /// racine d'une seule ligne → fetch retombe toujours sur ces defaults).
   factory FeatureFlags.defaultsV1_0() {
     return const FeatureFlags(
-      enabledLanguages: [SupportedLocale.fr, SupportedLocale.en],
+      // FR + EN + ES (Guinée équatoriale). L'espagnol activé par défaut assure
+      // qu'un téléphone en espagnol bascule automatiquement dessus même
+      // hors-ligne / cold start (avant la 1re lecture de `app_config`).
+      enabledLanguages: [
+        SupportedLocale.fr,
+        SupportedLocale.en,
+        SupportedLocale.es,
+      ],
       enabledCurrencies: [Currency.xaf, Currency.xof, Currency.usd],
       enabledRegions: ['francophone_africa'],
       streamingEnabled: false,

@@ -46,7 +46,7 @@ class CurrencyService {
 
     return switch (locale) {
       SupportedLocale.en => '${currency.symbol}$number',
-      SupportedLocale.fr || SupportedLocale.ar =>
+      SupportedLocale.fr || SupportedLocale.ar || SupportedLocale.es =>
         '$number ${currency.symbol}',
     };
   }
