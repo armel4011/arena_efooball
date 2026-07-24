@@ -44,6 +44,12 @@ void main() {
       expect(SupportedLocale.fromLanguageCode('es-GQ'), SupportedLocale.es);
       expect(SupportedLocale.fromLanguageCode('ES_ES'), SupportedLocale.es);
     });
+
+    test('portugais (Guinée équatoriale) : pt-GQ / pt → pt', () {
+      expect(SupportedLocale.fromLanguageCode('pt'), SupportedLocale.pt);
+      expect(SupportedLocale.fromLanguageCode('pt-GQ'), SupportedLocale.pt);
+      expect(SupportedLocale.fromLanguageCode('PT_BR'), SupportedLocale.pt);
+    });
   });
 
   group('LocaleController', () {
@@ -129,12 +135,13 @@ void main() {
   });
 
   group('FeatureFlags.defaultsV1_0', () {
-    test('V1.0 defaults : FR + EN + ES, 3 devises', () {
+    test('V1.0 defaults : FR + EN + ES + PT, 3 devises', () {
       final f = FeatureFlags.defaultsV1_0();
       expect(f.enabledLanguages, [
         SupportedLocale.fr,
         SupportedLocale.en,
         SupportedLocale.es,
+        SupportedLocale.pt,
       ]);
       expect(f.enabledCurrencies, [
         Currency.xaf,
