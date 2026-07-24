@@ -126,6 +126,16 @@ class _ProfileBody extends ConsumerWidget {
           const SizedBox(height: ArenaSpacing.sm),
           _RecentMatches(playerId: profile.id, asyncMatches: recentAsync),
           const SizedBox(height: ArenaSpacing.xl),
+          // Accès à l'HISTORIQUE complet des matchs (tous statuts, filtres
+          // Gagnés / Perdus / En cours).
+          ArenaButton(
+            label: l10n.playerProfileHistoryButton,
+            icon: Icons.history,
+            variant: ArenaButtonVariant.secondary,
+            fullWidth: true,
+            onPressed: () => context.push(UserRoutes.matchHistory),
+          ),
+          const SizedBox(height: ArenaSpacing.sm),
           // Accès à la page Paiements & gains : l'utilisateur y voit ses
           // versements et RÉCLAME ses gains (onglet GAINS → « À réclamer »).
           ArenaButton(

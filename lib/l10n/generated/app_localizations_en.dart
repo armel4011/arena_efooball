@@ -1293,6 +1293,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get outcomeDraw => 'Draw.';
 
   @override
+  String get outcomeYouWon => 'YOU WON';
+
+  @override
+  String get outcomeYouLost => 'YOU LOST';
+
+  @override
   String get outcomeEditMyScore => 'EDIT MY SCORE';
 
   @override
@@ -2420,6 +2426,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get playerProfileSettingsButton => 'SETTINGS';
+
+  @override
+  String get playerProfileHistoryButton => 'MATCH HISTORY';
 
   @override
   String get playerProfileSignOutButton => 'SIGN OUT';

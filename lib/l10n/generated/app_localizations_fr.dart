@@ -1301,6 +1301,12 @@ class AppLocalizationsFr extends AppLocalizations {
   String get outcomeDraw => 'Match nul.';
 
   @override
+  String get outcomeYouWon => 'TU AS GAGNÉ';
+
+  @override
+  String get outcomeYouLost => 'TU AS PERDU';
+
+  @override
   String get outcomeEditMyScore => 'MODIFIER MON SCORE';
 
   @override
@@ -2434,6 +2440,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get playerProfileSettingsButton => 'PARAMÈTRES';
+
+  @override
+  String get playerProfileHistoryButton => 'HISTORIQUE DES MATCHS';
 
   @override
   String get playerProfileSignOutButton => 'SE DÉCONNECTER';

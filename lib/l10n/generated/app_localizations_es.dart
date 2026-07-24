@@ -1299,6 +1299,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get outcomeDraw => 'Empate.';
 
   @override
+  String get outcomeYouWon => 'GANASTE';
+
+  @override
+  String get outcomeYouLost => 'PERDISTE';
+
+  @override
   String get outcomeEditMyScore => 'MODIFICAR MI MARCADOR';
 
   @override
@@ -2432,6 +2438,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get playerProfileSettingsButton => 'AJUSTES';
+
+  @override
+  String get playerProfileHistoryButton => 'HISTORIAL DE PARTIDOS';
 
   @override
   String get playerProfileSignOutButton => 'CERRAR SESIÓN';
