@@ -30,8 +30,15 @@ if [[ ! -f "$lcov_file" ]]; then
   exit 1
 fi
 
+# On EXCLUT les localisations GÉNÉRÉES (`lib/l10n/generated/app_localizations*`)
+# du calcul : ce sont des tables de chaînes auto-générées par `gen-l10n` (une
+# ligne par getter, aucune écrite à la main), qui ne doivent pas être soumises
+# au cliquet de couverture. Sans ça, ajouter une langue (es/pt…) diluerait
+# mécaniquement la couverture sous le plancher alors qu'aucun code métier n'a
+# régressé. On saute donc les blocs `SF:` situés sous `l10n/generated/`.
 read -r total covered pct < <(
-  awk '/^DA:/ {
+  awk '/^SF:/ { skip = ($0 ~ /l10n[\/\\]generated[\/\\]/) ? 1 : 0 }
+      /^DA:/ && !skip {
         split(substr($0, 4), a, ",")
         total++
         if (a[2] + 0 > 0) covered++
