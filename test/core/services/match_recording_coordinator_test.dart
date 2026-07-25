@@ -47,6 +47,8 @@ void main() {
       () => recording.start(
         matchId: any(named: 'matchId'),
         playerId: any(named: 'playerId'),
+        isHome: any(named: 'isHome'),
+        roomCode: any(named: 'roomCode'),
       ),
     ).thenAnswer((_) async => _stubSession);
     when(() => recording.stop()).thenAnswer(
@@ -110,7 +112,12 @@ void main() {
       opponentId: 'player-2',
     );
 
-    verify(() => recording.start(matchId: 'match-1', playerId: 'player-1'))
+    verify(() => recording.start(
+          matchId: 'match-1',
+          playerId: 'player-1',
+          isHome: any(named: 'isHome'),
+          roomCode: any(named: 'roomCode'),
+        ))
         .called(1);
     verify(() => overlay.startOrMorphToRecording(matchId: 'match-1')).called(1);
     expect(coordinator.state, isA<CoordinatorRecording>());
@@ -140,7 +147,12 @@ void main() {
     );
 
     // Recording a bien démarré ET l'état est passé à Recording malgré l'overlay.
-    verify(() => recording.start(matchId: 'match-1', playerId: 'player-1'))
+    verify(() => recording.start(
+          matchId: 'match-1',
+          playerId: 'player-1',
+          isHome: any(named: 'isHome'),
+          roomCode: any(named: 'roomCode'),
+        ))
         .called(1);
     expect(coordinator.state, isA<CoordinatorRecording>());
   });

@@ -14,6 +14,7 @@ import 'package:arena/features_user/match_room/widgets/match_locked_view.dart';
 import 'package:arena/features_user/match_room/widgets/match_players_header.dart';
 import 'package:arena/features_user/match_room/widgets/match_recording_lifecycle.dart';
 import 'package:arena/features_user/match_room/widgets/match_role_intro.dart';
+import 'package:arena/features_user/match_room/widgets/match_room_auto_refresh.dart';
 import 'package:arena/features_user/match_room/widgets/match_step_body.dart';
 import 'package:arena/features_user/match_room/widgets/match_step_indicator.dart';
 import 'package:arena/features_user/streaming/start_streaming_banner.dart';
@@ -196,6 +197,10 @@ class _MatchRoomBody extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Filet de secours Realtime : re-fetch le match au retour au premier
+          // plan (sortie/retour d'eFootball) → l'étape ne reste plus figée si un
+          // événement Realtime n'a pas été délivré. Widget invisible.
+          MatchRoomAutoRefresh(matchId: match.id),
           StepIndicator(step: step),
           const SizedBox(height: ArenaSpacing.sm),
           StepLabel(step: step),

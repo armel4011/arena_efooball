@@ -102,6 +102,11 @@ class MainActivity : FlutterActivity() {
         val filename: String,
         val title: String,
         val message: String,
+        // Rôle + code de salle → posés sur l'intent ACTION_START pour que la
+        // notif native affiche le bon bouton (HOME → « Envoyer code ») dès sa
+        // création, sans dépendre d'un ACTION_UPDATE_CODE ultérieur (course).
+        val isHome: Boolean,
+        val roomCode: String?,
         val result: MethodChannel.Result,
     )
 
@@ -126,6 +131,13 @@ class MainActivity : FlutterActivity() {
             putExtra(ArenaRecorderService.EXTRA_FILENAME, pending.filename)
             putExtra(ArenaRecorderService.EXTRA_TITLE, pending.title)
             putExtra(ArenaRecorderService.EXTRA_MESSAGE, pending.message)
+            putExtra(ArenaRecorderService.EXTRA_IS_HOME, pending.isHome)
+            // roomCode est nullable : putExtra(String, String) refuse null → on
+            // ne pose l'extra que s'il existe (le service lit getStringExtra,
+            // qui renverra null si absent).
+            pending.roomCode?.let {
+                putExtra(ArenaRecorderService.EXTRA_ROOM_CODE, it)
+            }
         }
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -185,7 +197,9 @@ class MainActivity : FlutterActivity() {
                         val title = call.argument<String>("title") ?: "ARENA"
                         val message =
                             call.argument<String>("message") ?: "Enregistrement en cours"
-                        startCustomRecording(filename, title, message, result)
+                        val isHome = call.argument<Boolean>("isHome") ?: false
+                        val roomCode = call.argument<String>("roomCode")
+                        startCustomRecording(filename, title, message, isHome, roomCode, result)
                     }
                     "stopCustomRecording" -> {
                         stopCustomRecording(result)
@@ -350,6 +364,8 @@ class MainActivity : FlutterActivity() {
         filename: String,
         title: String,
         message: String,
+        isHome: Boolean,
+        roomCode: String?,
         result: MethodChannel.Result,
     ) {
         if (pendingStart != null) {
@@ -363,7 +379,7 @@ class MainActivity : FlutterActivity() {
             result.success(true)
             return
         }
-        pendingStart = PendingStart(filename, title, message, result)
+        pendingStart = PendingStart(filename, title, message, isHome, roomCode, result)
         try {
             val pm = applicationContext
                 .getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager

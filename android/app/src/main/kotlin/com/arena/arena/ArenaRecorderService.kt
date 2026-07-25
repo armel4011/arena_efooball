@@ -267,6 +267,12 @@ class ArenaRecorderService : Service() {
                 recordStartMillis = System.currentTimeMillis()
                 notifTitle = title
                 notifMessage = message
+                // Rôle + code posés AVANT de construire la notif → le HOME voit
+                // « Envoyer code » dès la 1re notif, sans dépendre d'un
+                // ACTION_UPDATE_CODE ultérieur (qui pouvait arriver avant
+                // `isActive` et être jeté). Repli universel sans superposition.
+                isHome = intent.getBooleanExtra(EXTRA_IS_HOME, false)
+                roomCode = intent.getStringExtra(EXTRA_ROOM_CODE)
                 startForegroundCompat(title, message)
                 try {
                     startRecording(resultCode, resultData, filename)
