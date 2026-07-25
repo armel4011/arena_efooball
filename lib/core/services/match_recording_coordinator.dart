@@ -128,6 +128,10 @@ class MatchRecordingCoordinator {
     required String matchId,
     required String playerId,
     required String opponentId,
+    // Rôle + code de salle transmis à la notif native DÈS le démarrage (le HOME
+    // voit alors « Envoyer code » tout de suite, sans dépendre d'un update tardif).
+    bool isHome = false,
+    String? roomCode,
   }) async {
     if (_state is! CoordinatorIdle &&
         _state is! CoordinatorStopped &&
@@ -139,7 +143,12 @@ class MatchRecordingCoordinator {
     _playerId = playerId;
     _opponentId = opponentId;
 
-    await _recording.start(matchId: matchId, playerId: playerId);
+    await _recording.start(
+      matchId: matchId,
+      playerId: playerId,
+      isHome: isHome,
+      roomCode: roomCode,
+    );
     // Transforme l'overlay code-sender du HOME s'il est déjà ouvert, sinon
     // affiche le bouton d'enregistrement (quirk MIUI #4 : pas de 2ᵉ show).
     //

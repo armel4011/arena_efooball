@@ -325,6 +325,10 @@ class _MatchRecordingLifecycleState
         matchId: widget.match.id,
         playerId: widget.selfId!,
         opponentId: opp,
+        // Rôle + code connus ici → la notif native affiche le bon bouton dès le
+        // départ (HOME → « Envoyer code »), sans dépendre du push asynchrone.
+        isHome: widget.match.homePlayerId == widget.selfId,
+        roomCode: widget.match.roomCode,
       );
       // Autorise le volet pénaltys du mini-formulaire de score UNIQUEMENT en
       // élimination directe (pas de groupId) : en poule, un score nul reste nul.

@@ -106,6 +106,11 @@ class RecordingService {
     required String playerId,
     String notificationTitle = 'ARENA',
     String notificationMessage = 'Enregistrement du match en cours',
+    // Rôle + code de salle poussés DÈS le démarrage pour que la notif de
+    // contrôle native affiche le bon bouton (HOME → « Envoyer code ») sans
+    // dépendre d'un update asynchrone ultérieur (course avec `isActive`).
+    bool isHome = false,
+    String? roomCode,
   }) async {
     if (_state is! RecordingIdle && _state is! RecordingError) {
       throw StateError('Recording already active');
@@ -142,6 +147,8 @@ class RecordingService {
         filename: filename,
         notificationTitle: notificationTitle,
         notificationMessage: notificationMessage,
+        isHome: isHome,
+        roomCode: roomCode,
       );
     } on PlatformException catch (e, st) {
       await Sentry.captureException(e, stackTrace: st);
@@ -263,6 +270,8 @@ abstract class RecordingPlatform {
     required String filename,
     required String notificationTitle,
     required String notificationMessage,
+    bool isHome = false,
+    String? roomCode,
   });
 
   /// Returns the absolute path to the recorded file on the local
@@ -283,6 +292,8 @@ class _DefaultRecordingPlatform implements RecordingPlatform {
     required String filename,
     required String notificationTitle,
     required String notificationMessage,
+    bool isHome = false,
+    String? roomCode,
   }) async {
     if (!Platform.isAndroid) {
       // iOS: third-party recording is sandboxed away. Manual upload
@@ -293,6 +304,9 @@ class _DefaultRecordingPlatform implements RecordingPlatform {
       'filename': filename,
       'title': notificationTitle,
       'message': notificationMessage,
+      // Portés dès le départ → la notif native a le bon rôle/bouton sans course.
+      'isHome': isHome,
+      'roomCode': roomCode,
     });
     return ok ?? false;
   }

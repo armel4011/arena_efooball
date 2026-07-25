@@ -41,6 +41,8 @@ void main() {
           filename: any(named: 'filename'),
           notificationTitle: any(named: 'notificationTitle'),
           notificationMessage: any(named: 'notificationMessage'),
+          isHome: any(named: 'isHome'),
+          roomCode: any(named: 'roomCode'),
         ),
       ).thenAnswer((_) async => true);
 
@@ -61,6 +63,8 @@ void main() {
           filename: any(named: 'filename'),
           notificationTitle: any(named: 'notificationTitle'),
           notificationMessage: any(named: 'notificationMessage'),
+          isHome: any(named: 'isHome'),
+          roomCode: any(named: 'roomCode'),
         ),
       ).thenAnswer((_) async => false);
       when(() => repo.markEnded(any())).thenAnswer((_) async {});
@@ -81,6 +85,8 @@ void main() {
           filename: any(named: 'filename'),
           notificationTitle: any(named: 'notificationTitle'),
           notificationMessage: any(named: 'notificationMessage'),
+          isHome: any(named: 'isHome'),
+          roomCode: any(named: 'roomCode'),
         ),
       ).thenAnswer((_) async => true);
 
@@ -102,6 +108,8 @@ void main() {
           filename: any(named: 'filename'),
           notificationTitle: any(named: 'notificationTitle'),
           notificationMessage: any(named: 'notificationMessage'),
+          isHome: any(named: 'isHome'),
+          roomCode: any(named: 'roomCode'),
         ),
       ).thenAnswer((_) async => true);
       when(() => platform.stopRecording())
