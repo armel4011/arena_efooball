@@ -121,22 +121,54 @@
     if (rb) { rb.classList.remove('btn-ghost'); rb.classList.add('btn-primary'); }
   }
 
-  /* ---------- vidéo YouTube INTÉGRÉE (lecture dans la page) ---------- */
-  // La vidéo se lit DANS le site (lecteur YouTube embarqué), pas en ouvrant
-  // YouTube. Chargée en `loading="lazy"` → n'alourdit pas le haut de page.
-  // `hl` + `cc_lang_pref` = langue courante → YouTube choisit la piste audio
-  // doublée correspondante (fr/en) quand elle existe, sinon la piste par défaut.
-  function buildVideoIframe(wrap, id) {
+  /* ---------- vidéo YouTube INTÉGRÉE + piste audio selon la langue ---------- */
+  // La vidéo se lit DANS le site (lecteur embarqué). Via l'API IFrame Player,
+  // on SÉLECTIONNE explicitement la piste audio doublée correspondant à la
+  // langue du site : FR → piste française, EN/ES/PT → piste anglaise (les 2
+  // seules pistes disponibles). On re-sélectionne au changement de langue.
+  var ytPlayer = null;
+
+  // Langue du site → code de piste audio à cibler (seules FR et EN existent).
+  function audioLangFor(lang) { return lang === 'fr' ? 'fr' : 'en'; }
+
+  // Sélectionne la piste audio du lecteur pour la langue voulue. Les méthodes
+  // getAvailableAudioTracks / setAudioTrack ne sont pas documentées mais sont
+  // celles utilisées par le lecteur pour le multi-audio → tout est en try/catch.
+  function selectAudioTrack(player, lang) {
+    try {
+      if (!player || !player.getAvailableAudioTracks) return;
+      var tracks = player.getAvailableAudioTracks();
+      if (!tracks || !tracks.length) return;
+      var want = audioLangFor(lang);
+      var chosen = null;
+      for (var i = 0; i < tracks.length; i++) {
+        var t = tracks[i] || {};
+        var code = String(t.id || t.languageCode || t.name || '').toLowerCase();
+        if (code === want || code.indexOf(want + '.') === 0 ||
+            code.indexOf(want + '-') === 0 || code.indexOf(want) === 0) {
+          chosen = t; break;
+        }
+      }
+      if (chosen && player.setAudioTrack) player.setAudioTrack(chosen);
+    } catch (e) {/* API interne indisponible : on garde la piste par défaut */}
+  }
+
+  function createPlayer(wrap, id) {
+    var host = document.createElement('div');
+    wrap.appendChild(host);
     var lang = window.__arenaLang || 'fr';
-    var src = 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(id) +
-      '?rel=0&modestbranding=1&playsinline=1&hl=' + lang + '&cc_lang_pref=' + lang;
-    var ifr = document.createElement('iframe');
-    ifr.setAttribute('src', src);
-    ifr.setAttribute('title', 'ARENA');
-    ifr.setAttribute('loading', 'lazy');
-    ifr.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
-    ifr.setAttribute('allowfullscreen', '');
-    return ifr;
+    ytPlayer = new YT.Player(host, {
+      width: '100%', height: '100%', videoId: id,
+      host: 'https://www.youtube-nocookie.com',
+      playerVars: { rel: 0, modestbranding: 1, playsinline: 1, hl: lang, cc_lang_pref: lang },
+      events: {
+        onReady: function (e) { selectAudioTrack(e.target, window.__arenaLang || 'fr'); },
+        onStateChange: function (e) {
+          // À la 1re lecture, les pistes sont sûrement chargées → on (re)cible.
+          if (e.data === 1) selectAudioTrack(e.target, window.__arenaLang || 'fr');
+        }
+      }
+    });
   }
 
   function setupVideo() {
@@ -147,19 +179,24 @@
     var facade = document.getElementById('videoFacade');
     if (facade) facade.remove();
     wrap.style.cursor = 'default';
-    wrap.appendChild(buildVideoIframe(wrap, id));
+    if (window.YT && window.YT.Player) { createPlayer(wrap, id); return; }
+    // Charge l'API IFrame une seule fois puis crée le lecteur.
+    var prev = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = function () {
+      if (typeof prev === 'function') { try { prev(); } catch (e) {} }
+      createPlayer(wrap, id);
+    };
+    if (!document.getElementById('yt-iframe-api')) {
+      var s = document.createElement('script');
+      s.id = 'yt-iframe-api';
+      s.src = 'https://www.youtube.com/iframe_api';
+      document.head.appendChild(s);
+    }
   }
 
-  // Rebuild le lecteur avec la nouvelle langue quand l'utilisateur change de
-  // langue (met à jour la piste audio doublée). Appelé depuis applyLang.
+  // Changement de langue du site → bascule la piste audio du lecteur.
   function refreshVideoLang() {
-    var wrap = document.getElementById('videoWrap');
-    if (!wrap) return;
-    var id = wrap.getAttribute('data-video-id');
-    if (!id || id === 'PLACEHOLDER_VIDEO_ID') return;
-    var old = wrap.querySelector('iframe');
-    if (!old) return;
-    wrap.replaceChild(buildVideoIframe(wrap, id), old);
+    if (ytPlayer) selectAudioTrack(ytPlayer, window.__arenaLang || 'fr');
   }
   window.__arenaRefreshVideo = refreshVideoLang;
 
