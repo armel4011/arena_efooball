@@ -1,0 +1,52 @@
+# ════════════════════════════════════════════════════════════════════
+#  ARENA — config serveur Apache / cPanel (ignoré par nginx)
+#  Objectif : téléchargement APK RAPIDE + site sécurisé.
+# ════════════════════════════════════════════════════════════════════
+
+# ─── HTTPS forcé (sécurité) ─────────────────────────────────────────
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTPS} off
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</IfModule>
+
+# ─── APK : type MIME + téléchargement forcé ─────────────────────────
+AddType application/vnd.android.package-archive .apk
+<FilesMatch "\.apk$">
+  Header set Content-Disposition "attachment"
+  # Accept-Ranges → téléchargement REPRENABLE et en parallèle (gestionnaires
+  # de téléchargement, reprise après coupure réseau) = bien plus rapide/robuste
+  # sur les gros APK et les connexions mobiles instables.
+  Header set Accept-Ranges bytes
+  # Les APK sont déjà compressés : ne PAS re-gziper (gaspillage CPU + latence).
+  SetEnvIfNoCase Request_URI "\.apk$" no-gzip dont-vary
+</FilesMatch>
+
+# ─── Compression des assets texte (HTML/CSS/JS) = pages plus légères ──
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml \
+    application/javascript application/json image/svg+xml
+</IfModule>
+
+# ─── Cache ──────────────────────────────────────────────────────────
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType image/png "access plus 1 month"
+  ExpiresByType image/jpeg "access plus 1 month"
+  ExpiresByType image/svg+xml "access plus 1 month"
+  ExpiresByType text/css "access plus 7 days"
+  ExpiresByType application/javascript "access plus 7 days"
+  ExpiresByType text/html "access plus 1 hour"
+  # APK : versionnés par nom de build ; cache court côté client.
+  ExpiresByType application/vnd.android.package-archive "access plus 1 day"
+</IfModule>
+
+# ─── En-têtes de sécurité ───────────────────────────────────────────
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+  Header set X-Frame-Options "SAMEORIGIN"
+</IfModule>
+
+# ─── Page 404 ───────────────────────────────────────────────────────
+ErrorDocument 404 /404.html

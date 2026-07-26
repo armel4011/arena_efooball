@@ -1,72 +1,160 @@
-// Site Arena — interactions sans framework.
+/* ARENA — logique du site vitrine (vanilla, sans framework).
+   1) i18n : langue = préférence stockée > langue du navigateur > FR.
+   2) reveal au scroll.
+   3) détection d'appareil → met en avant le build de téléchargement le plus
+      rapide pour ce téléphone.
+   4) façade vidéo YouTube : ne charge l'iframe qu'au clic (page plus légère),
+      avec `hl` = langue courante → doublage audio auto (pistes fr/en). */
 (function () {
-  // 1) Reveal au scroll (éléments marqués data-reveal).
-  var els = document.querySelectorAll('[data-reveal]');
-  if ('IntersectionObserver' in window) {
-    var io = new IntersectionObserver(function (entries) {
-      entries.forEach(function (e) {
-        if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
-      });
-    }, { rootMargin: '0px 0px -10% 0px' });
-    els.forEach(function (el) { io.observe(el); });
-  } else {
-    els.forEach(function (el) { el.classList.add('in'); });
+  'use strict';
+  var SUPPORTED = ['fr', 'en', 'es', 'pt'];
+  var STORE_KEY = 'arena_lang';
+
+  /* ---------- i18n ---------- */
+  function pickLang() {
+    var saved = null;
+    try { saved = localStorage.getItem(STORE_KEY); } catch (e) {}
+    if (saved && SUPPORTED.indexOf(saved) !== -1) return saved;
+    var navs = (navigator.languages && navigator.languages.length)
+      ? navigator.languages : [navigator.language || 'fr'];
+    for (var i = 0; i < navs.length; i++) {
+      var code = String(navs[i]).toLowerCase().split(/[-_]/)[0];
+      if (SUPPORTED.indexOf(code) !== -1) return code;
+    }
+    return 'fr';
   }
 
-  // 2) Boutons "Lire la vidéo" : lance la vidéo et masque l'overlay.
-  document.querySelectorAll('button[aria-label="Lire la vidéo"]').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      var v = btn.parentElement.querySelector('video');
-      if (!v) return;
-      v.setAttribute('controls', '');
-      v.play();
-      btn.style.display = 'none';
-    });
-  });
+  function applyLang(lang) {
+    var dict = (window.I18N && window.I18N[lang]) || (window.I18N && window.I18N.fr) || {};
+    document.documentElement.setAttribute('lang', lang);
+    document.documentElement.setAttribute('data-lang', lang);
+    // Texte + attribut content (balise meta description).
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++) {
+      var key = nodes[i].getAttribute('data-i18n');
+      var val = dict[key];
+      if (val == null) continue;
+      if (nodes[i].tagName === 'META') nodes[i].setAttribute('content', val);
+      else nodes[i].textContent = val;
+    }
+    var cur = document.getElementById('langCur');
+    if (cur) cur.textContent = dict.langName || lang.toUpperCase();
+    try { localStorage.setItem(STORE_KEY, lang); } catch (e) {}
+    window.__arenaLang = lang;
+    // Rafraîchit le badge « Recommandé » traduit sur la carte de téléchargement.
+    var recTag = document.querySelector('.dl-card.reco .tag');
+    if (recTag) recTag.textContent = dict.dlRecommended || recTag.textContent;
+  }
 
-  // 3) Téléchargement plus rapide — détecte l'appareil et pousse d'un clic le
-  //    plus PETIT build compatible (évite le .apk universel de 255 Mo pris par
-  //    défaut « au cas où »). Amélioration progressive : sans JS, le bandeau
-  //    statique et la carte « Recommandé » guident déjà correctement.
-  var reco = document.getElementById('dl-reco');
-  if (reco) {
-    var BASE = 'mx-auto mt-8 flex max-w-2xl flex-wrap items-center justify-between gap-3 rounded-xl border px-5 py-3.5 text-sm ';
-    var ARROW = '<svg fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" class="h-4 w-4"><path d="M12 3v12"></path><path d="m7 11 5 5 5-5"></path><path d="M4 21h16"></path></svg>';
-    var BUILD = {
-      moderne: { href: '/downloads/arena-android-moderne.apk', size: '92 Mo' },
-      ancien: { href: '/downloads/arena-android-ancien.apk', size: '72 Mo' }
-    };
-    var show = function (key, msg, ok) {
-      reco.className = BASE + (ok
-        ? 'border-signal/40 bg-signal/10 text-white'
-        : 'border-white/10 bg-white/[0.03] text-silver');
-      var dot = '<span class="h-2 w-2 shrink-0 rounded-full ' + (ok ? 'bg-signal' : 'bg-silver') + '"></span>';
-      var btn = (ok && BUILD[key])
-        ? '<a href="' + BUILD[key].href + '" download class="flex shrink-0 items-center justify-center gap-2 rounded-full bg-signal px-5 py-3 font-semibold text-void transition-transform hover:scale-105">' + ARROW + 'Télécharger (' + BUILD[key].size + ')</a>'
-        : '';
-      reco.innerHTML = '<span class="flex items-center gap-2.5">' + dot + '<span>' + msg + '</span></span>' + btn;
-    };
-    var decide = function (bitness) {
-      if (!/Android/i.test(navigator.userAgent || '')) {
-        show(null, 'Ouvre cette page depuis ton téléphone Android : le bon build se télécharge en un clic.', false);
-        return;
-      }
-      if (bitness === '32') {
-        show('ancien', 'Détecté : appareil 32 bits. Voici le build adapté — le plus léger.', true);
-      } else {
-        show('moderne', 'Détecté : téléphone 64 bits. Build recommandé — le plus léger et rapide à installer.', true);
-      }
-    };
-    // API moderne (Chrome/Android) : bitness fiable "32" / "64".
-    if (navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) {
-      navigator.userAgentData.getHighEntropyValues(['bitness'])
-        .then(function (d) { decide(d.bitness); })
-        .catch(function () { decide(''); });
-    } else {
-      // Repli : indices d'ABI 32 bits dans l'user-agent, sinon on suppose 64 bits.
-      var ua = navigator.userAgent || '';
-      var is32 = /(armv7|armeabi)/i.test(ua) && !/(arm64|aarch64|x86_64|wow64|win64)/i.test(ua);
-      decide(is32 ? '32' : '');
+  function setupLangMenu() {
+    var btn = document.getElementById('langBtn');
+    var menu = document.getElementById('langMenu');
+    if (!btn || !menu) return;
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var open = menu.classList.toggle('open');
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    document.addEventListener('click', function () {
+      menu.classList.remove('open'); btn.setAttribute('aria-expanded', 'false');
+    });
+    var items = menu.querySelectorAll('[data-set-lang]');
+    for (var i = 0; i < items.length; i++) {
+      items[i].addEventListener('click', function () {
+        applyLang(this.getAttribute('data-set-lang'));
+        menu.classList.remove('open');
+      });
     }
   }
+
+  /* ---------- reveal au scroll ---------- */
+  function setupReveal() {
+    var els = document.querySelectorAll('.reveal');
+    if (!('IntersectionObserver' in window)) {
+      for (var i = 0; i < els.length; i++) els[i].classList.add('in');
+      return;
+    }
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); }
+      });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+    for (var j = 0; j < els.length; j++) io.observe(els[j]);
+  }
+
+  /* ---------- détection d'appareil (téléchargement rapide) ---------- */
+  function recommendedBuild() {
+    var ua = navigator.userAgent || '';
+    if (!/Android/i.test(ua)) return 'moderne'; // desktop/iOS : défaut moderne
+    var m = ua.match(/Android\s+(\d+)/i);
+    var major = m ? parseInt(m[1], 10) : 0;
+    // Android 9+ (téléphones ~2018+) = arm64 → build « moderne » (léger, rapide).
+    // Plus ancien → build « ancien » (arm32).
+    return (major && major < 9) ? 'ancien' : 'moderne';
+  }
+
+  function setupDownload() {
+    var rec = recommendedBuild();
+    var recCard = document.getElementById('card-' + rec);
+    if (!recCard) return;
+    var dict = (window.I18N && window.I18N[window.__arenaLang]) || {};
+    // Retire tout style « reco » existant (l'HTML par défaut met moderne).
+    var cards = document.querySelectorAll('.dl-card');
+    for (var i = 0; i < cards.length; i++) {
+      cards[i].classList.remove('reco');
+      var tag = cards[i].querySelector('.tag');
+      if (tag) tag.remove();
+      var b = cards[i].querySelector('.btn');
+      if (b) { b.classList.remove('btn-primary'); b.classList.add('btn-ghost'); }
+    }
+    // Applique « reco » à la carte détectée, en tête, bouton primaire.
+    recCard.classList.add('reco');
+    var parent = recCard.parentNode;
+    if (parent && parent.firstChild !== recCard) parent.insertBefore(recCard, parent.firstChild);
+    var tagEl = document.createElement('span');
+    tagEl.className = 'tag';
+    tagEl.textContent = dict.dlRecommended || 'Recommandé';
+    recCard.insertBefore(tagEl, recCard.firstChild);
+    var rb = recCard.querySelector('.btn');
+    if (rb) { rb.classList.remove('btn-ghost'); rb.classList.add('btn-primary'); }
+  }
+
+  /* ---------- façade vidéo YouTube (chargement au clic + doublage auto) ---------- */
+  function setupVideo() {
+    var wrap = document.getElementById('videoWrap');
+    if (!wrap) return;
+    function load() {
+      var id = wrap.getAttribute('data-video-id');
+      if (!id || id === 'PLACEHOLDER_VIDEO_ID') return; // en attente du vrai lien
+      var lang = window.__arenaLang || 'fr';
+      // `hl` + `cc_lang_pref` : YouTube choisit la piste audio doublée
+      // correspondant à la langue quand elle existe (fr/en), sinon la piste
+      // par défaut. youtube-nocookie = respect vie privée.
+      var src = 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(id) +
+        '?autoplay=1&rel=0&modestbranding=1&playsinline=1&hl=' + lang + '&cc_lang_pref=' + lang;
+      var ifr = document.createElement('iframe');
+      ifr.setAttribute('src', src);
+      ifr.setAttribute('title', 'ARENA');
+      ifr.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
+      ifr.setAttribute('allowfullscreen', '');
+      var facade = document.getElementById('videoFacade');
+      if (facade) facade.remove();
+      wrap.appendChild(ifr);
+    }
+    wrap.addEventListener('click', load);
+    wrap.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); load(); }
+    });
+  }
+
+  /* ---------- boot ---------- */
+  function boot() {
+    applyLang(pickLang());
+    setupLangMenu();
+    setupReveal();
+    setupDownload();
+    setupVideo();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
 })();
