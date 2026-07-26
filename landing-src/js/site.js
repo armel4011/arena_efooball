@@ -121,47 +121,55 @@
     if (rb) { rb.classList.remove('btn-ghost'); rb.classList.add('btn-primary'); }
   }
 
-  /* ---------- vidéo YouTube INTÉGRÉE + piste audio selon la langue ---------- */
-  // La vidéo se lit DANS le site. YouTube ne permet pas de forcer une piste
-  // audio par API fiable : la piste servie dépend de la langue passée AU
-  // CHARGEMENT via `hl`. On (re)charge donc l'iframe avec `hl` = langue du site
-  // (FR → fr, EN/ES/PT → en, seules 2 pistes) à chaque changement de langue.
-  function audioLangFor(lang) { return lang === 'fr' ? 'fr' : 'en'; }
+  /* ---------- vidéo YouTube INTÉGRÉE — UNE VIDÉO PAR LANGUE ---------- */
+  // Fiable : UNE vidéo par langue (chacune a son propre audio) — YouTube ne
+  // laisse pas forcer une piste audio dans une vidéo unique. Le site joue la
+  // vidéo de la langue courante (data-video-<lang>), avec repli fr puis en.
+  // On recharge la bonne vidéo au changement de langue.
+  function videoIdFor(wrap, lang) {
+    var id = wrap.getAttribute('data-video-' + lang) ||
+      wrap.getAttribute('data-video-fr') || wrap.getAttribute('data-video-en');
+    if (!id || id === 'PLACEHOLDER_VIDEO_ID') return '';
+    return id;
+  }
 
-  function buildVideoIframe(id) {
-    var a = audioLangFor(window.__arenaLang || 'fr');
-    // hl + persist_hl : demande à YouTube de servir la piste audio de la langue.
+  function buildVideoIframe(id, lang) {
     var src = 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(id) +
-      '?rel=0&modestbranding=1&playsinline=1&hl=' + a + '&cc_lang_pref=' + a + '&persist_hl=1';
+      '?rel=0&modestbranding=1&playsinline=1&hl=' + lang + '&cc_lang_pref=' + lang;
     var ifr = document.createElement('iframe');
     ifr.setAttribute('src', src);
     ifr.setAttribute('title', 'ARENA');
     ifr.setAttribute('loading', 'lazy');
     ifr.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
     ifr.setAttribute('allowfullscreen', '');
+    ifr.setAttribute('data-vid', id);
     return ifr;
   }
 
   function setupVideo() {
     var wrap = document.getElementById('videoWrap');
     if (!wrap) return;
-    var id = wrap.getAttribute('data-video-id');
-    if (!id || id === 'PLACEHOLDER_VIDEO_ID') return; // en attente du vrai lien
+    var lang = window.__arenaLang || 'fr';
+    var id = videoIdFor(wrap, lang);
+    if (!id) return; // en attente des vrais liens
     var facade = document.getElementById('videoFacade');
     if (facade) facade.remove();
     wrap.style.cursor = 'default';
-    wrap.appendChild(buildVideoIframe(id));
+    wrap.appendChild(buildVideoIframe(id, lang));
   }
 
-  // Changement de langue du site → RECHARGE l'iframe avec le nouveau `hl` pour
-  // que YouTube serve la piste audio correspondante.
+  // Changement de langue → joue la vidéo de la langue (recharge seulement si
+  // la vidéo cible change, pour ne pas couper une lecture en cours inutilement).
   function refreshVideoLang() {
     var wrap = document.getElementById('videoWrap');
     if (!wrap) return;
-    var id = wrap.getAttribute('data-video-id');
-    if (!id || id === 'PLACEHOLDER_VIDEO_ID') return;
+    var lang = window.__arenaLang || 'fr';
+    var id = videoIdFor(wrap, lang);
+    if (!id) return;
     var old = wrap.querySelector('iframe');
-    if (old) wrap.replaceChild(buildVideoIframe(id), old);
+    if (!old) return;
+    if (old.getAttribute('data-vid') === id) return; // même vidéo → on garde
+    wrap.replaceChild(buildVideoIframe(id, lang), old);
   }
   window.__arenaRefreshVideo = refreshVideoLang;
 
