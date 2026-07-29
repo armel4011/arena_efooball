@@ -2,6 +2,7 @@ import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/models/match_status.dart';
 import 'package:arena/data/repositories/admin/admin_matches_repository.dart';
+import 'package:arena/features_admin/matches_admin/admin_match_arbitration_sheet.dart';
 import 'package:arena/features_shared/widgets/arena_app_bar.dart';
 import 'package:arena/features_shared/widgets/arena_avatar.dart';
 import 'package:arena/features_shared/widgets/arena_badge.dart';
@@ -165,7 +166,9 @@ class _MatchCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final visual = _visualFor(match.status);
-    return Container(
+    return InkWell(
+      onTap: () => showMatchArbitrationSheet(context, match.id),
+      child: Container(
       padding: const EdgeInsets.all(ArenaSpacing.md),
       decoration: BoxDecoration(
         color: ArenaColors.carbon,
@@ -197,6 +200,7 @@ class _MatchCard extends StatelessWidget {
             style: ArenaText.bodyMuted.copyWith(color: visual.footColor),
           ),
         ],
+      ),
       ),
     ).animate().fadeIn(duration: ArenaDurations.medium);
   }
