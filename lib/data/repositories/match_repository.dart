@@ -103,6 +103,20 @@ class MatchRepository {
         .map((rows) => rows.isEmpty ? null : ArenaMatch.fromJson(rows.first));
   }
 
+  /// Fetch PONCTUEL (REST, sans canal Realtime) d'un match par id. Utilisé par
+  /// le filet périodique de la salle : quand le WebSocket Realtime stalle au
+  /// premier plan (OEM/MIUI, socket rétabli sans re-push), ce SELECT léger
+  /// détecte un changement sans re-souscrire de canal — on ne re-synchronise
+  /// le stream QUE si les champs du déroulé ont bougé (cf. MatchRoomAutoRefresh).
+  Future<ArenaMatch?> fetchById(String matchId) async {
+    final rows =
+        await _client.from(_table).select().eq('id', matchId).limit(1);
+    final list = rows as List<dynamic>;
+    return list.isEmpty
+        ? null
+        : ArenaMatch.fromJson(list.first as Map<String, dynamic>);
+  }
+
   /// Realtime stream of `score_submitted` events for a match. Used by
   /// the score-validation step to detect when both players have posted.
   ///
