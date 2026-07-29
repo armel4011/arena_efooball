@@ -155,6 +155,29 @@ class MatchRepository {
     }).eq('id', matchId);
   }
 
+  /// Trace (une seule fois) que l'EXTÉRIEUR a rejoint la salle du match —
+  /// event persistant `room_joined`. Signal d'engagement pour l'arbitrage du
+  /// no-show (l'away s'est présenté, même s'il n'a pas encore enregistré).
+  /// Idempotent : ne réinsère pas si l'event existe déjà pour ce joueur.
+  Future<void> markRoomJoined(String matchId) async {
+    final uid = _client.auth.currentUser?.id;
+    if (uid == null) return;
+    final existing = await _client
+        .from('match_events')
+        .select('id')
+        .eq('match_id', matchId)
+        .eq('type', 'room_joined')
+        .eq('created_by', uid)
+        .limit(1);
+    if ((existing as List).isNotEmpty) return;
+    await _client.from('match_events').insert({
+      'match_id': matchId,
+      'type': 'room_joined',
+      'created_by': uid,
+      'payload': {'auto': true},
+    });
+  }
+
   /// Either player marks the match as actually started — flips to
   /// `in_progress` and stamps `started_at`.
   Future<void> markInProgress(String matchId) async {

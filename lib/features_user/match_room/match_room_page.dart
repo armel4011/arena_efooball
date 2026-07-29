@@ -15,6 +15,7 @@ import 'package:arena/features_user/match_room/widgets/match_players_header.dart
 import 'package:arena/features_user/match_room/widgets/match_recording_lifecycle.dart';
 import 'package:arena/features_user/match_room/widgets/match_role_intro.dart';
 import 'package:arena/features_user/match_room/widgets/match_room_auto_refresh.dart';
+import 'package:arena/features_user/match_room/widgets/match_room_join_marker.dart';
 import 'package:arena/features_user/match_room/widgets/match_step_body.dart';
 import 'package:arena/features_user/match_room/widgets/match_step_indicator.dart';
 import 'package:arena/features_user/streaming/start_streaming_banner.dart';
@@ -248,6 +249,12 @@ class _MatchRoomBody extends ConsumerWidget {
                       role: role,
                       game: gameType,
                     ),
+                  // EXTÉRIEUR (foot) : trace `room_joined` dès l'entrée en
+                  // salle — signal d'engagement pour l'arbitrage du no-show.
+                  if (!isDraughts &&
+                      role != MatchRole.observer &&
+                      !role.isHomeOf(match))
+                    MatchRoomJoinMarker(matchId: match.id),
                   // Anti-cheat recording banner (Android-only, no-op ailleurs).
                   // Inutile pour les dames : la partie est jouée in-app, le
                   // serveur tient l'historique des coups (pas d'écran tiers à
