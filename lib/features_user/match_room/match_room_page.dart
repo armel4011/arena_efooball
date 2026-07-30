@@ -202,6 +202,12 @@ class _MatchRoomBody extends ConsumerWidget {
           // plan (sortie/retour d'eFootball) → l'étape ne reste plus figée si un
           // événement Realtime n'a pas été délivré. Widget invisible.
           MatchRoomAutoRefresh(matchId: match.id),
+          // Indication du jeu de la compétition (eFootball / Mobile FC / Dream
+          // League / Dames) : badge coloré emoji + nom, en tête de la salle.
+          if (gameTypeAsync.valueOrNull != null) ...[
+            Center(child: _GameBadge(game: gameTypeAsync.value!)),
+            const SizedBox(height: ArenaSpacing.md),
+          ],
           StepIndicator(step: step),
           const SizedBox(height: ArenaSpacing.sm),
           StepLabel(step: step),
@@ -279,3 +285,53 @@ class _MatchRoomBody extends ConsumerWidget {
     );
   }
 }
+
+/// Badge indiquant le jeu de la compétition (emoji + nom, teinté à la couleur
+/// du jeu). Affiché en tête de la salle pour que le joueur sache immédiatement
+/// sur quel jeu se joue le match.
+class _GameBadge extends StatelessWidget {
+  const _GameBadge({required this.game});
+
+  final GameType game;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _gameColor(game);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: ArenaRadius.pill,
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(_gameEmoji(game), style: const TextStyle(fontSize: 14)),
+          const SizedBox(width: 8),
+          Text(
+            game.label,
+            style: ArenaText.badge.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _gameEmoji(GameType g) => switch (g) {
+      GameType.efootball => '⚽',
+      GameType.draughts => '🔴',
+      GameType.eaSportsFc => '🎮',
+      GameType.dreamLeague => '🥅',
+    };
+
+Color _gameColor(GameType g) => switch (g) {
+      GameType.efootball => ArenaColors.gameEfoot,
+      GameType.draughts => ArenaColors.gameDraughts,
+      GameType.eaSportsFc => ArenaColors.gameFc,
+      GameType.dreamLeague => ArenaColors.gameDream,
+    };
