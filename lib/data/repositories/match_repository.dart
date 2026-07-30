@@ -103,6 +103,20 @@ class MatchRepository {
         .map((rows) => rows.isEmpty ? null : ArenaMatch.fromJson(rows.first));
   }
 
+  /// Fetch PONCTUEL (REST, sans canal Realtime) d'un match par id. Utilisé par
+  /// le filet périodique de la salle : quand le WebSocket Realtime stalle au
+  /// premier plan (OEM/MIUI, socket rétabli sans re-push), ce SELECT léger
+  /// détecte un changement sans re-souscrire de canal — on ne re-synchronise
+  /// le stream QUE si les champs du déroulé ont bougé (cf. MatchRoomAutoRefresh).
+  Future<ArenaMatch?> fetchById(String matchId) async {
+    final rows =
+        await _client.from(_table).select().eq('id', matchId).limit(1);
+    final list = rows as List<dynamic>;
+    return list.isEmpty
+        ? null
+        : ArenaMatch.fromJson(list.first as Map<String, dynamic>);
+  }
+
   /// Realtime stream of `score_submitted` events for a match. Used by
   /// the score-validation step to detect when both players have posted.
   ///
@@ -153,6 +167,29 @@ class MatchRepository {
     await _client.from(_table).update({
       column: teamName.trim(),
     }).eq('id', matchId);
+  }
+
+  /// Trace (une seule fois) que l'EXTÉRIEUR a rejoint la salle du match —
+  /// event persistant `room_joined`. Signal d'engagement pour l'arbitrage du
+  /// no-show (l'away s'est présenté, même s'il n'a pas encore enregistré).
+  /// Idempotent : ne réinsère pas si l'event existe déjà pour ce joueur.
+  Future<void> markRoomJoined(String matchId) async {
+    final uid = _client.auth.currentUser?.id;
+    if (uid == null) return;
+    final existing = await _client
+        .from('match_events')
+        .select('id')
+        .eq('match_id', matchId)
+        .eq('type', 'room_joined')
+        .eq('created_by', uid)
+        .limit(1);
+    if ((existing as List).isNotEmpty) return;
+    await _client.from('match_events').insert({
+      'match_id': matchId,
+      'type': 'room_joined',
+      'created_by': uid,
+      'payload': {'auto': true},
+    });
   }
 
   /// Either player marks the match as actually started — flips to

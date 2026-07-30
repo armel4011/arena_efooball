@@ -533,10 +533,10 @@ class RecordingOverlayButton extends StatefulWidget {
 }
 
 class _RecordingOverlayButtonState extends State<RecordingOverlayButton> {
-  static const double _mainSize = 72;
+  static const double _mainSize = 48;
   // Distance between the main button center and a mini button center.
   // The overlay window is 220×220 — a 40 dp mini at radius 64 around a
-  // 72 dp main fits with a 14 dp gutter to the window edge.
+  // 48 dp main fits with a comfortable gutter to the window edge.
   static const double _miniRadius = 64;
 
   bool _expanded = false;
@@ -703,8 +703,8 @@ class _RecordingOverlayButtonState extends State<RecordingOverlayButton> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(_mainIcon, color: Colors.white, size: 14),
-                    const SizedBox(height: 2),
+                    Icon(_mainIcon, color: Colors.white, size: 11),
+                    const SizedBox(height: 1),
                     Text(
                       _tick.formatted,
                       // KEEP : ce widget tourne dans un isolate Flutter
@@ -715,7 +715,7 @@ class _RecordingOverlayButtonState extends State<RecordingOverlayButton> {
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w700,
-                        fontSize: 12,
+                        fontSize: 10,
                         fontFeatures: [FontFeature.tabularFigures()],
                       ),
                     ),
