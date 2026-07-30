@@ -76,6 +76,18 @@ class AdminMatchesRepository {
     }).eq('id', matchId);
   }
 
+  /// Consultation de l'arbitrage d'un match (RPC `admin_match_arbitration`,
+  /// gardée `is_admin` côté serveur) : verdict + signaux d'engagement par
+  /// joueur (Domicile/Extérieur) + chronologie des events. Renvoie le jsonb
+  /// brut, rendu par le volet Arbitrage.
+  Future<Map<String, dynamic>> fetchArbitration(String matchId) async {
+    final res = await _client.rpc<dynamic>(
+      'admin_match_arbitration',
+      params: {'p_match_id': matchId},
+    );
+    return Map<String, dynamic>.from(res as Map);
+  }
+
   /// Admin manually flags an in-progress match for streaming. Auto
   /// finals get this flag via the trigger
   /// `auto_publish_final_match`, but the master prompt also wants the
@@ -236,4 +248,11 @@ final adminMatchesProvider =
   return ref
       .watch(adminMatchesRepositoryProvider)
       .watchAll(status: filter.status, competitionId: filter.competitionId);
+});
+
+/// Arbitrage d'un match (verdict + signaux + chronologie) pour le volet admin.
+final adminMatchArbitrationProvider =
+    FutureProvider.family.autoDispose<Map<String, dynamic>, String>(
+        (ref, matchId) {
+  return ref.watch(adminMatchesRepositoryProvider).fetchArbitration(matchId);
 });

@@ -205,9 +205,11 @@ void main() {
   // 2641 → 2643 le 2026-07-22 : +2 `ArenaColors.*` (hint pays silver à
   // l'inscription + aide opérateur silverDim du tuto paiement admin desktop).
   // 2643 → 2646 le 2026-07-24 : +3 `ArenaColors.*` du résultat de match coloré
-  // 2646 → 2650 le 2026-07-29 : +4 `ArenaColors.*` du badge du jeu (salle de match)
   // (CompletedView : vert gagné / rouge perdu / neutre — texte + icône + carte).
-  const colorsDotBaseline = 2650; // occurrences de `Colors.`
+  // 2646 → 2650 le 2026-07-29 : +4 `ArenaColors.*` du badge du jeu (salle de match)
+  // 2650 → 2673 le 2026-07-29 : +23 `ArenaColors.*` du volet Arbitrage admin
+  // (admin_match_arbitration_sheet : verdict, table signaux, chronologie).
+  const colorsDotBaseline = 2673; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.
