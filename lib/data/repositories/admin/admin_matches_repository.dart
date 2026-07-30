@@ -81,7 +81,7 @@ class AdminMatchesRepository {
   /// joueur (Domicile/Extérieur) + chronologie des events. Renvoie le jsonb
   /// brut, rendu par le volet Arbitrage.
   Future<Map<String, dynamic>> fetchArbitration(String matchId) async {
-    final res = await _client.rpc(
+    final res = await _client.rpc<dynamic>(
       'admin_match_arbitration',
       params: {'p_match_id': matchId},
     );
