@@ -214,7 +214,10 @@ void main() {
   // case « J'ai compris », bouton OK). check_colors.sh --strict = 0 régression.
   // 2685 → 2687 le 2026-07-30 : +2 `ArenaColors.signalBlue` du bouton « Regarder
   // le guide vidéo » (lecture in-app) du dialogue de réglages. 0 vrai Colors.*.
-  const colorsDotBaseline = 2687; // occurrences de `Colors.`
+  // 2687 → 2690 le 2026-07-30 : +3 `ArenaColors.*` de la carte d'avertissement
+  // « Lance d'abord le jeu » (statusWarn/bone/silver) à l'étape d'activation
+  // de l'enregistrement. 0 vrai Colors.*.
+  const colorsDotBaseline = 2690; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.

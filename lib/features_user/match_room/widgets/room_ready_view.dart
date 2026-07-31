@@ -11,6 +11,7 @@ import 'package:arena/features_user/match_room/match_room_providers.dart';
 import 'package:arena/features_user/match_room/widgets/cyan_dashed_container.dart';
 import 'package:arena/features_user/match_room/widgets/match_rules_dialog.dart';
 import 'package:arena/features_user/match_room/widgets/open_chat_link.dart';
+import 'package:arena/features_user/match_room/widgets/start_game_first_card.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -213,6 +214,8 @@ class _RoomReadyViewState extends ConsumerState<RoomReadyView> {
                 style: ArenaText.small.copyWith(color: ArenaColors.silver),
               ),
             ),
+            const SizedBox(height: ArenaSpacing.md),
+            StartGameFirstCard(matchId: widget.match.id),
             const SizedBox(height: ArenaSpacing.md),
             ArenaButton(
               label: l10n.roomReadyJoinedButton,
