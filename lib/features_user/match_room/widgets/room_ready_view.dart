@@ -185,6 +185,8 @@ class _RoomReadyViewState extends ConsumerState<RoomReadyView> {
           if (_localStep == 0) ...[
             // Étape 1 — nom d'équipe (aucun enregistrement déclenché : le nom
             // n'est PAS encore persisté, donc selfJoined reste faux).
+            StartGameFirstCard(matchId: widget.match.id),
+            const SizedBox(height: ArenaSpacing.md),
             Text(l10n.roomReadyTeamNameLabel, style: ArenaText.inputLabel),
             const SizedBox(height: ArenaSpacing.sm),
             ArenaTextField(

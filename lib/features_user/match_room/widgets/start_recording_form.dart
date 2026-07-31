@@ -132,6 +132,8 @@ class _StartRecordingFormState extends ConsumerState<StartRecordingForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        StartGameFirstCard(matchId: widget.match.id),
+        const SizedBox(height: ArenaSpacing.lg),
         Text(l10n.startRecordingTeamStepTitle, style: ArenaText.inputLabel),
         const SizedBox(height: ArenaSpacing.sm),
         CyanDashedContainer(
