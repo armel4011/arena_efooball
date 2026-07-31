@@ -1,6 +1,7 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/repositories/match_repository.dart';
+import 'package:arena/data/repositories/tutorial_video_repository.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_user/match_room/match_room_page.dart'
@@ -67,10 +68,14 @@ class _StartRecordingFormState extends ConsumerState<StartRecordingForm> {
   /// KO/classement) via un dialogue bloquant, puis persiste le nom d'équipe.
   Future<void> _onContinue() async {
     final game = ref.read(matchGameTypeProvider(widget.match.id)).valueOrNull;
+    final videoUrl = game == null
+        ? null
+        : ref.read(matchRulesVideoProvider(game)).valueOrNull?.videoUrl;
     final ok = await showMatchRulesDialog(
       context,
       isKo: widget.match.groupId == null,
       gameLabel: game?.label ?? 'ton jeu',
+      videoUrl: videoUrl,
     );
     if (ok) await _saveTeamName();
   }

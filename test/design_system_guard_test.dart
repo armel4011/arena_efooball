@@ -212,7 +212,9 @@ void main() {
   // 2673 → 2685 le 2026-07-30 : +12 `ArenaColors.*` du dialogue de réglages
   // prolongations/tirs au but (match_rules_dialog : bandeau activer/désactiver,
   // case « J'ai compris », bouton OK). check_colors.sh --strict = 0 régression.
-  const colorsDotBaseline = 2685; // occurrences de `Colors.`
+  // 2685 → 2687 le 2026-07-30 : +2 `ArenaColors.signalBlue` du bouton « Regarder
+  // le guide vidéo » (lecture in-app) du dialogue de réglages. 0 vrai Colors.*.
+  const colorsDotBaseline = 2687; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.

@@ -48,6 +48,13 @@ enum TutorialPage {
   /// [TutorialVideo.game] requis (une vidéo par jeu externe).
   @JsonValue('install_check')
   installCheck,
+
+  /// Dialogue de réglages au « Continuer » (après le nom d'équipe) :
+  /// prolongations / tirs au but à activer ou désactiver selon KO/classement.
+  /// Football uniquement. Discriminant [TutorialVideo.game] requis (une vidéo
+  /// de guide par jeu).
+  @JsonValue('match_rules')
+  matchRules,
 }
 
 /// Valeur "fil" (snake_case) attendue par la colonne `target_page` —
@@ -63,6 +70,7 @@ extension TutorialPageWire on TutorialPage {
         TutorialPage.matchRoleIntro => 'match_role_intro',
         TutorialPage.paymentTutorial => 'payment_tutorial',
         TutorialPage.installCheck => 'install_check',
+        TutorialPage.matchRules => 'match_rules',
       };
 
   /// Libellé FR pour les écrans admin.
@@ -76,6 +84,7 @@ extension TutorialPageWire on TutorialPage {
         TutorialPage.matchRoleIntro => 'Intro du rôle (étape 1 du match)',
         TutorialPage.paymentTutorial => 'Tuto paiement (par pays)',
         TutorialPage.installCheck => 'Contrôle appli (avant inscription)',
+        TutorialPage.matchRules => 'Réglages match (prolongations/pénaltys)',
       };
 
   /// `true` si la vidéo est jouée IN-APP (via `ArenaYoutubePlayer`) plutôt
@@ -85,7 +94,8 @@ extension TutorialPageWire on TutorialPage {
         TutorialPage.matchLocked ||
         TutorialPage.matchRoleIntro ||
         TutorialPage.paymentTutorial ||
-        TutorialPage.installCheck =>
+        TutorialPage.installCheck ||
+        TutorialPage.matchRules =>
           true,
         _ => false,
       };
@@ -95,7 +105,8 @@ extension TutorialPageWire on TutorialPage {
   bool get needsGame =>
       this == TutorialPage.matchLocked ||
       this == TutorialPage.matchRoleIntro ||
-      this == TutorialPage.installCheck;
+      this == TutorialPage.installCheck ||
+      this == TutorialPage.matchRules;
 
   /// `true` si la cible se discrimine par PAYS (un tuto paiement par pays).
   bool get needsCountry => this == TutorialPage.paymentTutorial;

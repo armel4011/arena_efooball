@@ -1,4 +1,5 @@
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/features_shared/widgets/arena_youtube_player.dart';
 import 'package:flutter/material.dart';
 
 /// Dialogue BLOQUANT de réglages du match, affiché au clic sur « Continuer »
@@ -14,20 +15,30 @@ Future<bool> showMatchRulesDialog(
   BuildContext context, {
   required bool isKo,
   required String gameLabel,
+  String? videoUrl,
 }) async {
   final result = await showDialog<bool>(
     context: context,
     barrierDismissible: false,
-    builder: (_) => _MatchRulesDialog(isKo: isKo, gameLabel: gameLabel),
+    builder: (_) => _MatchRulesDialog(
+      isKo: isKo,
+      gameLabel: gameLabel,
+      videoUrl: videoUrl,
+    ),
   );
   return result ?? false;
 }
 
 class _MatchRulesDialog extends StatefulWidget {
-  const _MatchRulesDialog({required this.isKo, required this.gameLabel});
+  const _MatchRulesDialog({
+    required this.isKo,
+    required this.gameLabel,
+    this.videoUrl,
+  });
 
   final bool isKo;
   final String gameLabel;
+  final String? videoUrl;
 
   @override
   State<_MatchRulesDialog> createState() => _MatchRulesDialogState();
@@ -95,6 +106,30 @@ class _MatchRulesDialogState extends State<_MatchRulesDialog> {
                   ],
                 ),
               ),
+              // Guide vidéo IN-APP (si l'admin en a publié un pour ce jeu) —
+              // ouvert en PLEIN ÉCRAN, comme l'intro de rôle.
+              if (ArenaYoutubePlayer.maybe(widget.videoUrl) != null) ...[
+                const SizedBox(height: ArenaSpacing.md),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () =>
+                        openFullscreenYoutube(context, widget.videoUrl),
+                    icon: const Icon(Icons.play_circle_outline, size: 20),
+                    label: const Text('Regarder le guide vidéo'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: ArenaColors.signalBlue,
+                      side: const BorderSide(color: ArenaColors.signalBlue),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: ArenaSpacing.md,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(ArenaRadius.md),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: ArenaSpacing.md),
               // Case obligatoire pour débloquer OK.
               InkWell(

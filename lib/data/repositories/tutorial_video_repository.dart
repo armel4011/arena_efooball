@@ -274,6 +274,19 @@ final matchRoleIntroVideoProvider = Provider.autoDispose
   },
 );
 
+/// Vidéo IN-APP active du dialogue de réglages (prolongations / tirs au but),
+/// pour un [GameType] (football). Dérivée du stream partagé.
+final matchRulesVideoProvider = Provider.autoDispose
+    .family<AsyncValue<TutorialVideo?>, GameType>((ref, game) {
+  return ref.watch(_allTutorialBannersStreamProvider).whenData(
+        (all) => TutorialVideoRepository.activeContextualVideo(
+          all,
+          TutorialPage.matchRules,
+          gameWire: game.value,
+        ),
+      );
+});
+
 /// Vidéo IN-APP active du dialogue de contrôle d'installation (avant
 /// inscription), pour un [GameType] externe. Dérivée du stream partagé.
 final installCheckVideoProvider = Provider.autoDispose
