@@ -209,7 +209,10 @@ void main() {
   // 2646 → 2650 le 2026-07-29 : +4 `ArenaColors.*` du badge du jeu (salle de match)
   // 2650 → 2673 le 2026-07-29 : +23 `ArenaColors.*` du volet Arbitrage admin
   // (admin_match_arbitration_sheet : verdict, table signaux, chronologie).
-  const colorsDotBaseline = 2673; // occurrences de `Colors.`
+  // 2673 → 2685 le 2026-07-30 : +12 `ArenaColors.*` du dialogue de réglages
+  // prolongations/tirs au but (match_rules_dialog : bandeau activer/désactiver,
+  // case « J'ai compris », bouton OK). check_colors.sh --strict = 0 régression.
+  const colorsDotBaseline = 2685; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.

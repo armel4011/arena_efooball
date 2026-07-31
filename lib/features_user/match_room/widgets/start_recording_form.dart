@@ -5,7 +5,9 @@ import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_user/match_room/match_room_page.dart'
     show MatchRole;
+import 'package:arena/features_user/match_room/match_room_providers.dart';
 import 'package:arena/features_user/match_room/widgets/cyan_dashed_container.dart';
+import 'package:arena/features_user/match_room/widgets/match_rules_dialog.dart';
 import 'package:arena/features_user/match_room/widgets/open_chat_link.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -59,6 +61,18 @@ class _StartRecordingFormState extends ConsumerState<StartRecordingForm> {
         ? widget.match.player1TeamName
         : widget.match.player2TeamName;
     return n != null && n.trim().isNotEmpty;
+  }
+
+  /// « Continuer » : rappelle les réglages (prolongations + tirs au but selon
+  /// KO/classement) via un dialogue bloquant, puis persiste le nom d'équipe.
+  Future<void> _onContinue() async {
+    final game = ref.read(matchGameTypeProvider(widget.match.id)).valueOrNull;
+    final ok = await showMatchRulesDialog(
+      context,
+      isKo: widget.match.groupId == null,
+      gameLabel: game?.label ?? 'ton jeu',
+    );
+    if (ok) await _saveTeamName();
   }
 
   /// ÉTAPE 1 — persiste UNIQUEMENT le nom d'équipe (pas de `markInProgress`,
@@ -137,7 +151,7 @@ class _StartRecordingFormState extends ConsumerState<StartRecordingForm> {
           icon: Icons.arrow_forward_rounded,
           fullWidth: true,
           isLoading: _submitting,
-          onPressed: _teamCtrl.text.trim().isEmpty ? null : _saveTeamName,
+          onPressed: _teamCtrl.text.trim().isEmpty ? null : _onContinue,
         ),
         const SizedBox(height: ArenaSpacing.sm),
         OpenChatLink(matchId: widget.match.id),
