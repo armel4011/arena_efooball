@@ -7,7 +7,6 @@ import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_user/match_room/match_room_page.dart'
     show MatchRole;
 import 'package:arena/features_user/match_room/widgets/cyan_dashed_container.dart';
-import 'package:arena/features_user/match_room/widgets/forfeit_timer_card.dart';
 import 'package:arena/features_user/match_room/widgets/open_chat_link.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -160,10 +159,6 @@ class _RoomReadyViewState extends ConsumerState<RoomReadyView> {
             ],
           ),
         ),
-        if (widget.match.scheduledAt != null) ...[
-          const SizedBox(height: ArenaSpacing.lg),
-          ForfeitTimerCard(scheduledAt: widget.match.scheduledAt!),
-        ],
         if (isPlayer) ...[
           const SizedBox(height: ArenaSpacing.lg),
           if (_localStep == 0) ...[

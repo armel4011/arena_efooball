@@ -16,6 +16,7 @@ import 'package:arena/data/models/match_stream.dart';
 import 'package:arena/data/repositories/match_repository.dart';
 import 'package:arena/data/repositories/match_stream_repository.dart';
 import 'package:arena/features_user/match_room/widgets/match_recording_actions_sheet.dart';
+import 'package:arena/features_user/match_room/widgets/recording_countdown_card.dart';
 import 'package:arena/features_user/recording/overlay/overlay_restricted_guide.dart';
 import 'package:arena/features_user/recording/overlay/recording_overlay_messages.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
@@ -698,27 +699,33 @@ class _MatchRecordingLifecycleState
       _ => null,
     };
     if (nativeBanner != null) {
-      // Capture active mais bouton flottant manquant (overlay refusé/restreint
-      // sur Android 13+) → on garde la bannière d'enregistrement ET on ajoute
-      // un rappel NON bloquant qui ouvre le guide d'activation. La preuve est
-      // capturée quand même.
-      if (_overlayMissing &&
-          (coordState is CoordinatorRecording ||
-              coordState is CoordinatorPaused)) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            nativeBanner,
-            _LifecycleBanner(
-              icon: Icons.open_in_new,
-              color: ArenaColors.signalBlue,
-              text: "Bouton flottant désactivé — appuie pour l'activer",
-              onTap: () => showOverlayRestrictedGuide(context, ref),
-            ),
-          ],
-        );
-      }
-      return nativeBanner;
+      final extras = <Widget>[
+        nativeBanner,
+        // Compte à rebours de la durée MAX d'enregistrement (25 min),
+        // synchronisé avec le bouton flottant. Uniquement pendant
+        // l'enregistrement ACTIF (le bandeau « pause » n'affiche pas de
+        // décompte, il serait faux tant que c'est en pause).
+        if (coordState is CoordinatorRecording) ...[
+          const SizedBox(height: ArenaSpacing.sm),
+          const RecordingCountdownCard(),
+        ],
+        // Capture active mais bouton flottant manquant (overlay refusé/
+        // restreint sur Android 13+) → rappel NON bloquant vers le guide
+        // d'activation. La preuve est capturée quand même.
+        if (_overlayMissing &&
+            (coordState is CoordinatorRecording ||
+                coordState is CoordinatorPaused)) ...[
+          const SizedBox(height: ArenaSpacing.sm),
+          _LifecycleBanner(
+            icon: Icons.open_in_new,
+            color: ArenaColors.signalBlue,
+            text: "Bouton flottant désactivé — appuie pour l'activer",
+            onTap: () => showOverlayRestrictedGuide(context, ref),
+          ),
+        ],
+      ];
+      if (extras.length == 1) return nativeBanner;
+      return Column(mainAxisSize: MainAxisSize.min, children: extras);
     }
 
     // Provider LiveKit actif : bannière simple « enregistrement en cours »

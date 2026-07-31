@@ -120,6 +120,7 @@ class RecordingOverlayController {
       _platform.shareData(
         RecordingOverlayMessages.tick(
           elapsedSeconds: elapsed.inSeconds,
+          remainingSeconds: remaining.inSeconds,
           warning: remaining <= const Duration(seconds: 30),
           paused: _pausedElapsed != null,
           liveAvailable: _liveAvailable,
@@ -149,6 +150,7 @@ class RecordingOverlayController {
       _platform.shareData(
         RecordingOverlayMessages.tick(
           elapsedSeconds: elapsed.inSeconds,
+          remainingSeconds: remaining.inSeconds,
           warning: remaining <= const Duration(seconds: 30),
           paused: _pausedElapsed != null,
           liveAvailable: _liveAvailable,
@@ -348,6 +350,7 @@ class RecordingOverlayController {
       _platform.shareData(
         RecordingOverlayMessages.tick(
           elapsedSeconds: elapsed.inSeconds,
+          remainingSeconds: remaining.inSeconds,
           warning: remaining <= const Duration(seconds: 30),
           paused: _pausedElapsed != null,
           liveAvailable: _liveAvailable,
@@ -415,6 +418,7 @@ class RecordingOverlayController {
     await _platform.shareData(
       RecordingOverlayMessages.tick(
         elapsedSeconds: _pausedElapsed!.inSeconds,
+        remainingSeconds: (totalDuration - _pausedElapsed!).inSeconds,
         warning: false,
         paused: true,
         simple: _simpleMode,
@@ -438,6 +442,7 @@ class RecordingOverlayController {
     await _platform.shareData(
       RecordingOverlayMessages.tick(
         elapsedSeconds: paused.inSeconds,
+        remainingSeconds: (totalDuration - paused).inSeconds,
         warning: totalDuration - paused <= const Duration(seconds: 30),
         simple: _simpleMode,
         codeEntry: _codeEntry,
@@ -542,6 +547,7 @@ class RecordingOverlayController {
       _platform.shareData(
         RecordingOverlayMessages.tick(
           elapsedSeconds: elapsed.inSeconds,
+          remainingSeconds: remaining.inSeconds,
           warning: isWarning,
           liveAvailable: _liveAvailable,
           simple: _simpleMode,

@@ -135,6 +135,7 @@ void main() {
             body: RecordingOverlayButton(
               tick: const OverlayTick(
                 elapsedSeconds: 65,
+                remainingSeconds: 65,
                 isWarning: false,
                 isCodeEntry: true,
               ),
@@ -162,7 +163,11 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: RecordingOverlayButton(
-              tick: const OverlayTick(elapsedSeconds: 3, isWarning: false),
+              tick: const OverlayTick(
+                elapsedSeconds: 3,
+                remainingSeconds: 3,
+                isWarning: false,
+              ),
               onSubmitCode: (_) {},
               onFieldFocusChange: (_) async {},
             ),
