@@ -1,4 +1,5 @@
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/models/match_status.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -27,19 +28,33 @@ enum MatchStep {
         MatchStep.result => l10n.matchStepResult,
       };
 
-  static MatchStep fromStatus(MatchStatus s) => switch (s) {
-        MatchStatus.pending || MatchStatus.scheduled => MatchStep.codeRoom,
-        MatchStatus.ready => MatchStep.opponentJoining,
-        MatchStatus.inProgress ||
-        MatchStatus.scorePending ||
-        MatchStatus.awaitingValidation =>
-          MatchStep.matchInProgress,
-        MatchStatus.completed ||
-        MatchStatus.disputed ||
-        MatchStatus.forfeited ||
-        MatchStatus.cancelled =>
-          MatchStep.result,
-      };
+  /// Déduit l'étape depuis l'ÉTAT RÉEL du match (pas seulement le statut) :
+  /// le statut `ready` est mort (le flux passe `scheduled` → `in_progress`),
+  /// donc l'étape 2 « adversaire rejoint » ne s'activait jamais. On la déduit
+  /// désormais de signaux concrets :
+  ///   1 — Code room     : prépa HOME, code pas encore partagé.
+  ///   2 — Adversaire rejoint : code partagé OU match démarré mais un seul
+  ///       joueur a posé son nom d'équipe (l'autre n'a pas encore rejoint).
+  ///   3 — Match en cours : les DEUX ont rejoint (noms d'équipe posés) / score.
+  ///   4 — Résultat       : terminal.
+  static MatchStep fromMatch(ArenaMatch m) {
+    final codeShared = m.roomCode?.trim().isNotEmpty ?? false;
+    final bothJoined = (m.player1TeamName?.trim().isNotEmpty ?? false) &&
+        (m.player2TeamName?.trim().isNotEmpty ?? false);
+    return switch (m.status) {
+      MatchStatus.pending || MatchStatus.scheduled || MatchStatus.ready =>
+        codeShared ? MatchStep.opponentJoining : MatchStep.codeRoom,
+      MatchStatus.inProgress =>
+        bothJoined ? MatchStep.matchInProgress : MatchStep.opponentJoining,
+      MatchStatus.scorePending || MatchStatus.awaitingValidation =>
+        MatchStep.matchInProgress,
+      MatchStatus.completed ||
+      MatchStatus.disputed ||
+      MatchStatus.forfeited ||
+      MatchStatus.cancelled =>
+        MatchStep.result,
+    };
+  }
 }
 
 class StepIndicator extends StatelessWidget {

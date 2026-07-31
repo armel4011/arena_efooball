@@ -185,7 +185,7 @@ class _MatchRoomBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final players = ref.watch(matchPlayersProvider(match.id));
-    final step = MatchStep.fromStatus(match.status);
+    final step = MatchStep.fromMatch(match);
     final gameTypeAsync = ref.watch(matchGameTypeProvider(match.id));
 
     return SingleChildScrollView(
