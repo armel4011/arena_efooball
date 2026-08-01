@@ -18,6 +18,7 @@ import 'package:arena/features_user/match_room/widgets/match_room_auto_refresh.d
 import 'package:arena/features_user/match_room/widgets/match_room_join_marker.dart';
 import 'package:arena/features_user/match_room/widgets/match_step_body.dart';
 import 'package:arena/features_user/match_room/widgets/match_step_indicator.dart';
+import 'package:arena/features_user/match_room/widgets/match_sync_view.dart';
 import 'package:arena/features_user/streaming/start_streaming_banner.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -182,11 +183,22 @@ class _MatchRoomBody extends ConsumerWidget {
   final MatchRole role;
   final String? selfId;
 
+  /// ÉTAPE 0 — vrai tant que les deux joueurs (football) n'ont pas confirmé que
+  /// leur jeu est ouvert. Dames exclues (partie in-app), observateur exclu.
+  bool _needsSyncGate(GameType? game) =>
+      game != null &&
+      game != GameType.draughts &&
+      role != MatchRole.observer &&
+      (match.status == MatchStatus.pending ||
+          match.status == MatchStatus.scheduled) &&
+      !(match.player1Ready && match.player2Ready);
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final players = ref.watch(matchPlayersProvider(match.id));
-    final step = MatchStep.fromMatch(match);
     final gameTypeAsync = ref.watch(matchGameTypeProvider(match.id));
+    final needsSync = _needsSyncGate(gameTypeAsync.valueOrNull);
+    final step = needsSync ? MatchStep.sync : MatchStep.fromMatch(match);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(
@@ -240,6 +252,12 @@ class _MatchRoomBody extends ConsumerWidget {
             ),
             data: (gameType) {
               final isDraughts = gameType == GameType.draughts;
+              // ÉTAPE 0 — Synchronisation : tant que les deux joueurs n'ont pas
+              // confirmé que leur jeu est ouvert, on n'affiche QUE la vue de
+              // synchro (ni intro de rôle, ni enregistrement, ni StepBody).
+              if (_needsSyncGate(gameType)) {
+                return MatchSyncView(match: match, role: role);
+              }
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [

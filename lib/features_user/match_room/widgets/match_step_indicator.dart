@@ -12,6 +12,9 @@ import 'package:flutter/material.dart';
 ///   3 — Match en cours  (recording / score submission)
 ///   4 — Score validé  (terminal : completed / disputed / forfeited)
 enum MatchStep {
+  /// Étape 0 — synchronisation : les deux joueurs confirment que leur jeu est
+  /// ouvert avant que le processus démarre (aucune barre active).
+  sync(0),
   codeRoom(1),
   opponentJoining(2),
   matchInProgress(3),
@@ -22,6 +25,7 @@ enum MatchStep {
   final int number;
 
   String labelOf(AppLocalizations l10n) => switch (this) {
+        MatchStep.sync => 'Synchronisation',
         MatchStep.codeRoom => l10n.matchStepCodeRoom,
         MatchStep.opponentJoining => l10n.matchStepOpponentJoining,
         MatchStep.matchInProgress => l10n.matchStepInProgress,

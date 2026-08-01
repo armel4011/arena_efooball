@@ -26,6 +26,8 @@ _$ArenaMatchImpl _$$ArenaMatchImplFromJson(Map<String, dynamic> json) =>
       roomCode: json['room_code'] as String?,
       player1TeamName: json['player1_team_name'] as String?,
       player2TeamName: json['player2_team_name'] as String?,
+      player1Ready: json['player1_ready'] as bool? ?? false,
+      player2Ready: json['player2_ready'] as bool? ?? false,
       nextMatchId: json['next_match_id'] as String?,
       isThirdPlace: json['is_third_place'] as bool? ?? false,
       isStreamed: json['is_streamed'] as bool? ?? false,
@@ -68,6 +70,8 @@ Map<String, dynamic> _$$ArenaMatchImplToJson(_$ArenaMatchImpl instance) =>
         'player1_team_name': value,
       if (instance.player2TeamName case final value?)
         'player2_team_name': value,
+      'player1_ready': instance.player1Ready,
+      'player2_ready': instance.player2Ready,
       if (instance.nextMatchId case final value?) 'next_match_id': value,
       'is_third_place': instance.isThirdPlace,
       'is_streamed': instance.isStreamed,
