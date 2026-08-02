@@ -220,7 +220,9 @@ void main() {
   // 2690 → 2700 le 2026-08-01 : +10 `ArenaColors.*` de l'ÉTAPE 0 « Synchronisation »
   // (match_sync_view : icône, statuts prêt/attente des 2 joueurs, bandeau,
   // bouton). 0 vrai Colors.*.
-  const colorsDotBaseline = 2700; // occurrences de `Colors.`
+  // 2700 → 2706 le 2026-08-01 : +6 `ArenaColors.*` mise en avant « ÉTAPE
+  // IMPORTANTE » (bandeau statusWarn + carte consigne signalBlue). 0 vrai Colors.*.
+  const colorsDotBaseline = 2706; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.

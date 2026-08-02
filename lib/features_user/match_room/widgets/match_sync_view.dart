@@ -59,6 +59,40 @@ class _MatchSyncViewState extends ConsumerState<MatchSyncView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // Bandeau proéminent : cette étape est TRÈS IMPORTANTE.
+        Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: ArenaSpacing.md,
+              vertical: 8,
+            ),
+            decoration: BoxDecoration(
+              color: ArenaColors.statusWarn.withValues(alpha: 0.16),
+              borderRadius: ArenaRadius.pill,
+              border: Border.all(
+                color: ArenaColors.statusWarn.withValues(alpha: 0.55),
+                width: 1.5,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.priority_high_rounded,
+                    color: ArenaColors.statusWarn, size: 18,),
+                const SizedBox(width: 6),
+                Text(
+                  'ÉTAPE IMPORTANTE',
+                  style: ArenaText.badge.copyWith(
+                    color: ArenaColors.statusWarn,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: ArenaSpacing.lg),
         const Icon(Icons.sync, size: 48, color: ArenaColors.signalBlue),
         const SizedBox(height: ArenaSpacing.md),
         Text(
@@ -67,12 +101,35 @@ class _MatchSyncViewState extends ConsumerState<MatchSyncView> {
           style: ArenaText.h2,
         ),
         const SizedBox(height: ArenaSpacing.sm),
-        Text(
-          "Ouvre D'ABORD ton application de jeu (jusqu'au menu principal), "
-          'puis confirme ci-dessous. Le match démarre quand les DEUX joueurs '
-          'ont confirmé.',
-          textAlign: TextAlign.center,
-          style: ArenaText.body.copyWith(color: ArenaColors.silver),
+        // Consigne mise en avant dans une carte accentuée.
+        Container(
+          padding: const EdgeInsets.all(ArenaSpacing.md),
+          decoration: BoxDecoration(
+            color: ArenaColors.signalBlue.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(ArenaRadius.md),
+            border: Border.all(
+              color: ArenaColors.signalBlue.withValues(alpha: 0.35),
+            ),
+          ),
+          child: Text.rich(
+            TextSpan(
+              style: ArenaText.body.copyWith(color: ArenaColors.bone),
+              children: const [
+                TextSpan(
+                  text: "Ouvre D'ABORD ton application de jeu ",
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+                TextSpan(text: "(jusqu'au menu principal), puis confirme "
+                    'ci-dessous. ',),
+                TextSpan(
+                  text: 'Le match ne démarre QUE lorsque les DEUX joueurs '
+                      'ont confirmé.',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ],
+            ),
+            textAlign: TextAlign.center,
+          ),
         ),
         const SizedBox(height: ArenaSpacing.xl),
 
