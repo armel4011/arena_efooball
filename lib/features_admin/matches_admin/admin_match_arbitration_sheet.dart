@@ -208,6 +208,8 @@ class _SignalsTable extends StatelessWidget {
             Expanded(child: _playerHead(p2)),
           ],),
           const Divider(height: 1, color: ArenaColors.border),
+          _row('🎮 Synchro (jeu ouvert)', p1['sync_confirmed'],
+              p2['sync_confirmed'],),
           _row('🔑 Code envoyé', p1['sent_code'], p2['sent_code'],
               homeOnly: true, p1: p1, p2: p2,),
           _row('🚪 Salle rejointe', p1['joined'], p2['joined'],
