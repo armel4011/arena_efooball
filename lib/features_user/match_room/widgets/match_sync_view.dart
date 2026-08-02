@@ -67,23 +67,23 @@ class _MatchSyncViewState extends ConsumerState<MatchSyncView> {
               vertical: 8,
             ),
             decoration: BoxDecoration(
-              color: ArenaColors.statusWarn.withValues(alpha: 0.16),
+              color: ArenaColors.neonRed.withValues(alpha: 0.16),
               borderRadius: ArenaRadius.pill,
               border: Border.all(
-                color: ArenaColors.statusWarn.withValues(alpha: 0.55),
+                color: ArenaColors.neonRed.withValues(alpha: 0.55),
                 width: 1.5,
               ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.priority_high_rounded,
-                    color: ArenaColors.statusWarn, size: 18,),
+                const Icon(Icons.warning_amber_rounded,
+                    color: ArenaColors.neonRed, size: 18,),
                 const SizedBox(width: 6),
                 Text(
                   'ÉTAPE IMPORTANTE',
                   style: ArenaText.badge.copyWith(
-                    color: ArenaColors.statusWarn,
+                    color: ArenaColors.neonRed,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 1.4,
                   ),
@@ -101,34 +101,55 @@ class _MatchSyncViewState extends ConsumerState<MatchSyncView> {
           style: ArenaText.h2,
         ),
         const SizedBox(height: ArenaSpacing.sm),
-        // Consigne mise en avant dans une carte accentuée.
+        // Consigne mise en avant : texte AGRANDI, en ROUGE, avec une icône
+        // d'avertissement à côté.
         Container(
           padding: const EdgeInsets.all(ArenaSpacing.md),
           decoration: BoxDecoration(
-            color: ArenaColors.signalBlue.withValues(alpha: 0.08),
+            color: ArenaColors.neonRed.withValues(alpha: 0.10),
             borderRadius: BorderRadius.circular(ArenaRadius.md),
             border: Border.all(
-              color: ArenaColors.signalBlue.withValues(alpha: 0.35),
+              color: ArenaColors.neonRed.withValues(alpha: 0.45),
+              width: 1.5,
             ),
           ),
-          child: Text.rich(
-            TextSpan(
-              style: ArenaText.body.copyWith(color: ArenaColors.bone),
-              children: const [
-                TextSpan(
-                  text: "Ouvre D'ABORD ton application de jeu ",
-                  style: TextStyle(fontWeight: FontWeight.w800),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(
+                Icons.warning_amber_rounded,
+                color: ArenaColors.neonRed,
+                size: 30,
+              ),
+              const SizedBox(width: ArenaSpacing.sm),
+              Expanded(
+                child: Text.rich(
+                  TextSpan(
+                    style: ArenaText.body.copyWith(
+                      color: ArenaColors.neonRed,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      height: 1.35,
+                    ),
+                    children: const [
+                      TextSpan(
+                        text: "Ouvre D'ABORD ton application de jeu ",
+                        style: TextStyle(fontWeight: FontWeight.w900),
+                      ),
+                      TextSpan(
+                        text: "(jusqu'au menu principal), puis confirme "
+                            'ci-dessous. ',
+                      ),
+                      TextSpan(
+                        text: 'Le match ne démarre QUE lorsque les DEUX '
+                            'joueurs ont confirmé.',
+                        style: TextStyle(fontWeight: FontWeight.w900),
+                      ),
+                    ],
+                  ),
                 ),
-                TextSpan(text: "(jusqu'au menu principal), puis confirme "
-                    'ci-dessous. ',),
-                TextSpan(
-                  text: 'Le match ne démarre QUE lorsque les DEUX joueurs '
-                      'ont confirmé.',
-                  style: TextStyle(fontWeight: FontWeight.w800),
-                ),
-              ],
-            ),
-            textAlign: TextAlign.center,
+              ),
+            ],
           ),
         ),
         const SizedBox(height: ArenaSpacing.xl),
