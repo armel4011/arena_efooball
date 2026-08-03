@@ -326,3 +326,14 @@ final recordingServiceProvider = Provider<RecordingService>((ref) {
   ref.onDispose(service.dispose);
   return service;
 });
+
+/// État courant de l'enregistrement (idle / starting / active / …). Émet
+/// d'abord l'état courant pour éviter un flash `loading`. Utilisé par la carte
+/// « temps restant enregistrement » (compte à rebours synchronisé avec le
+/// bouton flottant, tous deux basés sur `startedAt` + `maxDuration`).
+final recordingStateProvider =
+    StreamProvider.autoDispose<RecordingState>((ref) async* {
+  final service = ref.watch(recordingServiceProvider);
+  yield service.state;
+  yield* service.stateStream;
+});

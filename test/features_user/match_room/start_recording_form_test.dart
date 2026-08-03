@@ -6,9 +6,13 @@
 // La permission de capture ne tombe donc jamais sur l'écran du nom d'équipe.
 
 import 'package:arena/data/models/arena_match.dart';
+import 'package:arena/data/models/competition_enums.dart';
+import 'package:arena/data/models/tutorial_video.dart';
 import 'package:arena/data/repositories/match_repository.dart';
+import 'package:arena/data/repositories/tutorial_video_repository.dart';
 import 'package:arena/features_user/match_room/match_room_page.dart'
     show MatchRole;
+import 'package:arena/features_user/match_room/match_room_providers.dart';
 import 'package:arena/features_user/match_room/widgets/start_recording_form.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -55,7 +59,14 @@ Future<void> _pump(
 }) {
   return tester.pumpWidget(
     ProviderScope(
-      overrides: [matchRepositoryProvider.overrideWithValue(repo)],
+      overrides: [
+        matchRepositoryProvider.overrideWithValue(repo),
+        // Jeu de la compétition (carte « lance d'abord » + dialogue réglages).
+        matchGameTypeProvider('m1').overrideWith((ref) => GameType.efootball),
+        // Pas de vidéo guide dans le dialogue en test.
+        matchRulesVideoProvider(GameType.efootball)
+            .overrideWithValue(const AsyncData<TutorialVideo?>(null)),
+      ],
       child: MaterialApp(
         locale: const Locale('fr'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -82,7 +93,14 @@ void main() {
     await tester.enterText(find.byType(TextField), ' FC Home ');
     await tester.pump();
     await tester.tap(find.text('Continuer'));
+    await tester.pumpAndSettle();
+
+    // Nouveau flux : « Continuer » ouvre d'abord le dialogue de réglages
+    // (prolongations/tirs au but). On coche « J'ai compris » puis OK.
+    await tester.tap(find.byType(Checkbox));
     await tester.pump();
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
 
     // Étape 1 ne déclenche PAS l'enregistrement (pas de markInProgress).
     expect(repo.calls, ['setTeamName']);

@@ -192,6 +192,19 @@ class MatchRepository {
     });
   }
 
+  /// Étape 0 « Synchronisation » : le joueur confirme que son APPLICATION DE
+  /// JEU est déjà ouverte. Pose le drapeau `ready` de SON siège. Le trigger
+  /// `guard_matches_protected_columns` ne protège que score/winner/status, donc
+  /// un joueur du match peut librement écrire cette colonne. Quand les DEUX
+  /// drapeaux sont posés, la salle passe à l'étape 1.
+  Future<void> markGameReady({
+    required String matchId,
+    required bool isPlayer1,
+  }) async {
+    final column = isPlayer1 ? 'player1_ready' : 'player2_ready';
+    await _client.from(_table).update({column: true}).eq('id', matchId);
+  }
+
   /// Either player marks the match as actually started — flips to
   /// `in_progress` and stamps `started_at`.
   Future<void> markInProgress(String matchId) async {

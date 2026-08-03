@@ -3,12 +3,14 @@
 // code / « a rejoint » (team name).
 
 import 'package:arena/data/models/arena_match.dart';
+import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/models/match_status.dart';
 import 'package:arena/data/repositories/match_repository.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
 import 'package:arena/features_user/match_room/match_room_page.dart'
     show MatchRole;
+import 'package:arena/features_user/match_room/match_room_providers.dart';
 import 'package:arena/features_user/match_room/widgets/match_step_body.dart';
 import 'package:arena/features_user/match_room/widgets/room_ready_view.dart';
 import 'package:arena/features_user/match_room/widgets/score_flow_view.dart';
@@ -67,6 +69,10 @@ Future<void> _pump(
         matchScoreSubmissionsProvider.overrideWith(
           (ref, id) => Stream.value(const <Map<String, dynamic>>[]),
         ),
+        // Le jeu de la compétition (tiré par la carte « lance d'abord le
+        // jeu »). Sans ça, le provider dérivé touche le cache disque et casse.
+        matchGameTypeProvider(match.id)
+            .overrideWith((ref) => GameType.efootball),
       ],
       child: MaterialApp(
         locale: const Locale('fr'),

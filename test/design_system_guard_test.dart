@@ -209,7 +209,22 @@ void main() {
   // 2646 → 2650 le 2026-07-29 : +4 `ArenaColors.*` du badge du jeu (salle de match)
   // 2650 → 2673 le 2026-07-29 : +23 `ArenaColors.*` du volet Arbitrage admin
   // (admin_match_arbitration_sheet : verdict, table signaux, chronologie).
-  const colorsDotBaseline = 2673; // occurrences de `Colors.`
+  // 2673 → 2685 le 2026-07-30 : +12 `ArenaColors.*` du dialogue de réglages
+  // prolongations/tirs au but (match_rules_dialog : bandeau activer/désactiver,
+  // case « J'ai compris », bouton OK). check_colors.sh --strict = 0 régression.
+  // 2685 → 2687 le 2026-07-30 : +2 `ArenaColors.signalBlue` du bouton « Regarder
+  // le guide vidéo » (lecture in-app) du dialogue de réglages. 0 vrai Colors.*.
+  // 2687 → 2690 le 2026-07-30 : +3 `ArenaColors.*` de la carte d'avertissement
+  // « Lance d'abord le jeu » (statusWarn/bone/silver) à l'étape d'activation
+  // de l'enregistrement. 0 vrai Colors.*.
+  // 2690 → 2700 le 2026-08-01 : +10 `ArenaColors.*` de l'ÉTAPE 0 « Synchronisation »
+  // (match_sync_view : icône, statuts prêt/attente des 2 joueurs, bandeau,
+  // bouton). 0 vrai Colors.*.
+  // 2700 → 2706 le 2026-08-01 : +6 `ArenaColors.*` mise en avant « ÉTAPE
+  // IMPORTANTE » (bandeau statusWarn + carte consigne signalBlue). 0 vrai Colors.*.
+  // 2706 → 2707 le 2026-08-01 : +1 `ArenaColors.neonRed` — consigne synchro
+  // passée en ROUGE + agrandie + icône avertissement. 0 vrai Colors.*.
+  const colorsDotBaseline = 2707; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.

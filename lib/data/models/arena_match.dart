@@ -35,6 +35,10 @@ sealed class ArenaMatch with _$ArenaMatch {
     String? roomCode,
     String? player1TeamName,
     String? player2TeamName,
+    // Étape 0 « Synchronisation » : chaque joueur confirme que son jeu est
+    // ouvert avant que le processus démarre.
+    @Default(false) bool player1Ready,
+    @Default(false) bool player2Ready,
     String? nextMatchId,
     @Default(false) bool isThirdPlace,
     @Default(false) bool isStreamed,

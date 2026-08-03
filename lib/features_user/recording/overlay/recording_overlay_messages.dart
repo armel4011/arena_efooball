@@ -153,6 +153,7 @@ abstract final class RecordingOverlayMessages {
   /// à chaque tick) sinon il disparaîtrait au premier tick périodique qui l'omet.
   static Map<String, dynamic> tick({
     required int elapsedSeconds,
+    required int remainingSeconds,
     required bool warning,
     bool paused = false,
     bool liveAvailable = false,
@@ -170,6 +171,7 @@ abstract final class RecordingOverlayMessages {
     return {
       'type': type,
       'elapsed': elapsedSeconds,
+      'remaining': remainingSeconds,
       'liveAvailable': liveAvailable,
       'simple': simple,
       'codeEntry': codeEntry,
@@ -186,6 +188,7 @@ class OverlayTick {
   const OverlayTick({
     required this.elapsedSeconds,
     required this.isWarning,
+    this.remainingSeconds = 0,
     this.isPaused = false,
     this.isLiveAvailable = false,
     this.isSimple = false,
@@ -201,6 +204,7 @@ class OverlayTick {
     }
     final type = raw['type'];
     final elapsed = raw['elapsed'];
+    final remaining = raw['remaining'];
     final liveAvailable = raw['liveAvailable'];
     final simple = raw['simple'];
     final codeEntry = raw['codeEntry'];
@@ -209,6 +213,7 @@ class OverlayTick {
     final roomCode = raw['roomCode'];
     return OverlayTick(
       elapsedSeconds: elapsed is int ? elapsed : 0,
+      remainingSeconds: remaining is int ? remaining : 0,
       isWarning: type == RecordingOverlayMessages.warnType,
       isPaused: type == RecordingOverlayMessages.pausedType,
       isLiveAvailable: liveAvailable == true,
@@ -221,6 +226,11 @@ class OverlayTick {
   }
 
   final int elapsedSeconds;
+
+  /// Temps RESTANT avant l'arrêt automatique (25 min − écoulé), borné à 0.
+  /// Le bouton flottant affiche ce compte à rebours (synchronisé avec la
+  /// carte « temps restant » de la page match).
+  final int remainingSeconds;
   final bool isWarning;
   final bool isPaused;
   final bool isLiveAvailable;
@@ -248,6 +258,14 @@ class OverlayTick {
   String get formatted {
     final m = (elapsedSeconds ~/ 60).toString().padLeft(2, '0');
     final s = (elapsedSeconds % 60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
+
+  /// Compte à rebours MM:SS du temps restant (borné à 0).
+  String get countdown {
+    final r = remainingSeconds < 0 ? 0 : remainingSeconds;
+    final m = (r ~/ 60).toString().padLeft(2, '0');
+    final s = (r % 60).toString().padLeft(2, '0');
     return '$m:$s';
   }
 }

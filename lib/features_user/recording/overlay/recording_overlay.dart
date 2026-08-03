@@ -571,7 +571,7 @@ class _RecordingOverlayButtonState extends State<RecordingOverlayButton> {
     if (_tick.isScoreEntry) {
       return ScoreEntryField(
         allowPenalties: _tick.allowPenalties,
-        timerLabel: _tick.formatted,
+        timerLabel: _tick.countdown,
         onFocusChange: widget.onFieldFocusChange,
         onClose: () => sendToMain(RecordingOverlayMessages.askExitScoreType),
         onSubmit: (my, opp, viaPen, myPen, oppPen) => sendToMain(
@@ -589,7 +589,7 @@ class _RecordingOverlayButtonState extends State<RecordingOverlayButton> {
       return RoomCodeField(
         onSubmit: widget.onSubmitCode,
         onFocusChange: widget.onFieldFocusChange,
-        timerLabel: _tick.formatted,
+        timerLabel: _tick.countdown,
         onClose: () => sendToMain(RecordingOverlayMessages.askExitCodeType),
         // EXTÉRIEUR : `roomCode` reçu ⇒ champ en LECTURE SEULE (affiche le code).
         // HOME : `roomCode` null ⇒ champ de SAISIE (tape + envoie).
@@ -706,7 +706,7 @@ class _RecordingOverlayButtonState extends State<RecordingOverlayButton> {
                     Icon(_mainIcon, color: Colors.white, size: 11),
                     const SizedBox(height: 1),
                     Text(
-                      _tick.formatted,
+                      _tick.countdown,
                       // KEEP : ce widget tourne dans un isolate Flutter
                       // détaché (flutter_overlay_window). GoogleFonts
                       // n'est pas initialisé côté isolate, donc on
