@@ -5,6 +5,12 @@
 -- (pending/scheduled/ready) doivent se décaler du MÊME delta (espacement des
 -- rounds préservé) ; les matchs déjà joués (completed…) ne bougent pas.
 --
+-- Dates RELATIVES à now() (loin dans le futur) : sinon, une fois la date du
+-- jour dépassée, le trigger de plancher `floor_rescheduled_matches` (now()+5min)
+-- clampe les créneaux devenus « passés » et fait échouer les assertions.
+-- `now()` est constant dans la transaction pgTAP → fixtures et assertions
+-- restent alignées.
+--
 -- Triggers de cascade/notif neutralisés : on teste le seul décalage.
 -- ════════════════════════════════════════════════════════════════════
 
@@ -28,37 +34,37 @@ insert into profiles(id,username,email,country_code,referral_code,role,is_active
 
 insert into competitions(id,name,game,format,status,start_date,max_players,registration_fee,registration_currency)
 values ('c1000000-0000-0000-0000-00000000c001','SHIFT','efootball','single_elimination','ongoing',
-        '2026-08-01 10:00:00+00',4,0,'XOF');
+        now() + interval '10 days',4,0,'XOF');
 
 insert into matches(id,competition_id,status,scheduled_at,player1_id,player2_id) values
   -- round 1 programmé (doit se décaler)
   ('c1000000-0000-0000-0000-000000000011','c1000000-0000-0000-0000-00000000c001','scheduled',
-   '2026-08-01 10:00:00+00','c1000000-0000-0000-0000-0000000000a1','c1000000-0000-0000-0000-0000000000a2'),
+   now() + interval '10 days','c1000000-0000-0000-0000-0000000000a1','c1000000-0000-0000-0000-0000000000a2'),
   -- round 2 placeholder pending (doit se décaler, espacement +2h préservé)
   ('c1000000-0000-0000-0000-000000000013','c1000000-0000-0000-0000-00000000c001','pending',
-   '2026-08-01 12:00:00+00',null,null),
+   now() + interval '10 days' + interval '2 hours',null,null),
   -- match déjà joué (ne doit PAS bouger)
   ('c1000000-0000-0000-0000-000000000012','c1000000-0000-0000-0000-00000000c001','completed',
-   '2026-08-01 10:00:00+00','c1000000-0000-0000-0000-0000000000a1','c1000000-0000-0000-0000-0000000000a2');
+   now() + interval '10 days','c1000000-0000-0000-0000-0000000000a1','c1000000-0000-0000-0000-0000000000a2');
 
 select has_function('public', 'shift_competition_matches_on_reschedule', array[]::text[]);
 
 -- ─── Reprogrammation : +2 jours ─────────────────────────────────────
 update public.competitions
-   set start_date = '2026-08-03 10:00:00+00'
+   set start_date = now() + interval '12 days'
  where id = 'c1000000-0000-0000-0000-00000000c001';
 
 select is(
   (select scheduled_at from matches where id='c1000000-0000-0000-0000-000000000011'),
-  '2026-08-03 10:00:00+00'::timestamptz,
+  (now() + interval '12 days')::timestamptz,
   'match scheduled décalé de +2 jours');
 select is(
   (select scheduled_at from matches where id='c1000000-0000-0000-0000-000000000013'),
-  '2026-08-03 12:00:00+00'::timestamptz,
+  (now() + interval '12 days' + interval '2 hours')::timestamptz,
   'match pending décalé de +2 jours (espacement +2h préservé)');
 select is(
   (select scheduled_at from matches where id='c1000000-0000-0000-0000-000000000012'),
-  '2026-08-01 10:00:00+00'::timestamptz,
+  (now() + interval '10 days')::timestamptz,
   'match completed NON décalé');
 
 -- ─── Modifier une autre colonne ne décale rien (trigger scoping) ────
@@ -67,7 +73,7 @@ update public.competitions
  where id = 'c1000000-0000-0000-0000-00000000c001';
 select is(
   (select scheduled_at from matches where id='c1000000-0000-0000-0000-000000000011'),
-  '2026-08-03 10:00:00+00'::timestamptz,
+  (now() + interval '12 days')::timestamptz,
   'changer le nom ne re-décale pas les matchs');
 
 select * from finish();
