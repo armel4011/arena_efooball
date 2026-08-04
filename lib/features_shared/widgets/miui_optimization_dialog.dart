@@ -6,38 +6,53 @@ import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-// Nom de préférence (pas un secret) : flag « guide MIUI déjà montré ».
-const _miuiPromptedPref = 'arena_miui_prompted';
+// Nom de préférence (pas un secret) : flag « guide arrière-plan déjà montré ».
+// NB : nouvelle clé (≠ ancien `arena_miui_prompted`) pour que le guide amélioré
+// — avec l'exemption batterie universelle — soit revu une fois par TOUS, y
+// compris ceux qui n'avaient eu que l'ancien guide MIUI.
+const _bgReliabilityPromptedPref = 'arena_bg_reliability_prompted';
 
-/// Affiche UNE seule fois (persisté) le guide d'optimisation MIUI sur les
-/// appareils Xiaomi. À appeler après login, depuis un endroit stable (home).
-/// No-op hors Xiaomi ou si déjà montré. Idempotent.
-Future<void> maybePromptMiuiOptimization(
+/// Affiche UNE seule fois (persisté) le guide « garder Arena actif en
+/// arrière-plan ». À appeler après login, depuis un endroit stable (home).
+///
+/// Se déclenche si l'app n'est PAS exemptée de l'optimisation batterie (tous
+/// OEM — Samsung inclus) OU sur Xiaomi (réglages MIUI supplémentaires). No-op si
+/// déjà exemptée et hors Xiaomi, ou si déjà montré. Idempotent.
+Future<void> maybePromptBackgroundReliability(
   BuildContext context,
   WidgetRef ref,
 ) async {
   final prefs = ref.read(sharedPreferencesProvider);
-  if (prefs.getBool(_miuiPromptedPref) == true) return;
-  final isMiui = await ref.read(miuiOptimizationServiceProvider).isMiui();
-  if (!isMiui) return;
-  await prefs.setBool(_miuiPromptedPref, true);
+  if (prefs.getBool(_bgReliabilityPromptedPref) == true) return;
+  final svc = ref.read(miuiOptimizationServiceProvider);
+  final isMiui = await svc.isMiui();
+  final ignoring = await svc.isIgnoringBatteryOptimizations();
+  // Rien à faire : déjà exemptée ET pas de réglages MIUI spécifiques à activer.
+  if (ignoring && !isMiui) return;
+  await prefs.setBool(_bgReliabilityPromptedPref, true);
   if (!context.mounted) return;
-  await showMiuiOptimizationDialog(context, ref);
+  await showBackgroundReliabilityDialog(context, ref, isMiui: isMiui);
 }
 
-/// Ouvre le guide MIUI à la demande (ex. depuis les réglages). Toujours affiché.
-Future<void> showMiuiOptimizationDialog(
+/// Ouvre le guide à la demande (ex. depuis les réglages). Toujours affiché.
+Future<void> showBackgroundReliabilityDialog(
   BuildContext context,
-  WidgetRef ref,
-) {
-  return showDialog<void>(
+  WidgetRef ref, {
+  bool? isMiui,
+}) async {
+  final resolvedMiui =
+      isMiui ?? await ref.read(miuiOptimizationServiceProvider).isMiui();
+  if (!context.mounted) return;
+  await showDialog<void>(
     context: context,
-    builder: (_) => const _MiuiOptimizationDialog(),
+    builder: (_) => _BackgroundReliabilityDialog(isMiui: resolvedMiui),
   );
 }
 
-class _MiuiOptimizationDialog extends ConsumerWidget {
-  const _MiuiOptimizationDialog();
+class _BackgroundReliabilityDialog extends ConsumerWidget {
+  const _BackgroundReliabilityDialog({required this.isMiui});
+
+  final bool isMiui;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -63,7 +78,7 @@ class _MiuiOptimizationDialog extends ConsumerWidget {
                 const SizedBox(width: ArenaSpacing.sm),
                 Expanded(
                   child: Text(
-                    'Autorise Arena sur ton Xiaomi',
+                    'Garde Arena actif en arrière-plan',
                     style:
                         ArenaText.body.copyWith(fontWeight: FontWeight.w800),
                   ),
@@ -72,27 +87,39 @@ class _MiuiOptimizationDialog extends ConsumerWidget {
             ),
             const SizedBox(height: ArenaSpacing.md),
             Text(
-              'MIUI met les applis en veille quand elles sont fermées. Pour que '
-              'ta preuve de match parte automatiquement (et que tu reçoives tes '
-              'gains sans souci), active deux réglages pour Arena :',
+              'Ton téléphone met les applis en veille au bout de quelques '
+              "minutes. Pendant un match, ça coupe l'enregistrement et ta preuve "
+              'est perdue. Active ce réglage pour Arena :',
               style: ArenaText.small.copyWith(color: ArenaColors.silver),
             ),
             const SizedBox(height: ArenaSpacing.md),
+            // Étape UNIVERSELLE (tous OEM) : exemption batterie en une tape.
             _Step(
               n: '1',
-              title: 'Démarrage auto',
-              desc: 'Autorise Arena à démarrer en arrière-plan.',
-              buttonLabel: 'Ouvrir « Démarrage auto »',
-              onTap: svc.openAutostart,
+              title: "Autoriser l'exécution en arrière-plan",
+              desc: 'Le plus important : whiteliste Arena de l’économiseur '
+                  'de batterie (empêche Android de la fermer).',
+              buttonLabel: 'Autoriser (recommandé)',
+              onTap: svc.requestBatteryExemption,
             ),
-            const SizedBox(height: ArenaSpacing.sm),
-            _Step(
-              n: '2',
-              title: 'Batterie « Sans restriction »',
-              desc: 'Économiseur de batterie → choisis « Sans restriction ».',
-              buttonLabel: 'Ouvrir les réglages batterie',
-              onTap: svc.openBatterySaver,
-            ),
+            if (isMiui) ...[
+              const SizedBox(height: ArenaSpacing.sm),
+              _Step(
+                n: '2',
+                title: 'Démarrage auto (Xiaomi)',
+                desc: 'Autorise Arena à démarrer en arrière-plan.',
+                buttonLabel: 'Ouvrir « Démarrage auto »',
+                onTap: svc.openAutostart,
+              ),
+              const SizedBox(height: ArenaSpacing.sm),
+              _Step(
+                n: '3',
+                title: 'Batterie « Sans restriction » (Xiaomi)',
+                desc: 'Économiseur de batterie → choisis « Sans restriction ».',
+                buttonLabel: 'Ouvrir les réglages batterie',
+                onTap: svc.openBatterySaver,
+              ),
+            ],
             const SizedBox(height: ArenaSpacing.md),
             Align(
               alignment: Alignment.centerRight,

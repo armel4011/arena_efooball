@@ -11,6 +11,12 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
+    <!-- Exemption d'optimisation batterie (Doze/kill OEM) : sans ça, MIUI/Samsung
+         tuent le processus après quelques minutes en arrière-plan et coupent
+         l'enregistrement. App distribuée hors Play Store → intent whitelist
+         autorisé. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
     <!-- Bouton flottant overlay par-dessus eFootball -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <!-- Required by flutter_overlay_window's foreground service on

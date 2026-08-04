@@ -42,6 +42,30 @@ class MiuiOptimizationService {
   Future<bool> openBatterySaver() =>
       _open('openMiuiBatterySaver', 'Miui.openBatterySaver');
 
+  /// `true` si l'app est déjà exemptée de l'optimisation batterie (Doze). On
+  /// renvoie `true` par défaut hors Android / canal absent pour NE PAS harceler
+  /// l'utilisateur inutilement.
+  Future<bool> isIgnoringBatteryOptimizations() async {
+    if (!Platform.isAndroid) return true;
+    try {
+      return (await _channel
+              .invokeMethod<bool>('isIgnoringBatteryOptimizations')) ??
+          true;
+    } on MissingPluginException {
+      return true;
+    } catch (e, st) {
+      unawaited(reportError(e, st, context: 'Miui.isIgnoringBattery'));
+      return true;
+    }
+  }
+
+  /// Ouvre le dialogue système « une tape » qui whiteliste l'app du Doze / kill
+  /// batterie OEM (TOUS constructeurs, pas seulement MIUI). C'est LE réglage qui
+  /// empêche Android de tuer le processus (et donc l'enregistrement) après
+  /// quelques minutes en arrière-plan.
+  Future<bool> requestBatteryExemption() =>
+      _open('requestIgnoreBatteryOptimizations', 'Miui.requestBatteryExemption');
+
   Future<bool> _open(String method, String ctx) async {
     if (!Platform.isAndroid) return false;
     try {
