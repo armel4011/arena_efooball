@@ -10,6 +10,7 @@ import 'package:arena/features_user/match_room/match_room_providers.dart';
 import 'package:arena/features_user/match_room/widgets/cyan_dashed_container.dart';
 import 'package:arena/features_user/match_room/widgets/match_rules_dialog.dart';
 import 'package:arena/features_user/match_room/widgets/open_chat_link.dart';
+import 'package:arena/features_user/match_room/widgets/opponent_team_banner.dart';
 import 'package:arena/features_user/match_room/widgets/start_game_first_card.dart';
 import 'package:arena/features_user/match_room/widgets/team_name_guard.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
@@ -166,6 +167,7 @@ class _StartRecordingFormState extends ConsumerState<StartRecordingForm> {
           ),
         ),
         const SizedBox(height: ArenaSpacing.lg),
+        OpponentTeamBanner(match: widget.match, isPlayer1: _isPlayer1),
         Text(l10n.roomReadyTeamNameLabel, style: ArenaText.inputLabel),
         const SizedBox(height: ArenaSpacing.sm),
         ArenaTextField(

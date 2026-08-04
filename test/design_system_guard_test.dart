@@ -224,7 +224,8 @@ void main() {
   // IMPORTANTE » (bandeau statusWarn + carte consigne signalBlue). 0 vrai Colors.*.
   // 2706 → 2707 le 2026-08-01 : +1 `ArenaColors.neonRed` — consigne synchro
   // passée en ROUGE + agrandie + icône avertissement. 0 vrai Colors.*.
-  const colorsDotBaseline = 2707; // occurrences de `Colors.`
+  // 2707 → 2713 le 2026-08-04 : +6 `ArenaColors.*` — OpponentTeamBanner
+  const colorsDotBaseline = 2713; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.
