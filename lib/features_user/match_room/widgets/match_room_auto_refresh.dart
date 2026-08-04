@@ -103,9 +103,16 @@ class _MatchRoomAutoRefreshState extends ConsumerState<MatchRoomAutoRefresh>
   /// Signature des SEULS champs qui pilotent le déroulé de la salle. Exclut les
   /// champs bruités (compteurs de vues, timestamps de heartbeat) pour ne pas
   /// re-synchroniser inutilement.
+  ///
+  /// ⚠️ Inclure ICI tout champ dont dépend l'affichage d'une étape, sinon un
+  /// push Realtime manqué laisse la salle FIGÉE (le sondage ne re-synchronise
+  /// que si la signature bouge). Les flags `player*_ready` pilotent l'ÉTAPE 0
+  /// (synchronisation) : sans eux, socket gelé = blocage définitif « en attente
+  /// de l'adversaire ». Cf. [[stopped_notification_reliable_resume]].
   String _flowSignature(ArenaMatch? m) =>
       '${m?.status}|${m?.roomCode}|${m?.homePlayerId}|${m?.score1}|'
-      '${m?.score2}|${m?.winnerId}|${m?.player1TeamName}|${m?.player2TeamName}';
+      '${m?.score2}|${m?.winnerId}|${m?.player1TeamName}|${m?.player2TeamName}|'
+      '${m?.player1Ready}|${m?.player2Ready}';
 
   @override
   Widget build(BuildContext context) => const SizedBox.shrink();
