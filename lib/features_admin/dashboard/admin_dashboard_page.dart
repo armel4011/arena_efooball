@@ -262,6 +262,14 @@ class AdminDashboardPage extends ConsumerWidget {
                     ),
                     const SizedBox(height: ArenaSpacing.xs),
                   ],
+                  ArenaButton(
+                    label: '🧾 COLLECTEURS',
+                    fullWidth: true,
+                    variant: ArenaButtonVariant.secondary,
+                    onPressed: () =>
+                        context.push(AdminRoutes.superCollectors),
+                  ),
+                  const SizedBox(height: ArenaSpacing.xs),
                   if (adminCanSection(profile, 'revenue')) ...[
                     ArenaButton(
                       label: 'REVENUE PLATEFORME',

@@ -9,6 +9,7 @@ import 'package:arena/features_admin/auth_admin/splash_admin_screen.dart';
 import 'package:arena/features_admin/auth_admin/totp_setup_screen.dart';
 import 'package:arena/features_admin/auth_admin/totp_verify_screen.dart';
 import 'package:arena/features_admin/bracket_admin/admin_bracket_management_page.dart';
+import 'package:arena/features_admin/collector/collector_console_page.dart';
 import 'package:arena/features_admin/competitions_admin/admin_competition_detail_page.dart';
 import 'package:arena/features_admin/competitions_admin/admin_competitions_list_page.dart';
 import 'package:arena/features_admin/competitions_admin/create_competition_page.dart';
@@ -24,6 +25,7 @@ import 'package:arena/features_admin/super_admin/admin_chat_thread_page.dart';
 import 'package:arena/features_admin/super_admin/super_admin_anticheat.dart';
 import 'package:arena/features_admin/super_admin/super_admin_app_update.dart';
 import 'package:arena/features_admin/super_admin/super_admin_broadcast.dart';
+import 'package:arena/features_admin/super_admin/super_admin_collectors_page.dart';
 import 'package:arena/features_admin/super_admin/super_admin_dashboard.dart';
 import 'package:arena/features_admin/super_admin/super_admin_game_rules.dart';
 import 'package:arena/features_admin/super_admin/super_admin_invitations.dart';
@@ -75,6 +77,9 @@ abstract final class AdminRoutes {
   static const auditLog = '/audit';
   static const profile = '/profile';
 
+  // Console dédiée du collecteur de paiement (rôle réduit, hors console admin).
+  static const collectorConsole = '/collector';
+
   // Super-admin
   static const superDashboard = '/super';
   static const superInvitations = '/super/invitations';
@@ -92,6 +97,7 @@ abstract final class AdminRoutes {
   static const superSupportThread = '/super/support/:channelId';
   static const superAppUpdate = '/super/app-update';
   static const superAntiCheat = '/super/anticheat';
+  static const superCollectors = '/super/collectors';
 
   static const devPreview = '/_dev/widgets';
   static const intro = '/intro';
@@ -161,7 +167,11 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
       final profile = ref.read(currentProfileProvider).valueOrNull;
       if (profile == null) return null; // Still hydrating, let the screen render.
 
-      if (!profile.isAdmin) {
+      // Le collecteur de paiement N'EST PAS admin mais a accès à l'app admin
+      // (console réduite). On ne le renvoie donc PAS au splash ; le 2FA lui
+      // s'applique aussi (rôle sensible « argent »), puis il est aiguillé vers
+      // sa console dédiée plus bas.
+      if (!profile.isAdmin && !profile.isCollector) {
         // Wrong-app guard — sign-out is handled in [AdminAuthRepository.signInAdmin]
         // when role check fails. Belt-and-braces : send them back to splash.
         return AdminRoutes.splash;
@@ -177,6 +187,14 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
           ref.read(adminTotpSessionProvider) == profile.id;
       if (!totpVerified) {
         return loc == AdminRoutes.totpVerify ? null : AdminRoutes.totpVerify;
+      }
+
+      // Collecteur pleinement authentifié → console dédiée (jamais la console
+      // admin complète). Il reste confiné à `/collector*`.
+      if (profile.isCollector) {
+        return loc.startsWith(AdminRoutes.collectorConsole)
+            ? null
+            : AdminRoutes.collectorConsole;
       }
 
       // Autorisation (rôle super-admin sur `/super/*` + périmètre de section)
@@ -385,6 +403,16 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
         path: AdminRoutes.superAntiCheat,
         name: 'admin.superAntiCheat',
         builder: (context, state) => const SuperAdminAntiCheat(),
+      ),
+      GoRoute(
+        path: AdminRoutes.superCollectors,
+        name: 'admin.superCollectors',
+        builder: (context, state) => const SuperAdminCollectorsPage(),
+      ),
+      GoRoute(
+        path: AdminRoutes.collectorConsole,
+        name: 'admin.collectorConsole',
+        builder: (context, state) => const CollectorConsolePage(),
       ),
       GoRoute(
         path: AdminRoutes.superSupportThread,
