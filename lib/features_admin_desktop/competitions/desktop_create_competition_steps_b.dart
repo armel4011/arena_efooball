@@ -15,76 +15,200 @@ mixin _StepBuildersB
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const _SectionTitle('Répartition des récompenses'),
-        InfoBar(
-          title: Text('Montants en $_currency'),
-          content: Text(
-            'Saisissez le montant attribué à chaque place — en $_currency. '
-            'La cagnotte est la somme de ces montants.',
-          ),
-          severity: InfoBarSeverity.info,
-          isLong: true,
-        ),
-        const SizedBox(height: 16),
-        InfoLabel(
-          label: 'Nombre de récompensés',
-          child: ComboBox<int>(
-            value: _rewardedCount,
-            isExpanded: true,
-            items: [
-              for (final n in kRewardedRankOptions)
-                ComboBoxItem<int>(value: n, child: Text('$n place(s)')),
+        Card(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            children: [
+              const Expanded(
+                child: Text('Compétition amicale (sans cagnotte)'),
+              ),
+              ToggleSwitch(
+                checked: _noReward,
+                onChanged: (v) => setState(() => _noReward = v),
+              ),
             ],
-            onChanged: (v) => setState(
-              () => _rewardedCount = (v ?? _rewardedCount).clamp(
-                1,
-                kMaxRewardedRanks,
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (_noReward)
+          InfoBar(
+            title: const Text('Sans récompense'),
+            content: const Text(
+              'Aucune cagnotte : les frais éventuels ne financent pas de prix.',
+            ),
+            severity: InfoBarSeverity.info,
+            isLong: true,
+          )
+        else ...[
+          InfoBar(
+            title: Text('Montants en $_currency'),
+            content: Text(
+              'Saisissez le montant attribué à chaque place — en $_currency. '
+              'La cagnotte est la somme de ces montants.',
+            ),
+            severity: InfoBarSeverity.info,
+            isLong: true,
+          ),
+          const SizedBox(height: 16),
+          InfoLabel(
+            label: 'Nombre de récompensés',
+            child: ComboBox<int>(
+              value: _rewardedCount,
+              isExpanded: true,
+              items: [
+                for (final n in kRewardedRankOptions)
+                  ComboBoxItem<int>(value: n, child: Text('$n place(s)')),
+              ],
+              onChanged: (v) => setState(
+                () => _rewardedCount = (v ?? _rewardedCount).clamp(
+                  1,
+                  kMaxRewardedRanks,
+                ),
               ),
             ),
           ),
-        ),
-        const SizedBox(height: 16),
-        for (var i = 0; i < topCount; i++) ...[
-          InfoLabel(
-            label: '${prizeRankEmoji(i)} ${prizeRankLabel(i)} place',
-            child: _amountBox(_topShareCtrls[i], 'Montant'),
-          ),
-          const SizedBox(height: 12),
-        ],
-        for (var b = 0; b < prizeBlocks.length; b++)
-          if (_rewardedCount >= prizeBlocks[b].lastRank) ...[
+          const SizedBox(height: 16),
+          for (var i = 0; i < topCount; i++) ...[
             InfoLabel(
-              label: '🏅 ${prizeBlocks[b].label} — par place',
-              child: _amountBox(_blockShareCtrls[b], 'Montant par place'),
+              label: '${prizeRankEmoji(i)} ${prizeRankLabel(i)} place',
+              child: _amountBox(_topShareCtrls[i], 'Montant'),
             ),
             const SizedBox(height: 12),
           ],
-        const SizedBox(height: 8),
-        Card(
-          backgroundColor: ArenaColors.statusOk.withValues(alpha: 0.08),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Cagnotte totale',
-                  style: GoogleFonts.spaceGrotesk(
-                    color: ArenaColors.bone,
-                    fontWeight: FontWeight.w600,
+          for (var b = 0; b < prizeBlocks.length; b++)
+            if (_rewardedCount >= prizeBlocks[b].lastRank) ...[
+              InfoLabel(
+                label: '🏅 ${prizeBlocks[b].label} — par place',
+                child: _amountBox(_blockShareCtrls[b], 'Montant par place'),
+              ),
+              const SizedBox(height: 12),
+            ],
+          const SizedBox(height: 8),
+          Card(
+            backgroundColor: ArenaColors.statusOk.withValues(alpha: 0.08),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Cagnotte totale',
+                    style: GoogleFonts.spaceGrotesk(
+                      color: ArenaColors.bone,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-              ),
-              Text(
-                '${NumberFormat('#,###', 'fr').format(_shareTotal())} '
-                '$_currency',
-                style: GoogleFonts.jetBrainsMono(
-                  color: ArenaColors.statusOk,
-                  fontWeight: FontWeight.w700,
+                Text(
+                  '${NumberFormat('#,###', 'fr').format(_shareTotal())} '
+                  '$_currency',
+                  style: GoogleFonts.jetBrainsMono(
+                    color: ArenaColors.statusOk,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Button(
+                onPressed: _savePrizeTemplate,
+                child: const Text('Enregistrer ce barème'),
+              ),
+              const SizedBox(width: 8),
+              Builder(
+                builder: (context) {
+                  final n = ref
+                          .watch(prizeTemplatesProvider)
+                          .valueOrNull
+                          ?.saved
+                          .length ??
+                      0;
+                  return Button(
+                    onPressed: n > 0 ? _openPrizeTemplates : null,
+                    child: Text('Mes barèmes ($n)'),
+                  );
+                },
               ),
             ],
           ),
-        ),
+        ],
       ],
     );
+  }
+
+  Future<void> _savePrizeTemplate() async {
+    final name = await _promptName(
+      context,
+      title: 'Enregistrer le barème',
+      placeholder: 'Nom (ex. Standard 4 places)',
+    );
+    if (name == null || name.isEmpty) return;
+    await ref.read(prizeTemplatesProvider.notifier).saveTemplate(
+          name,
+          _rewardedCount,
+          _topShareCtrls.map((c) => c.text).toList(),
+          _blockShareCtrls.map((c) => c.text).toList(),
+        );
+  }
+
+  Future<void> _openPrizeTemplates() async {
+    final saved =
+        ref.read(prizeTemplatesProvider).valueOrNull?.saved ?? const [];
+    if (saved.isEmpty) return;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => ContentDialog(
+        title: const Text('Mes barèmes'),
+        content: SizedBox(
+          width: 460,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final tpl in saved)
+                ListTile(
+                  title: Text(tpl.name),
+                  subtitle: Text(tpl.preview),
+                  onPressed: () {
+                    _applyPrizeTemplate(tpl);
+                    Navigator.of(ctx).pop();
+                  },
+                  trailing: IconButton(
+                    icon: const Icon(FluentIcons.delete),
+                    onPressed: () {
+                      ref
+                          .read(prizeTemplatesProvider.notifier)
+                          .deleteTemplate(tpl.name);
+                      Navigator.of(ctx).pop();
+                    },
+                  ),
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          Button(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Fermer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _applyPrizeTemplate(PrizeTemplate tpl) {
+    setState(() {
+      _noReward = false;
+      _rewardedCount = tpl.rewardedCount.clamp(1, kMaxRewardedRanks);
+      for (var i = 0; i < _topShareCtrls.length; i++) {
+        _topShareCtrls[i].text =
+            i < tpl.topShares.length ? tpl.topShares[i] : '0';
+      }
+      for (var b = 0; b < _blockShareCtrls.length; b++) {
+        _blockShareCtrls[b].text =
+            b < tpl.blockShares.length ? tpl.blockShares[b] : '0';
+      }
+    });
   }
 
   Widget _amountBox(TextEditingController ctrl, String placeholder) {
@@ -130,9 +254,7 @@ mixin _StepBuildersB
                   TextBox(
                     controller: _entryFeeCtrl,
                     placeholder: '0',
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp('[0-9.]')),
-                    ],
+                    inputFormatters: [_singleDecimalFormatter],
                     onChanged: (_) => setState(() {}),
                   ),
                 ),

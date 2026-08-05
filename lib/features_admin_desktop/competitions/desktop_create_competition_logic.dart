@@ -9,6 +9,12 @@ part of 'desktop_create_competition_page.dart';
 // _StepBuilders. Aucun changement de comportement.
 // ─────────────────────────────────────────────────────────────────────
 
+/// Formatter décimal : chiffres avec AU PLUS un point (rejette « 1.2.3 »).
+final _singleDecimalFormatter = TextInputFormatter.withFunction((old, neu) {
+  if (neu.text.isEmpty) return neu;
+  return RegExp(r'^\d*\.?\d*$').hasMatch(neu.text) ? neu : old;
+});
+
 /// Libellé lisible d'un intervalle en minutes (min / h / jours).
 String _intervalLabel(int minutes) {
   if (minutes < 60) return '$minutes min';
@@ -23,6 +29,9 @@ mixin _SubmitAndCompute on ConsumerState<DesktopCreateCompetitionPage> {
   bool get _submitting;
   set _submitting(bool value);
   set _error(String? value);
+  String? get _createdId;
+  set _createdId(String? value);
+  bool get _noReward;
   GameType get _game;
   TournamentFormat get _format;
   int get _maxPlayers;
@@ -53,16 +62,31 @@ mixin _SubmitAndCompute on ConsumerState<DesktopCreateCompetitionPage> {
 
   Future<void> _submit() async {
     if (_submitting) return;
+    final adminId = ref.read(currentSessionProvider)?.user.id;
+    if (adminId == null) {
+      setState(() => _error = 'Session expirée — reconnecte-toi.');
+      return;
+    }
+    // Re-validation COMPLÈTE (le rail cliquable pouvait mener au Récap sans
+    // renseigner les étapes) : nom, capacité, frais, ET options de paiement si
+    // la compétition est payante.
+    final invalid = _firstInvalidStepMessage();
+    if (invalid != null) {
+      setState(() => _error = invalid);
+      return;
+    }
+    // Date de début : doit être dans le futur (sauf édition d'une comp dont la
+    // date est déjà passée).
+    final start = _startDate!;
+    if (!_isEditing && !start.isAfter(DateTime.now())) {
+      setState(() => _error = 'La date de début doit être dans le futur.');
+      return;
+    }
+
     setState(() {
       _submitting = true;
       _error = null;
     });
-    final adminId = ref.read(currentSessionProvider)?.user.id;
-    if (adminId == null || _startDate == null) {
-      setState(() => _submitting = false);
-      return;
-    }
-
     final draft = _buildDraft();
     final repo = ref.read(adminCompetitionsRepositoryProvider);
 
@@ -85,19 +109,30 @@ mixin _SubmitAndCompute on ConsumerState<DesktopCreateCompetitionPage> {
           },
         );
       } else {
-        final created = await repo
-            .create(buildCreateCompetitionPayload(draft, createdBy: adminId));
+        // Anti-duplication : si un create précédent a réussi mais qu'une étape
+        // suivante a échoué, le retry NE recrée PAS — il met à jour la comp déjà
+        // créée puis (re)pose les options (setPaymentOptions = remplace-tout).
+        if (_createdId == null) {
+          final created = await repo
+              .create(buildCreateCompetitionPayload(draft, createdBy: adminId));
+          _createdId = created.id;
+        } else {
+          await repo.update(
+            _createdId!,
+            buildUpdateCompetitionPayload(draft),
+          );
+        }
         await repo.setPaymentOptions(
-          created.id,
+          _createdId!,
           paymentOptionsFromDrafts(_paymentCountries),
         );
         await ref.read(adminAuditLogRepositoryProvider).record(
           adminId: adminId,
           action: 'competition_created',
           targetType: 'competition',
-          targetId: created.id,
+          targetId: _createdId!,
           afterState: {
-            'name': created.name,
+            'name': draft.name,
             'game': _game.value,
             'format': _format.value,
             'published_immediately': _publishNow,
@@ -113,6 +148,32 @@ mixin _SubmitAndCompute on ConsumerState<DesktopCreateCompetitionPage> {
         _error = arenaErrorMessage(e);
       });
     }
+  }
+
+  /// Message de la 1re étape invalide (ou cagnotte manquante sur comp payante),
+  /// ou `null` si tout est valide. Sert de backstop au submit.
+  String? _firstInvalidStepMessage() {
+    bool stepOk(int s) => canAdvanceCompetitionStep(
+          step: s,
+          name: _nameCtrl.text,
+          startDate: _startDate,
+          maxPlayers: _maxPlayers,
+          entryFeeText: _entryFeeCtrl.text,
+          paymentCountries: _paymentCountries,
+        );
+    if (!stepOk(0)) return 'Renseigne le nom (≥ 3 caractères) et la date.';
+    if (!stepOk(1)) return 'Choisis une capacité (≥ 2 joueurs).';
+    if (!stepOk(3)) return 'Renseigne des frais valides (≥ 0).';
+    if (!stepOk(4)) {
+      return 'Compétition payante : renseigne au moins un opérateur '
+          '(nom + code) par pays.';
+    }
+    final fee = double.tryParse(_entryFeeCtrl.text) ?? 0;
+    if (fee > 0 && !_noReward && _computedPool() <= 0) {
+      return 'Compétition payante : définis une cagnotte (> 0) ou coche '
+          '« sans récompense ».';
+    }
+    return null;
   }
 
   /// Assemble le [CompetitionDraft] depuis les controllers/state du wizard
@@ -154,16 +215,15 @@ mixin _SubmitAndCompute on ConsumerState<DesktopCreateCompetitionPage> {
 
   String? _emptyToNull(String s) => s.trim().isEmpty ? null : s.trim();
 
-  // Le desktop n'a pas de toggle « sans récompense » → noReward: false.
   List<int> _prizeDistribution() => computePrizeDistribution(
-        noReward: false,
+        noReward: _noReward,
         rewardedCount: _rewardedCount,
         topShareTexts: _topShareCtrls.map((c) => c.text).toList(),
         blockShareTexts: _blockShareCtrls.map((c) => c.text).toList(),
       );
 
   int _shareTotal() => computeShareTotal(
-        noReward: false,
+        noReward: _noReward,
         rewardedCount: _rewardedCount,
         topShareTexts: _topShareCtrls.map((c) => c.text).toList(),
         blockShareTexts: _blockShareCtrls.map((c) => c.text).toList(),

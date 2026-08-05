@@ -16,6 +16,7 @@ import 'package:arena/features_shared/competition_description_templates.dart';
 import 'package:arena/features_shared/payment_operator_templates.dart';
 import 'package:arena/features_shared/payment_option_draft.dart';
 import 'package:arena/features_shared/prize_ranks.dart';
+import 'package:arena/features_shared/prize_templates.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -64,6 +65,16 @@ class _DesktopCreateCompetitionPageState
   bool _submitting = false;
   @override
   String? _error;
+
+  /// Id de la compétition créée (mode création) — mémorisé après un `create()`
+  /// réussi pour que le retry après un échec partiel (options) NE recrée PAS la
+  /// compétition (anti-duplication / orpheline).
+  @override
+  String? _createdId;
+
+  /// Compétition « amicale » (sans cagnotte) — parité avec le toggle mobile.
+  @override
+  bool _noReward = false;
 
   // Étape « Pays » ───────────────────────────────────────────────────
   @override
@@ -180,6 +191,9 @@ class _DesktopCreateCompetitionPageState
     _androidStoreUrlCtrl.text = c.androidStoreUrl ?? '';
     _iosStoreUrlCtrl.text = c.iosStoreUrl ?? '';
     final dist = c.prizeDistribution;
+    // Compétition amicale (aucune part de cagnotte) → coche « sans récompense »
+    // pour ne PAS la transformer en récompensée au save.
+    _noReward = dist.isEmpty;
     _rewardedCount = _snapRewardedCount(dist.length);
     final topCount = _rewardedCount < 4 ? _rewardedCount : 4;
     for (var i = 0; i < topCount && i < dist.length; i++) {
@@ -250,14 +264,27 @@ class _DesktopCreateCompetitionPageState
     }
   }
 
-  bool get _canAdvance => canAdvanceCompetitionStep(
-        step: _step,
+  bool _stepValid(int step) => canAdvanceCompetitionStep(
+        step: step,
         name: _nameCtrl.text,
         startDate: _startDate,
         maxPlayers: _maxPlayers,
         entryFeeText: _entryFeeCtrl.text,
         paymentCountries: _paymentCountries,
       );
+
+  bool get _canAdvance => _stepValid(_step);
+
+  /// Rail borné : on peut TOUJOURS revenir en arrière ; on ne peut sauter en
+  /// AVANT que si toutes les étapes intermédiaires sont valides (sinon on
+  /// pourrait atteindre le Récap et « Créer » une compétition incomplète).
+  bool _canJumpTo(int target) {
+    if (target <= _step) return true;
+    for (var s = 0; s < target; s++) {
+      if (!_stepValid(s)) return false;
+    }
+    return true;
+  }
 
   static const _stepTitles = [
     'Infos',
@@ -288,7 +315,10 @@ class _DesktopCreateCompetitionPageState
               child: _StepsRail(
                 steps: _stepTitles,
                 current: _step,
-                onTap: (i) => setState(() => _step = i),
+                canTap: _canJumpTo,
+                onTap: (i) {
+                  if (_canJumpTo(i)) setState(() => _step = i);
+                },
               ),
             ),
             const SizedBox(width: 24),

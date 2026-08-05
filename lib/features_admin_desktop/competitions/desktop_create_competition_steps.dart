@@ -24,6 +24,8 @@ mixin _StepBuilders on ConsumerState<DesktopCreateCompetitionPage> {
   set _currency(String value);
   int get _rewardedCount;
   set _rewardedCount(int value);
+  bool get _noReward;
+  set _noReward(bool value);
   bool get _publishNow;
   set _publishNow(bool value);
   bool get _autoGenerateBracket;
@@ -78,31 +80,11 @@ mixin _StepBuilders on ConsumerState<DesktopCreateCompetitionPage> {
   Future<void> _saveDescTemplate() async {
     final text = _descCtrl.text.trim();
     if (text.isEmpty) return;
-    final nameCtrl = TextEditingController();
-    final name = await showDialog<String>(
-      context: context,
-      builder: (ctx) => ContentDialog(
-        title: const Text('Enregistrer le modèle'),
-        content: Padding(
-          padding: const EdgeInsets.only(top: 8),
-          child: TextBox(
-            controller: nameCtrl,
-            placeholder: 'Nom du modèle (ex. Tournoi du week-end)',
-          ),
-        ),
-        actions: [
-          Button(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Annuler'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(nameCtrl.text.trim()),
-            child: const Text('Enregistrer'),
-          ),
-        ],
-      ),
+    final name = await _promptName(
+      context,
+      title: 'Enregistrer le modèle',
+      placeholder: 'Nom du modèle (ex. Tournoi du week-end)',
     );
-    nameCtrl.dispose();
     if (name == null || name.isEmpty) return;
     await ref
         .read(competitionDescTemplatesProvider.notifier)
