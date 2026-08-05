@@ -366,53 +366,91 @@ mixin _StepBuildersB
   Widget _buildOperatorRow(int ci, int oi) {
     final country = _paymentCountries[ci];
     final op = country.operators[oi];
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
+    // Collecteurs actifs de CE pays — pour rattacher le numéro (quota/blocage).
+    final countryCollectors = [
+      for (final c in ref.watch(collectorsListProvider).valueOrNull ??
+          const <PaymentCollector>[])
+        if (c.countryCode == country.countryCode && c.isActive) c,
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(
-          child: InfoLabel(
-            label: "Nom de l'opérateur",
-            child: TextBox(
-              controller: op.labelCtrl,
-              placeholder: 'ex. Orange Money',
-              onChanged: (_) => setState(() {}),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(
+              child: InfoLabel(
+                label: "Nom de l'opérateur",
+                child: TextBox(
+                  controller: op.labelCtrl,
+                  placeholder: 'ex. Orange Money',
+                  onChanged: (_) => setState(() {}),
+                ),
+              ),
             ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: InfoLabel(
-            label: 'Code de transfert',
-            child: TextBox(
-              controller: op.codeCtrl,
-              placeholder: 'ex. *126*1*001234#',
-              onChanged: (_) => setState(() {}),
+            const SizedBox(width: 8),
+            Expanded(
+              child: InfoLabel(
+                label: 'Code de transfert',
+                child: TextBox(
+                  controller: op.codeCtrl,
+                  placeholder: 'ex. *126*1*001234#',
+                  onChanged: (_) => setState(() {}),
+                ),
+              ),
             ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: InfoLabel(
-            label: 'Numéro à payer (CEMAC)',
-            child: TextBox(
-              controller: op.numberCtrl,
-              placeholder: 'optionnel',
-              onChanged: (_) => setState(() {}),
+            const SizedBox(width: 8),
+            Expanded(
+              child: InfoLabel(
+                label: 'Numéro à payer (CEMAC)',
+                child: TextBox(
+                  controller: op.numberCtrl,
+                  placeholder: 'optionnel',
+                  onChanged: (_) => setState(() {}),
+                ),
+              ),
             ),
-          ),
-        ),
-        const SizedBox(width: 4),
-        IconButton(
-          icon: const Icon(FluentIcons.save, size: 16),
-          onPressed: () => _savePaymentOperatorTemplate(ci, oi),
-        ),
-        if (country.operators.length > 1)
-          IconButton(
-            icon: const Icon(FluentIcons.cancel, color: ArenaColors.neonRed),
-            onPressed: () => setState(
-              () => country.operators.removeAt(oi).dispose(),
+            const SizedBox(width: 4),
+            IconButton(
+              icon: const Icon(FluentIcons.save, size: 16),
+              onPressed: () => _savePaymentOperatorTemplate(ci, oi),
             ),
-          ),
+            if (country.operators.length > 1)
+              IconButton(
+                icon:
+                    const Icon(FluentIcons.cancel, color: ArenaColors.neonRed),
+                onPressed: () => setState(
+                  () => country.operators.removeAt(oi).dispose(),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        InfoLabel(
+          label: 'Collecteur (quota)',
+          child: countryCollectors.isEmpty
+              ? const Text(
+                  'Aucun collecteur actif pour ce pays — numéro libre (sans '
+                  'quota).',
+                  style: TextStyle(color: ArenaColors.silver),
+                )
+              : ComboBox<String?>(
+                  value: op.collectorId,
+                  isExpanded: true,
+                  placeholder: const Text('— Aucun (numéro libre) —'),
+                  items: [
+                    const ComboBoxItem<String?>(
+                      child: Text('— Aucun (numéro libre) —'),
+                    ),
+                    for (final c in countryCollectors)
+                      ComboBoxItem<String?>(
+                        value: c.id,
+                        child: Text(c.username ?? c.id),
+                      ),
+                  ],
+                  onChanged: (v) => setState(() => op.collectorId = v),
+                ),
+        ),
       ],
     );
   }
