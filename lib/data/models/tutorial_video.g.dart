@@ -20,6 +20,7 @@ _$TutorialVideoImpl _$$TutorialVideoImplFromJson(Map<String, dynamic> json) =>
       countryCode: json['country_code'] as String?,
       operatorCode: json['operator_code'] as String?,
       roleSide: json['role_side'] as String?,
+      locale: json['locale'] as String?,
       updatedBy: json['updated_by'] as String?,
       createdAt: json['created_at'] == null
           ? null
@@ -41,6 +42,7 @@ Map<String, dynamic> _$$TutorialVideoImplToJson(_$TutorialVideoImpl instance) =>
       if (instance.countryCode case final value?) 'country_code': value,
       if (instance.operatorCode case final value?) 'operator_code': value,
       if (instance.roleSide case final value?) 'role_side': value,
+      if (instance.locale case final value?) 'locale': value,
       if (instance.updatedBy case final value?) 'updated_by': value,
       if (instance.createdAt?.toIso8601String() case final value?)
         'created_at': value,

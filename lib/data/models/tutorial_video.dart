@@ -176,6 +176,11 @@ sealed class TutorialVideo with _$TutorialVideo {
     /// Côté ciblé (`home`/`away`) pour la cible `match_role_intro` : Domicile et
     /// Extérieur ont chacun leur vidéo. `null` pour toutes les autres cibles.
     String? roleSide,
+
+    /// Langue ciblée (`fr`/`en`/`es`/`pt`) : la vidéo n'est montrée qu'aux
+    /// utilisateurs de cette langue. `null` = vidéo par défaut (toutes langues,
+    /// repli si aucune vidéo propre à la langue de l'utilisateur).
+    String? locale,
     String? updatedBy,
     DateTime? createdAt,
     DateTime? updatedAt,

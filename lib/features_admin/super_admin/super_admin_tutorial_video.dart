@@ -365,6 +365,8 @@ class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
   GameType? _game;
   String? _country;
   MatchRoleSide? _roleSide;
+  // Langue ciblée (fr/en/es/pt) ou null = toutes langues (vidéo par défaut).
+  String? _locale;
   // Opérateur du tuto paiement (optionnel) — saisi en libellé libre, converti
   // en slug à l'enregistrement ; vide = vidéo par défaut du pays.
   late final TextEditingController _operatorCtrl;
@@ -383,6 +385,7 @@ class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
     _game = e?.gameType;
     _country = e?.countryCode;
     _roleSide = _sideFromWire(e?.roleSide);
+    _locale = e?.locale;
     _operatorCtrl = TextEditingController(
       text: e?.operatorCode == null
           ? ''
@@ -503,6 +506,7 @@ class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
           countryCode: country,
           roleSide: roleSide,
           operatorCode: operatorCode,
+          locale: _locale,
           updatedBy: adminId,
         );
         await audit.record(
@@ -541,6 +545,7 @@ class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
           countryCode: country,
           roleSide: roleSide,
           operatorCode: operatorCode,
+          locale: _locale,
           updatedBy: adminId,
         );
         await audit.record(
@@ -714,6 +719,16 @@ class _BannerFormSheetState extends ConsumerState<_BannerFormSheet> {
                   const SizedBox(height: ArenaSpacing.lg),
                 ],
 
+                // Langue de la vidéo (optionnel) : une vidéo par langue, à
+                // défaut « Toutes langues » (repli universel).
+                Text('🌐 LANGUE (OPTIONNEL)', style: ArenaText.inputLabel),
+                const SizedBox(height: ArenaSpacing.sm),
+                _LocaleDropdown(
+                  value: _locale,
+                  onChanged: (l) => setState(() => _locale = l),
+                ),
+                const SizedBox(height: ArenaSpacing.lg),
+
                 ArenaButton(
                   label: _saving
                       ? 'ENREGISTREMENT…'
@@ -846,6 +861,46 @@ class _CountryDropdown extends StatelessWidget {
 }
 
 /// Sélecteur de côté (Domicile / Extérieur) pour l'intro de rôle.
+/// Langues supportées par l'app (fr/en/es/pt) + « Toutes langues » (null).
+const Map<String, String> _kVideoLocales = {
+  'fr': '🇫🇷 Français',
+  'en': '🇬🇧 English',
+  'es': '🇪🇸 Español',
+  'pt': '🇵🇹 Português',
+};
+
+class _LocaleDropdown extends StatelessWidget {
+  const _LocaleDropdown({required this.value, required this.onChanged});
+  final String? value;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: ArenaSpacing.md),
+      decoration: BoxDecoration(
+        color: ArenaColors.carbon,
+        borderRadius: BorderRadius.circular(ArenaRadius.md),
+        border: Border.all(color: ArenaColors.border),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String?>(
+          value: value,
+          isExpanded: true,
+          dropdownColor: ArenaColors.carbon,
+          style: ArenaText.body,
+          items: [
+            const DropdownMenuItem(child: Text('🌐 Toutes langues')),
+            for (final e in _kVideoLocales.entries)
+              DropdownMenuItem(value: e.key, child: Text(e.value)),
+          ],
+          onChanged: onChanged,
+        ),
+      ),
+    );
+  }
+}
+
 class _RoleSideDropdown extends StatelessWidget {
   const _RoleSideDropdown({required this.value, required this.onChanged});
   final MatchRoleSide? value;

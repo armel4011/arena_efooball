@@ -152,6 +152,7 @@ class TutorialVideoRepository {
     String? countryCode,
     String? roleSide,
     String? operatorCode,
+    String? locale,
     String? updatedBy,
   }) async {
     await _client.from(_table).insert({
@@ -164,6 +165,7 @@ class TutorialVideoRepository {
       'country_code': countryCode,
       'role_side': roleSide,
       'operator_code': operatorCode,
+      'locale': locale,
       if (updatedBy != null) 'updated_by': updatedBy,
     });
   }
@@ -182,6 +184,7 @@ class TutorialVideoRepository {
     String? countryCode,
     String? roleSide,
     String? operatorCode,
+    String? locale,
     String? updatedBy,
   }) async {
     await _client.from(_table).update({
@@ -194,6 +197,7 @@ class TutorialVideoRepository {
       'country_code': countryCode,
       'role_side': roleSide,
       'operator_code': operatorCode,
+      'locale': locale,
       'updated_at': _now(),
       if (updatedBy != null) 'updated_by': updatedBy,
     }).eq('id', id);

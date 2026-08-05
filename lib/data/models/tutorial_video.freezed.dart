@@ -43,6 +43,11 @@ mixin _$TutorialVideo {
   /// Côté ciblé (`home`/`away`) pour la cible `match_role_intro` : Domicile et
   /// Extérieur ont chacun leur vidéo. `null` pour toutes les autres cibles.
   String? get roleSide => throw _privateConstructorUsedError;
+
+  /// Langue ciblée (`fr`/`en`/`es`/`pt`) : la vidéo n'est montrée qu'aux
+  /// utilisateurs de cette langue. `null` = vidéo par défaut (toutes langues,
+  /// repli si aucune vidéo propre à la langue de l'utilisateur).
+  String? get locale => throw _privateConstructorUsedError;
   String? get updatedBy => throw _privateConstructorUsedError;
   DateTime? get createdAt => throw _privateConstructorUsedError;
   DateTime? get updatedAt => throw _privateConstructorUsedError;
@@ -74,6 +79,7 @@ abstract class $TutorialVideoCopyWith<$Res> {
       String? countryCode,
       String? operatorCode,
       String? roleSide,
+      String? locale,
       String? updatedBy,
       DateTime? createdAt,
       DateTime? updatedAt});
@@ -104,6 +110,7 @@ class _$TutorialVideoCopyWithImpl<$Res, $Val extends TutorialVideo>
     Object? countryCode = freezed,
     Object? operatorCode = freezed,
     Object? roleSide = freezed,
+    Object? locale = freezed,
     Object? updatedBy = freezed,
     Object? createdAt = freezed,
     Object? updatedAt = freezed,
@@ -149,6 +156,10 @@ class _$TutorialVideoCopyWithImpl<$Res, $Val extends TutorialVideo>
           ? _value.roleSide
           : roleSide // ignore: cast_nullable_to_non_nullable
               as String?,
+      locale: freezed == locale
+          ? _value.locale
+          : locale // ignore: cast_nullable_to_non_nullable
+              as String?,
       updatedBy: freezed == updatedBy
           ? _value.updatedBy
           : updatedBy // ignore: cast_nullable_to_non_nullable
@@ -184,6 +195,7 @@ abstract class _$$TutorialVideoImplCopyWith<$Res>
       String? countryCode,
       String? operatorCode,
       String? roleSide,
+      String? locale,
       String? updatedBy,
       DateTime? createdAt,
       DateTime? updatedAt});
@@ -212,6 +224,7 @@ class __$$TutorialVideoImplCopyWithImpl<$Res>
     Object? countryCode = freezed,
     Object? operatorCode = freezed,
     Object? roleSide = freezed,
+    Object? locale = freezed,
     Object? updatedBy = freezed,
     Object? createdAt = freezed,
     Object? updatedAt = freezed,
@@ -257,6 +270,10 @@ class __$$TutorialVideoImplCopyWithImpl<$Res>
           ? _value.roleSide
           : roleSide // ignore: cast_nullable_to_non_nullable
               as String?,
+      locale: freezed == locale
+          ? _value.locale
+          : locale // ignore: cast_nullable_to_non_nullable
+              as String?,
       updatedBy: freezed == updatedBy
           ? _value.updatedBy
           : updatedBy // ignore: cast_nullable_to_non_nullable
@@ -287,6 +304,7 @@ class _$TutorialVideoImpl extends _TutorialVideo {
       this.countryCode,
       this.operatorCode,
       this.roleSide,
+      this.locale,
       this.updatedBy,
       this.createdAt,
       this.updatedAt})
@@ -331,6 +349,12 @@ class _$TutorialVideoImpl extends _TutorialVideo {
   /// Extérieur ont chacun leur vidéo. `null` pour toutes les autres cibles.
   @override
   final String? roleSide;
+
+  /// Langue ciblée (`fr`/`en`/`es`/`pt`) : la vidéo n'est montrée qu'aux
+  /// utilisateurs de cette langue. `null` = vidéo par défaut (toutes langues,
+  /// repli si aucune vidéo propre à la langue de l'utilisateur).
+  @override
+  final String? locale;
   @override
   final String? updatedBy;
   @override
@@ -340,7 +364,7 @@ class _$TutorialVideoImpl extends _TutorialVideo {
 
   @override
   String toString() {
-    return 'TutorialVideo(id: $id, title: $title, videoUrl: $videoUrl, isActive: $isActive, displayDays: $displayDays, targetPage: $targetPage, game: $game, countryCode: $countryCode, operatorCode: $operatorCode, roleSide: $roleSide, updatedBy: $updatedBy, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'TutorialVideo(id: $id, title: $title, videoUrl: $videoUrl, isActive: $isActive, displayDays: $displayDays, targetPage: $targetPage, game: $game, countryCode: $countryCode, operatorCode: $operatorCode, roleSide: $roleSide, locale: $locale, updatedBy: $updatedBy, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -365,6 +389,7 @@ class _$TutorialVideoImpl extends _TutorialVideo {
                 other.operatorCode == operatorCode) &&
             (identical(other.roleSide, roleSide) ||
                 other.roleSide == roleSide) &&
+            (identical(other.locale, locale) || other.locale == locale) &&
             (identical(other.updatedBy, updatedBy) ||
                 other.updatedBy == updatedBy) &&
             (identical(other.createdAt, createdAt) ||
@@ -387,6 +412,7 @@ class _$TutorialVideoImpl extends _TutorialVideo {
       countryCode,
       operatorCode,
       roleSide,
+      locale,
       updatedBy,
       createdAt,
       updatedAt);
@@ -419,6 +445,7 @@ abstract class _TutorialVideo extends TutorialVideo {
       final String? countryCode,
       final String? operatorCode,
       final String? roleSide,
+      final String? locale,
       final String? updatedBy,
       final DateTime? createdAt,
       final DateTime? updatedAt}) = _$TutorialVideoImpl;
@@ -460,6 +487,12 @@ abstract class _TutorialVideo extends TutorialVideo {
   /// Extérieur ont chacun leur vidéo. `null` pour toutes les autres cibles.
   @override
   String? get roleSide;
+
+  /// Langue ciblée (`fr`/`en`/`es`/`pt`) : la vidéo n'est montrée qu'aux
+  /// utilisateurs de cette langue. `null` = vidéo par défaut (toutes langues,
+  /// repli si aucune vidéo propre à la langue de l'utilisateur).
+  @override
+  String? get locale;
   @override
   String? get updatedBy;
   @override

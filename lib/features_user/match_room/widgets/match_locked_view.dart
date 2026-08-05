@@ -157,7 +157,10 @@ class _MatchLockedViewState extends ConsumerState<MatchLockedView> {
                       ),
                     ],
                   ],
-                  _gameBriefing(l10n),
+                  _gameBriefing(
+                    l10n,
+                    Localizations.localeOf(context).languageCode,
+                  ),
                 ],
               ),
             ),
@@ -171,19 +174,22 @@ class _MatchLockedViewState extends ConsumerState<MatchLockedView> {
   /// discriminés par le jeu de la compétition. Rendu vide tant que le jeu n'est
   /// pas résolu ou qu'aucun contenu n'a été saisi par l'admin — l'écran de
   /// verrouillage reste alors identique à avant.
-  Widget _gameBriefing(AppLocalizations l10n) {
+  Widget _gameBriefing(AppLocalizations l10n, String lang) {
     final game = ref.watch(matchGameTypeProvider(widget.matchId)).valueOrNull;
     if (game == null) return const SizedBox.shrink();
 
     final rules = ref.watch(gameRulesProvider(game)).valueOrNull;
     // Plusieurs vidéos possibles (règles, prolongations, tirs au but…) — on
-    // n'affiche que celles dont le lien est exploitable. Lecture IN-APP plein
-    // écran au tap (léger : pas N lecteurs embarqués simultanés).
+    // n'affiche que celles dont le lien est exploitable ET adaptées à la LANGUE
+    // de l'utilisateur (`locale == lang`) ou universelles (`locale == null`).
+    // Lecture IN-APP plein écran au tap (léger : pas N lecteurs embarqués).
     final videos = ref.watch(matchLockedVideosProvider(game)).valueOrNull ??
         const <TutorialVideo>[];
     final playable = [
       for (final v in videos)
-        if (isPlayableYoutubeUrl(v.videoUrl)) v,
+        if (isPlayableYoutubeUrl(v.videoUrl) &&
+            (v.locale == null || v.locale == lang))
+          v,
     ];
     final hasRules = rules != null && rules.trim().isNotEmpty;
     if (!hasRules && playable.isEmpty) return const SizedBox.shrink();
