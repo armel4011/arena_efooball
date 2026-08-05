@@ -9,11 +9,16 @@ class _StepsRail extends StatelessWidget {
     required this.steps,
     required this.current,
     required this.onTap,
+    required this.canTap,
   });
 
   final List<String> steps;
   final int current;
   final ValueChanged<int> onTap;
+
+  /// Étape atteignable au clic (les étapes en avant d'une étape invalide sont
+  /// désactivées → on ne peut pas sauter le Récap sans tout renseigner).
+  final bool Function(int) canTap;
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +34,7 @@ class _StepsRail extends StatelessWidget {
               label: steps[i],
               active: i == current,
               done: i < current,
+              enabled: canTap(i),
               onTap: () => onTap(i),
             ),
         ],
@@ -43,6 +49,7 @@ class _StepTile extends StatelessWidget {
     required this.label,
     required this.active,
     required this.done,
+    required this.enabled,
     required this.onTap,
   });
 
@@ -50,13 +57,18 @@ class _StepTile extends StatelessWidget {
   final String label;
   final bool active;
   final bool done;
+  final bool enabled;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final accent = active ? ArenaColors.neonRed : ArenaColors.silver;
+    final accent = !enabled
+        ? ArenaColors.silverDim
+        : active
+            ? ArenaColors.neonRed
+            : ArenaColors.silver;
     return HoverButton(
-      onPressed: onTap,
+      onPressed: enabled ? onTap : null,
       builder: (context, states) {
         final hovered = states.isHovered;
         return Container(
@@ -76,9 +88,7 @@ class _StepTile extends StatelessWidget {
                   shape: BoxShape.circle,
                   color: done
                       ? ArenaColors.statusOk
-                      : (active
-                          ? ArenaColors.neonRed
-                          : ArenaColors.carbon2),
+                      : (active ? ArenaColors.neonRed : ArenaColors.carbon2),
                 ),
                 child: done
                     ? const Icon(
@@ -110,6 +120,66 @@ class _StepTile extends StatelessWidget {
       },
     );
   }
+}
+
+/// Dialog de saisie d'un NOM (modèle de description / barème). Isolé dans un
+/// StatefulWidget qui possède son controller (dispose sûr, pas de crash
+/// `_dependents` — parité robustesse avec le wizard mobile).
+class _NameInputDialog extends StatefulWidget {
+  const _NameInputDialog({required this.title, required this.placeholder});
+
+  final String title;
+  final String placeholder;
+
+  @override
+  State<_NameInputDialog> createState() => _NameInputDialogState();
+}
+
+class _NameInputDialogState extends State<_NameInputDialog> {
+  final _ctrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ContentDialog(
+      title: Text(widget.title),
+      content: Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: TextBox(
+          controller: _ctrl,
+          autofocus: true,
+          placeholder: widget.placeholder,
+        ),
+      ),
+      actions: [
+        Button(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Annuler'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(_ctrl.text.trim()),
+          child: const Text('Enregistrer'),
+        ),
+      ],
+    );
+  }
+}
+
+/// Ouvre [_NameInputDialog] et renvoie le nom saisi (ou null si annulé).
+Future<String?> _promptName(
+  BuildContext context, {
+  required String title,
+  required String placeholder,
+}) {
+  return showDialog<String>(
+    context: context,
+    builder: (_) => _NameInputDialog(title: title, placeholder: placeholder),
+  );
 }
 
 class _SectionTitle extends StatelessWidget {
