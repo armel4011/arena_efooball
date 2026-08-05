@@ -212,19 +212,7 @@ class _MatchLockedViewState extends ConsumerState<MatchLockedView> {
         if (hasRules) ...[
           Text(l10n.matchRulesSectionTitle, style: ArenaText.h3),
           const SizedBox(height: ArenaSpacing.sm),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(ArenaSpacing.md),
-            decoration: BoxDecoration(
-              color: ArenaColors.carbon,
-              borderRadius: BorderRadius.circular(ArenaRadius.md),
-              border: Border.all(color: ArenaColors.border),
-            ),
-            child: Text(
-              rules.trim(),
-              style: ArenaText.body.copyWith(color: ArenaColors.silver),
-            ),
-          ),
+          _RulesBlock(rules: rules.trim()),
         ],
       ],
     );
@@ -293,6 +281,110 @@ class _LockedVideoCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Rend une liste de règles (texte libre saisi par l'admin) de façon lisible :
+/// on saute la ligne de titre « RÈGLES … » (l'en-tête de section suffit), et
+/// chaque « N. Mot-clé : texte » devient une ligne aérée avec une pastille de
+/// numéro et le mot-clé en gras.
+class _RulesBlock extends StatelessWidget {
+  const _RulesBlock({required this.rules});
+
+  final String rules;
+
+  static final _numbered = RegExp(r'^(\d+)\.\s*(.*)$');
+
+  @override
+  Widget build(BuildContext context) {
+    final items = <Widget>[];
+    for (final raw in rules.split('\n')) {
+      final line = raw.trim();
+      if (line.isEmpty) continue;
+      final upper = line.toUpperCase();
+      if (upper.startsWith('RÈGLES') || upper.startsWith('REGLES')) continue;
+      if (items.isNotEmpty) {
+        items.add(const SizedBox(height: ArenaSpacing.sm));
+      }
+      final m = _numbered.firstMatch(line);
+      if (m != null) {
+        items.add(_RuleRow(number: m.group(1)!, text: m.group(2)!));
+      } else {
+        items.add(
+          Text(line, style: ArenaText.body.copyWith(color: ArenaColors.silver)),
+        );
+      }
+    }
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(ArenaSpacing.md),
+      decoration: BoxDecoration(
+        color: ArenaColors.carbon,
+        borderRadius: BorderRadius.circular(ArenaRadius.md),
+        border: Border.all(color: ArenaColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: items,
+      ),
+    );
+  }
+}
+
+class _RuleRow extends StatelessWidget {
+  const _RuleRow({required this.number, required this.text});
+
+  final String number;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    // Met en gras le mot-clé avant le premier « : ».
+    final idx = text.indexOf(' : ');
+    final hasLabel = idx > 0;
+    final label = hasLabel ? text.substring(0, idx) : '';
+    final rest = hasLabel ? text.substring(idx + 3) : text;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 22,
+          height: 22,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: ArenaColors.signalBlue.withValues(alpha: 0.15),
+            shape: BoxShape.circle,
+          ),
+          child: Text(
+            number,
+            style: ArenaText.small.copyWith(
+              color: ArenaColors.signalBlue,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+        const SizedBox(width: ArenaSpacing.sm),
+        Expanded(
+          child: Text.rich(
+            TextSpan(
+              style: ArenaText.body
+                  .copyWith(color: ArenaColors.silver, height: 1.35),
+              children: [
+                if (hasLabel)
+                  TextSpan(
+                    text: '$label : ',
+                    style: const TextStyle(
+                      color: ArenaColors.bone,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                TextSpan(text: rest),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
