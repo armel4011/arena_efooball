@@ -308,9 +308,15 @@ mixin _StepBuildersB
                         child: Text('${c.flag}  ${c.name}'),
                       ),
                   ],
-                  onChanged: (v) => setState(
-                    () => country.countryCode = v ?? country.countryCode,
-                  ),
+                  onChanged: (v) => setState(() {
+                    country.countryCode = v ?? country.countryCode;
+                    // Les collecteurs sont propres à un pays : changer le pays
+                    // invalide les collecteurs choisis (sinon value hors items
+                    // → crash ComboBox + collector_id incohérent au submit).
+                    for (final o in country.operators) {
+                      o.collectorId = null;
+                    }
+                  }),
                 ),
               ),
               const SizedBox(width: 8),
@@ -435,7 +441,12 @@ mixin _StepBuildersB
                   style: TextStyle(color: ArenaColors.silver),
                 )
               : ComboBox<String?>(
-                  value: op.collectorId,
+                  // Garde-fou : ne jamais présenter une value absente des items
+                  // (collecteur d'un autre pays / devenu inactif) → Fluent
+                  // exige value ∈ items.
+                  value: countryCollectors.any((c) => c.id == op.collectorId)
+                      ? op.collectorId
+                      : null,
                   isExpanded: true,
                   placeholder: const Text('— Aucun (numéro libre) —'),
                   items: [
