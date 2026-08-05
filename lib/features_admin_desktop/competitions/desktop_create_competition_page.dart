@@ -7,6 +7,8 @@ import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_competitions_repository.dart';
+import 'package:arena/data/repositories/admin/payment_collectors_repository.dart'
+    show PaymentCollector, collectorsListProvider;
 import 'package:arena/features_admin_desktop/competitions/desktop_competition_visuals.dart';
 import 'package:arena/features_shared/admin/competition_draft.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
