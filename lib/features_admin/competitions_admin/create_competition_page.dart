@@ -576,7 +576,16 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
   }
 
   void _setPaymentCountryCode(int countryIndex, String code) {
-    setState(() => _paymentCountries[countryIndex].countryCode = code);
+    setState(() {
+      final country = _paymentCountries[countryIndex];
+      country.countryCode = code;
+      // Les collecteurs sont propres à un pays : changer le pays invalide les
+      // collecteurs choisis (sinon valeur hors liste → crash dropdown +
+      // collector_id incohérent au submit).
+      for (final o in country.operators) {
+        o.collectorId = null;
+      }
+    });
   }
 
   void _addPaymentOperator(int countryIndex) {

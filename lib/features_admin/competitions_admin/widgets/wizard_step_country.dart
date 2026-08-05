@@ -380,7 +380,16 @@ class _OperatorRow extends StatelessWidget {
           )
         else
           DropdownButtonFormField<String?>(
-            initialValue: operator.collectorId,
+            // La key change avec la liste (donc au changement de pays) pour
+            // reconstruire le champ à neuf ; la garde évite une valeur hors
+            // items (collecteur d'un autre pays) → assertion Dropdown.
+            key: ValueKey(
+              'collector-${countryCollectors.map((c) => c.id).join('|')}',
+            ),
+            initialValue:
+                countryCollectors.any((c) => c.id == operator.collectorId)
+                    ? operator.collectorId
+                    : null,
             isExpanded: true,
             dropdownColor: ArenaColors.carbon,
             decoration: InputDecoration(
