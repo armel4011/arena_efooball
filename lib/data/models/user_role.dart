@@ -3,10 +3,14 @@
 /// - [player]      → joueur lambda (app User)
 /// - [admin]       → admin (app Admin uniquement)
 /// - [superAdmin]  → super-admin (généré uniquement par invitation)
+/// - [collector]   → agent collecteur de paiement (app Admin, périmètre RÉDUIT :
+///                   valide uniquement les paiements de SON pays sous quota).
+///                   N'est PAS un admin (isAdmin=false).
 enum UserRole {
   player('player'),
   admin('admin'),
-  superAdmin('super_admin');
+  superAdmin('super_admin'),
+  collector('collector');
 
   const UserRole(this.value);
 

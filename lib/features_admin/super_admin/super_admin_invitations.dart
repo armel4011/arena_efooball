@@ -445,6 +445,25 @@ class _GenerateCard extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: ArenaSpacing.xs),
+          ArenaButton(
+            label: 'COLLECTEUR DE PAIEMENT',
+            variant: role == UserRole.collector
+                ? ArenaButtonVariant.primary
+                : ArenaButtonVariant.secondary,
+            fullWidth: true,
+            onPressed: () => onRoleChanged(UserRole.collector),
+          ),
+          if (role == UserRole.collector) ...[
+            const SizedBox(height: ArenaSpacing.xs),
+            Text(
+              'Agent qui valide UNIQUEMENT les paiements de son pays. '
+              'Choisis son pays dans les restrictions ci-dessous, puis définis '
+              "son quota depuis l'écran « Collecteurs » une fois qu'il a créé "
+              'son compte.',
+              style: ArenaText.small.copyWith(color: ArenaColors.silver),
+            ),
+          ],
           const SizedBox(height: ArenaSpacing.md),
           Text('Email cible (optionnel)', style: ArenaText.inputLabel),
           const SizedBox(height: ArenaSpacing.xs),

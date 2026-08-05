@@ -74,6 +74,13 @@ sealed class Profile with _$Profile {
   bool get isAdmin => role == UserRole.admin || role == UserRole.superAdmin;
   bool get isSuperAdmin => role == UserRole.superAdmin;
 
+  /// Agent collecteur de paiement : accède à l'app Admin mais avec un périmètre
+  /// RÉDUIT (validation des paiements de son pays uniquement). N'est PAS admin.
+  bool get isCollector => role == UserRole.collector;
+
+  /// Accès à l'app Admin : admins, super-admins ET collecteurs (console réduite).
+  bool get canAccessAdminApp => isAdmin || isCollector;
+
   bool get hasAcceptedCgu => cguAcceptedAt != null;
   bool get isDeleted => deletedAt != null;
 
