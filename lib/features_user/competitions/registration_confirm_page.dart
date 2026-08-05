@@ -251,13 +251,13 @@ class _RegistrationConfirmPageState
         );
         context.go(UserRoutes.home);
       } else {
-        // Récupère les options de paiement (pays × opérateur × code)
-        // configurées par l'admin pour cette compétition.
-        final options = await ref
+        // Récupère les options de paiement (pays × opérateur × code) AVEC leur
+        // disponibilité (collecteur non bloqué) via la RPC de checkout.
+        final allOptions = await ref
             .read(competitionRepositoryProvider)
-            .fetchPaymentOptions(widget.competitionId);
+            .fetchCheckoutPaymentOptions(widget.competitionId);
         if (!mounted) return;
-        if (options.isEmpty) {
+        if (allOptions.isEmpty) {
           setState(() => _submitting = false);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(l10n.paymentOptionsMissing)),
@@ -266,9 +266,11 @@ class _RegistrationConfirmPageState
         }
 
         // Pays distincts activés (ordre = tri country_code déjà appliqué
-        // côté repo). 1 seul pays → auto-sélection sans dialog.
+        // côté repo). 1 seul pays → auto-sélection sans dialog. On garde TOUS
+        // les pays (même bloqués) : la « maintenance » est signalée APRÈS le
+        // choix du pays, avec le message dédié.
         final countries = <String>[];
-        for (final o in options) {
+        for (final o in allOptions) {
           if (!countries.contains(o.countryCode)) countries.add(o.countryCode);
         }
         String countryCode;
@@ -295,10 +297,25 @@ class _RegistrationConfirmPageState
           countryCode = picked;
         }
 
-        // P1 picker sur les options du pays choisi → option retenue.
-        final countryOptions =
-            options.where((o) => o.countryCode == countryCode).toList();
+        // Options DISPONIBLES du pays choisi (collecteur non bloqué). Si le pays
+        // a des options mais qu'aucune n'est disponible (tous les collecteurs
+        // ont atteint leur quota) → paiements en maintenance pour ce pays.
+        final countryOptions = allOptions
+            .where((o) => o.countryCode == countryCode && o.available)
+            .toList();
         if (!mounted) return;
+        if (countryOptions.isEmpty) {
+          setState(() => _submitting = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Le système de paiement de votre pays est en maintenance. '
+                'Réessaie plus tard.',
+              ),
+            ),
+          );
+          return;
+        }
         final selected = await context.push<CompetitionPaymentOption>(
           UserRoutes.paymentMethodPicker,
           extra: PaymentPickerArgs(

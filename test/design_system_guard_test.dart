@@ -225,7 +225,10 @@ void main() {
   // 2706 → 2707 le 2026-08-01 : +1 `ArenaColors.neonRed` — consigne synchro
   // passée en ROUGE + agrandie + icône avertissement. 0 vrai Colors.*.
   // 2707 → 2713 le 2026-08-04 : +6 `ArenaColors.*` — OpponentTeamBanner
-  const colorsDotBaseline = 2713; // occurrences de `Colors.`
+  // 2713 → 2741 le 2026-08-05 : +28 `ArenaColors.*` — écrans collecteurs
+  //   (super_admin_collectors_page + collector_console_page)
+  // 2741 → 2746 le 2026-08-05 : +5 `ArenaColors.*` — dropdown collecteur wizard
+  const colorsDotBaseline = 2746; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.

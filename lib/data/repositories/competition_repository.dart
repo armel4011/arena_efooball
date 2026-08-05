@@ -118,6 +118,24 @@ class CompetitionRepository {
     ];
   }
 
+  /// Options de paiement pour le CHECKOUT joueur, chacune enrichie d'un flag
+  /// `available` (collecteur non bloqué) via la RPC `SECURITY DEFINER`
+  /// `competition_checkout_payment_options` — le joueur ne pouvant pas lire
+  /// `payment_collectors`. Une option `available == false` = collecteur bloqué
+  /// (quota atteint) → à masquer (pays « en maintenance » si plus aucune).
+  Future<List<CompetitionPaymentOption>> fetchCheckoutPaymentOptions(
+    String competitionId,
+  ) async {
+    final rows = await _client.rpc<dynamic>(
+      'competition_checkout_payment_options',
+      params: {'p_competition_id': competitionId},
+    );
+    return [
+      for (final row in (rows as List<dynamic>))
+        CompetitionPaymentOption.fromJson(row as Map<String, dynamic>),
+    ];
+  }
+
   /// Realtime stream of competitions. The Supabase `.stream()` API does
   /// not support arbitrary `where` chaining — we filter by [game]
   /// client-side instead, which keeps the stream simple and avoids

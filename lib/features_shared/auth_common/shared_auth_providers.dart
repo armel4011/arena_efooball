@@ -123,10 +123,12 @@ final signOutProvider = Provider<Future<void> Function()>((ref) {
 /// de chaque controller de sign-in pour évacuer les comptes mal aiguillés
 /// avant que la session ne se propage dans le router.
 void enforceRoleForFlavor(Profile profile) {
-  if (FlavorConfig.instance.isUser && profile.isAdmin) {
+  // App User : réservée aux joueurs — admins ET collecteurs sont évacués.
+  if (FlavorConfig.instance.isUser && profile.canAccessAdminApp) {
     throw const WrongAppForRoleFailure();
   }
-  if (FlavorConfig.instance.isAdmin && !profile.isAdmin) {
+  // App Admin : admins, super-admins ET collecteurs (console réduite).
+  if (FlavorConfig.instance.isAdmin && !profile.canAccessAdminApp) {
     throw const WrongAppForRoleFailure();
   }
 }

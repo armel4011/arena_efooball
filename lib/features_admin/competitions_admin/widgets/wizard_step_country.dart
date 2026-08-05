@@ -1,5 +1,7 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/core/utils/supported_countries.dart';
+import 'package:arena/data/repositories/admin/payment_collectors_repository.dart'
+    show PaymentCollector;
 import 'package:arena/features_shared/payment_option_draft.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
@@ -33,6 +35,7 @@ class WizardStepCountry extends StatelessWidget {
     required this.onSaveOperator,
     required this.onOpenOperatorTemplates,
     required this.onChanged,
+    this.collectors = const [],
     super.key,
   });
 
@@ -43,6 +46,10 @@ class WizardStepCountry extends StatelessWidget {
   /// Préremplissage async des options en cours (mode édition) → spinner.
   final bool loading;
   final List<PaymentDraftCountry> countries;
+
+  /// Collecteurs de paiement visibles par l'admin (tous pays) — pour rattacher
+  /// chaque numéro à un collecteur. Filtrés par pays dans chaque carte.
+  final List<PaymentCollector> collectors;
 
   /// Nombre de modèles d'opérateurs enregistrés (badge du bouton).
   final int operatorTemplateCount;
@@ -92,6 +99,7 @@ class WizardStepCountry extends StatelessWidget {
           _PaymentEditor(
             l10n: l10n,
             countries: countries,
+            collectors: collectors,
             operatorTemplateCount: operatorTemplateCount,
             onAddCountry: onAddCountry,
             onRemoveCountry: onRemoveCountry,
@@ -111,6 +119,7 @@ class _PaymentEditor extends StatelessWidget {
   const _PaymentEditor({
     required this.l10n,
     required this.countries,
+    required this.collectors,
     required this.operatorTemplateCount,
     required this.onAddCountry,
     required this.onRemoveCountry,
@@ -124,6 +133,7 @@ class _PaymentEditor extends StatelessWidget {
 
   final AppLocalizations l10n;
   final List<PaymentDraftCountry> countries;
+  final List<PaymentCollector> collectors;
   final int operatorTemplateCount;
   final VoidCallback onAddCountry;
   final ValueChanged<int> onRemoveCountry;
@@ -156,6 +166,7 @@ class _PaymentEditor extends StatelessWidget {
           _CountryCard(
             l10n: l10n,
             country: countries[ci],
+            collectors: collectors,
             operatorTemplateCount: operatorTemplateCount,
             onRemoveCountry: () => onRemoveCountry(ci),
             onCountryCodeChanged: (code) => onCountryCodeChanged(ci, code),
@@ -181,6 +192,7 @@ class _CountryCard extends StatelessWidget {
   const _CountryCard({
     required this.l10n,
     required this.country,
+    required this.collectors,
     required this.operatorTemplateCount,
     required this.onRemoveCountry,
     required this.onCountryCodeChanged,
@@ -193,6 +205,7 @@ class _CountryCard extends StatelessWidget {
 
   final AppLocalizations l10n;
   final PaymentDraftCountry country;
+  final List<PaymentCollector> collectors;
   final int operatorTemplateCount;
   final VoidCallback onRemoveCountry;
   final ValueChanged<String> onCountryCodeChanged;
@@ -237,6 +250,10 @@ class _CountryCard extends StatelessWidget {
             _OperatorRow(
               l10n: l10n,
               operator: country.operators[oi],
+              countryCollectors: [
+                for (final c in collectors)
+                  if (c.countryCode == country.countryCode && c.isActive) c,
+              ],
               canRemove: country.operators.length > 1,
               onRemove: () => onRemoveOperator(oi),
               onSave: () => onSaveOperator(oi),
@@ -275,6 +292,7 @@ class _OperatorRow extends StatelessWidget {
   const _OperatorRow({
     required this.l10n,
     required this.operator,
+    required this.countryCollectors,
     required this.canRemove,
     required this.onRemove,
     required this.onSave,
@@ -283,6 +301,7 @@ class _OperatorRow extends StatelessWidget {
 
   final AppLocalizations l10n;
   final PaymentDraftOperator operator;
+  final List<PaymentCollector> countryCollectors;
   final bool canRemove;
   final VoidCallback onRemove;
   final VoidCallback onSave;
@@ -350,6 +369,52 @@ class _OperatorRow extends StatelessWidget {
           keyboardType: TextInputType.phone,
           onChanged: (_) => onChanged(),
         ),
+        const SizedBox(height: ArenaSpacing.xs),
+        Text('Collecteur (quota)', style: ArenaText.inputLabel),
+        const SizedBox(height: ArenaSpacing.xs),
+        if (countryCollectors.isEmpty)
+          Text(
+            'Aucun collecteur actif pour ce pays — numéro libre (sans quota). '
+            "Crée un collecteur depuis l'écran « Collecteurs ».",
+            style: ArenaText.small.copyWith(color: ArenaColors.silver),
+          )
+        else
+          DropdownButtonFormField<String?>(
+            initialValue: operator.collectorId,
+            isExpanded: true,
+            dropdownColor: ArenaColors.carbon,
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: ArenaColors.carbon,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: ArenaSpacing.md,
+                vertical: 12,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(ArenaRadius.md),
+                borderSide: const BorderSide(color: ArenaColors.border),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(ArenaRadius.md),
+                borderSide: const BorderSide(color: ArenaColors.border),
+              ),
+            ),
+            style: ArenaText.body,
+            items: [
+              const DropdownMenuItem(
+                child: Text('— Aucun (numéro libre) —'),
+              ),
+              for (final c in countryCollectors)
+                DropdownMenuItem(
+                  value: c.id,
+                  child: Text(c.username ?? c.id, style: ArenaText.body),
+                ),
+            ],
+            onChanged: (v) {
+              operator.collectorId = v;
+              onChanged();
+            },
+          ),
       ],
     );
   }

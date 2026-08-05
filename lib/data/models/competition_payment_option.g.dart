@@ -16,10 +16,12 @@ _$CompetitionPaymentOptionImpl _$$CompetitionPaymentOptionImplFromJson(
       transferCode: json['transfer_code'] as String,
       dialCode: json['dial_code'] as String?,
       paymentNumber: json['payment_number'] as String?,
+      collectorId: json['collector_id'] as String?,
       sortOrder: (json['sort_order'] as num?)?.toInt() ?? 0,
       createdAt: json['created_at'] == null
           ? null
           : DateTime.parse(json['created_at'] as String),
+      available: json['available'] as bool? ?? true,
     );
 
 Map<String, dynamic> _$$CompetitionPaymentOptionImplToJson(
@@ -32,7 +34,9 @@ Map<String, dynamic> _$$CompetitionPaymentOptionImplToJson(
       'transfer_code': instance.transferCode,
       if (instance.dialCode case final value?) 'dial_code': value,
       if (instance.paymentNumber case final value?) 'payment_number': value,
+      if (instance.collectorId case final value?) 'collector_id': value,
       'sort_order': instance.sortOrder,
       if (instance.createdAt?.toIso8601String() case final value?)
         'created_at': value,
+      'available': instance.available,
     };

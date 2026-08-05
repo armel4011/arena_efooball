@@ -26,8 +26,17 @@ sealed class CompetitionPaymentOption with _$CompetitionPaymentOption {
     /// Numéro destinataire du paiement Mobile Money (à copier par le joueur,
     /// zone CEMAC). Distinct du code USSD (`transferCode`). Optionnel.
     String? paymentNumber,
+
+    /// Collecteur de paiement rattaché à ce numéro (quota + blocage). `null` =
+    /// numéro libre (Cameroun historique), jamais bloqué.
+    String? collectorId,
     @Default(0) int sortOrder,
     DateTime? createdAt,
+
+    /// Disponibilité calculée au CHECKOUT (RPC `competition_checkout_payment_
+    /// options`) : `false` = collecteur bloqué/inactif → option masquée. Non
+    /// persisté (défaut `true` pour les lectures admin).
+    @Default(true) bool available,
   }) = _CompetitionPaymentOption;
 
   const CompetitionPaymentOption._();
@@ -44,6 +53,8 @@ sealed class CompetitionPaymentOption with _$CompetitionPaymentOption {
         if (dialCode != null && dialCode!.isNotEmpty) 'dial_code': dialCode,
         if (paymentNumber != null && paymentNumber!.isNotEmpty)
           'payment_number': paymentNumber,
+        if (collectorId != null && collectorId!.isNotEmpty)
+          'collector_id': collectorId,
         'sort_order': sortOrder,
       };
 }

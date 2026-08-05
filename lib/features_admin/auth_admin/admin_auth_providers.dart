@@ -121,9 +121,10 @@ class AdminAuthRepository {
       email: email,
       password: password,
     );
-    if (!profile.isAdmin) {
+    if (!profile.canAccessAdminApp) {
       // Sign back out — we don't want to leave a player session hanging
-      // in the admin app.
+      // in the admin app. Les collecteurs (canAccessAdminApp) sont admis :
+      // le router les aiguille vers leur console réduite.
       await _auth.signOut();
       throw const WrongAppForRoleFailure();
     }

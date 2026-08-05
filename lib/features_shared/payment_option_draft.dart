@@ -14,14 +14,22 @@ import 'package:flutter/widgets.dart';
 /// code de transfert Mobile Money, et un numéro destinataire optionnel
 /// (à copier par le joueur — utilisé pour la zone CEMAC).
 class PaymentDraftOperator {
-  PaymentDraftOperator({String label = '', String code = '', String number = ''})
-      : labelCtrl = TextEditingController(text: label),
+  PaymentDraftOperator({
+    String label = '',
+    String code = '',
+    String number = '',
+    this.collectorId,
+  })  : labelCtrl = TextEditingController(text: label),
         codeCtrl = TextEditingController(text: code),
         numberCtrl = TextEditingController(text: number);
 
   final TextEditingController labelCtrl;
   final TextEditingController codeCtrl;
   final TextEditingController numberCtrl;
+
+  /// Collecteur rattaché à ce numéro (mutable, choisi dans un menu déroulant).
+  /// `null` = numéro libre (pas de quota/blocage).
+  String? collectorId;
 
   void dispose() {
     labelCtrl.dispose();
@@ -69,6 +77,7 @@ List<PaymentDraftCountry> paymentDraftsFromOptions(
         label: o.operatorLabel,
         code: o.transferCode,
         number: o.paymentNumber ?? '',
+        collectorId: o.collectorId,
       ),
     );
   }
@@ -99,6 +108,7 @@ List<CompetitionPaymentOption> paymentOptionsFromDrafts(
           transferCode: code,
           dialCode: dialCodeFor(country.countryCode),
           paymentNumber: number.isEmpty ? null : number,
+          collectorId: op.collectorId,
           sortOrder: sort++,
         ),
       );
