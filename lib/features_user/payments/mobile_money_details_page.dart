@@ -285,6 +285,7 @@ class _MobileMoneyDetailsPageState
         payerPhone: '$_dialCode ${_phoneCtrl.text.trim()}',
         countryCode: widget.operator.countryCode,
         operatorLabel: widget.operator.label,
+        collectorId: widget.operator.collectorId,
       );
       if (!mounted) return;
       context.go(
@@ -298,10 +299,24 @@ class _MobileMoneyDetailsPageState
         ),
       );
     } on PostgrestException catch (e, st) {
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      // Blocage collecteur (quota atteint) : la policy restrictive rejette
+      // l'insert (RLS 42501) → message « maintenance » plutôt qu'une erreur brute.
+      if (e.code == '42501') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Le système de paiement de votre pays est en maintenance. '
+              'Réessaie plus tard.',
+            ),
+          ),
+        );
+        return;
+      }
       await Sentry.captureException(e, stackTrace: st);
       if (!mounted) return;
       final l10n = AppLocalizations.of(context);
-      setState(() => _submitting = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('${l10n.mobileMoneySubmitError}${e.message}')),
       );

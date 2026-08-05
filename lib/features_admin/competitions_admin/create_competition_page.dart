@@ -4,6 +4,8 @@ import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/repositories/admin/admin_audit_log_repository.dart';
 import 'package:arena/data/repositories/admin/admin_competitions_repository.dart';
+import 'package:arena/data/repositories/admin/payment_collectors_repository.dart'
+    show collectorsListProvider;
 import 'package:arena/features_admin/competitions_admin/widgets/wizard_step_country.dart';
 import 'package:arena/features_admin/competitions_admin/widgets/wizard_step_fees.dart';
 import 'package:arena/features_admin/competitions_admin/widgets/wizard_step_format.dart';
@@ -380,6 +382,9 @@ class _CreateCompetitionPageState extends ConsumerState<CreateCompetitionPage> {
                         isPaid: (double.tryParse(_entryFeeCtrl.text) ?? 0) > 0,
                         loading: _paymentOptionsLoading,
                         countries: _paymentCountries,
+                        collectors:
+                            ref.watch(collectorsListProvider).valueOrNull ??
+                                const [],
                         operatorTemplateCount: ref
                                 .watch(paymentOperatorTemplatesProvider)
                                 .valueOrNull

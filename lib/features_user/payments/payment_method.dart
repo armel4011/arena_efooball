@@ -24,6 +24,7 @@ class PaymentOperator {
     this.transferCode,
     this.dialCode,
     this.paymentNumber,
+    this.collectorId,
   });
 
   /// Reconstruit un opérateur depuis une option de paiement compétition.
@@ -35,6 +36,7 @@ class PaymentOperator {
       countryCode: o.countryCode,
       dialCode: o.dialCode,
       paymentNumber: o.paymentNumber,
+      collectorId: o.collectorId,
     );
   }
 
@@ -70,6 +72,9 @@ class PaymentOperator {
 
   /// Numéro destinataire du paiement (à copier par le joueur, zone CEMAC).
   final String? paymentNumber;
+
+  /// Collecteur rattaché à ce numéro — posé sur le paiement soumis (quota).
+  final String? collectorId;
 
   /// Initiales dérivées du label (1–3 lettres majuscules) pour le logo.
   String get badge {

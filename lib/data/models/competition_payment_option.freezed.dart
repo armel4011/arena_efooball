@@ -34,8 +34,17 @@ mixin _$CompetitionPaymentOption {
   /// Numéro destinataire du paiement Mobile Money (à copier par le joueur,
   /// zone CEMAC). Distinct du code USSD (`transferCode`). Optionnel.
   String? get paymentNumber => throw _privateConstructorUsedError;
+
+  /// Collecteur de paiement rattaché à ce numéro (quota + blocage). `null` =
+  /// numéro libre (Cameroun historique), jamais bloqué.
+  String? get collectorId => throw _privateConstructorUsedError;
   int get sortOrder => throw _privateConstructorUsedError;
   DateTime? get createdAt => throw _privateConstructorUsedError;
+
+  /// Disponibilité calculée au CHECKOUT (RPC `competition_checkout_payment_
+  /// options`) : `false` = collecteur bloqué/inactif → option masquée. Non
+  /// persisté (défaut `true` pour les lectures admin).
+  bool get available => throw _privateConstructorUsedError;
 
   /// Serializes this CompetitionPaymentOption to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -61,8 +70,10 @@ abstract class $CompetitionPaymentOptionCopyWith<$Res> {
       String transferCode,
       String? dialCode,
       String? paymentNumber,
+      String? collectorId,
       int sortOrder,
-      DateTime? createdAt});
+      DateTime? createdAt,
+      bool available});
 }
 
 /// @nodoc
@@ -88,8 +99,10 @@ class _$CompetitionPaymentOptionCopyWithImpl<$Res,
     Object? transferCode = null,
     Object? dialCode = freezed,
     Object? paymentNumber = freezed,
+    Object? collectorId = freezed,
     Object? sortOrder = null,
     Object? createdAt = freezed,
+    Object? available = null,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -120,6 +133,10 @@ class _$CompetitionPaymentOptionCopyWithImpl<$Res,
           ? _value.paymentNumber
           : paymentNumber // ignore: cast_nullable_to_non_nullable
               as String?,
+      collectorId: freezed == collectorId
+          ? _value.collectorId
+          : collectorId // ignore: cast_nullable_to_non_nullable
+              as String?,
       sortOrder: null == sortOrder
           ? _value.sortOrder
           : sortOrder // ignore: cast_nullable_to_non_nullable
@@ -128,6 +145,10 @@ class _$CompetitionPaymentOptionCopyWithImpl<$Res,
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
               as DateTime?,
+      available: null == available
+          ? _value.available
+          : available // ignore: cast_nullable_to_non_nullable
+              as bool,
     ) as $Val);
   }
 }
@@ -149,8 +170,10 @@ abstract class _$$CompetitionPaymentOptionImplCopyWith<$Res>
       String transferCode,
       String? dialCode,
       String? paymentNumber,
+      String? collectorId,
       int sortOrder,
-      DateTime? createdAt});
+      DateTime? createdAt,
+      bool available});
 }
 
 /// @nodoc
@@ -175,8 +198,10 @@ class __$$CompetitionPaymentOptionImplCopyWithImpl<$Res>
     Object? transferCode = null,
     Object? dialCode = freezed,
     Object? paymentNumber = freezed,
+    Object? collectorId = freezed,
     Object? sortOrder = null,
     Object? createdAt = freezed,
+    Object? available = null,
   }) {
     return _then(_$CompetitionPaymentOptionImpl(
       id: null == id
@@ -207,6 +232,10 @@ class __$$CompetitionPaymentOptionImplCopyWithImpl<$Res>
           ? _value.paymentNumber
           : paymentNumber // ignore: cast_nullable_to_non_nullable
               as String?,
+      collectorId: freezed == collectorId
+          ? _value.collectorId
+          : collectorId // ignore: cast_nullable_to_non_nullable
+              as String?,
       sortOrder: null == sortOrder
           ? _value.sortOrder
           : sortOrder // ignore: cast_nullable_to_non_nullable
@@ -215,6 +244,10 @@ class __$$CompetitionPaymentOptionImplCopyWithImpl<$Res>
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
               as DateTime?,
+      available: null == available
+          ? _value.available
+          : available // ignore: cast_nullable_to_non_nullable
+              as bool,
     ));
   }
 }
@@ -230,8 +263,10 @@ class _$CompetitionPaymentOptionImpl extends _CompetitionPaymentOption {
       required this.transferCode,
       this.dialCode,
       this.paymentNumber,
+      this.collectorId,
       this.sortOrder = 0,
-      this.createdAt})
+      this.createdAt,
+      this.available = true})
       : super._();
 
   factory _$CompetitionPaymentOptionImpl.fromJson(Map<String, dynamic> json) =>
@@ -257,15 +292,27 @@ class _$CompetitionPaymentOptionImpl extends _CompetitionPaymentOption {
   /// zone CEMAC). Distinct du code USSD (`transferCode`). Optionnel.
   @override
   final String? paymentNumber;
+
+  /// Collecteur de paiement rattaché à ce numéro (quota + blocage). `null` =
+  /// numéro libre (Cameroun historique), jamais bloqué.
+  @override
+  final String? collectorId;
   @override
   @JsonKey()
   final int sortOrder;
   @override
   final DateTime? createdAt;
 
+  /// Disponibilité calculée au CHECKOUT (RPC `competition_checkout_payment_
+  /// options`) : `false` = collecteur bloqué/inactif → option masquée. Non
+  /// persisté (défaut `true` pour les lectures admin).
+  @override
+  @JsonKey()
+  final bool available;
+
   @override
   String toString() {
-    return 'CompetitionPaymentOption(id: $id, competitionId: $competitionId, countryCode: $countryCode, operatorLabel: $operatorLabel, transferCode: $transferCode, dialCode: $dialCode, paymentNumber: $paymentNumber, sortOrder: $sortOrder, createdAt: $createdAt)';
+    return 'CompetitionPaymentOption(id: $id, competitionId: $competitionId, countryCode: $countryCode, operatorLabel: $operatorLabel, transferCode: $transferCode, dialCode: $dialCode, paymentNumber: $paymentNumber, collectorId: $collectorId, sortOrder: $sortOrder, createdAt: $createdAt, available: $available)';
   }
 
   @override
@@ -286,10 +333,14 @@ class _$CompetitionPaymentOptionImpl extends _CompetitionPaymentOption {
                 other.dialCode == dialCode) &&
             (identical(other.paymentNumber, paymentNumber) ||
                 other.paymentNumber == paymentNumber) &&
+            (identical(other.collectorId, collectorId) ||
+                other.collectorId == collectorId) &&
             (identical(other.sortOrder, sortOrder) ||
                 other.sortOrder == sortOrder) &&
             (identical(other.createdAt, createdAt) ||
-                other.createdAt == createdAt));
+                other.createdAt == createdAt) &&
+            (identical(other.available, available) ||
+                other.available == available));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -303,8 +354,10 @@ class _$CompetitionPaymentOptionImpl extends _CompetitionPaymentOption {
       transferCode,
       dialCode,
       paymentNumber,
+      collectorId,
       sortOrder,
-      createdAt);
+      createdAt,
+      available);
 
   /// Create a copy of CompetitionPaymentOption
   /// with the given fields replaced by the non-null parameter values.
@@ -332,8 +385,10 @@ abstract class _CompetitionPaymentOption extends CompetitionPaymentOption {
       required final String transferCode,
       final String? dialCode,
       final String? paymentNumber,
+      final String? collectorId,
       final int sortOrder,
-      final DateTime? createdAt}) = _$CompetitionPaymentOptionImpl;
+      final DateTime? createdAt,
+      final bool available}) = _$CompetitionPaymentOptionImpl;
   const _CompetitionPaymentOption._() : super._();
 
   factory _CompetitionPaymentOption.fromJson(Map<String, dynamic> json) =
@@ -359,10 +414,21 @@ abstract class _CompetitionPaymentOption extends CompetitionPaymentOption {
   /// zone CEMAC). Distinct du code USSD (`transferCode`). Optionnel.
   @override
   String? get paymentNumber;
+
+  /// Collecteur de paiement rattaché à ce numéro (quota + blocage). `null` =
+  /// numéro libre (Cameroun historique), jamais bloqué.
+  @override
+  String? get collectorId;
   @override
   int get sortOrder;
   @override
   DateTime? get createdAt;
+
+  /// Disponibilité calculée au CHECKOUT (RPC `competition_checkout_payment_
+  /// options`) : `false` = collecteur bloqué/inactif → option masquée. Non
+  /// persisté (défaut `true` pour les lectures admin).
+  @override
+  bool get available;
 
   /// Create a copy of CompetitionPaymentOption
   /// with the given fields replaced by the non-null parameter values.

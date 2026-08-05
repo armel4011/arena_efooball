@@ -104,11 +104,14 @@ class PaymentRepository {
     required String payerPhone,
     required String countryCode,
     required String operatorLabel,
+    String? collectorId,
   }) async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) {
       throw StateError('No authenticated user — cannot submit payment.');
     }
+    // La policy RESTRICTIVE `payments_insert_collector_open` refuse l'insert si
+    // le collecteur est bloqué/inactif → l'appelant affiche « maintenance ».
     final inserted = await _client
         .from(_table)
         .insert({
@@ -122,6 +125,7 @@ class PaymentRepository {
           'payer_phone': payerPhone,
           'country_code': countryCode,
           'operator_label': operatorLabel,
+          if (collectorId != null) 'collector_id': collectorId,
           'status': 'awaiting_admin',
         })
         .select('id')

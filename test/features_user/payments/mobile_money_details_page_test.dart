@@ -23,6 +23,7 @@ class _FakePaymentRepo extends Fake implements PaymentRepository {
   double? lastAmount;
   String? lastCountryCode;
   String? lastOperatorLabel;
+  String? lastCollectorId;
 
   @override
   Future<String> submitManualPayment({
@@ -33,6 +34,7 @@ class _FakePaymentRepo extends Fake implements PaymentRepository {
     required String payerPhone,
     required String countryCode,
     required String operatorLabel,
+    String? collectorId,
   }) async {
     calls++;
     lastMethodCode = payerMethodCode;
@@ -40,6 +42,7 @@ class _FakePaymentRepo extends Fake implements PaymentRepository {
     lastAmount = amountLocal;
     lastCountryCode = countryCode;
     lastOperatorLabel = operatorLabel;
+    lastCollectorId = collectorId;
     return 'pay-123';
   }
 }
