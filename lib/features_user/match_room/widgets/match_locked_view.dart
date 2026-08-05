@@ -318,6 +318,7 @@ class _RulesBlock extends StatelessWidget {
     }
     return Container(
       width: double.infinity,
+      margin: const EdgeInsets.only(bottom: ArenaSpacing.xl),
       padding: const EdgeInsets.all(ArenaSpacing.md),
       decoration: BoxDecoration(
         color: ArenaColors.carbon,
