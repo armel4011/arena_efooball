@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:arena/core/theme/arena_theme.dart';
+import 'package:arena/core/utils/youtube_url.dart';
+import 'package:arena/data/models/tutorial_video.dart';
 import 'package:arena/data/repositories/game_rules_repository.dart';
 import 'package:arena/data/repositories/match_repository.dart';
 import 'package:arena/data/repositories/tutorial_video_repository.dart';
@@ -174,11 +176,17 @@ class _MatchLockedViewState extends ConsumerState<MatchLockedView> {
     if (game == null) return const SizedBox.shrink();
 
     final rules = ref.watch(gameRulesProvider(game)).valueOrNull;
-    final video = ref.watch(matchLockedVideoProvider(game)).valueOrNull;
-    final player =
-        video == null ? null : ArenaYoutubePlayer.maybe(video.videoUrl);
+    // Plusieurs vidéos possibles (règles, prolongations, tirs au but…) — on
+    // n'affiche que celles dont le lien est exploitable. Lecture IN-APP plein
+    // écran au tap (léger : pas N lecteurs embarqués simultanés).
+    final videos = ref.watch(matchLockedVideosProvider(game)).valueOrNull ??
+        const <TutorialVideo>[];
+    final playable = [
+      for (final v in videos)
+        if (isPlayableYoutubeUrl(v.videoUrl)) v,
+    ];
     final hasRules = rules != null && rules.trim().isNotEmpty;
-    if (!hasRules && player == null) return const SizedBox.shrink();
+    if (!hasRules && playable.isEmpty) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -186,11 +194,14 @@ class _MatchLockedViewState extends ConsumerState<MatchLockedView> {
         const SizedBox(height: ArenaSpacing.xl),
         const Divider(color: ArenaColors.border),
         const SizedBox(height: ArenaSpacing.lg),
-        if (player != null) ...[
+        if (playable.isNotEmpty) ...[
           Text(l10n.matchRulesVideoTitle, style: ArenaText.h3),
           const SizedBox(height: ArenaSpacing.sm),
-          player,
-          const SizedBox(height: ArenaSpacing.lg),
+          for (final v in playable) ...[
+            _LockedVideoCard(video: v),
+            const SizedBox(height: ArenaSpacing.sm),
+          ],
+          const SizedBox(height: ArenaSpacing.md),
         ],
         if (hasRules) ...[
           Text(l10n.matchRulesSectionTitle, style: ArenaText.h3),
@@ -213,6 +224,8 @@ class _MatchLockedViewState extends ConsumerState<MatchLockedView> {
     );
   }
 
+  // (déplacé) — la carte vidéo est un widget dédié plus bas.
+
   /// hh:mm:ss si ≥ 1h, sinon mm:ss. Borné à 0.
   String _formatCountdown(Duration raw) {
     final d = raw.isNegative ? Duration.zero : raw;
@@ -221,5 +234,59 @@ class _MatchLockedViewState extends ConsumerState<MatchLockedView> {
     final ss = d.inSeconds.remainder(60).toString().padLeft(2, '0');
     if (h > 0) return '${h.toString().padLeft(2, '0')}:$mm:$ss';
     return '$mm:$ss';
+  }
+}
+
+/// Carte d'une vidéo de l'écran de verrouillage : titre + tap → lecture IN-APP
+/// plein écran (`openFullscreenYoutube`). Évite d'embarquer N lecteurs YouTube
+/// simultanés (lourd / WebView capricieuse) quand il y a plusieurs vidéos.
+class _LockedVideoCard extends StatelessWidget {
+  const _LockedVideoCard({required this.video});
+
+  final TutorialVideo video;
+
+  @override
+  Widget build(BuildContext context) {
+    final title =
+        video.title.trim().isEmpty ? 'Vidéo explicative' : video.title.trim();
+    return InkWell(
+      borderRadius: BorderRadius.circular(ArenaRadius.md),
+      onTap: () => openFullscreenYoutube(context, video.videoUrl),
+      child: Container(
+        padding: const EdgeInsets.all(ArenaSpacing.md),
+        decoration: BoxDecoration(
+          color: ArenaColors.carbon,
+          borderRadius: BorderRadius.circular(ArenaRadius.md),
+          border: Border.all(color: ArenaColors.border),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: ArenaColors.signalBlue.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(ArenaRadius.sm),
+              ),
+              child: const Icon(
+                Icons.play_arrow_rounded,
+                color: ArenaColors.signalBlue,
+              ),
+            ),
+            const SizedBox(width: ArenaSpacing.md),
+            Expanded(
+              child: Text(
+                title,
+                style: ArenaText.body.copyWith(fontWeight: FontWeight.w700),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: ArenaColors.silver),
+          ],
+        ),
+      ),
+    );
   }
 }

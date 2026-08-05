@@ -230,7 +230,8 @@ void main() {
   // 2741 → 2746 le 2026-08-05 : +5 `ArenaColors.*` — dropdown collecteur wizard
   // 2746 → 2747 le 2026-08-05 : +1 `ArenaColors.*` — dropdown collecteur desktop
   // 2747 → 2748 le 2026-08-05 : +1 `ArenaColors.silverDim` — rail étape désactivée
-  const colorsDotBaseline = 2748; // occurrences de `Colors.`
+  // 2748 → 2753 le 2026-08-05 : +5 `ArenaColors.*` — carte vidéo salle bloquée
+  const colorsDotBaseline = 2753; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.
