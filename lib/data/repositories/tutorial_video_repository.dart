@@ -59,6 +59,28 @@ class TutorialVideoRepository {
     return null;
   }
 
+  /// Filtre pur : TOUTES les vidéos contextuelles actives d'une cible (ex.
+  /// `match_locked` qui peut en avoir plusieurs), triées par `created_at`
+  /// croissant pour un ordre d'affichage stable.
+  static List<TutorialVideo> activeContextualVideos(
+    List<TutorialVideo> videos,
+    TutorialPage target, {
+    String? gameWire,
+    String? countryCode,
+    String? roleSide,
+  }) {
+    final out = [
+      for (final v in videos)
+        if (v.isActive &&
+            v.targetPage == target &&
+            (!target.needsGame || v.game == gameWire) &&
+            (!target.needsCountry || v.countryCode == countryCode) &&
+            (!target.needsRoleSide || v.roleSide == roleSide))
+          v,
+    ]..sort((a, b) => _createdAtOf(a).compareTo(_createdAtOf(b)));
+    return out;
+  }
+
   /// Filtre pur : la vidéo de tuto paiement active pour un [countryCode] et un
   /// [operatorCode] (slug). Deux niveaux : on privilégie la vidéo PROPRE à
   /// l'opérateur, à défaut la vidéo PAR DÉFAUT du pays (`operator_code` NULL).
@@ -130,6 +152,7 @@ class TutorialVideoRepository {
     String? countryCode,
     String? roleSide,
     String? operatorCode,
+    String? locale,
     String? updatedBy,
   }) async {
     await _client.from(_table).insert({
@@ -142,6 +165,7 @@ class TutorialVideoRepository {
       'country_code': countryCode,
       'role_side': roleSide,
       'operator_code': operatorCode,
+      'locale': locale,
       if (updatedBy != null) 'updated_by': updatedBy,
     });
   }
@@ -160,6 +184,7 @@ class TutorialVideoRepository {
     String? countryCode,
     String? roleSide,
     String? operatorCode,
+    String? locale,
     String? updatedBy,
   }) async {
     await _client.from(_table).update({
@@ -172,6 +197,7 @@ class TutorialVideoRepository {
       'country_code': countryCode,
       'role_side': roleSide,
       'operator_code': operatorCode,
+      'locale': locale,
       'updated_at': _now(),
       if (updatedBy != null) 'updated_by': updatedBy,
     }).eq('id', id);
@@ -250,6 +276,20 @@ final matchLockedVideoProvider = Provider.autoDispose
     .family<AsyncValue<TutorialVideo?>, GameType>((ref, game) {
   return ref.watch(_allTutorialBannersStreamProvider).whenData(
         (all) => TutorialVideoRepository.activeContextualVideo(
+          all,
+          TutorialPage.matchLocked,
+          gameWire: game.value,
+        ),
+      );
+});
+
+/// TOUTES les vidéos IN-APP actives de l'écran de verrouillage de salle, pour un
+/// [GameType] — l'admin peut en publier plusieurs (règles, prolongations,
+/// tirs au but…). Dérivée du stream partagé (pas de canal Realtime propre).
+final matchLockedVideosProvider = Provider.autoDispose
+    .family<AsyncValue<List<TutorialVideo>>, GameType>((ref, game) {
+  return ref.watch(_allTutorialBannersStreamProvider).whenData(
+        (all) => TutorialVideoRepository.activeContextualVideos(
           all,
           TutorialPage.matchLocked,
           gameWire: game.value,

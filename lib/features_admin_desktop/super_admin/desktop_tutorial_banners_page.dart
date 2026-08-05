@@ -14,6 +14,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+/// Langues supportées par l'app (fr/en/es/pt) + « Toutes langues » (null).
+const Map<String, String> _kVideoLocales = {
+  'fr': '🇫🇷 Français',
+  'en': '🇬🇧 English',
+  'es': '🇪🇸 Español',
+  'pt': '🇵🇹 Português',
+};
+
 /// Super-admin · Bannières tutoriel (desktop) — gestion CRUD des bannières
 /// de prise en main, équivalent Fluent UI de l'écran mobile
 /// `SuperAdminTutorialVideo`.
@@ -342,6 +350,7 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
   GameType? _game;
   String? _country;
   MatchRoleSide? _roleSide;
+  String? _locale;
   // Opérateur du tuto paiement (optionnel) — libellé libre → slug à la sauvegarde.
   late final TextEditingController _operatorCtrl;
   bool _saving = false;
@@ -365,6 +374,7 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
     _game = e?.gameType;
     _country = e?.countryCode;
     _roleSide = _sideFromWire(e?.roleSide);
+    _locale = e?.locale;
     _operatorCtrl = TextEditingController(
       text: e?.operatorCode == null
           ? ''
@@ -475,6 +485,7 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
           countryCode: country,
           roleSide: roleSide,
           operatorCode: operatorCode,
+          locale: _locale,
           updatedBy: adminId,
         );
         await audit.record(
@@ -513,6 +524,7 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
           countryCode: country,
           roleSide: roleSide,
           operatorCode: operatorCode,
+          locale: _locale,
           updatedBy: adminId,
         );
         await audit.record(
@@ -737,6 +749,21 @@ class _BannerFormDialogState extends ConsumerState<_BannerFormDialog> {
                 ),
               ),
             ],
+            const SizedBox(height: 16),
+            InfoLabel(
+              label: 'Langue (optionnel)',
+              child: ComboBox<String?>(
+                value: _locale,
+                isExpanded: true,
+                placeholder: const Text('🌐 Toutes langues'),
+                items: [
+                  const ComboBoxItem(child: Text('🌐 Toutes langues')),
+                  for (final e in _kVideoLocales.entries)
+                    ComboBoxItem(value: e.key, child: Text(e.value)),
+                ],
+                onChanged: _saving ? null : (l) => setState(() => _locale = l),
+              ),
+            ),
           ],
         ),
       ),
