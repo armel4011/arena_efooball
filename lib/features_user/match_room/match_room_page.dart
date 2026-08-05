@@ -252,48 +252,46 @@ class _MatchRoomBody extends ConsumerWidget {
             ),
             data: (gameType) {
               final isDraughts = gameType == GameType.draughts;
-              // ÉTAPE 0 — Synchronisation : tant que les deux joueurs n'ont pas
-              // confirmé que leur jeu est ouvert, on n'affiche QUE la vue de
-              // synchro (ni intro de rôle, ni enregistrement, ni StepBody).
-              if (_needsSyncGate(gameType)) {
-                return MatchSyncView(match: match, role: role);
-              }
+              final isPlayer = role != MatchRole.observer;
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Intro de rôle (DOMICILE/EXTÉRIEUR) à l'entrée en salle de
-                  // code : uniquement football, joueur, étape 1 — one-shot par
-                  // rôle. Widget invisible (déclencheur de dialogue).
-                  if (!isDraughts &&
-                      step == MatchStep.codeRoom &&
-                      role != MatchRole.observer)
+                  // Intro de rôle (DOMICILE/EXTÉRIEUR) : montée AVANT l'étape 0
+                  // — elle s'affiche dès l'entrée en salle, avant la synchro, et
+                  // le déroulé ne continue qu'après « J'ai compris ». Clé stable
+                  // → l'intro n'est PAS re-déclenchée quand on passe de l'étape 0
+                  // au reste (one-shot par rôle, garde serveur). Foot + joueur.
+                  if (!isDraughts && isPlayer)
                     MatchRoleIntroGate(
                       key: const ValueKey('role-intro-gate'),
                       match: match,
                       role: role,
                       game: gameType,
                     ),
-                  // EXTÉRIEUR (foot) : trace `room_joined` dès l'entrée en
-                  // salle — signal d'engagement pour l'arbitrage du no-show.
-                  if (!isDraughts &&
-                      role != MatchRole.observer &&
-                      !role.isHomeOf(match))
-                    MatchRoomJoinMarker(matchId: match.id),
-                  // Anti-cheat recording banner (Android-only, no-op ailleurs).
-                  // Inutile pour les dames : la partie est jouée in-app, le
-                  // serveur tient l'historique des coups (pas d'écran tiers à
-                  // filmer).
-                  if (!isDraughts)
-                    MatchRecordingLifecycle(match: match, selfId: selfId),
-                  if (role != MatchRole.observer)
-                    StartStreamingBanner(matchId: match.id),
-                  const SizedBox(height: ArenaSpacing.lg),
-                  StepBody(
-                    match: match,
-                    role: role,
-                    selfId: selfId,
-                    isDraughts: isDraughts,
-                  ),
+                  // ÉTAPE 0 — Synchronisation : tant que les deux joueurs n'ont
+                  // pas confirmé que leur jeu est ouvert, on n'affiche QUE la vue
+                  // de synchro (ni enregistrement, ni StepBody).
+                  if (_needsSyncGate(gameType))
+                    MatchSyncView(match: match, role: role)
+                  else ...[
+                    // EXTÉRIEUR (foot) : trace `room_joined` dès l'entrée en
+                    // salle — signal d'engagement pour l'arbitrage du no-show.
+                    if (!isDraughts && isPlayer && !role.isHomeOf(match))
+                      MatchRoomJoinMarker(matchId: match.id),
+                    // Anti-cheat recording banner (Android-only, no-op ailleurs).
+                    // Inutile pour les dames : la partie est jouée in-app, le
+                    // serveur tient l'historique des coups (pas d'écran à filmer).
+                    if (!isDraughts)
+                      MatchRecordingLifecycle(match: match, selfId: selfId),
+                    if (isPlayer) StartStreamingBanner(matchId: match.id),
+                    const SizedBox(height: ArenaSpacing.lg),
+                    StepBody(
+                      match: match,
+                      role: role,
+                      selfId: selfId,
+                      isDraughts: isDraughts,
+                    ),
+                  ],
                 ],
               );
             },

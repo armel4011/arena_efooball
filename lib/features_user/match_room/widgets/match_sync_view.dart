@@ -47,12 +47,18 @@ class _MatchSyncViewState extends ConsumerState<MatchSyncView> {
             matchId: widget.match.id,
             isPlayer1: _isPlayer1,
           );
+      // Ne PAS attendre le push Realtime (socket parfois gelé côté extérieur) :
+      // on re-souscrit le stream → son fetch initial ramène l'état RÉEL (ma
+      // confirmation + celle de l'adversaire si déjà posée). Sans ça, un push
+      // manqué laissait la salle figée « en attente ». Cf. MatchRoomAutoRefresh.
+      if (mounted) ref.invalidate(matchByIdProvider(widget.match.id));
     } catch (e) {
       if (!mounted) return;
-      setState(() => _submitting = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erreur : $e')),
       );
+    } finally {
+      if (mounted) setState(() => _submitting = false);
     }
   }
 

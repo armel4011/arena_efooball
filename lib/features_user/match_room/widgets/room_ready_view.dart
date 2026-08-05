@@ -11,7 +11,9 @@ import 'package:arena/features_user/match_room/match_room_providers.dart';
 import 'package:arena/features_user/match_room/widgets/cyan_dashed_container.dart';
 import 'package:arena/features_user/match_room/widgets/match_rules_dialog.dart';
 import 'package:arena/features_user/match_room/widgets/open_chat_link.dart';
+import 'package:arena/features_user/match_room/widgets/opponent_team_banner.dart';
 import 'package:arena/features_user/match_room/widgets/start_game_first_card.dart';
+import 'package:arena/features_user/match_room/widgets/team_name_guard.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -73,6 +75,11 @@ class _RoomReadyViewState extends ConsumerState<RoomReadyView> {
     final teamName = _teamCtrl.text.trim();
     // Garde-fou : le bouton est déjà désactivé tant que le nom est vide.
     if (teamName.isEmpty) return;
+    // Les deux joueurs ne peuvent pas utiliser la même équipe.
+    if (sameTeamAsOpponent(widget.match, teamName, isPlayer1: _isPlayer1)) {
+      _showSameTeamError();
+      return;
+    }
     setState(() => _submitting = true);
     try {
       final repo = ref.read(matchRepositoryProvider);
@@ -92,12 +99,27 @@ class _RoomReadyViewState extends ConsumerState<RoomReadyView> {
       }
     } catch (e) {
       if (!mounted) return;
-      final l10n = AppLocalizations.of(context);
       setState(() => _submitting = false);
+      if (isSameTeamError(e)) {
+        _showSameTeamError();
+        return;
+      }
+      final l10n = AppLocalizations.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('${l10n.roomReadyMarkStartedError}$e')),
       );
     }
+  }
+
+  void _showSameTeamError() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          "Cette équipe est déjà prise par l'adversaire — choisis-en une autre.",
+        ),
+      ),
+    );
   }
 
   /// « Continuer » après le nom d'équipe : rappelle les réglages (prolongations
@@ -187,6 +209,7 @@ class _RoomReadyViewState extends ConsumerState<RoomReadyView> {
             // n'est PAS encore persisté, donc selfJoined reste faux).
             StartGameFirstCard(matchId: widget.match.id),
             const SizedBox(height: ArenaSpacing.md),
+            OpponentTeamBanner(match: widget.match, isPlayer1: _isPlayer1),
             Text(l10n.roomReadyTeamNameLabel, style: ArenaText.inputLabel),
             const SizedBox(height: ArenaSpacing.sm),
             ArenaTextField(

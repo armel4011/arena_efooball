@@ -92,10 +92,12 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
         await UpdateAvailableDialog.show(context, status);
       }
     } catch (_) {/* non bloquant */}
-    // Après l'éventuelle MAJ : guide MIUI/Xiaomi une seule fois (déblocage de
-    // l'upload background de preuve anti-triche). No-op hors Xiaomi / si déjà vu.
+    // Après l'éventuelle MAJ : guide « garder Arena actif en arrière-plan » une
+    // seule fois (exemption batterie universelle + réglages Xiaomi). Empêche
+    // l'OS de tuer le processus/enregistrement. No-op si déjà exemptée (hors
+    // Xiaomi) ou déjà vu.
     if (mounted) {
-      await maybePromptMiuiOptimization(context, ref);
+      await maybePromptBackgroundReliability(context, ref);
     }
   }
 

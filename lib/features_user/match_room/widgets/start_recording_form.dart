@@ -10,7 +10,9 @@ import 'package:arena/features_user/match_room/match_room_providers.dart';
 import 'package:arena/features_user/match_room/widgets/cyan_dashed_container.dart';
 import 'package:arena/features_user/match_room/widgets/match_rules_dialog.dart';
 import 'package:arena/features_user/match_room/widgets/open_chat_link.dart';
+import 'package:arena/features_user/match_room/widgets/opponent_team_banner.dart';
 import 'package:arena/features_user/match_room/widgets/start_game_first_card.dart';
+import 'package:arena/features_user/match_room/widgets/team_name_guard.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -86,6 +88,12 @@ class _StartRecordingFormState extends ConsumerState<StartRecordingForm> {
   Future<void> _saveTeamName() async {
     final teamName = _teamCtrl.text.trim();
     if (teamName.isEmpty) return;
+    // Les deux joueurs ne peuvent pas utiliser la même équipe (contrôle en amont ;
+    // le trigger serveur reste le filet infalsifiable).
+    if (sameTeamAsOpponent(widget.match, teamName, isPlayer1: _isPlayer1)) {
+      _showSameTeamError();
+      return;
+    }
     setState(() => _submitting = true);
     try {
       await ref.read(matchRepositoryProvider).setTeamName(
@@ -95,13 +103,28 @@ class _StartRecordingFormState extends ConsumerState<StartRecordingForm> {
           );
     } catch (e) {
       if (!mounted) return;
-      final l10n = AppLocalizations.of(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${l10n.roomReadyMarkStartedError}$e')),
-      );
+      if (isSameTeamError(e)) {
+        _showSameTeamError();
+      } else {
+        final l10n = AppLocalizations.of(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${l10n.roomReadyMarkStartedError}$e')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
+  }
+
+  void _showSameTeamError() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          "Cette équipe est déjà prise par l'adversaire — choisis-en une autre.",
+        ),
+      ),
+    );
   }
 
   /// ÉTAPE 2 — bascule le match en `in_progress`. C'est CE moment (nouvelle
@@ -144,6 +167,7 @@ class _StartRecordingFormState extends ConsumerState<StartRecordingForm> {
           ),
         ),
         const SizedBox(height: ArenaSpacing.lg),
+        OpponentTeamBanner(match: widget.match, isPlayer1: _isPlayer1),
         Text(l10n.roomReadyTeamNameLabel, style: ArenaText.inputLabel),
         const SizedBox(height: ArenaSpacing.sm),
         ArenaTextField(

@@ -1,5 +1,6 @@
 package com.arena.arena
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ComponentName
 import android.content.ContentValues
@@ -12,6 +13,7 @@ import android.media.projection.MediaProjectionManager
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.os.PowerManager
 import android.provider.MediaStore
 import android.provider.Settings
 import android.util.Log
@@ -238,6 +240,12 @@ class MainActivity : FlutterActivity() {
                     }
                     "openMiuiBatterySaver" -> {
                         result.success(openMiuiBatterySaver())
+                    }
+                    "isIgnoringBatteryOptimizations" -> {
+                        result.success(isIgnoringBatteryOptimizations())
+                    }
+                    "requestIgnoreBatteryOptimizations" -> {
+                        result.success(requestIgnoreBatteryOptimizations())
                     }
                     else -> result.notImplemented()
                 }
@@ -491,6 +499,41 @@ class MainActivity : FlutterActivity() {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         return launchOrAppDetails(intent)
+    }
+
+    /** `true` si l'app est déjà exemptée de l'optimisation batterie (Doze). Sur
+     *  &lt; Android 6 l'optimisation n'existe pas → considéré exempté. */
+    private fun isIgnoringBatteryOptimizations(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return true
+        val pm = getSystemService(Context.POWER_SERVICE) as? PowerManager ?: return false
+        return pm.isIgnoringBatteryOptimizations(packageName)
+    }
+
+    /** Dialogue système « une tape » pour whitelister l'app du Doze/kill batterie
+     *  (fonctionne sur TOUS les OEM, dont Samsung). Repli : écran général des
+     *  optimisations batterie. Renvoie true si déjà exempté ou si un écran s'ouvre. */
+    @SuppressLint("BatteryLife")
+    private fun requestIgnoreBatteryOptimizations(): Boolean {
+        if (isIgnoringBatteryOptimizations()) return true
+        val direct = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+            data = Uri.fromParts("package", packageName, null)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        try {
+            startActivity(direct)
+            return true
+        } catch (_: Exception) {
+            // fall through — repli sur la liste générale
+        }
+        return try {
+            startActivity(
+                Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+            true
+        } catch (_: Exception) {
+            false
+        }
     }
 
     /** Lance [intent] ; si l'activité MIUI n'existe pas (ROM/version variable),
