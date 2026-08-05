@@ -90,16 +90,17 @@ class _ScoreFlowViewState extends ConsumerState<ScoreFlowView> {
     return u != null && DateTime.now().isBefore(u);
   }
 
-  /// (Re)pose un ticker 1 s tant que le verrou court, pour rafraîchir le
-  /// compte à rebours et déverrouiller pile à l'heure.
+  /// Programme un unique déverrouillage à l'heure exacte (pas de rebours
+  /// affiché → pas besoin d'un tick par seconde).
   void _syncLockTicker() {
     _lockTicker?.cancel();
     _lockTicker = null;
-    if (!_scoreLocked) return;
-    _lockTicker = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
-      if (!_scoreLocked) _lockTicker?.cancel();
-      setState(() {});
+    final u = _scoreUnlockAt;
+    if (u == null) return;
+    final remaining = u.difference(DateTime.now());
+    if (remaining <= Duration.zero) return;
+    _lockTicker = Timer(remaining, () {
+      if (mounted) setState(() {});
     });
   }
 
@@ -329,9 +330,7 @@ class _ScoreFlowViewState extends ConsumerState<ScoreFlowView> {
     // Verrou 5 min : tant qu'il court, on n'affiche PAS le formulaire de score,
     // seulement un compte à rebours (anti-triche : pas de score instantané).
     if (_scoreLocked) {
-      return _ScoreLockedCard(
-        remaining: _scoreUnlockAt!.difference(DateTime.now()),
-      );
+      return const _ScoreLockedCard();
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -642,15 +641,10 @@ class _ProofAttachmentBlock extends StatelessWidget {
 /// Carte affichée pendant le VERROU de 5 min : la saisie du score n'est pas
 /// encore possible (un vrai match ne se termine pas dans les premières minutes).
 class _ScoreLockedCard extends StatelessWidget {
-  const _ScoreLockedCard({required this.remaining});
-
-  final Duration remaining;
+  const _ScoreLockedCard();
 
   @override
   Widget build(BuildContext context) {
-    final d = remaining.isNegative ? Duration.zero : remaining;
-    final mm = d.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final ss = d.inSeconds.remainder(60).toString().padLeft(2, '0');
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(ArenaSpacing.lg),
@@ -675,14 +669,6 @@ class _ScoreLockedCard extends StatelessWidget {
             'coup d’envoi.',
             style: ArenaText.body.copyWith(color: ArenaColors.silver),
             textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: ArenaSpacing.md),
-          Text(
-            '$mm:$ss',
-            style: ArenaText.monoLg.copyWith(
-              color: ArenaColors.signalBlue,
-              fontSize: 30,
-            ),
           ),
         ],
       ),

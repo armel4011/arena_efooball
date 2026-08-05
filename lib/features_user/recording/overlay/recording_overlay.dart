@@ -867,7 +867,7 @@ class _ScoreEntryFieldState extends State<ScoreEntryField> {
 
   /// Carte compacte du VERROU (saisie score pas encore ouverte) : icône +
   /// message + compte à rebours + Fermer. Style overlay (isolate, sans ArenaText).
-  Widget _lockedCard(String remaining) {
+  Widget _lockedCard() {
     return Focus(
       onFocusChange: widget.onFocusChange,
       child: Container(
@@ -898,17 +898,7 @@ class _ScoreEntryFieldState extends State<ScoreEntryField> {
               textAlign: TextAlign.center,
               style: TextStyle(color: ArenaColors.silver, fontSize: 11),
             ),
-            const SizedBox(height: 6),
-            Text(
-              remaining,
-              style: const TextStyle(
-                color: ArenaColors.signalBlue,
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                fontFeatures: [FontFeature.tabularFigures()],
-              ),
-            ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
             GestureDetector(
               onTap: widget.onClose,
               child: const Text(
@@ -932,10 +922,7 @@ class _ScoreEntryFieldState extends State<ScoreEntryField> {
     // on affiche seulement un compte à rebours (anti-triche).
     const lockSeconds = 300;
     if (widget.elapsedSeconds < lockSeconds) {
-      final rem = lockSeconds - widget.elapsedSeconds;
-      final mm = (rem ~/ 60).toString().padLeft(2, '0');
-      final ss = (rem % 60).toString().padLeft(2, '0');
-      return _lockedCard('$mm:$ss');
+      return _lockedCard();
     }
     final canPen = widget.allowPenalties && _isTie;
     const sep = Padding(
