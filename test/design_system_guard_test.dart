@@ -233,7 +233,8 @@ void main() {
   // 2748 → 2753 le 2026-08-05 : +5 `ArenaColors.*` — carte vidéo salle bloquée
   // 2753 → 2756 le 2026-08-05 : +3 `ArenaColors.*` — dropdown langue (admin vidéo)
   // 2756 → 2760 le 2026-08-05 : +4 `ArenaColors.*` — mise en forme règles (page bloquée)
-  const colorsDotBaseline = 2760; // occurrences de `Colors.`
+  // 2760 → 2772 le 2026-08-05 : +12 `ArenaColors.*` — verrou saisie score (in-app + overlay)
+  const colorsDotBaseline = 2772; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.
