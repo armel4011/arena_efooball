@@ -44,14 +44,79 @@ class AuthRepository {
     return _profileForUserOrThrow(user);
   }
 
-  /// Sign up + insert the matching `profiles` row.
+  /// Étape 1 de l'inscription email : crée le compte auth et déclenche
+  /// l'envoi du code de confirmation à 6 chiffres (`{{ .Token }}` du
+  /// template « Confirm signup ») **si la confirmation email est activée**
+  /// côté Supabase. Le profil n'est PAS créé ici : il le sera par
+  /// [finalizeSignUpProfile] une fois la session ouverte (après OTP, ou
+  /// tout de suite si la confirmation est désactivée).
   ///
-  /// CGU/Privacy timestamps are passed in by the caller (the screen
-  /// holds the checkbox state). [marketingConsent] is optional.
-  Future<Profile> signUpWithEmail({
+  /// Renvoie `true` si un code a été envoyé et qu'une confirmation OTP est
+  /// requise (aucune session encore) ; `false` si la session est déjà
+  /// ouverte (confirmation désactivée → l'appelant finalise directement).
+  Future<bool> startEmailSignUp({
     required String email,
     required String password,
     required String username,
+  }) async {
+    // Pre-validate username uniqueness BEFORE auth.signUp so a clash
+    // doesn't leave us with an orphan auth.users row that can't be
+    // reused (Supabase rejects re-registering the same email).
+    if (await _profiles.usernameExists(username)) {
+      throw const UsernameAlreadyTakenFailure();
+    }
+
+    return _runAuth(() async {
+      final res = await _client.auth.signUp(
+        email: email.trim().toLowerCase(),
+        password: password,
+        data: {'username': username},
+      );
+      // Session non nulle ⇒ confirmation email désactivée : pas d'OTP,
+      // l'utilisateur est déjà authentifié.
+      return res.session == null;
+    });
+  }
+
+  /// Étape 2 (confirmation email active) : vérifie le code à 6 chiffres
+  /// reçu par email (`OtpType.signup`) et hydrate la session. Une fois
+  /// résolue avec succès, l'utilisateur est authentifié et
+  /// [finalizeSignUpProfile] peut insérer la ligne `profiles`.
+  Future<void> confirmSignUpCode({
+    required String email,
+    required String code,
+  }) async {
+    await _runAuth<bool>(() async {
+      await _client.auth.verifyOTP(
+        email: email.trim().toLowerCase(),
+        token: code.trim(),
+        type: OtpType.signup,
+      );
+      return true;
+    });
+  }
+
+  /// Renvoie un nouveau code de confirmation d'inscription par email.
+  Future<void> resendSignUpCode({required String email}) async {
+    await _runAuth<bool>(() async {
+      await _client.auth.resend(
+        type: OtpType.signup,
+        email: email.trim().toLowerCase(),
+      );
+      return true;
+    });
+  }
+
+  /// Étape finale : insère la ligne `profiles` pour l'utilisateur courant
+  /// (session déjà ouverte — soit directement après [startEmailSignUp]
+  /// quand la confirmation email est désactivée, soit après
+  /// [confirmSignUpCode]).
+  ///
+  /// CGU/Privacy timestamps are passed in by the caller (the screen
+  /// holds the checkbox state). [marketingConsent] is optional.
+  Future<Profile> finalizeSignUpProfile({
+    required String username,
+    required String email,
     required String countryCode,
     required String preferredLanguage,
     required String preferredCurrency,
@@ -64,24 +129,9 @@ class AuthRepository {
     DateTime? birthDate,
     String? deviceId,
   }) async {
-    // Pre-validate username uniqueness BEFORE auth.signUp so a clash
-    // doesn't leave us with an orphan auth.users row that can't be
-    // reused (Supabase rejects re-registering the same email).
-    if (await _profiles.usernameExists(username)) {
-      throw const UsernameAlreadyTakenFailure();
-    }
-
-    final user = await _runAuth(() async {
-      final res = await _client.auth.signUp(
-        email: email.trim().toLowerCase(),
-        password: password,
-        data: {'username': username},
-      );
-      return res.user;
-    });
-
+    final user = _client.auth.currentUser;
     if (user == null) {
-      throw const UnknownAuthFailure();
+      throw const UnknownAuthFailure('no session when finalizing signup');
     }
 
     // The `profiles` row is created here client-side. If you prefer a
