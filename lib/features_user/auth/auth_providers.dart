@@ -91,6 +91,7 @@ class SignUpController extends AsyncNotifier<Profile?> {
     bool marketingConsent = true,
     String? referredBy,
     DateTime? birthDate,
+    String? deviceId,
   }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
@@ -108,6 +109,7 @@ class SignUpController extends AsyncNotifier<Profile?> {
             marketingConsent: marketingConsent,
             referredBy: referredBy,
             birthDate: birthDate,
+            deviceId: deviceId,
           );
     });
   }

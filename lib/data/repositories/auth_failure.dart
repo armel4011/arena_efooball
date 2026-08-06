@@ -63,6 +63,14 @@ class UnknownAuthFailure extends AuthFailure {
 }
 
 /// Username déjà pris par un autre profil (contrainte unique sur `username`).
+/// Inscription refusée par une garde anti-fraude serveur (trop de comptes sur
+/// l'appareil, auto-parrainage…). [reason] est un message déjà lisible.
+class SignUpBlockedFailure extends AuthFailure {
+  const SignUpBlockedFailure(this.reason, [Object? cause])
+      : super('signup_blocked', cause);
+  final String reason;
+}
+
 class UsernameAlreadyTakenFailure extends AuthFailure {
   const UsernameAlreadyTakenFailure([Object? cause])
       : super('username_already_taken', cause);

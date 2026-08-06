@@ -65,6 +65,10 @@ sealed class Profile with _$Profile {
     /// Date de naissance (PII) — saisie à l'inscription. Lue par le propriétaire
     /// et les admins ; sert à calculer l'âge côté admin.
     DateTime? birthDate,
+
+    /// Empreinte d'appareil (ANDROID_ID) posée à l'inscription — anti-faux-
+    /// comptes (max 5 comptes/appareil + blocage auto-parrainage même appareil).
+    String? deviceId,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) = _Profile;

@@ -62,6 +62,7 @@ class AuthRepository {
     bool marketingConsent = true,
     String? referredBy,
     DateTime? birthDate,
+    String? deviceId,
   }) async {
     // Pre-validate username uniqueness BEFORE auth.signUp so a clash
     // doesn't leave us with an orphan auth.users row that can't be
@@ -102,6 +103,7 @@ class AuthRepository {
       // referredBy comme lien sortant.
       referredBy: referredBy,
       birthDate: birthDate,
+      deviceId: deviceId,
     );
     try {
       return await _profiles.create(profile);
@@ -110,6 +112,11 @@ class AuthRepository {
       // claimed the same username before our INSERT landed.
       if (e.code == '23505' && e.message.contains('username')) {
         throw UsernameAlreadyTakenFailure(e);
+      }
+      // Garde anti-fraude (trigger guard_signup_fraud) : trop de comptes sur
+      // l'appareil, ou auto-parrainage même appareil. Message déjà lisible.
+      if (e.code == '42501' && e.message.contains('appareil')) {
+        throw SignUpBlockedFailure(e.message, e);
       }
       rethrow;
     }

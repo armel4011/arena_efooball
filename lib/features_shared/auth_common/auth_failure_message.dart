@@ -66,6 +66,8 @@ String authFailureToMessage(AuthFailure failure, [AppLocalizations? l10n]) {
         (l) => l.authErrUsernameTaken,
         'Ce pseudo est déjà utilisé. Choisissez-en un autre.',
       ),
+    // Garde anti-fraude serveur : le message est déjà rédigé côté trigger.
+    SignUpBlockedFailure(:final reason) => reason,
     SsoCancelledFailure() => tr((l) => l.authErrSsoCancelled, 'Connexion annulée.'),
     SsoIdTokenMissingFailure() => tr(
         (l) => l.authErrSsoIdToken,

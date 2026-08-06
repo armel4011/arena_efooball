@@ -1,5 +1,6 @@
 import 'package:arena/core/i18n/i18n_service.dart';
 import 'package:arena/core/router/user_router.dart';
+import 'package:arena/core/services/device_id_service.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/core/utils/supported_countries.dart';
 import 'package:arena/data/repositories/auth_failure.dart';
@@ -101,6 +102,8 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
     final now = DateTime.now().toUtc();
     final locale = ref.read(currentLocaleProvider);
     final referral = _referralCodeCtrl.text.trim().toUpperCase();
+    // Empreinte d'appareil (anti-faux-comptes) — best-effort, null hors Android.
+    final deviceId = await readDeviceId();
     await ref.read(signUpControllerProvider.notifier).signUp(
           email: _emailCtrl.text,
           password: _passwordCtrl.text,
@@ -118,6 +121,7 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
           marketingConsent: _marketingAccepted,
           referredBy: referral.isEmpty ? null : referral,
           birthDate: _birthDate,
+          deviceId: deviceId,
         );
     if (mounted &&
         ref.read(signUpControllerProvider).hasValue &&

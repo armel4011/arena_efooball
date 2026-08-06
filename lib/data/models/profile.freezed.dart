@@ -75,6 +75,10 @@ mixin _$Profile {
   /// Date de naissance (PII) — saisie à l'inscription. Lue par le propriétaire
   /// et les admins ; sert à calculer l'âge côté admin.
   DateTime? get birthDate => throw _privateConstructorUsedError;
+
+  /// Empreinte d'appareil (ANDROID_ID) posée à l'inscription — anti-faux-
+  /// comptes (max 5 comptes/appareil + blocage auto-parrainage même appareil).
+  String? get deviceId => throw _privateConstructorUsedError;
   DateTime? get createdAt => throw _privateConstructorUsedError;
   DateTime? get updatedAt => throw _privateConstructorUsedError;
 
@@ -128,6 +132,7 @@ abstract class $ProfileCopyWith<$Res> {
       List<String>? adminAllowedSections,
       @GameInterestsConverter() List<GameType>? gameInterests,
       DateTime? birthDate,
+      String? deviceId,
       DateTime? createdAt,
       DateTime? updatedAt});
 }
@@ -182,6 +187,7 @@ class _$ProfileCopyWithImpl<$Res, $Val extends Profile>
     Object? adminAllowedSections = freezed,
     Object? gameInterests = freezed,
     Object? birthDate = freezed,
+    Object? deviceId = freezed,
     Object? createdAt = freezed,
     Object? updatedAt = freezed,
   }) {
@@ -326,6 +332,10 @@ class _$ProfileCopyWithImpl<$Res, $Val extends Profile>
           ? _value.birthDate
           : birthDate // ignore: cast_nullable_to_non_nullable
               as DateTime?,
+      deviceId: freezed == deviceId
+          ? _value.deviceId
+          : deviceId // ignore: cast_nullable_to_non_nullable
+              as String?,
       createdAt: freezed == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -381,6 +391,7 @@ abstract class _$$ProfileImplCopyWith<$Res> implements $ProfileCopyWith<$Res> {
       List<String>? adminAllowedSections,
       @GameInterestsConverter() List<GameType>? gameInterests,
       DateTime? birthDate,
+      String? deviceId,
       DateTime? createdAt,
       DateTime? updatedAt});
 }
@@ -433,6 +444,7 @@ class __$$ProfileImplCopyWithImpl<$Res>
     Object? adminAllowedSections = freezed,
     Object? gameInterests = freezed,
     Object? birthDate = freezed,
+    Object? deviceId = freezed,
     Object? createdAt = freezed,
     Object? updatedAt = freezed,
   }) {
@@ -577,6 +589,10 @@ class __$$ProfileImplCopyWithImpl<$Res>
           ? _value.birthDate
           : birthDate // ignore: cast_nullable_to_non_nullable
               as DateTime?,
+      deviceId: freezed == deviceId
+          ? _value.deviceId
+          : deviceId // ignore: cast_nullable_to_non_nullable
+              as String?,
       createdAt: freezed == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -628,6 +644,7 @@ class _$ProfileImpl extends _Profile {
       final List<String>? adminAllowedSections,
       @GameInterestsConverter() final List<GameType>? gameInterests,
       this.birthDate,
+      this.deviceId,
       this.createdAt,
       this.updatedAt})
       : _stats = stats,
@@ -781,6 +798,11 @@ class _$ProfileImpl extends _Profile {
   /// et les admins ; sert à calculer l'âge côté admin.
   @override
   final DateTime? birthDate;
+
+  /// Empreinte d'appareil (ANDROID_ID) posée à l'inscription — anti-faux-
+  /// comptes (max 5 comptes/appareil + blocage auto-parrainage même appareil).
+  @override
+  final String? deviceId;
   @override
   final DateTime? createdAt;
   @override
@@ -788,7 +810,7 @@ class _$ProfileImpl extends _Profile {
 
   @override
   String toString() {
-    return 'Profile(id: $id, username: $username, countryCode: $countryCode, email: $email, avatarColor: $avatarColor, avatarUrl: $avatarUrl, role: $role, isActive: $isActive, permanentBan: $permanentBan, fcmToken: $fcmToken, stats: $stats, authProvider: $authProvider, authProviderId: $authProviderId, whatsappNumber: $whatsappNumber, preferredLanguage: $preferredLanguage, preferredCurrency: $preferredCurrency, timezone: $timezone, onboardingCompleted: $onboardingCompleted, onboardingCompletedAt: $onboardingCompletedAt, totpEnabled: $totpEnabled, cguAcceptedAt: $cguAcceptedAt, cguVersionAccepted: $cguVersionAccepted, privacyPolicyAcceptedAt: $privacyPolicyAcceptedAt, marketingConsent: $marketingConsent, accountDeletionRequestedAt: $accountDeletionRequestedAt, accountDeletionReason: $accountDeletionReason, deletedAt: $deletedAt, kycStatus: $kycStatus, kycVerifiedAt: $kycVerifiedAt, referralCode: $referralCode, referredBy: $referredBy, adminAllowedCountries: $adminAllowedCountries, adminAllowedSections: $adminAllowedSections, gameInterests: $gameInterests, birthDate: $birthDate, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'Profile(id: $id, username: $username, countryCode: $countryCode, email: $email, avatarColor: $avatarColor, avatarUrl: $avatarUrl, role: $role, isActive: $isActive, permanentBan: $permanentBan, fcmToken: $fcmToken, stats: $stats, authProvider: $authProvider, authProviderId: $authProviderId, whatsappNumber: $whatsappNumber, preferredLanguage: $preferredLanguage, preferredCurrency: $preferredCurrency, timezone: $timezone, onboardingCompleted: $onboardingCompleted, onboardingCompletedAt: $onboardingCompletedAt, totpEnabled: $totpEnabled, cguAcceptedAt: $cguAcceptedAt, cguVersionAccepted: $cguVersionAccepted, privacyPolicyAcceptedAt: $privacyPolicyAcceptedAt, marketingConsent: $marketingConsent, accountDeletionRequestedAt: $accountDeletionRequestedAt, accountDeletionReason: $accountDeletionReason, deletedAt: $deletedAt, kycStatus: $kycStatus, kycVerifiedAt: $kycVerifiedAt, referralCode: $referralCode, referredBy: $referredBy, adminAllowedCountries: $adminAllowedCountries, adminAllowedSections: $adminAllowedSections, gameInterests: $gameInterests, birthDate: $birthDate, deviceId: $deviceId, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -864,10 +886,11 @@ class _$ProfileImpl extends _Profile {
                 .equals(other._gameInterests, _gameInterests) &&
             (identical(other.birthDate, birthDate) ||
                 other.birthDate == birthDate) &&
+            (identical(other.deviceId, deviceId) ||
+                other.deviceId == deviceId) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
-            (identical(other.updatedAt, updatedAt) ||
-                other.updatedAt == updatedAt));
+            (identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -909,6 +932,7 @@ class _$ProfileImpl extends _Profile {
         const DeepCollectionEquality().hash(_adminAllowedSections),
         const DeepCollectionEquality().hash(_gameInterests),
         birthDate,
+        deviceId,
         createdAt,
         updatedAt
       ]);
@@ -966,6 +990,7 @@ abstract class _Profile extends Profile {
       final List<String>? adminAllowedSections,
       @GameInterestsConverter() final List<GameType>? gameInterests,
       final DateTime? birthDate,
+      final String? deviceId,
       final DateTime? createdAt,
       final DateTime? updatedAt}) = _$ProfileImpl;
   const _Profile._() : super._();
@@ -1060,6 +1085,11 @@ abstract class _Profile extends Profile {
   /// et les admins ; sert à calculer l'âge côté admin.
   @override
   DateTime? get birthDate;
+
+  /// Empreinte d'appareil (ANDROID_ID) posée à l'inscription — anti-faux-
+  /// comptes (max 5 comptes/appareil + blocage auto-parrainage même appareil).
+  @override
+  String? get deviceId;
   @override
   DateTime? get createdAt;
   @override
