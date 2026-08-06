@@ -90,6 +90,7 @@ class SignUpController extends AsyncNotifier<Profile?> {
     required DateTime privacyPolicyAcceptedAt,
     bool marketingConsent = true,
     String? referredBy,
+    DateTime? birthDate,
   }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
@@ -106,6 +107,7 @@ class SignUpController extends AsyncNotifier<Profile?> {
             privacyPolicyAcceptedAt: privacyPolicyAcceptedAt,
             marketingConsent: marketingConsent,
             referredBy: referredBy,
+            birthDate: birthDate,
           );
     });
   }

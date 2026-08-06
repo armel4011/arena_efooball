@@ -71,6 +71,10 @@ mixin _$Profile {
 // a répondu. Écrit une seule fois via le RPC `set_game_interests`.
   @GameInterestsConverter()
   List<GameType>? get gameInterests => throw _privateConstructorUsedError;
+
+  /// Date de naissance (PII) — saisie à l'inscription. Lue par le propriétaire
+  /// et les admins ; sert à calculer l'âge côté admin.
+  DateTime? get birthDate => throw _privateConstructorUsedError;
   DateTime? get createdAt => throw _privateConstructorUsedError;
   DateTime? get updatedAt => throw _privateConstructorUsedError;
 
@@ -123,6 +127,7 @@ abstract class $ProfileCopyWith<$Res> {
       List<String>? adminAllowedCountries,
       List<String>? adminAllowedSections,
       @GameInterestsConverter() List<GameType>? gameInterests,
+      DateTime? birthDate,
       DateTime? createdAt,
       DateTime? updatedAt});
 }
@@ -176,6 +181,7 @@ class _$ProfileCopyWithImpl<$Res, $Val extends Profile>
     Object? adminAllowedCountries = freezed,
     Object? adminAllowedSections = freezed,
     Object? gameInterests = freezed,
+    Object? birthDate = freezed,
     Object? createdAt = freezed,
     Object? updatedAt = freezed,
   }) {
@@ -316,6 +322,10 @@ class _$ProfileCopyWithImpl<$Res, $Val extends Profile>
           ? _value.gameInterests
           : gameInterests // ignore: cast_nullable_to_non_nullable
               as List<GameType>?,
+      birthDate: freezed == birthDate
+          ? _value.birthDate
+          : birthDate // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
       createdAt: freezed == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -370,6 +380,7 @@ abstract class _$$ProfileImplCopyWith<$Res> implements $ProfileCopyWith<$Res> {
       List<String>? adminAllowedCountries,
       List<String>? adminAllowedSections,
       @GameInterestsConverter() List<GameType>? gameInterests,
+      DateTime? birthDate,
       DateTime? createdAt,
       DateTime? updatedAt});
 }
@@ -421,6 +432,7 @@ class __$$ProfileImplCopyWithImpl<$Res>
     Object? adminAllowedCountries = freezed,
     Object? adminAllowedSections = freezed,
     Object? gameInterests = freezed,
+    Object? birthDate = freezed,
     Object? createdAt = freezed,
     Object? updatedAt = freezed,
   }) {
@@ -561,6 +573,10 @@ class __$$ProfileImplCopyWithImpl<$Res>
           ? _value._gameInterests
           : gameInterests // ignore: cast_nullable_to_non_nullable
               as List<GameType>?,
+      birthDate: freezed == birthDate
+          ? _value.birthDate
+          : birthDate // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
       createdAt: freezed == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -611,6 +627,7 @@ class _$ProfileImpl extends _Profile {
       final List<String>? adminAllowedCountries,
       final List<String>? adminAllowedSections,
       @GameInterestsConverter() final List<GameType>? gameInterests,
+      this.birthDate,
       this.createdAt,
       this.updatedAt})
       : _stats = stats,
@@ -760,6 +777,10 @@ class _$ProfileImpl extends _Profile {
     return EqualUnmodifiableListView(value);
   }
 
+  /// Date de naissance (PII) — saisie à l'inscription. Lue par le propriétaire
+  /// et les admins ; sert à calculer l'âge côté admin.
+  @override
+  final DateTime? birthDate;
   @override
   final DateTime? createdAt;
   @override
@@ -767,7 +788,7 @@ class _$ProfileImpl extends _Profile {
 
   @override
   String toString() {
-    return 'Profile(id: $id, username: $username, countryCode: $countryCode, email: $email, avatarColor: $avatarColor, avatarUrl: $avatarUrl, role: $role, isActive: $isActive, permanentBan: $permanentBan, fcmToken: $fcmToken, stats: $stats, authProvider: $authProvider, authProviderId: $authProviderId, whatsappNumber: $whatsappNumber, preferredLanguage: $preferredLanguage, preferredCurrency: $preferredCurrency, timezone: $timezone, onboardingCompleted: $onboardingCompleted, onboardingCompletedAt: $onboardingCompletedAt, totpEnabled: $totpEnabled, cguAcceptedAt: $cguAcceptedAt, cguVersionAccepted: $cguVersionAccepted, privacyPolicyAcceptedAt: $privacyPolicyAcceptedAt, marketingConsent: $marketingConsent, accountDeletionRequestedAt: $accountDeletionRequestedAt, accountDeletionReason: $accountDeletionReason, deletedAt: $deletedAt, kycStatus: $kycStatus, kycVerifiedAt: $kycVerifiedAt, referralCode: $referralCode, referredBy: $referredBy, adminAllowedCountries: $adminAllowedCountries, adminAllowedSections: $adminAllowedSections, gameInterests: $gameInterests, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'Profile(id: $id, username: $username, countryCode: $countryCode, email: $email, avatarColor: $avatarColor, avatarUrl: $avatarUrl, role: $role, isActive: $isActive, permanentBan: $permanentBan, fcmToken: $fcmToken, stats: $stats, authProvider: $authProvider, authProviderId: $authProviderId, whatsappNumber: $whatsappNumber, preferredLanguage: $preferredLanguage, preferredCurrency: $preferredCurrency, timezone: $timezone, onboardingCompleted: $onboardingCompleted, onboardingCompletedAt: $onboardingCompletedAt, totpEnabled: $totpEnabled, cguAcceptedAt: $cguAcceptedAt, cguVersionAccepted: $cguVersionAccepted, privacyPolicyAcceptedAt: $privacyPolicyAcceptedAt, marketingConsent: $marketingConsent, accountDeletionRequestedAt: $accountDeletionRequestedAt, accountDeletionReason: $accountDeletionReason, deletedAt: $deletedAt, kycStatus: $kycStatus, kycVerifiedAt: $kycVerifiedAt, referralCode: $referralCode, referredBy: $referredBy, adminAllowedCountries: $adminAllowedCountries, adminAllowedSections: $adminAllowedSections, gameInterests: $gameInterests, birthDate: $birthDate, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -841,6 +862,8 @@ class _$ProfileImpl extends _Profile {
                 .equals(other._adminAllowedSections, _adminAllowedSections) &&
             const DeepCollectionEquality()
                 .equals(other._gameInterests, _gameInterests) &&
+            (identical(other.birthDate, birthDate) ||
+                other.birthDate == birthDate) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
             (identical(other.updatedAt, updatedAt) ||
@@ -885,6 +908,7 @@ class _$ProfileImpl extends _Profile {
         const DeepCollectionEquality().hash(_adminAllowedCountries),
         const DeepCollectionEquality().hash(_adminAllowedSections),
         const DeepCollectionEquality().hash(_gameInterests),
+        birthDate,
         createdAt,
         updatedAt
       ]);
@@ -941,6 +965,7 @@ abstract class _Profile extends Profile {
       final List<String>? adminAllowedCountries,
       final List<String>? adminAllowedSections,
       @GameInterestsConverter() final List<GameType>? gameInterests,
+      final DateTime? birthDate,
       final DateTime? createdAt,
       final DateTime? updatedAt}) = _$ProfileImpl;
   const _Profile._() : super._();
@@ -1030,6 +1055,11 @@ abstract class _Profile extends Profile {
   @override
   @GameInterestsConverter()
   List<GameType>? get gameInterests;
+
+  /// Date de naissance (PII) — saisie à l'inscription. Lue par le propriétaire
+  /// et les admins ; sert à calculer l'âge côté admin.
+  @override
+  DateTime? get birthDate;
   @override
   DateTime? get createdAt;
   @override

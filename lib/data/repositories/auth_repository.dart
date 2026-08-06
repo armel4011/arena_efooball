@@ -61,6 +61,7 @@ class AuthRepository {
     required DateTime privacyPolicyAcceptedAt,
     bool marketingConsent = true,
     String? referredBy,
+    DateTime? birthDate,
   }) async {
     // Pre-validate username uniqueness BEFORE auth.signUp so a clash
     // doesn't leave us with an orphan auth.users row that can't be
@@ -100,6 +101,7 @@ class AuthRepository {
       // `ensure_referral_code` pose le code propre du joueur, on garde
       // referredBy comme lien sortant.
       referredBy: referredBy,
+      birthDate: birthDate,
     );
     try {
       return await _profiles.create(profile);

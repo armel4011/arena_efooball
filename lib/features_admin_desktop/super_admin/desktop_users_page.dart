@@ -303,6 +303,16 @@ class _UserCard extends ConsumerWidget {
                     ),
                     const SizedBox(height: 2),
                     _WhatsappLine(profile: profile),
+                    if (profile.age != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        '🎂 ${profile.age} ans',
+                        style: GoogleFonts.spaceGrotesk(
+                          color: ArenaColors.silver,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

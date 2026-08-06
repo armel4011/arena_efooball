@@ -38,6 +38,8 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
   // Aucun pays imposé par défaut : le joueur DOIT choisir lui-même son pays
   // (la sélection est obligatoire pour valider l'étape profil).
   String _countryCode = '';
+  // Date de naissance (obligatoire) — âge minimum appliqué à la validation.
+  DateTime? _birthDate;
   ArenaAvatarColor _avatarColor = ArenaAvatarColor.blue;
   bool _cguAccepted = false;
   bool _privacyAccepted = false;
@@ -115,6 +117,7 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
           privacyPolicyAcceptedAt: now,
           marketingConsent: _marketingAccepted,
           referredBy: referral.isEmpty ? null : referral,
+          birthDate: _birthDate,
         );
     if (mounted &&
         ref.read(signUpControllerProvider).hasValue &&
@@ -179,6 +182,8 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
                       whatsappCtrl: _whatsappCtrl,
                       countryCode: _countryCode,
                       onCountry: (c) => setState(() => _countryCode = c),
+                      birthDate: _birthDate,
+                      onBirthDate: (d) => setState(() => _birthDate = d),
                       avatarColor: _avatarColor,
                       onAvatarColor: (c) => setState(() => _avatarColor = c),
                       initial: _initialFromUsername(),
@@ -305,9 +310,8 @@ class _AccountStep extends StatelessWidget {
             textInputAction: TextInputAction.done,
             prefixIcon: Icons.lock_outline,
             enabled: !isLoading,
-            errorText: passwordConfirmCtrl.text.isEmpty
-                ? null
-                : _confirmError(l10n),
+            errorText:
+                passwordConfirmCtrl.text.isEmpty ? null : _confirmError(l10n),
           ),
           const SizedBox(height: ArenaSpacing.xl),
           ArenaButton(
@@ -331,6 +335,8 @@ class _ProfileStep extends StatelessWidget {
     required this.referralCodeCtrl,
     required this.countryCode,
     required this.onCountry,
+    required this.birthDate,
+    required this.onBirthDate,
     required this.avatarColor,
     required this.onAvatarColor,
     required this.initial,
@@ -350,6 +356,8 @@ class _ProfileStep extends StatelessWidget {
   final TextEditingController referralCodeCtrl;
   final String countryCode;
   final ValueChanged<String> onCountry;
+  final DateTime? birthDate;
+  final ValueChanged<DateTime?> onBirthDate;
   final ArenaAvatarColor avatarColor;
   final ValueChanged<ArenaAvatarColor> onAvatarColor;
   final String initial;
@@ -368,6 +376,18 @@ class _ProfileStep extends StatelessWidget {
 
   bool get _isWhatsappValid => isLocalPhoneValid(whatsappCtrl.text);
 
+  /// Âge minimum requis à l'inscription (Arena = jeu en argent réel).
+  static const _minAge = 18;
+
+  bool get _birthDateValid {
+    final b = birthDate;
+    if (b == null) return false;
+    final now = DateTime.now();
+    var a = now.year - b.year;
+    if (now.month < b.month || (now.month == b.month && now.day < b.day)) a--;
+    return a >= _minAge;
+  }
+
   bool get _canSubmit =>
       cgu &&
       privacy &&
@@ -375,6 +395,7 @@ class _ProfileStep extends StatelessWidget {
       countryCode.isNotEmpty &&
       usernameCtrl.text.trim().length >= 3 &&
       usernameCtrl.text.trim().length <= 20 &&
+      _birthDateValid &&
       _isWhatsappValid;
 
   @override
@@ -401,6 +422,14 @@ class _ProfileStep extends StatelessWidget {
             onSelect: onCountry,
             options: kSupportedCountries,
             isLoading: isLoading,
+          ),
+          const SizedBox(height: ArenaSpacing.md),
+          _BirthDateField(
+            value: birthDate,
+            onChanged: onBirthDate,
+            enabled: !isLoading,
+            minAge: _minAge,
+            invalid: birthDate != null && !_birthDateValid,
           ),
           const SizedBox(height: ArenaSpacing.md),
           ArenaTextField(
@@ -510,6 +539,95 @@ class _AvatarColorPicker extends StatelessWidget {
   }
 }
 
+/// Champ « date de naissance » : tappable → `showDatePicker`. Le sélecteur
+/// borne `lastDate` à aujourd'hui − [minAge] ans → impossible de choisir une
+/// date rendant l'utilisateur trop jeune (Arena = jeu en argent réel).
+class _BirthDateField extends StatelessWidget {
+  const _BirthDateField({
+    required this.value,
+    required this.onChanged,
+    required this.enabled,
+    required this.minAge,
+    required this.invalid,
+  });
+
+  final DateTime? value;
+  final ValueChanged<DateTime?> onChanged;
+  final bool enabled;
+  final int minAge;
+  final bool invalid;
+
+  String _fmt(DateTime d) => '${d.day.toString().padLeft(2, '0')}/'
+      '${d.month.toString().padLeft(2, '0')}/${d.year}';
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final latest = DateTime(now.year - minAge, now.month, now.day);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Date de naissance', style: ArenaTypography.labelMedium),
+        const SizedBox(height: ArenaSpacing.sm),
+        InkWell(
+          borderRadius: BorderRadius.circular(ArenaRadius.md),
+          onTap: enabled
+              ? () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate:
+                        value ?? DateTime(now.year - 20, now.month, now.day),
+                    firstDate: DateTime(now.year - 120),
+                    lastDate: latest,
+                    helpText: 'Ta date de naissance',
+                  );
+                  if (picked != null) onChanged(picked);
+                }
+              : null,
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: ArenaSpacing.md,
+              vertical: 14,
+            ),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(ArenaRadius.md),
+              border: Border.all(
+                color: invalid ? ArenaColors.neonRed : ArenaColors.border,
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.cake_outlined,
+                    color: ArenaColors.silver, size: 20),
+                const SizedBox(width: ArenaSpacing.sm),
+                Expanded(
+                  child: Text(
+                    value == null
+                        ? 'Choisir ta date de naissance'
+                        : _fmt(value!),
+                    style: ArenaTypography.bodyLarge.copyWith(
+                      color: value == null ? ArenaColors.silver : null,
+                    ),
+                  ),
+                ),
+                const Icon(Icons.calendar_today_outlined,
+                    color: ArenaColors.silver, size: 18),
+              ],
+            ),
+          ),
+        ),
+        if (invalid) ...[
+          const SizedBox(height: 4),
+          Text(
+            'Tu dois avoir au moins $minAge ans pour t’inscrire.',
+            style: ArenaText.small.copyWith(color: ArenaColors.neonRed),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
 class _CountryPicker extends StatelessWidget {
   const _CountryPicker({
     required this.selected,
@@ -539,7 +657,8 @@ class _CountryPicker extends StatelessWidget {
           dropdownColor: ArenaColors.surfaceLight,
           hint: Text(
             l10n.registerCountryHint,
-            style: ArenaTypography.bodyLarge.copyWith(color: ArenaColors.silver),
+            style:
+                ArenaTypography.bodyLarge.copyWith(color: ArenaColors.silver),
           ),
           onChanged: isLoading ? null : (v) => v == null ? null : onSelect(v),
           items: [
