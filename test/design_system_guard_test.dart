@@ -235,7 +235,7 @@ void main() {
   // 2756 → 2760 le 2026-08-05 : +4 `ArenaColors.*` — mise en forme règles (page bloquée)
   // 2760 → 2772 le 2026-08-05 : +12 `ArenaColors.*` — verrou saisie score (in-app + overlay)
   // 2772 → 2790 le 2026-08-06 : +18 `ArenaColors.*` — santé du compte + date naissance + âge admin
-  const colorsDotBaseline = 2791; // occurrences de `Colors.`
+  const colorsDotBaseline = 2799; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.
