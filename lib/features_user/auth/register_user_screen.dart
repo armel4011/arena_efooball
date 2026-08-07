@@ -279,7 +279,7 @@ AuthFailure _asFailure(Object? error) {
 
 // ─── Step 1 ─────────────────────────────────────────────────────────────
 
-class _AccountStep extends StatelessWidget {
+class _AccountStep extends StatefulWidget {
   const _AccountStep({
     required this.emailCtrl,
     required this.passwordCtrl,
@@ -298,6 +298,15 @@ class _AccountStep extends StatelessWidget {
   final bool googleLoading;
   final bool isLoading;
 
+  @override
+  State<_AccountStep> createState() => _AccountStepState();
+}
+
+class _AccountStepState extends State<_AccountStep> {
+  // Masqués par défaut ; l'œil bascule l'affichage en clair.
+  bool _obscurePassword = true;
+  bool _obscureConfirm = true;
+
   String? _emailError(String value, AppLocalizations l10n) {
     if (value.isEmpty) return l10n.registerEmailRequired;
     if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(value)) {
@@ -312,16 +321,32 @@ class _AccountStep extends StatelessWidget {
   }
 
   String? _confirmError(AppLocalizations l10n) {
-    if (passwordConfirmCtrl.text != passwordCtrl.text) {
+    if (widget.passwordConfirmCtrl.text != widget.passwordCtrl.text) {
       return l10n.registerPasswordMismatch;
     }
     return null;
   }
 
   bool _canSubmit(AppLocalizations l10n) =>
-      _emailError(emailCtrl.text, l10n) == null &&
-      _passwordError(passwordCtrl.text, l10n) == null &&
+      _emailError(widget.emailCtrl.text, l10n) == null &&
+      _passwordError(widget.passwordCtrl.text, l10n) == null &&
       _confirmError(l10n) == null;
+
+  /// Bouton œil afficher/masquer, placé en suffixe des champs mot de passe.
+  Widget _visibilityToggle({
+    required bool obscured,
+    required VoidCallback onToggle,
+  }) {
+    return IconButton(
+      icon: Icon(
+        obscured ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+        color: ArenaColors.textMuted,
+        size: 20,
+      ),
+      splashRadius: 20,
+      onPressed: widget.isLoading ? null : onToggle,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -335,8 +360,8 @@ class _AccountStep extends StatelessWidget {
           GoogleSignInButton(
             label: l10n.registerGoogleSignUp,
             fullWidth: true,
-            isLoading: googleLoading,
-            onPressed: isLoading ? null : onGoogle,
+            isLoading: widget.googleLoading,
+            onPressed: widget.isLoading ? null : widget.onGoogle,
           ),
           const SizedBox(height: ArenaSpacing.md),
           const _OrDivider(),
@@ -344,44 +369,54 @@ class _AccountStep extends StatelessWidget {
           ArenaTextField(
             label: l10n.registerEmailLabel,
             hint: 'joueur@arena.app',
-            controller: emailCtrl,
+            controller: widget.emailCtrl,
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.next,
             prefixIcon: Icons.email_outlined,
-            enabled: !isLoading,
-            errorText: emailCtrl.text.isEmpty
+            enabled: !widget.isLoading,
+            errorText: widget.emailCtrl.text.isEmpty
                 ? null
-                : _emailError(emailCtrl.text, l10n),
+                : _emailError(widget.emailCtrl.text, l10n),
           ),
           const SizedBox(height: ArenaSpacing.md),
           ArenaTextField(
             label: l10n.registerPasswordLabel,
-            controller: passwordCtrl,
-            obscureText: true,
+            controller: widget.passwordCtrl,
+            obscureText: _obscurePassword,
             textInputAction: TextInputAction.next,
             prefixIcon: Icons.lock_outline,
-            enabled: !isLoading,
-            errorText: passwordCtrl.text.isEmpty
+            enabled: !widget.isLoading,
+            suffixIcon: _visibilityToggle(
+              obscured: _obscurePassword,
+              onToggle: () =>
+                  setState(() => _obscurePassword = !_obscurePassword),
+            ),
+            errorText: widget.passwordCtrl.text.isEmpty
                 ? null
-                : _passwordError(passwordCtrl.text, l10n),
+                : _passwordError(widget.passwordCtrl.text, l10n),
           ),
           const SizedBox(height: ArenaSpacing.md),
           ArenaTextField(
             label: l10n.registerPasswordConfirmLabel,
-            controller: passwordConfirmCtrl,
-            obscureText: true,
+            controller: widget.passwordConfirmCtrl,
+            obscureText: _obscureConfirm,
             textInputAction: TextInputAction.done,
             prefixIcon: Icons.lock_outline,
-            enabled: !isLoading,
-            errorText:
-                passwordConfirmCtrl.text.isEmpty ? null : _confirmError(l10n),
+            enabled: !widget.isLoading,
+            suffixIcon: _visibilityToggle(
+              obscured: _obscureConfirm,
+              onToggle: () => setState(() => _obscureConfirm = !_obscureConfirm),
+            ),
+            errorText: widget.passwordConfirmCtrl.text.isEmpty
+                ? null
+                : _confirmError(l10n),
           ),
           const SizedBox(height: ArenaSpacing.xl),
           ArenaButton(
             label: l10n.registerAccountContinueButton,
             fullWidth: true,
             size: ArenaButtonSize.large,
-            onPressed: _canSubmit(l10n) ? onNext : null,
+            onPressed: _canSubmit(l10n) ? widget.onNext : null,
           ),
         ],
       ),
