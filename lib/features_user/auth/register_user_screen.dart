@@ -14,6 +14,7 @@ import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:arena/features_shared/widgets/google_sign_in_button.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
 import 'package:arena/features_user/auth/widgets/auth_error_banner.dart';
+import 'package:arena/features_user/auth/widgets/code_verification_view.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -829,63 +830,22 @@ class _OtpStep extends StatelessWidget {
   final bool isLoading;
   final bool resending;
 
-  bool get _isCodeValid => codeCtrl.text.trim().length == 6;
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(ArenaSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(l10n.resetCodeTitle, style: ArenaTypography.displayMedium),
-          const SizedBox(height: ArenaSpacing.sm),
-          Text(
-            l10n.resetCodeSubtitle,
-            style: ArenaTypography.bodyMedium.copyWith(
-              color: ArenaColors.textMuted,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(email, style: ArenaTypography.labelLarge),
-          const SizedBox(height: ArenaSpacing.xl),
-          ArenaTextField(
-            label: l10n.resetCodeFieldLabel,
-            hint: '••••••',
-            controller: codeCtrl,
-            keyboardType: TextInputType.number,
-            textInputAction: TextInputAction.done,
-            prefixIcon: Icons.lock_clock_outlined,
-            enabled: !isLoading,
-            maxLength: 6,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          ),
-          if (errorMessage != null) ...[
-            const SizedBox(height: ArenaSpacing.sm),
-            AuthErrorBanner(message: errorMessage!),
-          ],
-          const SizedBox(height: ArenaSpacing.lg),
-          ArenaButton(
-            label: l10n.resetCodeVerifyButton,
-            fullWidth: true,
-            size: ArenaButtonSize.large,
-            isLoading: isLoading,
-            onPressed: _isCodeValid && !isLoading ? onVerify : null,
-          ),
-          const SizedBox(height: ArenaSpacing.lg),
-          Center(
-            child: TextButton(
-              onPressed: isLoading || resending ? null : onResend,
-              child: Text(
-                resending
-                    ? l10n.resetCodeResending
-                    : l10n.resetCodeResendButton,
-              ),
-            ),
-          ),
-        ],
-      ),
+    return CodeVerificationView(
+      title: l10n.resetCodeTitle,
+      subtitle: l10n.resetCodeSubtitle,
+      email: email,
+      controller: codeCtrl,
+      verifyLabel: l10n.resetCodeVerifyButton,
+      resendLabel: l10n.resetCodeResendButton,
+      resendingLabel: l10n.resetCodeResending,
+      onVerify: onVerify,
+      onResend: onResend,
+      isLoading: isLoading,
+      resending: resending,
+      errorMessage: errorMessage,
     );
   }
 }
