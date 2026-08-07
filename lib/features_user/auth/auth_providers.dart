@@ -72,12 +72,71 @@ final googleSsoControllerProvider =
   GoogleSsoController.new,
 );
 
+/// Issue de l'étape « démarrage » de l'inscription.
+enum SignUpOutcome {
+  /// Compte auth créé, code de confirmation envoyé par email : l'UI doit
+  /// afficher la saisie du code (confirmation email activée).
+  needsOtp,
+
+  /// Session déjà ouverte (confirmation email désactivée) et profil créé :
+  /// l'UI peut afficher l'écran de succès.
+  done,
+
+  /// Une erreur est survenue (état du controller = AsyncError) : l'UI
+  /// affiche le message et reste sur l'étape courante.
+  error,
+}
+
+/// Données d'inscription collectées à l'étape profil, conservées entre le
+/// démarrage (création du compte auth + envoi du code) et la finalisation
+/// (insertion du profil après confirmation email).
+class _PendingSignUp {
+  const _PendingSignUp({
+    required this.email,
+    required this.username,
+    required this.countryCode,
+    required this.preferredLanguage,
+    required this.preferredCurrency,
+    required this.whatsappNumber,
+    required this.cguAcceptedAt,
+    required this.cguVersionAccepted,
+    required this.privacyPolicyAcceptedAt,
+    required this.marketingConsent,
+    required this.referredBy,
+    required this.birthDate,
+    required this.deviceId,
+  });
+
+  final String email;
+  final String username;
+  final String countryCode;
+  final String preferredLanguage;
+  final String preferredCurrency;
+  final String whatsappNumber;
+  final DateTime cguAcceptedAt;
+  final String cguVersionAccepted;
+  final DateTime privacyPolicyAcceptedAt;
+  final bool marketingConsent;
+  final String? referredBy;
+  final DateTime? birthDate;
+  final String? deviceId;
+}
+
 /// Async controller for the multi-step sign-up form.
 class SignUpController extends AsyncNotifier<Profile?> {
+  _PendingSignUp? _pending;
+
   @override
   Future<Profile?> build() async => null;
 
-  Future<void> signUp({
+  /// Démarre l'inscription : crée le compte auth et, si la confirmation
+  /// email est active, déclenche l'envoi du code à 6 chiffres. Selon la
+  /// config Supabase :
+  ///  - confirmation active   → [SignUpOutcome.needsOtp] (UI = saisie code) ;
+  ///  - confirmation désactivée→ profil créé, [SignUpOutcome.done].
+  /// En cas d'échec, l'état passe en `AsyncError` et [SignUpOutcome.error]
+  /// est renvoyé.
+  Future<SignUpOutcome> start({
     required String email,
     required String password,
     required String username,
@@ -90,27 +149,105 @@ class SignUpController extends AsyncNotifier<Profile?> {
     required DateTime privacyPolicyAcceptedAt,
     bool marketingConsent = true,
     String? referredBy,
+    DateTime? birthDate,
+    String? deviceId,
   }) async {
     state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
-      return ref.read(authRepositoryProvider).signUpWithEmail(
-            email: email,
-            password: password,
-            username: username,
-            countryCode: countryCode,
-            preferredLanguage: preferredLanguage,
-            preferredCurrency: preferredCurrency,
-            whatsappNumber: whatsappNumber,
-            cguAcceptedAt: cguAcceptedAt,
-            cguVersionAccepted: cguVersionAccepted,
-            privacyPolicyAcceptedAt: privacyPolicyAcceptedAt,
-            marketingConsent: marketingConsent,
-            referredBy: referredBy,
-          );
-    });
+    try {
+      final repo = ref.read(authRepositoryProvider);
+      final needsOtp = await repo.startEmailSignUp(
+        email: email,
+        password: password,
+        username: username,
+      );
+      _pending = _PendingSignUp(
+        email: email.trim().toLowerCase(),
+        username: username,
+        countryCode: countryCode,
+        preferredLanguage: preferredLanguage,
+        preferredCurrency: preferredCurrency,
+        whatsappNumber: whatsappNumber,
+        cguAcceptedAt: cguAcceptedAt,
+        cguVersionAccepted: cguVersionAccepted,
+        privacyPolicyAcceptedAt: privacyPolicyAcceptedAt,
+        marketingConsent: marketingConsent,
+        referredBy: referredBy,
+        birthDate: birthDate,
+        deviceId: deviceId,
+      );
+      if (needsOtp) {
+        // Compte auth créé, en attente du code : on revient à un état non
+        // authentifié (profil pas encore inséré). L'UI bascule sur l'OTP.
+        state = const AsyncData(null);
+        return SignUpOutcome.needsOtp;
+      }
+      final profile = await _finalize(repo);
+      _pending = null;
+      state = AsyncData(profile);
+      return SignUpOutcome.done;
+    } catch (e, st) {
+      state = AsyncError(e, st);
+      return SignUpOutcome.error;
+    }
   }
 
-  void reset() => state = const AsyncData(null);
+  /// Étape OTP : vérifie le code reçu par email puis insère le profil.
+  /// Renvoie `true` si l'inscription est finalisée.
+  Future<bool> confirmOtp(String code) async {
+    final pending = _pending;
+    if (pending == null) {
+      state = AsyncError(
+        const UnknownAuthFailure('no pending signup for OTP'),
+        StackTrace.current,
+      );
+      return false;
+    }
+    state = const AsyncLoading();
+    try {
+      final repo = ref.read(authRepositoryProvider);
+      await repo.confirmSignUpCode(email: pending.email, code: code);
+      final profile = await _finalize(repo);
+      _pending = null;
+      state = AsyncData(profile);
+      return true;
+    } catch (e, st) {
+      state = AsyncError(e, st);
+      return false;
+    }
+  }
+
+  /// Renvoie un nouveau code de confirmation à l'email en attente.
+  Future<void> resendOtp() async {
+    final pending = _pending;
+    if (pending == null) return;
+    await ref.read(authRepositoryProvider).resendSignUpCode(
+          email: pending.email,
+        );
+  }
+
+  Future<Profile> _finalize(AuthRepository repo) {
+    final p = _pending!;
+    return repo.finalizeSignUpProfile(
+      username: p.username,
+      email: p.email,
+      countryCode: p.countryCode,
+      preferredLanguage: p.preferredLanguage,
+      preferredCurrency: p.preferredCurrency,
+      whatsappNumber: p.whatsappNumber,
+      cguAcceptedAt: p.cguAcceptedAt,
+      cguVersionAccepted: p.cguVersionAccepted,
+      privacyPolicyAcceptedAt: p.privacyPolicyAcceptedAt,
+      marketingConsent: p.marketingConsent,
+      referredBy: p.referredBy,
+      birthDate: p.birthDate,
+      deviceId: p.deviceId,
+    );
+  }
+
+  void reset() {
+    _pending = null;
+    state = const AsyncData(null);
+  }
 }
 
 final signUpControllerProvider =

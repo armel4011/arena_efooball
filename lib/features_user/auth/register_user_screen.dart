@@ -1,5 +1,6 @@
 import 'package:arena/core/i18n/i18n_service.dart';
 import 'package:arena/core/router/user_router.dart';
+import 'package:arena/core/services/device_id_service.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/core/utils/supported_countries.dart';
 import 'package:arena/data/repositories/auth_failure.dart';
@@ -34,17 +35,30 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
   final _passwordConfirmCtrl = TextEditingController();
   final _usernameCtrl = TextEditingController();
   final _whatsappCtrl = TextEditingController();
+  // Code de confirmation à 6 chiffres reçu par email (étape OTP).
+  final _codeCtrl = TextEditingController();
+  bool _resending = false;
 
   // Aucun pays imposé par défaut : le joueur DOIT choisir lui-même son pays
   // (la sélection est obligatoire pour valider l'étape profil).
   String _countryCode = '';
+  // Date de naissance (obligatoire) — âge minimum appliqué à la validation.
+  DateTime? _birthDate;
   ArenaAvatarColor _avatarColor = ArenaAvatarColor.blue;
   bool _cguAccepted = false;
   bool _privacyAccepted = false;
   // Consentement marketing activé par défaut (l'utilisateur peut décocher
   // au signup ou désactiver plus tard dans Réglages).
   bool _marketingAccepted = true;
-  int _step = 0;
+
+  // Étapes du parcours d'inscription. L'étape OTP (2) n'apparaît que si la
+  // confirmation email est activée côté Supabase ; sinon on passe de profil
+  // (1) directement au succès (3).
+  static const _stepAccount = 0;
+  static const _stepProfile = 1;
+  static const _stepOtp = 2;
+  static const _stepSuccess = 3;
+  int _step = _stepAccount;
 
   // Lot D.1 — Code de parrainage optionnel (ARN-XXXX) saisi au signup.
   // Stocké en `profiles.referred_by` lors du INSERT.
@@ -57,6 +71,7 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
     _usernameCtrl,
     _whatsappCtrl,
     _referralCodeCtrl,
+    _codeCtrl,
   ];
 
   @override
@@ -99,7 +114,9 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
     final now = DateTime.now().toUtc();
     final locale = ref.read(currentLocaleProvider);
     final referral = _referralCodeCtrl.text.trim().toUpperCase();
-    await ref.read(signUpControllerProvider.notifier).signUp(
+    // Empreinte d'appareil (anti-faux-comptes) — best-effort, null hors Android.
+    final deviceId = await readDeviceId();
+    final outcome = await ref.read(signUpControllerProvider.notifier).start(
           email: _emailCtrl.text,
           password: _passwordCtrl.text,
           username: _usernameCtrl.text.trim(),
@@ -115,12 +132,44 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
           privacyPolicyAcceptedAt: now,
           marketingConsent: _marketingAccepted,
           referredBy: referral.isEmpty ? null : referral,
+          birthDate: _birthDate,
+          deviceId: deviceId,
         );
-    if (mounted &&
-        ref.read(signUpControllerProvider).hasValue &&
-        ref.read(signUpControllerProvider).value != null) {
-      setState(() => _step = 2);
+    if (!mounted) return;
+    switch (outcome) {
+      // Confirmation email active → on demande le code reçu par email.
+      case SignUpOutcome.needsOtp:
+        setState(() => _step = _stepOtp);
+      // Confirmation désactivée → profil déjà créé, on affiche le succès.
+      case SignUpOutcome.done:
+        setState(() => _step = _stepSuccess);
+      // Erreur → on reste sur l'étape profil, le banner affiche le message.
+      case SignUpOutcome.error:
+        break;
     }
+  }
+
+  /// Vérifie le code de confirmation reçu par email puis finalise le profil.
+  Future<void> _verifyOtp() async {
+    FocusScope.of(context).unfocus();
+    final ok = await ref
+        .read(signUpControllerProvider.notifier)
+        .confirmOtp(_codeCtrl.text);
+    if (mounted && ok) setState(() => _step = _stepSuccess);
+  }
+
+  /// Renvoie un nouveau code de confirmation à l'email saisi.
+  Future<void> _resendOtp() async {
+    if (_resending) return;
+    setState(() => _resending = true);
+    await ref.read(signUpControllerProvider.notifier).resendOtp();
+    if (!mounted) return;
+    setState(() => _resending = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(AppLocalizations.of(context).resetCodeNewCodeSent),
+      ),
+    );
   }
 
   Future<void> _submitGoogle() async {
@@ -142,8 +191,12 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
 
     return Scaffold(
       appBar: ArenaAppBar(
-        title: l10n.registerStepperTitle(_step + 1),
-        showBack: _step < 2 && !isLoading,
+        // Titre borné à 3 : l'étape OTP et le succès partagent la dernière
+        // barre « Confirmation ».
+        title: l10n.registerStepperTitle((_step + 1).clamp(1, 3)),
+        // Retour possible uniquement sur les étapes de saisie (compte/profil) :
+        // une fois le compte auth créé (OTP/succès), on n'y revient pas.
+        showBack: _step < _stepOtp && !isLoading,
         onBack: _back,
       ),
       body: ArenaScreenBackground(
@@ -160,11 +213,14 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
                   ArenaSpacing.lg,
                   0,
                 ),
-                child: ArenaStepper(totalSteps: 3, currentStep: _step),
+                child: ArenaStepper(
+                  totalSteps: 3,
+                  currentStep: _step > _stepOtp ? _stepOtp : _step,
+                ),
               ),
               Expanded(
                 child: switch (_step) {
-                  0 => _AccountStep(
+                  _stepAccount => _AccountStep(
                       emailCtrl: _emailCtrl,
                       passwordCtrl: _passwordCtrl,
                       passwordConfirmCtrl: _passwordConfirmCtrl,
@@ -173,12 +229,14 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
                       googleLoading: googleState.isLoading,
                       isLoading: isLoading,
                     ),
-                  1 => _ProfileStep(
+                  _stepProfile => _ProfileStep(
                       referralCodeCtrl: _referralCodeCtrl,
                       usernameCtrl: _usernameCtrl,
                       whatsappCtrl: _whatsappCtrl,
                       countryCode: _countryCode,
                       onCountry: (c) => setState(() => _countryCode = c),
+                      birthDate: _birthDate,
+                      onBirthDate: (d) => setState(() => _birthDate = d),
                       avatarColor: _avatarColor,
                       onAvatarColor: (c) => setState(() => _avatarColor = c),
                       initial: _initialFromUsername(),
@@ -192,6 +250,15 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
                       errorMessage: errorMessage,
                       onSubmit: _submit,
                       isLoading: isLoading,
+                    ),
+                  _stepOtp => _OtpStep(
+                      email: _emailCtrl.text.trim(),
+                      codeCtrl: _codeCtrl,
+                      onVerify: _verifyOtp,
+                      onResend: _resendOtp,
+                      errorMessage: errorMessage,
+                      isLoading: isLoading,
+                      resending: _resending,
                     ),
                   _ => const _SuccessStep(),
                 },
@@ -305,9 +372,8 @@ class _AccountStep extends StatelessWidget {
             textInputAction: TextInputAction.done,
             prefixIcon: Icons.lock_outline,
             enabled: !isLoading,
-            errorText: passwordConfirmCtrl.text.isEmpty
-                ? null
-                : _confirmError(l10n),
+            errorText:
+                passwordConfirmCtrl.text.isEmpty ? null : _confirmError(l10n),
           ),
           const SizedBox(height: ArenaSpacing.xl),
           ArenaButton(
@@ -331,6 +397,8 @@ class _ProfileStep extends StatelessWidget {
     required this.referralCodeCtrl,
     required this.countryCode,
     required this.onCountry,
+    required this.birthDate,
+    required this.onBirthDate,
     required this.avatarColor,
     required this.onAvatarColor,
     required this.initial,
@@ -350,6 +418,8 @@ class _ProfileStep extends StatelessWidget {
   final TextEditingController referralCodeCtrl;
   final String countryCode;
   final ValueChanged<String> onCountry;
+  final DateTime? birthDate;
+  final ValueChanged<DateTime?> onBirthDate;
   final ArenaAvatarColor avatarColor;
   final ValueChanged<ArenaAvatarColor> onAvatarColor;
   final String initial;
@@ -368,6 +438,18 @@ class _ProfileStep extends StatelessWidget {
 
   bool get _isWhatsappValid => isLocalPhoneValid(whatsappCtrl.text);
 
+  /// Âge minimum requis à l'inscription (Arena = jeu en argent réel).
+  static const _minAge = 18;
+
+  bool get _birthDateValid {
+    final b = birthDate;
+    if (b == null) return false;
+    final now = DateTime.now();
+    var a = now.year - b.year;
+    if (now.month < b.month || (now.month == b.month && now.day < b.day)) a--;
+    return a >= _minAge;
+  }
+
   bool get _canSubmit =>
       cgu &&
       privacy &&
@@ -375,6 +457,7 @@ class _ProfileStep extends StatelessWidget {
       countryCode.isNotEmpty &&
       usernameCtrl.text.trim().length >= 3 &&
       usernameCtrl.text.trim().length <= 20 &&
+      _birthDateValid &&
       _isWhatsappValid;
 
   @override
@@ -401,6 +484,14 @@ class _ProfileStep extends StatelessWidget {
             onSelect: onCountry,
             options: kSupportedCountries,
             isLoading: isLoading,
+          ),
+          const SizedBox(height: ArenaSpacing.md),
+          _BirthDateField(
+            value: birthDate,
+            onChanged: onBirthDate,
+            enabled: !isLoading,
+            minAge: _minAge,
+            invalid: birthDate != null && !_birthDateValid,
           ),
           const SizedBox(height: ArenaSpacing.md),
           ArenaTextField(
@@ -510,6 +601,101 @@ class _AvatarColorPicker extends StatelessWidget {
   }
 }
 
+/// Champ « date de naissance » : tappable → `showDatePicker`. Le sélecteur
+/// borne `lastDate` à aujourd'hui − [minAge] ans → impossible de choisir une
+/// date rendant l'utilisateur trop jeune (Arena = jeu en argent réel).
+class _BirthDateField extends StatelessWidget {
+  const _BirthDateField({
+    required this.value,
+    required this.onChanged,
+    required this.enabled,
+    required this.minAge,
+    required this.invalid,
+  });
+
+  final DateTime? value;
+  final ValueChanged<DateTime?> onChanged;
+  final bool enabled;
+  final int minAge;
+  final bool invalid;
+
+  String _fmt(DateTime d) => '${d.day.toString().padLeft(2, '0')}/'
+      '${d.month.toString().padLeft(2, '0')}/${d.year}';
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final latest = DateTime(now.year - minAge, now.month, now.day);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Date de naissance', style: ArenaTypography.labelMedium),
+        const SizedBox(height: ArenaSpacing.sm),
+        InkWell(
+          borderRadius: BorderRadius.circular(ArenaRadius.md),
+          onTap: enabled
+              ? () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate:
+                        value ?? DateTime(now.year - 20, now.month, now.day),
+                    firstDate: DateTime(now.year - 120),
+                    lastDate: latest,
+                    helpText: 'Ta date de naissance',
+                  );
+                  if (picked != null) onChanged(picked);
+                }
+              : null,
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: ArenaSpacing.md,
+              vertical: 14,
+            ),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(ArenaRadius.md),
+              border: Border.all(
+                color: invalid ? ArenaColors.neonRed : ArenaColors.border,
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.cake_outlined,
+                  color: ArenaColors.silver,
+                  size: 20,
+                ),
+                const SizedBox(width: ArenaSpacing.sm),
+                Expanded(
+                  child: Text(
+                    value == null
+                        ? 'Choisir ta date de naissance'
+                        : _fmt(value!),
+                    style: ArenaTypography.bodyLarge.copyWith(
+                      color: value == null ? ArenaColors.silver : null,
+                    ),
+                  ),
+                ),
+                const Icon(
+                  Icons.calendar_today_outlined,
+                  color: ArenaColors.silver,
+                  size: 18,
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (invalid) ...[
+          const SizedBox(height: 4),
+          Text(
+            'Tu dois avoir au moins $minAge ans pour t’inscrire.',
+            style: ArenaText.small.copyWith(color: ArenaColors.neonRed),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
 class _CountryPicker extends StatelessWidget {
   const _CountryPicker({
     required this.selected,
@@ -539,7 +725,8 @@ class _CountryPicker extends StatelessWidget {
           dropdownColor: ArenaColors.surfaceLight,
           hint: Text(
             l10n.registerCountryHint,
-            style: ArenaTypography.bodyLarge.copyWith(color: ArenaColors.silver),
+            style:
+                ArenaTypography.bodyLarge.copyWith(color: ArenaColors.silver),
           ),
           onChanged: isLoading ? null : (v) => v == null ? null : onSelect(v),
           items: [
@@ -608,6 +795,92 @@ class _ConsentTile extends StatelessWidget {
                 style: ArenaTypography.bodySmall.copyWith(
                   color: ArenaColors.text,
                 ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Step OTP (confirmation email) ──────────────────────────────────────
+
+/// Saisie du code à 6 chiffres reçu par email pour confirmer le compte.
+/// N'apparaît que si la confirmation email est activée côté Supabase.
+/// Réutilise les libellés `resetCode*` (génériques : « VÉRIFICATION »,
+/// « Saisis le code à 6 chiffres envoyé à », « VÉRIFIER »…).
+class _OtpStep extends StatelessWidget {
+  const _OtpStep({
+    required this.email,
+    required this.codeCtrl,
+    required this.onVerify,
+    required this.onResend,
+    required this.errorMessage,
+    required this.isLoading,
+    required this.resending,
+  });
+
+  final String email;
+  final TextEditingController codeCtrl;
+  final VoidCallback onVerify;
+  final VoidCallback onResend;
+  final String? errorMessage;
+  final bool isLoading;
+  final bool resending;
+
+  bool get _isCodeValid => codeCtrl.text.trim().length == 6;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(ArenaSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(l10n.resetCodeTitle, style: ArenaTypography.displayMedium),
+          const SizedBox(height: ArenaSpacing.sm),
+          Text(
+            l10n.resetCodeSubtitle,
+            style: ArenaTypography.bodyMedium.copyWith(
+              color: ArenaColors.textMuted,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(email, style: ArenaTypography.labelLarge),
+          const SizedBox(height: ArenaSpacing.xl),
+          ArenaTextField(
+            label: l10n.resetCodeFieldLabel,
+            hint: '••••••',
+            controller: codeCtrl,
+            keyboardType: TextInputType.number,
+            textInputAction: TextInputAction.done,
+            prefixIcon: Icons.lock_clock_outlined,
+            enabled: !isLoading,
+            maxLength: 6,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          ),
+          if (errorMessage != null) ...[
+            const SizedBox(height: ArenaSpacing.sm),
+            AuthErrorBanner(message: errorMessage!),
+          ],
+          const SizedBox(height: ArenaSpacing.lg),
+          ArenaButton(
+            label: l10n.resetCodeVerifyButton,
+            fullWidth: true,
+            size: ArenaButtonSize.large,
+            isLoading: isLoading,
+            onPressed: _isCodeValid && !isLoading ? onVerify : null,
+          ),
+          const SizedBox(height: ArenaSpacing.lg),
+          Center(
+            child: TextButton(
+              onPressed: isLoading || resending ? null : onResend,
+              child: Text(
+                resending
+                    ? l10n.resetCodeResending
+                    : l10n.resetCodeResendButton,
               ),
             ),
           ),

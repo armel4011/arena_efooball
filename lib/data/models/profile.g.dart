@@ -62,6 +62,10 @@ _$ProfileImpl _$$ProfileImplFromJson(Map<String, dynamic> json) =>
           .toList(),
       gameInterests: const GameInterestsConverter()
           .fromJson(json['game_interests'] as List?),
+      birthDate: json['birth_date'] == null
+          ? null
+          : DateTime.parse(json['birth_date'] as String),
+      deviceId: json['device_id'] as String?,
       createdAt: json['created_at'] == null
           ? null
           : DateTime.parse(json['created_at'] as String),
@@ -120,6 +124,9 @@ Map<String, dynamic> _$$ProfileImplToJson(_$ProfileImpl instance) =>
       if (const GameInterestsConverter().toJson(instance.gameInterests)
           case final value?)
         'game_interests': value,
+      if (instance.birthDate?.toIso8601String() case final value?)
+        'birth_date': value,
+      if (instance.deviceId case final value?) 'device_id': value,
       if (instance.createdAt?.toIso8601String() case final value?)
         'created_at': value,
       if (instance.updatedAt?.toIso8601String() case final value?)

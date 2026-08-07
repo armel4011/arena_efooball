@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:arena/core/services/score_proof_uploader.dart';
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/arena_match.dart';
@@ -49,8 +51,25 @@ class _ScoreFlowViewState extends ConsumerState<ScoreFlowView> {
   bool _pickingProof = false;
   String? _proofError;
 
+  // Verrou anti-triche : impossible de saisir le score pendant les 5 premières
+  // minutes après le début du match (un vrai match ne finit pas en 10 s).
+  Timer? _lockTicker;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncLockTicker();
+  }
+
+  @override
+  void didUpdateWidget(ScoreFlowView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.match.startedAt != widget.match.startedAt) _syncLockTicker();
+  }
+
   @override
   void dispose() {
+    _lockTicker?.cancel();
     _myScoreCtrl.dispose();
     _oppScoreCtrl.dispose();
     _myPenCtrl.dispose();
@@ -60,6 +79,30 @@ class _ScoreFlowViewState extends ConsumerState<ScoreFlowView> {
 
   bool get _isPlayer1 => widget.role == MatchRole.player1;
   bool get _isKnockout => widget.match.groupId == null;
+
+  /// Heure à partir de laquelle la saisie du score est autorisée : 5 min après
+  /// le coup d'envoi (`startedAt`). `null` si le match n'a pas encore démarré.
+  DateTime? get _scoreUnlockAt =>
+      widget.match.startedAt?.add(const Duration(minutes: 5));
+
+  bool get _scoreLocked {
+    final u = _scoreUnlockAt;
+    return u != null && DateTime.now().isBefore(u);
+  }
+
+  /// Programme un unique déverrouillage à l'heure exacte (pas de rebours
+  /// affiché → pas besoin d'un tick par seconde).
+  void _syncLockTicker() {
+    _lockTicker?.cancel();
+    _lockTicker = null;
+    final u = _scoreUnlockAt;
+    if (u == null) return;
+    final remaining = u.difference(DateTime.now());
+    if (remaining <= Duration.zero) return;
+    _lockTicker = Timer(remaining, () {
+      if (mounted) setState(() {});
+    });
+  }
 
   Future<void> _submit() async {
     // Symétrique de la garde de `_pickAndUploadProof` : la preuve est uploadée
@@ -141,9 +184,7 @@ class _ScoreFlowViewState extends ConsumerState<ScoreFlowView> {
       return;
     }
     if (!mounted) return;
-    ref
-        .read(pendingScoreSubmissionProvider(widget.match.id).notifier)
-        .state = {
+    ref.read(pendingScoreSubmissionProvider(widget.match.id).notifier).state = {
       'created_by': selfId,
       'payload': {
         'score1': s1,
@@ -192,8 +233,9 @@ class _ScoreFlowViewState extends ConsumerState<ScoreFlowView> {
       final l10n = AppLocalizations.of(context);
       setState(() {
         _pickingProof = false;
-        _proofError =
-            e is FormatException ? e.message : '${l10n.scoreFlowProofUploadError}$e';
+        _proofError = e is FormatException
+            ? e.message
+            : '${l10n.scoreFlowProofUploadError}$e';
       });
     }
   }
@@ -285,6 +327,11 @@ class _ScoreFlowViewState extends ConsumerState<ScoreFlowView> {
 
   Widget _buildForm() {
     final l10n = AppLocalizations.of(context);
+    // Verrou 5 min : tant qu'il court, on n'affiche PAS le formulaire de score,
+    // seulement un compte à rebours (anti-triche : pas de score instantané).
+    if (_scoreLocked) {
+      return const _ScoreLockedCard();
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -314,9 +361,8 @@ class _ScoreFlowViewState extends ConsumerState<ScoreFlowView> {
                 label: l10n.scoreFlowOppScoreLabel,
                 controller: _oppScoreCtrl,
                 enabled: !_submitting,
-                action: _isKnockout
-                    ? TextInputAction.next
-                    : TextInputAction.done,
+                action:
+                    _isKnockout ? TextInputAction.next : TextInputAction.done,
               ),
             ),
           ],
@@ -589,5 +635,43 @@ class _ProofAttachmentBlock extends StatelessWidget {
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(0)} Ko';
     return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} Mo';
+  }
+}
+
+/// Carte affichée pendant le VERROU de 5 min : la saisie du score n'est pas
+/// encore possible (un vrai match ne se termine pas dans les premières minutes).
+class _ScoreLockedCard extends StatelessWidget {
+  const _ScoreLockedCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(ArenaSpacing.lg),
+      decoration: BoxDecoration(
+        color: ArenaColors.carbon,
+        borderRadius: BorderRadius.circular(ArenaRadius.md),
+        border: Border.all(color: ArenaColors.border),
+      ),
+      child: Column(
+        children: [
+          const Icon(Icons.timer_outlined,
+              size: 40, color: ArenaColors.signalBlue),
+          const SizedBox(height: ArenaSpacing.sm),
+          Text(
+            'Saisie du score bientôt disponible',
+            style: ArenaText.h3,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: ArenaSpacing.xs),
+          Text(
+            'Jouez votre match : la saisie du score s’ouvre 5 minutes après le '
+            'coup d’envoi.',
+            style: ArenaText.body.copyWith(color: ArenaColors.silver),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
   }
 }

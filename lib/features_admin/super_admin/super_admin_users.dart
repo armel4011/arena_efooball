@@ -580,6 +580,15 @@ class _UserCard extends ConsumerWidget {
                     Text(profile.email ?? '—', style: ArenaText.bodyMuted),
                     const SizedBox(height: 2),
                     _WhatsappLine(profile: profile),
+                    if (profile.age != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        '🎂 ${profile.age} ans',
+                        style: ArenaText.small.copyWith(
+                          color: ArenaColors.silver,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

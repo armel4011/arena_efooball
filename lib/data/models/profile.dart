@@ -61,6 +61,14 @@ sealed class Profile with _$Profile {
     // dialogue obligatoire au 1er démarrage) ; liste (éventuellement vide) =
     // a répondu. Écrit une seule fois via le RPC `set_game_interests`.
     @GameInterestsConverter() List<GameType>? gameInterests,
+
+    /// Date de naissance (PII) — saisie à l'inscription. Lue par le propriétaire
+    /// et les admins ; sert à calculer l'âge côté admin.
+    DateTime? birthDate,
+
+    /// Empreinte d'appareil (ANDROID_ID) posée à l'inscription — anti-faux-
+    /// comptes (max 5 comptes/appareil + blocage auto-parrainage même appareil).
+    String? deviceId,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) = _Profile;
@@ -83,6 +91,18 @@ sealed class Profile with _$Profile {
 
   bool get hasAcceptedCgu => cguAcceptedAt != null;
   bool get isDeleted => deletedAt != null;
+
+  /// Âge en années révolues, ou `null` si la date de naissance est absente.
+  int? get age {
+    final b = birthDate;
+    if (b == null) return null;
+    final now = DateTime.now();
+    var a = now.year - b.year;
+    if (now.month < b.month || (now.month == b.month && now.day < b.day)) {
+      a--;
+    }
+    return a < 0 ? null : a;
+  }
 
   /// `true` uniquement si l'utilisateur a déjà répondu au sondage des jeux
   /// (colonne non NULL). NULL = jamais sollicité → montrer le dialogue.

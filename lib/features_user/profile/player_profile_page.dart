@@ -4,6 +4,7 @@ import 'package:arena/data/models/arena_match.dart';
 import 'package:arena/data/models/player_stats.dart';
 import 'package:arena/data/models/profile.dart';
 import 'package:arena/data/models/tutorial_video.dart';
+import 'package:arena/data/repositories/account_health_repository.dart';
 import 'package:arena/data/repositories/friends_repository.dart';
 import 'package:arena/data/repositories/match_stats_repository.dart';
 import 'package:arena/data/repositories/referral_repository.dart';
@@ -75,6 +76,7 @@ class _ProfileBody extends ConsumerWidget {
       ..invalidate(currentProfileProvider)
       ..invalidate(playerStatsProvider(profile.id))
       ..invalidate(playerRecentMatchesProvider(profile.id))
+      ..invalidate(accountHealthProvider)
       // Le compteur d'invités est un FutureProvider (pas de Realtime sur
       // `profiles`) : sans cette invalidation il reste figé au pull-to-refresh.
       ..invalidate(myReferralCountProvider);
@@ -99,6 +101,8 @@ class _ProfileBody extends ConsumerWidget {
           ),
           const SizedBox(height: ArenaSpacing.lg),
           _StatsRow(stats: statsAsync),
+          const SizedBox(height: ArenaSpacing.lg),
+          const _AccountHealthCard(),
           const SizedBox(height: ArenaSpacing.lg),
           Text(
             l10n.playerProfileSuccessHeader,
@@ -163,6 +167,121 @@ class _ProfileBody extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Carte « Santé du compte » : illustre les indicateurs anti-triche du joueur
+/// (avertissements/strikes, preuves vérifiées, statut du compte) — un peu comme
+/// la « santé » d'un compte. Données via `accountHealthProvider`.
+class _AccountHealthCard extends ConsumerWidget {
+  const _AccountHealthCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(accountHealthProvider);
+    return async.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (h) {
+        final (color, icon, label) = switch (h.level) {
+          AccountHealthLevel.ok => (
+              ArenaColors.statusOk,
+              Icons.verified_user_outlined,
+              'Compte en règle',
+            ),
+          AccountHealthLevel.warning => (
+              ArenaColors.statusWarn,
+              Icons.warning_amber_rounded,
+              'Avertissement en cours',
+            ),
+          AccountHealthLevel.critical => (
+              ArenaColors.neonRed,
+              Icons.block,
+              'Compte suspendu',
+            ),
+        };
+        return Container(
+          padding: const EdgeInsets.all(ArenaSpacing.md),
+          decoration: BoxDecoration(
+            color: ArenaColors.carbon,
+            borderRadius: BorderRadius.circular(ArenaRadius.md),
+            border: Border.all(color: color.withValues(alpha: 0.5)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(icon, color: color, size: 20),
+                  const SizedBox(width: ArenaSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      'SANTÉ DU COMPTE',
+                      style: ArenaText.monoSmall.copyWith(
+                        color: ArenaColors.silver,
+                        letterSpacing: 1.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    label,
+                    style: ArenaText.small.copyWith(
+                      color: color,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: ArenaSpacing.md),
+              Row(
+                children: [
+                  Text(
+                    'Avertissements',
+                    style: ArenaText.body.copyWith(color: ArenaColors.bone),
+                  ),
+                  const Spacer(),
+                  for (var i = 0; i < h.strikesMax; i++) ...[
+                    Icon(
+                      i < h.strikes ? Icons.circle : Icons.circle_outlined,
+                      size: 14,
+                      color: i < h.strikes
+                          ? ArenaColors.neonRed
+                          : ArenaColors.silverDim,
+                    ),
+                    const SizedBox(width: 4),
+                  ],
+                  Text(
+                    '${h.strikes}/${h.strikesMax}',
+                    style: ArenaText.small.copyWith(color: ArenaColors.silver),
+                  ),
+                ],
+              ),
+              const SizedBox(height: ArenaSpacing.xs),
+              Row(
+                children: [
+                  const Icon(Icons.verified_outlined,
+                      size: 16, color: ArenaColors.statusOk),
+                  const SizedBox(width: ArenaSpacing.sm),
+                  Text(
+                    '${h.verifiedProofs} preuve(s) vérifiée(s)',
+                    style: ArenaText.body.copyWith(color: ArenaColors.silver),
+                  ),
+                ],
+              ),
+              const SizedBox(height: ArenaSpacing.sm),
+              Text(
+                h.permanentBan
+                    ? 'Ton compte est suspendu suite à des infractions répétées.'
+                    : 'Joue proprement : 3 avertissements entraînent une '
+                        'suspension définitive.',
+                style: ArenaText.small.copyWith(color: ArenaColors.silverDim),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

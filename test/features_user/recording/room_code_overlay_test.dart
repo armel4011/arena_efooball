@@ -242,6 +242,7 @@ void main() {
             body: ScoreEntryField(
               allowPenalties: allowPenalties,
               timerLabel: '00:10',
+              elapsedSeconds: 600,
               onSubmit: (_, __, ___, ____, _____) {},
               onFocusChange: (_) async {},
               onClose: () {},
@@ -283,6 +284,7 @@ void main() {
             body: ScoreEntryField(
               allowPenalties: true,
               timerLabel: '00:10',
+              elapsedSeconds: 600,
               onSubmit: (_, __, ___, ____, _____) => submitted = true,
               onFocusChange: (_) async {},
               onClose: () {},

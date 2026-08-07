@@ -31,6 +31,8 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
+  # Empreinte d'appareil (ANDROID_ID) — anti-faux-comptes à l'inscription.
+  android_id: ^0.4.0
   google_fonts: ^6.2.1
   flutter_animate: ^4.5.0
   # Cache disque + mémoire des images réseau (bannières promo, miniatures

@@ -572,6 +572,7 @@ class _RecordingOverlayButtonState extends State<RecordingOverlayButton> {
       return ScoreEntryField(
         allowPenalties: _tick.allowPenalties,
         timerLabel: _tick.countdown,
+        elapsedSeconds: _tick.elapsedSeconds,
         onFocusChange: widget.onFieldFocusChange,
         onClose: () => sendToMain(RecordingOverlayMessages.askExitScoreType),
         onSubmit: (my, opp, viaPen, myPen, oppPen) => sendToMain(
@@ -742,6 +743,7 @@ class ScoreEntryField extends StatefulWidget {
     required this.onClose,
     required this.allowPenalties,
     required this.timerLabel,
+    required this.elapsedSeconds,
     super.key,
   });
 
@@ -754,6 +756,11 @@ class ScoreEntryField extends StatefulWidget {
   final VoidCallback onClose;
   final bool allowPenalties;
   final String timerLabel;
+
+  /// Secondes écoulées depuis le début de l'enregistrement. La saisie du score
+  /// est VERROUILLÉE tant que < 300 s (5 min) — anti-triche (pas de score
+  /// instantané).
+  final int elapsedSeconds;
 
   @override
   State<ScoreEntryField> createState() => _ScoreEntryFieldState();
@@ -858,8 +865,65 @@ class _ScoreEntryFieldState extends State<ScoreEntryField> {
     );
   }
 
+  /// Carte compacte du VERROU (saisie score pas encore ouverte) : icône +
+  /// message + compte à rebours + Fermer. Style overlay (isolate, sans ArenaText).
+  Widget _lockedCard() {
+    return Focus(
+      onFocusChange: widget.onFocusChange,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: ArenaColors.void_.withValues(alpha: 0.92),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: ArenaColors.danger, width: 1.5),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.timer_outlined,
+                color: ArenaColors.signalBlue, size: 26),
+            const SizedBox(height: 6),
+            const Text(
+              'Saisie du score bientôt disponible',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: ArenaColors.bone,
+                fontWeight: FontWeight.w800,
+                fontSize: 12,
+              ),
+            ),
+            const SizedBox(height: 2),
+            const Text(
+              'Joue ton match — 5 min minimum',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: ArenaColors.silver, fontSize: 11),
+            ),
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: widget.onClose,
+              child: const Text(
+                'Fermer',
+                style: TextStyle(
+                  color: ArenaColors.silver,
+                  fontSize: 12,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    // VERROU 5 min : tant que < 300 s d'enregistrement, la saisie est bloquée —
+    // on affiche seulement un compte à rebours (anti-triche).
+    const lockSeconds = 300;
+    if (widget.elapsedSeconds < lockSeconds) {
+      return _lockedCard();
+    }
     final canPen = widget.allowPenalties && _isTie;
     const sep = Padding(
       padding: EdgeInsets.symmetric(horizontal: 8),

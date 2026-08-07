@@ -232,7 +232,10 @@ void main() {
   // 2747 → 2748 le 2026-08-05 : +1 `ArenaColors.silverDim` — rail étape désactivée
   // 2748 → 2753 le 2026-08-05 : +5 `ArenaColors.*` — carte vidéo salle bloquée
   // 2753 → 2756 le 2026-08-05 : +3 `ArenaColors.*` — dropdown langue (admin vidéo)
-  const colorsDotBaseline = 2756; // occurrences de `Colors.`
+  // 2756 → 2760 le 2026-08-05 : +4 `ArenaColors.*` — mise en forme règles (page bloquée)
+  // 2760 → 2772 le 2026-08-05 : +12 `ArenaColors.*` — verrou saisie score (in-app + overlay)
+  // 2772 → 2790 le 2026-08-06 : +18 `ArenaColors.*` — santé du compte + date naissance + âge admin
+  const colorsDotBaseline = 2791; // occurrences de `Colors.`
   const colorHexBaseline = 28; // occurrences de `Color(0x`
   // Baseline GoogleFonts figée au 2026-06-26 : 185 usages directs de
   // `GoogleFonts.<font>` hors lib/core/theme, TOUS dans lib/features_admin_desktop/.
@@ -275,7 +278,8 @@ void main() {
   // (_GameInterestBreakdown). Même convention Fluent. À migrer vers ArenaText.
   // 230 → 231 le 2026-07-22 : +1 `GoogleFonts.spaceGrotesk` de l'aide « opérateur »
   // du tuto paiement admin desktop (parité Fluent). À migrer vers ArenaText.
-  const googleFontsBaseline = 231; // occurrences de `GoogleFonts.`
+  // 231 → 232 le 2026-08-06 : +1 `GoogleFonts.spaceGrotesk` — ligne âge (desktop users)
+  const googleFontsBaseline = 232; // occurrences de `GoogleFonts.`
 
   final colorsDotRe = RegExp(r'Colors\.');
   final colorHexRe = RegExp(r'Color\(0x');
