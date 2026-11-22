@@ -35,14 +35,16 @@ class WhatsAppGroupStatus {
       required && !joined && (inviteUrl?.trim().isNotEmpty ?? false);
 }
 
-/// Un emplacement de groupe WhatsApp (1..[WhatsAppGroupRepository.maxGroups])
-/// vu par le super-admin, avec son remplissage.
+/// Un groupe WhatsApp vu par le super-admin, avec son remplissage.
+///
+/// [id] est stable : le compteur de validations suit le groupe même si
+/// d'autres groupes sont ajoutés, supprimés ou réordonnés.
 ///
 /// ⚠️ `members` = joueurs ARENA ayant VALIDÉ ce groupe (WhatsApp n'expose
 /// aucune API de comptage des membres) : c'est une estimation du remplissage.
 class WhatsAppGroupSlot {
   const WhatsAppGroupSlot({
-    required this.position,
+    required this.id,
     this.inviteUrl = '',
     this.groupName = '',
     this.capacity = WhatsAppGroupRepository.defaultCapacity,
@@ -52,7 +54,7 @@ class WhatsAppGroupSlot {
 
   factory WhatsAppGroupSlot.fromRow(Map<String, dynamic> row) {
     return WhatsAppGroupSlot(
-      position: (row['position'] as num).toInt(),
+      id: (row['id'] as num).toInt(),
       inviteUrl: (row['invite_url'] as String?) ?? '',
       groupName: (row['group_name'] as String?) ?? '',
       capacity: (row['capacity'] as num?)?.toInt() ??
@@ -62,7 +64,7 @@ class WhatsAppGroupSlot {
     );
   }
 
-  final int position;
+  final int id;
   final String inviteUrl;
   final String groupName;
   final int capacity;
@@ -79,9 +81,6 @@ class WhatsAppGroupRepository {
   const WhatsAppGroupRepository(this._client);
 
   final SupabaseClient _client;
-
-  /// Nombre maximal de groupes configurables.
-  static const maxGroups = 5;
 
   /// Capacité par groupe (plafond WhatsApp 1024, marge pour les validations
   /// simultanées) — valeur par défaut côté serveur.
@@ -108,38 +107,54 @@ class WhatsAppGroupRepository {
     return res == true;
   }
 
-  /// Les [maxGroups] emplacements (super-admin), complétés par des
-  /// emplacements vides pour ceux non configurés.
+  /// Tous les groupes, dans l'ordre (super-admin).
   Future<List<WhatsAppGroupSlot>> fetchGroups() async {
     final res = await _client.rpc<dynamic>('admin_list_whatsapp_groups');
-    final byPosition = <int, WhatsAppGroupSlot>{};
-    if (res is List) {
-      for (final row in res.whereType<Map<dynamic, dynamic>>()) {
-        final slot =
-            WhatsAppGroupSlot.fromRow(Map<String, dynamic>.from(row));
-        byPosition[slot.position] = slot;
-      }
-    }
+    if (res is! List) return const [];
     return [
-      for (var p = 1; p <= maxGroups; p++)
-        byPosition[p] ?? WhatsAppGroupSlot(position: p),
+      for (final row in res.whereType<Map<dynamic, dynamic>>())
+        WhatsAppGroupSlot.fromRow(Map<String, dynamic>.from(row)),
     ];
   }
 
-  /// Enregistre les emplacements dans l'ordre (super-admin). Lien ET nom
-  /// vides = emplacement libéré ; tous vides = étape désactivée.
+  /// Enregistre la liste complète, dans l'ordre (super-admin) :
+  /// - `id` connu → groupe mis à jour (son compteur est conservé) ;
+  /// - `id` null → nouveau groupe ;
+  /// - groupe existant absent de la liste → supprimé ;
+  /// - lien ET nom vides → ignoré. Liste vide = étape désactivée.
   Future<void> saveGroups(
-    List<({String inviteUrl, String groupName})> groups,
+    List<({int? id, String inviteUrl, String groupName})> groups,
   ) async {
     await _client.rpc<dynamic>(
       'set_whatsapp_groups',
       params: {
         'p_groups': [
           for (final g in groups)
-            {'invite_url': g.inviteUrl.trim(), 'group_name': g.groupName.trim()},
+            {
+              'id': g.id,
+              'invite_url': g.inviteUrl.trim(),
+              'group_name': g.groupName.trim(),
+            },
         ],
       },
     );
+  }
+
+  /// Nom suggéré pour un nouveau groupe : « Arena_Game NNN », NNN = numéro
+  /// suivant le plus grand déjà utilisé (ou le rang si aucun ne suit ce
+  /// modèle).
+  static String suggestNextName(Iterable<String> existingNames) {
+    final pattern = RegExp(r'(\d+)\s*$');
+    var maxNumber = 0;
+    var count = 0;
+    for (final name in existingNames) {
+      count++;
+      final m = pattern.firstMatch(name.trim());
+      final n = m == null ? null : int.tryParse(m.group(1)!);
+      if (n != null && n > maxNumber) maxNumber = n;
+    }
+    final next = (maxNumber > 0 ? maxNumber : count) + 1;
+    return 'Arena_Game ${next.toString().padLeft(3, '0')}';
   }
 }
 

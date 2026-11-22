@@ -9,9 +9,9 @@ import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Écran super-admin : jusqu'à 5 groupes WhatsApp que TOUT joueur doit
-/// rejoindre. Les nouveaux joueurs reçoivent le lien du premier groupe non
-/// plein (1020 validations) ; bascule automatique sur le suivant.
+/// Écran super-admin : groupes WhatsApp que TOUT joueur doit rejoindre, en
+/// nombre illimité (« Nouveau groupe »). Les nouveaux joueurs reçoivent le
+/// lien du premier groupe non plein (1020 validations), puis du suivant.
 class SuperAdminWhatsAppGroup extends ConsumerStatefulWidget {
   const SuperAdminWhatsAppGroup({super.key});
 
@@ -20,17 +20,28 @@ class SuperAdminWhatsAppGroup extends ConsumerStatefulWidget {
       _SuperAdminWhatsAppGroupState();
 }
 
+/// Groupe en cours d'édition. [stats] est null pour un groupe pas encore
+/// enregistré.
+class _GroupDraft {
+  _GroupDraft({this.stats, String url = '', String name = ''})
+      : url = TextEditingController(text: url),
+        name = TextEditingController(text: name);
+
+  final WhatsAppGroupSlot? stats;
+  final TextEditingController url;
+  final TextEditingController name;
+
+  int? get id => stats?.id;
+
+  void dispose() {
+    url.dispose();
+    name.dispose();
+  }
+}
+
 class _SuperAdminWhatsAppGroupState
     extends ConsumerState<SuperAdminWhatsAppGroup> {
-  final _urls = List.generate(
-    WhatsAppGroupRepository.maxGroups,
-    (_) => TextEditingController(),
-  );
-  final _names = List.generate(
-    WhatsAppGroupRepository.maxGroups,
-    (_) => TextEditingController(),
-  );
-  List<WhatsAppGroupSlot> _slots = const [];
+  final List<_GroupDraft> _drafts = [];
 
   bool _loading = true;
   bool _saving = false;
@@ -44,20 +55,25 @@ class _SuperAdminWhatsAppGroupState
 
   @override
   void dispose() {
-    for (final c in [..._urls, ..._names]) {
-      c.dispose();
+    for (final d in _drafts) {
+      d.dispose();
     }
     super.dispose();
   }
 
   Future<void> _load() async {
     try {
-      final slots = await ref.read(whatsAppGroupRepositoryProvider).fetchGroups();
-      for (var i = 0; i < slots.length; i++) {
-        _urls[i].text = slots[i].inviteUrl;
-        _names[i].text = slots[i].groupName;
+      final groups =
+          await ref.read(whatsAppGroupRepositoryProvider).fetchGroups();
+      for (final d in _drafts) {
+        d.dispose();
       }
-      _slots = slots;
+      _drafts
+        ..clear()
+        ..addAll([
+          for (final g in groups)
+            _GroupDraft(stats: g, url: g.inviteUrl, name: g.groupName),
+        ]);
       _error = null;
     } catch (e) {
       _error = arenaErrorMessage(e);
@@ -66,11 +82,52 @@ class _SuperAdminWhatsAppGroupState
     }
   }
 
+  void _addGroup() {
+    final suggestion = WhatsAppGroupRepository.suggestNextName(
+      _drafts.map((d) => d.name.text).where((n) => n.trim().isNotEmpty),
+    );
+    setState(() => _drafts.add(_GroupDraft(name: suggestion)));
+  }
+
+  Future<void> _removeGroup(int index) async {
+    final draft = _drafts[index];
+    final members = draft.stats?.members ?? 0;
+    if (members > 0) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Supprimer ce groupe ?'),
+          content: Text(
+            '$members joueur(s) l’ont validé. Ils restent validés, mais ne '
+            'compteront plus dans le remplissage. La suppression est '
+            'appliquée à l’enregistrement.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Annuler'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Supprimer'),
+            ),
+          ],
+        ),
+      );
+      if (ok != true || !mounted) return;
+    }
+    setState(() {
+      _drafts.removeAt(index);
+    });
+    draft.dispose();
+  }
+
   Future<void> _save({bool disable = false}) async {
     if (disable) {
-      for (final c in [..._urls, ..._names]) {
-        c.clear();
+      for (final d in _drafts) {
+        d.dispose();
       }
+      _drafts.clear();
     }
     setState(() {
       _saving = true;
@@ -78,8 +135,8 @@ class _SuperAdminWhatsAppGroupState
     });
     try {
       await ref.read(whatsAppGroupRepositoryProvider).saveGroups([
-        for (var i = 0; i < WhatsAppGroupRepository.maxGroups; i++)
-          (inviteUrl: _urls[i].text, groupName: _names[i].text),
+        for (final d in _drafts)
+          (id: d.id, inviteUrl: d.url.text, groupName: d.name.text),
       ]);
       await _load();
       if (mounted) {
@@ -101,8 +158,8 @@ class _SuperAdminWhatsAppGroupState
   }
 
   bool get _allFull {
-    final configured = _slots.where((s) => s.isConfigured).toList();
-    return configured.isNotEmpty && configured.every((s) => s.isFull);
+    final saved = _drafts.map((d) => d.stats).whereType<WhatsAppGroupSlot>();
+    return saved.isNotEmpty && saved.every((s) => s.isFull);
   }
 
   @override
@@ -143,25 +200,40 @@ class _SuperAdminWhatsAppGroupState
                       ),
                     ],
                     const SizedBox(height: ArenaSpacing.lg),
-                    for (var i = 0; i < WhatsAppGroupRepository.maxGroups; i++) ...[
-                      _SlotCard(
-                        slot: i < _slots.length
-                            ? _slots[i]
-                            : WhatsAppGroupSlot(position: i + 1),
-                        urlCtrl: _urls[i],
-                        nameCtrl: _names[i],
+                    if (_drafts.isEmpty)
+                      Padding(
+                        padding:
+                            const EdgeInsets.only(bottom: ArenaSpacing.md),
+                        child: Text(
+                          'Aucun groupe : l’étape est inactive. Ajoute un '
+                          'groupe pour l’activer.',
+                          style: ArenaText.body
+                              .copyWith(color: ArenaColors.silver),
+                        ),
+                      ),
+                    for (var i = 0; i < _drafts.length; i++) ...[
+                      _GroupCard(
+                        number: i + 1,
+                        draft: _drafts[i],
                         enabled: !_saving,
+                        onRemove: () => _removeGroup(i),
                       ),
                       const SizedBox(height: ArenaSpacing.md),
                     ],
+                    ArenaButton(
+                      label: '+ NOUVEAU GROUPE',
+                      variant: ArenaButtonVariant.secondary,
+                      onPressed: _saving ? null : _addGroup,
+                    ),
                     if (_error != null) ...[
+                      const SizedBox(height: ArenaSpacing.md),
                       Text(
                         _error!,
                         style: ArenaText.small
                             .copyWith(color: ArenaColors.neonRed),
                       ),
-                      const SizedBox(height: ArenaSpacing.md),
                     ],
+                    const SizedBox(height: ArenaSpacing.lg),
                     ArenaButton(
                       label: _saving ? 'ENREGISTREMENT…' : 'ENREGISTRER',
                       onPressed: _saving ? null : _save,
@@ -171,7 +243,9 @@ class _SuperAdminWhatsAppGroupState
                     ArenaButton(
                       label: 'DÉSACTIVER L’ÉTAPE',
                       variant: ArenaButtonVariant.ghost,
-                      onPressed: _saving ? null : () => _save(disable: true),
+                      onPressed: _saving || _drafts.isEmpty
+                          ? null
+                          : () => _save(disable: true),
                     ),
                   ],
                 ),
@@ -181,27 +255,27 @@ class _SuperAdminWhatsAppGroupState
   }
 }
 
-class _SlotCard extends StatelessWidget {
-  const _SlotCard({
-    required this.slot,
-    required this.urlCtrl,
-    required this.nameCtrl,
+class _GroupCard extends StatelessWidget {
+  const _GroupCard({
+    required this.number,
+    required this.draft,
     required this.enabled,
+    required this.onRemove,
   });
 
-  final WhatsAppGroupSlot slot;
-  final TextEditingController urlCtrl;
-  final TextEditingController nameCtrl;
+  final int number;
+  final _GroupDraft draft;
   final bool enabled;
+  final VoidCallback onRemove;
 
   @override
   Widget build(BuildContext context) {
-    final number = slot.position.toString().padLeft(3, '0');
-    final (String badge, Color color) = !slot.isConfigured
-        ? ('VIDE', ArenaColors.silver)
-        : slot.isCurrent
+    final stats = draft.stats;
+    final (String badge, Color color) = stats == null
+        ? ('NOUVEAU', ArenaColors.signalBlue)
+        : stats.isCurrent
             ? ('EN COURS', ArenaColors.success)
-            : slot.isFull
+            : stats.isFull
                 ? ('PLEIN', ArenaColors.neonRed)
                 : ('EN ATTENTE', ArenaColors.silver);
     return ArenaCard(
@@ -212,7 +286,7 @@ class _SlotCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  'Groupe ${slot.position}',
+                  'Groupe $number',
                   style: ArenaText.body.copyWith(fontWeight: FontWeight.w800),
                 ),
               ),
@@ -233,32 +307,39 @@ class _SlotCard extends StatelessWidget {
                   ),
                 ),
               ),
+              IconButton(
+                tooltip: 'Supprimer ce groupe',
+                icon: const Icon(
+                  Icons.delete_outline,
+                  color: ArenaColors.neonRed,
+                ),
+                onPressed: enabled ? onRemove : null,
+              ),
             ],
           ),
-          if (slot.isConfigured) ...[
-            const SizedBox(height: ArenaSpacing.xs),
+          if (stats != null) ...[
             Text(
-              '${slot.members} / ${slot.capacity} validés',
+              '${stats.members} / ${stats.capacity} validés',
               style: ArenaText.small.copyWith(color: ArenaColors.silver),
             ),
             const SizedBox(height: ArenaSpacing.xs),
             LinearProgressIndicator(
-              value: (slot.members / slot.capacity).clamp(0, 1).toDouble(),
+              value: (stats.members / stats.capacity).clamp(0, 1).toDouble(),
               color: color,
               backgroundColor: ArenaColors.border,
             ),
+            const SizedBox(height: ArenaSpacing.sm),
           ],
-          const SizedBox(height: ArenaSpacing.md),
           ArenaTextField(
-            controller: urlCtrl,
+            controller: draft.url,
             hint: 'https://chat.whatsapp.com/…',
             keyboardType: TextInputType.url,
             enabled: enabled,
           ),
           const SizedBox(height: ArenaSpacing.sm),
           ArenaTextField(
-            controller: nameCtrl,
-            hint: 'Arena_Game $number',
+            controller: draft.name,
+            hint: 'Nom exact du groupe',
             enabled: enabled,
           ),
         ],
