@@ -47,10 +47,11 @@ jobs:
           # `stable` tracking est suffisamment stable pour ARENA, et
           # évite de devoir bumper la CI à chaque release.
           channel: stable
-          # Épinglé : le canal `stable` non pinné a tiré une Flutter exigeant
-          # Gradle ≥ 9.3.1 (projet pinné 8.14) → builds natifs cassés. 3.41.6
-          # = version locale connue-bonne (Dart ≥ 3.8 pour app_usage OK).
-          flutter-version: 3.41.6
+          # Épinglé : un `stable` flottant a déjà cassé tous les builds natifs
+          # (nouvelle Flutter → nouvelles exigences Gradle/AGP). Bumper
+          # explicitement, en phase avec le SDK local et android/
+          # (Flutter 3.50.1 ↔ Gradle 9.5 / AGP 9.3.1 / KGP 2.4.20).
+          flutter-version: 3.50.1
           cache: true
 
       - name: Print versions
@@ -193,10 +194,11 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
-          # Épinglé : le canal `stable` non pinné a tiré une Flutter exigeant
-          # Gradle ≥ 9.3.1 (projet pinné 8.14) → builds natifs cassés. 3.41.6
-          # = version locale connue-bonne (Dart ≥ 3.8 pour app_usage OK).
-          flutter-version: 3.41.6
+          # Épinglé : un `stable` flottant a déjà cassé tous les builds natifs
+          # (nouvelle Flutter → nouvelles exigences Gradle/AGP). Bumper
+          # explicitement, en phase avec le SDK local et android/
+          # (Flutter 3.50.1 ↔ Gradle 9.5 / AGP 9.3.1 / KGP 2.4.20).
+          flutter-version: 3.50.1
           cache: true
 
       - name: Stub .env (CI uses placeholders, no real secrets)
@@ -253,10 +255,11 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
-          # Épinglé : le canal `stable` non pinné a tiré une Flutter exigeant
-          # Gradle ≥ 9.3.1 (projet pinné 8.14) → builds natifs cassés. 3.41.6
-          # = version locale connue-bonne (Dart ≥ 3.8 pour app_usage OK).
-          flutter-version: 3.41.6
+          # Épinglé : un `stable` flottant a déjà cassé tous les builds natifs
+          # (nouvelle Flutter → nouvelles exigences Gradle/AGP). Bumper
+          # explicitement, en phase avec le SDK local et android/
+          # (Flutter 3.50.1 ↔ Gradle 9.5 / AGP 9.3.1 / KGP 2.4.20).
+          flutter-version: 3.50.1
           cache: true
 
       - name: Stub .env (CI uses placeholders, no real secrets)
@@ -346,6 +349,34 @@ jobs:
             Write-Host 'libwebrtc déjà pré-stagé — skip.'
             exit 0
           }
+          # flutter_webrtc >= 1.6 : l'URL est composée depuis libwebrtc_version.ini
+          # (<download_url>/<binary_version>/libwebrtc-win-x64-release.zip) et le
+          # CMake extrait LUI-MÊME dans le vrai dossier (REALPATH → plus de souci
+          # de symlink). On se contente donc de pré-télécharger le zip au chemin
+          # attendu, avec retry (le file(DOWNLOAD) CMake n'en a pas).
+          $ini = Join-Path $tp 'libwebrtc_version.ini'
+          if (Test-Path $ini) {
+            $kv = @{}
+            Get-Content $ini | ForEach-Object {
+              if ($_ -match '^\s*([A-Za-z_]+)\s*=\s*(\S+)\s*$') { $kv[$Matches[1]] = $Matches[2] }
+            }
+            if (-not $kv['download_url'] -or -not $kv['binary_version']) {
+              throw 'libwebrtc_version.ini : download_url / binary_version introuvables'
+            }
+            $asset = 'libwebrtc-win-x64-release'
+            $url = $kv['download_url'].TrimEnd('/') + '/' + $kv['binary_version'] + '/' + $asset + '.zip'
+            $dl = Join-Path $tp 'downloads'
+            New-Item -ItemType Directory -Force -Path $dl | Out-Null
+            $zip = Join-Path $dl ($asset + '.zip')
+            if (Test-Path $zip) { Write-Host 'zip libwebrtc déjà présent — skip.'; exit 0 }
+            Write-Host "Téléchargement (curl --retry) $url"
+            curl.exe --fail --location --retry 6 --retry-all-errors --retry-delay 5 `
+              --connect-timeout 30 --max-time 900 -o $zip $url
+            if ($LASTEXITCODE -ne 0) { throw "Échec téléchargement $url" }
+            Write-Host 'Pré-stage flutter_webrtc (>= 1.6, zip seul) OK.'
+            exit 0
+          }
+          # flutter_webrtc < 1.6 : URL littérale + extraction manuelle hors symlink.
           $cml = Get-Content (Join-Path $tp 'CMakeLists.txt') -Raw
           $url = [regex]::Match($cml, 'DOWNLOAD_URL\s+"([^"]+)"').Groups[1].Value
           if (-not $url) { throw 'URL libwebrtc introuvable dans CMakeLists.txt' }

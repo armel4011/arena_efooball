@@ -35,10 +35,6 @@ android {
         isCoreLibraryDesugaringEnabled = true
     }
 
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
-    }
-
     defaultConfig {
         applicationId = "com.arena.arena"
         minSdk = flutter.minSdkVersion
@@ -57,6 +53,12 @@ android {
         targetSdk = 35
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+    }
+
+    // AGP 9 : `resValues` est désactivé par défaut — requis par les
+    // `resValue("string", "app_name", …)` des flavors user/admin ci-dessous.
+    buildFeatures {
+        resValues = true
     }
 
     flavorDimensions += "app"
@@ -155,6 +157,14 @@ android {
                 "**/libagora_video_quality_analyzer_extension.so",
             )
         }
+    }
+}
+
+// KGP 2.x : `android { kotlinOptions {} }` est déprécié → DSL `compilerOptions`
+// (forme du template Flutter 3.50).
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
     }
 }
 
