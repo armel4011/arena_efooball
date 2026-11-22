@@ -6,8 +6,8 @@ import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Écran super-admin desktop : groupe WhatsApp obligatoire pour tous les
-/// joueurs (`whatsapp_group_config`). Équivalent Fluent de
+/// Écran super-admin desktop : jusqu'à 5 groupes WhatsApp obligatoires
+/// (bascule automatique à 1020 validations). Équivalent Fluent de
 /// SuperAdminWhatsAppGroup.
 class DesktopWhatsAppGroupPage extends ConsumerStatefulWidget {
   const DesktopWhatsAppGroupPage({super.key});
@@ -19,8 +19,15 @@ class DesktopWhatsAppGroupPage extends ConsumerStatefulWidget {
 
 class _DesktopWhatsAppGroupPageState
     extends ConsumerState<DesktopWhatsAppGroupPage> {
-  final _inviteUrl = TextEditingController();
-  final _groupName = TextEditingController();
+  final _urls = List.generate(
+    WhatsAppGroupRepository.maxGroups,
+    (_) => TextEditingController(),
+  );
+  final _names = List.generate(
+    WhatsAppGroupRepository.maxGroups,
+    (_) => TextEditingController(),
+  );
+  List<WhatsAppGroupSlot> _slots = const [];
 
   bool _loading = true;
   bool _saving = false;
@@ -35,16 +42,20 @@ class _DesktopWhatsAppGroupPageState
 
   @override
   void dispose() {
-    _inviteUrl.dispose();
-    _groupName.dispose();
+    for (final c in [..._urls, ..._names]) {
+      c.dispose();
+    }
     super.dispose();
   }
 
   Future<void> _load() async {
     try {
-      final cfg = await ref.read(whatsAppGroupRepositoryProvider).fetchConfig();
-      _inviteUrl.text = cfg.inviteUrl ?? '';
-      _groupName.text = cfg.groupName ?? '';
+      final slots = await ref.read(whatsAppGroupRepositoryProvider).fetchGroups();
+      for (var i = 0; i < slots.length; i++) {
+        _urls[i].text = slots[i].inviteUrl;
+        _names[i].text = slots[i].groupName;
+      }
+      _slots = slots;
     } catch (e) {
       _error = arenaErrorMessage(e);
     } finally {
@@ -54,8 +65,9 @@ class _DesktopWhatsAppGroupPageState
 
   Future<void> _save({bool disable = false}) async {
     if (disable) {
-      _inviteUrl.clear();
-      _groupName.clear();
+      for (final c in [..._urls, ..._names]) {
+        c.clear();
+      }
     }
     setState(() {
       _saving = true;
@@ -63,15 +75,16 @@ class _DesktopWhatsAppGroupPageState
       _success = null;
     });
     try {
-      await ref.read(whatsAppGroupRepositoryProvider).saveConfig(
-            inviteUrl: _inviteUrl.text,
-            groupName: _groupName.text,
-          );
+      await ref.read(whatsAppGroupRepositoryProvider).saveGroups([
+        for (var i = 0; i < WhatsAppGroupRepository.maxGroups; i++)
+          (inviteUrl: _urls[i].text, groupName: _names[i].text),
+      ]);
+      await _load();
       if (mounted) {
         setState(
           () => _success = disable
               ? 'Étape « groupe WhatsApp » désactivée.'
-              : 'Groupe WhatsApp enregistré.',
+              : 'Groupes WhatsApp enregistrés.',
         );
       }
     } catch (e) {
@@ -81,10 +94,15 @@ class _DesktopWhatsAppGroupPageState
     }
   }
 
+  bool get _allFull {
+    final configured = _slots.where((s) => s.isConfigured).toList();
+    return configured.isNotEmpty && configured.every((s) => s.isFull);
+  }
+
   @override
   Widget build(BuildContext context) {
     return ScaffoldPage(
-      header: const PageHeader(title: Text('GROUPE WHATSAPP')),
+      header: const PageHeader(title: Text('GROUPES WHATSAPP')),
       content: _loading
           ? const Center(child: ProgressRing())
           : Padding(
@@ -94,27 +112,34 @@ class _DesktopWhatsAppGroupPageState
               child: ListView(
                 children: [
                   Text(
-                    'Tout joueur devra rejoindre ce groupe puis saisir son nom '
-                    'pour continuer à utiliser l’app. La saisie tolère '
-                    'majuscules, accents, espaces et emojis.',
+                    'Tout joueur doit rejoindre l’un de ces groupes puis saisir '
+                    'son nom. Les nouveaux reçoivent le lien du premier groupe '
+                    'non plein (${WhatsAppGroupRepository.defaultCapacity} '
+                    'validations), puis du suivant. Le remplissage compte les '
+                    'joueurs ARENA ayant validé (WhatsApp ne communique pas son '
+                    'nombre de membres).',
                     style: GoogleFonts.spaceGrotesk(color: ArenaColors.silver),
                   ),
-                  const SizedBox(height: 16),
-                  _field(
-                    "Lien d'invitation",
-                    _inviteUrl,
-                    'https://chat.whatsapp.com/…',
-                  ),
-                  _field('Nom exact du groupe', _groupName, 'Arena Communauté'),
-                  Text(
-                    'Le nom reste secret : il n’est jamais envoyé aux joueurs. '
-                    'Si tu renommes le groupe, mets ce champ à jour (les '
-                    'joueurs déjà validés le restent).',
-                    style: GoogleFonts.spaceGrotesk(
-                      color: ArenaColors.silver,
-                      fontSize: 12,
+                  if (_allFull) ...[
+                    const SizedBox(height: 12),
+                    const InfoBar(
+                      title: Text('Tous les groupes sont pleins'),
+                      content: Text(
+                        'Les nouveaux joueurs ne sont plus bloqués. Ajoute un '
+                        'groupe.',
+                      ),
+                      severity: InfoBarSeverity.warning,
                     ),
-                  ),
+                  ],
+                  const SizedBox(height: 16),
+                  for (var i = 0; i < WhatsAppGroupRepository.maxGroups; i++)
+                    _slotCard(
+                      i < _slots.length
+                          ? _slots[i]
+                          : WhatsAppGroupSlot(position: i + 1),
+                      _urls[i],
+                      _names[i],
+                    ),
                   if (_error != null) ...[
                     const SizedBox(height: 12),
                     InfoBar(
@@ -166,27 +191,66 @@ class _DesktopWhatsAppGroupPageState
     );
   }
 
-  Widget _field(
-    String label,
-    TextEditingController ctrl,
-    String placeholder,
+  Widget _slotCard(
+    WhatsAppGroupSlot slot,
+    TextEditingController urlCtrl,
+    TextEditingController nameCtrl,
   ) {
+    final number = slot.position.toString().padLeft(3, '0');
+    final (String badge, Color color) = !slot.isConfigured
+        ? ('VIDE', ArenaColors.silver)
+        : slot.isCurrent
+            ? ('EN COURS', ArenaColors.success)
+            : slot.isFull
+                ? ('PLEIN', ArenaColors.neonRed)
+                : ('EN ATTENTE', ArenaColors.silver);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: GoogleFonts.spaceGrotesk(
-              color: ArenaColors.silver,
-              fontWeight: FontWeight.w700,
-              fontSize: 12,
+      child: Card(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Groupe ${slot.position}',
+                    style: GoogleFonts.spaceGrotesk(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                Text(
+                  badge,
+                  style: TextStyle(color: color, fontWeight: FontWeight.w800),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 4),
-          TextBox(controller: ctrl, placeholder: placeholder),
-        ],
+            if (slot.isConfigured) ...[
+              const SizedBox(height: 6),
+              Text(
+                '${slot.members} / ${slot.capacity} validés',
+                style: const TextStyle(color: ArenaColors.silver, fontSize: 12),
+              ),
+              const SizedBox(height: 4),
+              ProgressBar(
+                value: (slot.members / slot.capacity * 100).clamp(0, 100).toDouble(),
+              ),
+            ],
+            const SizedBox(height: 10),
+            TextBox(
+              controller: urlCtrl,
+              placeholder: 'https://chat.whatsapp.com/…',
+              enabled: !_saving,
+            ),
+            const SizedBox(height: 8),
+            TextBox(
+              controller: nameCtrl,
+              placeholder: 'Arena_Game $number',
+              enabled: !_saving,
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -35,18 +35,57 @@ class WhatsAppGroupStatus {
       required && !joined && (inviteUrl?.trim().isNotEmpty ?? false);
 }
 
-/// Réglage du groupe (lecture super-admin uniquement, RLS).
-class WhatsAppGroupConfig {
-  const WhatsAppGroupConfig({this.inviteUrl, this.groupName});
+/// Un emplacement de groupe WhatsApp (1..[WhatsAppGroupRepository.maxGroups])
+/// vu par le super-admin, avec son remplissage.
+///
+/// ⚠️ `members` = joueurs ARENA ayant VALIDÉ ce groupe (WhatsApp n'expose
+/// aucune API de comptage des membres) : c'est une estimation du remplissage.
+class WhatsAppGroupSlot {
+  const WhatsAppGroupSlot({
+    required this.position,
+    this.inviteUrl = '',
+    this.groupName = '',
+    this.capacity = WhatsAppGroupRepository.defaultCapacity,
+    this.members = 0,
+    this.isCurrent = false,
+  });
 
-  final String? inviteUrl;
-  final String? groupName;
+  factory WhatsAppGroupSlot.fromRow(Map<String, dynamic> row) {
+    return WhatsAppGroupSlot(
+      position: (row['position'] as num).toInt(),
+      inviteUrl: (row['invite_url'] as String?) ?? '',
+      groupName: (row['group_name'] as String?) ?? '',
+      capacity: (row['capacity'] as num?)?.toInt() ??
+          WhatsAppGroupRepository.defaultCapacity,
+      members: (row['members'] as num?)?.toInt() ?? 0,
+      isCurrent: row['is_current'] == true,
+    );
+  }
+
+  final int position;
+  final String inviteUrl;
+  final String groupName;
+  final int capacity;
+  final int members;
+
+  /// Groupe dont le lien est actuellement proposé aux nouveaux joueurs.
+  final bool isCurrent;
+
+  bool get isConfigured => inviteUrl.isNotEmpty && groupName.isNotEmpty;
+  bool get isFull => members >= capacity;
 }
 
 class WhatsAppGroupRepository {
   const WhatsAppGroupRepository(this._client);
 
   final SupabaseClient _client;
+
+  /// Nombre maximal de groupes configurables.
+  static const maxGroups = 5;
+
+  /// Capacité par groupe (plafond WhatsApp 1024, marge pour les validations
+  /// simultanées) — valeur par défaut côté serveur.
+  static const defaultCapacity = 1020;
 
   /// Statut du joueur courant. `null` si la réponse est vide (profil absent).
   Future<WhatsAppGroupStatus?> fetchMyStatus() async {
@@ -69,27 +108,37 @@ class WhatsAppGroupRepository {
     return res == true;
   }
 
-  /// Réglage courant (super-admin : la RLS filtre les autres rôles à 0 ligne).
-  Future<WhatsAppGroupConfig> fetchConfig() async {
-    final row = await _client
-        .from('whatsapp_group_config')
-        .select('invite_url, group_name')
-        .eq('id', 1)
-        .maybeSingle();
-    return WhatsAppGroupConfig(
-      inviteUrl: row?['invite_url'] as String?,
-      groupName: row?['group_name'] as String?,
-    );
+  /// Les [maxGroups] emplacements (super-admin), complétés par des
+  /// emplacements vides pour ceux non configurés.
+  Future<List<WhatsAppGroupSlot>> fetchGroups() async {
+    final res = await _client.rpc<dynamic>('admin_list_whatsapp_groups');
+    final byPosition = <int, WhatsAppGroupSlot>{};
+    if (res is List) {
+      for (final row in res.whereType<Map<dynamic, dynamic>>()) {
+        final slot =
+            WhatsAppGroupSlot.fromRow(Map<String, dynamic>.from(row));
+        byPosition[slot.position] = slot;
+      }
+    }
+    return [
+      for (var p = 1; p <= maxGroups; p++)
+        byPosition[p] ?? WhatsAppGroupSlot(position: p),
+    ];
   }
 
-  /// Enregistre le groupe (super-admin). Deux champs vides = étape désactivée.
-  Future<void> saveConfig({
-    required String inviteUrl,
-    required String groupName,
-  }) async {
+  /// Enregistre les emplacements dans l'ordre (super-admin). Lien ET nom
+  /// vides = emplacement libéré ; tous vides = étape désactivée.
+  Future<void> saveGroups(
+    List<({String inviteUrl, String groupName})> groups,
+  ) async {
     await _client.rpc<dynamic>(
-      'set_whatsapp_group_config',
-      params: {'p_invite_url': inviteUrl, 'p_group_name': groupName},
+      'set_whatsapp_groups',
+      params: {
+        'p_groups': [
+          for (final g in groups)
+            {'invite_url': g.inviteUrl.trim(), 'group_name': g.groupName.trim()},
+        ],
+      },
     );
   }
 }
