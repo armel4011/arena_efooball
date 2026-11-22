@@ -6,141 +6,122 @@ part of 'competition.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-_$CompetitionImpl _$$CompetitionImplFromJson(Map<String, dynamic> json) =>
-    _$CompetitionImpl(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      game: const GameTypeConverter().fromJson(json['game'] as String?),
-      format:
-          const TournamentFormatConverter().fromJson(json['format'] as String?),
-      startDate: DateTime.parse(json['start_date'] as String),
-      status: json['status'] == null
-          ? CompetitionStatus.draft
-          : const CompetitionStatusConverter()
-              .fromJson(json['status'] as String?),
-      maxPlayers: (json['max_players'] as num?)?.toInt() ?? 2,
-      currentPlayers: (json['current_players'] as num?)?.toInt() ?? 0,
-      registrationFee: (json['registration_fee'] as num?)?.toDouble() ?? 0,
-      registrationCurrency: json['registration_currency'] as String? ?? 'XAF',
-      countryCode: json['country_code'] as String? ?? 'CM',
-      commissionPct: (json['commission_pct'] as num?)?.toDouble() ?? 10,
-      prizePoolLocal: (json['prize_pool_local'] as num?)?.toDouble() ?? 0,
-      commissionXaf: (json['commission_xaf'] as num?)?.toDouble() ?? 0,
-      sponsorBonusLocal: (json['sponsor_bonus_local'] as num?)?.toDouble() ?? 0,
-      description: json['description'] as String?,
-      bannerUrl: json['banner_url'] as String?,
-      registrationOpensAt: json['registration_opens_at'] == null
-          ? null
-          : DateTime.parse(json['registration_opens_at'] as String),
-      registrationClosesAt: json['registration_closes_at'] == null
-          ? null
-          : DateTime.parse(json['registration_closes_at'] as String),
-      endDate: json['end_date'] == null
-          ? null
-          : DateTime.parse(json['end_date'] as String),
-      prizePoolCurrency: json['prize_pool_currency'] as String?,
-      createdBy: json['created_by'] as String?,
-      createdAt: json['created_at'] == null
-          ? null
-          : DateTime.parse(json['created_at'] as String),
-      updatedAt: json['updated_at'] == null
-          ? null
-          : DateTime.parse(json['updated_at'] as String),
-      orangeMoneyCode: json['orange_money_code'] as String?,
-      mtnMomoCode: json['mtn_momo_code'] as String?,
-      prizeDistribution: (json['prize_distribution'] as List<dynamic>?)
-              ?.map((e) => (e as num).toInt())
-              .toList() ??
-          const <int>[0, 0, 0, 0],
-      matchIntervalMinutes:
-          (json['match_interval_minutes'] as num?)?.toInt() ?? 60,
-      autoGenerateBracket: json['auto_generate_bracket'] as bool? ?? true,
-      thirdPlaceMatch: json['third_place_match'] as bool? ?? false,
-      referralQuota: (json['referral_quota'] as num?)?.toInt() ?? 0,
-      referralActivityMode: json['referral_activity_mode'] as String? ?? 'any',
-      roundIntervals: (json['round_intervals'] as List<dynamic>?)
+_Competition _$CompetitionFromJson(Map<String, dynamic> json) => _Competition(
+  id: json['id'] as String,
+  name: json['name'] as String,
+  game: const GameTypeConverter().fromJson(json['game'] as String?),
+  format: const TournamentFormatConverter().fromJson(json['format'] as String?),
+  startDate: DateTime.parse(json['start_date'] as String),
+  status: json['status'] == null
+      ? CompetitionStatus.draft
+      : const CompetitionStatusConverter().fromJson(json['status'] as String?),
+  maxPlayers: (json['max_players'] as num?)?.toInt() ?? 2,
+  currentPlayers: (json['current_players'] as num?)?.toInt() ?? 0,
+  registrationFee: (json['registration_fee'] as num?)?.toDouble() ?? 0,
+  registrationCurrency: json['registration_currency'] as String? ?? 'XAF',
+  countryCode: json['country_code'] as String? ?? 'CM',
+  commissionPct: (json['commission_pct'] as num?)?.toDouble() ?? 10,
+  prizePoolLocal: (json['prize_pool_local'] as num?)?.toDouble() ?? 0,
+  commissionXaf: (json['commission_xaf'] as num?)?.toDouble() ?? 0,
+  sponsorBonusLocal: (json['sponsor_bonus_local'] as num?)?.toDouble() ?? 0,
+  description: json['description'] as String?,
+  bannerUrl: json['banner_url'] as String?,
+  registrationOpensAt: json['registration_opens_at'] == null
+      ? null
+      : DateTime.parse(json['registration_opens_at'] as String),
+  registrationClosesAt: json['registration_closes_at'] == null
+      ? null
+      : DateTime.parse(json['registration_closes_at'] as String),
+  endDate: json['end_date'] == null
+      ? null
+      : DateTime.parse(json['end_date'] as String),
+  prizePoolCurrency: json['prize_pool_currency'] as String?,
+  createdBy: json['created_by'] as String?,
+  createdAt: json['created_at'] == null
+      ? null
+      : DateTime.parse(json['created_at'] as String),
+  updatedAt: json['updated_at'] == null
+      ? null
+      : DateTime.parse(json['updated_at'] as String),
+  orangeMoneyCode: json['orange_money_code'] as String?,
+  mtnMomoCode: json['mtn_momo_code'] as String?,
+  prizeDistribution:
+      (json['prize_distribution'] as List<dynamic>?)
           ?.map((e) => (e as num).toInt())
-          .toList(),
-      formatConfig: json['format_config'] as Map<String, dynamic>? ??
-          const <String, dynamic>{},
-      androidStoreUrl: json['android_store_url'] as String?,
-      iosStoreUrl: json['ios_store_url'] as String?,
-      lastBracketError: json['last_bracket_error'] as String?,
-      lastBracketErrorAt: json['last_bracket_error_at'] == null
-          ? null
-          : DateTime.parse(json['last_bracket_error_at'] as String),
-      isPinned: json['is_pinned'] as bool? ?? false,
-      pinnedAt: json['pinned_at'] == null
-          ? null
-          : DateTime.parse(json['pinned_at'] as String),
-      completedAt: json['completed_at'] == null
-          ? null
-          : DateTime.parse(json['completed_at'] as String),
-      archivedAt: json['archived_at'] == null
-          ? null
-          : DateTime.parse(json['archived_at'] as String),
-    );
+          .toList() ??
+      const <int>[0, 0, 0, 0],
+  matchIntervalMinutes: (json['match_interval_minutes'] as num?)?.toInt() ?? 60,
+  autoGenerateBracket: json['auto_generate_bracket'] as bool? ?? true,
+  thirdPlaceMatch: json['third_place_match'] as bool? ?? false,
+  referralQuota: (json['referral_quota'] as num?)?.toInt() ?? 0,
+  referralActivityMode: json['referral_activity_mode'] as String? ?? 'any',
+  roundIntervals: (json['round_intervals'] as List<dynamic>?)
+      ?.map((e) => (e as num).toInt())
+      .toList(),
+  formatConfig:
+      json['format_config'] as Map<String, dynamic>? ??
+      const <String, dynamic>{},
+  androidStoreUrl: json['android_store_url'] as String?,
+  iosStoreUrl: json['ios_store_url'] as String?,
+  lastBracketError: json['last_bracket_error'] as String?,
+  lastBracketErrorAt: json['last_bracket_error_at'] == null
+      ? null
+      : DateTime.parse(json['last_bracket_error_at'] as String),
+  isPinned: json['is_pinned'] as bool? ?? false,
+  pinnedAt: json['pinned_at'] == null
+      ? null
+      : DateTime.parse(json['pinned_at'] as String),
+  completedAt: json['completed_at'] == null
+      ? null
+      : DateTime.parse(json['completed_at'] as String),
+  archivedAt: json['archived_at'] == null
+      ? null
+      : DateTime.parse(json['archived_at'] as String),
+);
 
-Map<String, dynamic> _$$CompetitionImplToJson(_$CompetitionImpl instance) =>
-    <String, dynamic>{
-      'id': instance.id,
-      'name': instance.name,
-      if (const GameTypeConverter().toJson(instance.game) case final value?)
-        'game': value,
-      if (const TournamentFormatConverter().toJson(instance.format)
-          case final value?)
-        'format': value,
-      'start_date': instance.startDate.toIso8601String(),
-      if (const CompetitionStatusConverter().toJson(instance.status)
-          case final value?)
-        'status': value,
-      'max_players': instance.maxPlayers,
-      'current_players': instance.currentPlayers,
-      'registration_fee': instance.registrationFee,
-      'registration_currency': instance.registrationCurrency,
-      'country_code': instance.countryCode,
-      'commission_pct': instance.commissionPct,
-      'prize_pool_local': instance.prizePoolLocal,
-      'commission_xaf': instance.commissionXaf,
-      'sponsor_bonus_local': instance.sponsorBonusLocal,
-      if (instance.description case final value?) 'description': value,
-      if (instance.bannerUrl case final value?) 'banner_url': value,
-      if (instance.registrationOpensAt?.toIso8601String() case final value?)
-        'registration_opens_at': value,
-      if (instance.registrationClosesAt?.toIso8601String() case final value?)
-        'registration_closes_at': value,
-      if (instance.endDate?.toIso8601String() case final value?)
-        'end_date': value,
-      if (instance.prizePoolCurrency case final value?)
-        'prize_pool_currency': value,
-      if (instance.createdBy case final value?) 'created_by': value,
-      if (instance.createdAt?.toIso8601String() case final value?)
-        'created_at': value,
-      if (instance.updatedAt?.toIso8601String() case final value?)
-        'updated_at': value,
-      if (instance.orangeMoneyCode case final value?)
-        'orange_money_code': value,
-      if (instance.mtnMomoCode case final value?) 'mtn_momo_code': value,
-      'prize_distribution': instance.prizeDistribution,
-      'match_interval_minutes': instance.matchIntervalMinutes,
-      'auto_generate_bracket': instance.autoGenerateBracket,
-      'third_place_match': instance.thirdPlaceMatch,
-      'referral_quota': instance.referralQuota,
-      'referral_activity_mode': instance.referralActivityMode,
-      if (instance.roundIntervals case final value?) 'round_intervals': value,
-      'format_config': instance.formatConfig,
-      if (instance.androidStoreUrl case final value?)
-        'android_store_url': value,
-      if (instance.iosStoreUrl case final value?) 'ios_store_url': value,
-      if (instance.lastBracketError case final value?)
-        'last_bracket_error': value,
-      if (instance.lastBracketErrorAt?.toIso8601String() case final value?)
-        'last_bracket_error_at': value,
-      'is_pinned': instance.isPinned,
-      if (instance.pinnedAt?.toIso8601String() case final value?)
-        'pinned_at': value,
-      if (instance.completedAt?.toIso8601String() case final value?)
-        'completed_at': value,
-      if (instance.archivedAt?.toIso8601String() case final value?)
-        'archived_at': value,
-    };
+Map<String, dynamic> _$CompetitionToJson(
+  _Competition instance,
+) => <String, dynamic>{
+  'id': instance.id,
+  'name': instance.name,
+  'game': ?const GameTypeConverter().toJson(instance.game),
+  'format': ?const TournamentFormatConverter().toJson(instance.format),
+  'start_date': instance.startDate.toIso8601String(),
+  'status': ?const CompetitionStatusConverter().toJson(instance.status),
+  'max_players': instance.maxPlayers,
+  'current_players': instance.currentPlayers,
+  'registration_fee': instance.registrationFee,
+  'registration_currency': instance.registrationCurrency,
+  'country_code': instance.countryCode,
+  'commission_pct': instance.commissionPct,
+  'prize_pool_local': instance.prizePoolLocal,
+  'commission_xaf': instance.commissionXaf,
+  'sponsor_bonus_local': instance.sponsorBonusLocal,
+  'description': ?instance.description,
+  'banner_url': ?instance.bannerUrl,
+  'registration_opens_at': ?instance.registrationOpensAt?.toIso8601String(),
+  'registration_closes_at': ?instance.registrationClosesAt?.toIso8601String(),
+  'end_date': ?instance.endDate?.toIso8601String(),
+  'prize_pool_currency': ?instance.prizePoolCurrency,
+  'created_by': ?instance.createdBy,
+  'created_at': ?instance.createdAt?.toIso8601String(),
+  'updated_at': ?instance.updatedAt?.toIso8601String(),
+  'orange_money_code': ?instance.orangeMoneyCode,
+  'mtn_momo_code': ?instance.mtnMomoCode,
+  'prize_distribution': instance.prizeDistribution,
+  'match_interval_minutes': instance.matchIntervalMinutes,
+  'auto_generate_bracket': instance.autoGenerateBracket,
+  'third_place_match': instance.thirdPlaceMatch,
+  'referral_quota': instance.referralQuota,
+  'referral_activity_mode': instance.referralActivityMode,
+  'round_intervals': ?instance.roundIntervals,
+  'format_config': instance.formatConfig,
+  'android_store_url': ?instance.androidStoreUrl,
+  'ios_store_url': ?instance.iosStoreUrl,
+  'last_bracket_error': ?instance.lastBracketError,
+  'last_bracket_error_at': ?instance.lastBracketErrorAt?.toIso8601String(),
+  'is_pinned': instance.isPinned,
+  'pinned_at': ?instance.pinnedAt?.toIso8601String(),
+  'completed_at': ?instance.completedAt?.toIso8601String(),
+  'archived_at': ?instance.archivedAt?.toIso8601String(),
+};

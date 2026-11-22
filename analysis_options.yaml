@@ -14,6 +14,9 @@ analyzer:
     # (case-sensitive).
     - "ARENA_BRANDING_PACK/**"
     - "arena_branding_pack/**"
+    - android/**
+    - ios/**
+    - windows/**
   errors:
     invalid_annotation_target: ignore
 

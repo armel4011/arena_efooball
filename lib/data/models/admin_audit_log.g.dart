@@ -6,16 +6,18 @@ part of 'admin_audit_log.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-_$AdminAuditLogImpl _$$AdminAuditLogImplFromJson(Map<String, dynamic> json) =>
-    _$AdminAuditLogImpl(
+_AdminAuditLog _$AdminAuditLogFromJson(Map<String, dynamic> json) =>
+    _AdminAuditLog(
       id: json['id'] as String,
       adminId: json['admin_id'] as String,
       action: json['action'] as String,
       targetType: json['target_type'] as String?,
       targetId: json['target_id'] as String?,
-      beforeState: json['before_state'] as Map<String, dynamic>? ??
+      beforeState:
+          json['before_state'] as Map<String, dynamic>? ??
           const <String, dynamic>{},
-      afterState: json['after_state'] as Map<String, dynamic>? ??
+      afterState:
+          json['after_state'] as Map<String, dynamic>? ??
           const <String, dynamic>{},
       ipAddress: json['ip_address'] as String?,
       userAgent: json['user_agent'] as String?,
@@ -24,17 +26,16 @@ _$AdminAuditLogImpl _$$AdminAuditLogImplFromJson(Map<String, dynamic> json) =>
           : DateTime.parse(json['created_at'] as String),
     );
 
-Map<String, dynamic> _$$AdminAuditLogImplToJson(_$AdminAuditLogImpl instance) =>
+Map<String, dynamic> _$AdminAuditLogToJson(_AdminAuditLog instance) =>
     <String, dynamic>{
       'id': instance.id,
       'admin_id': instance.adminId,
       'action': instance.action,
-      if (instance.targetType case final value?) 'target_type': value,
-      if (instance.targetId case final value?) 'target_id': value,
+      'target_type': ?instance.targetType,
+      'target_id': ?instance.targetId,
       'before_state': instance.beforeState,
       'after_state': instance.afterState,
-      if (instance.ipAddress case final value?) 'ip_address': value,
-      if (instance.userAgent case final value?) 'user_agent': value,
-      if (instance.createdAt?.toIso8601String() case final value?)
-        'created_at': value,
+      'ip_address': ?instance.ipAddress,
+      'user_agent': ?instance.userAgent,
+      'created_at': ?instance.createdAt?.toIso8601String(),
     };
