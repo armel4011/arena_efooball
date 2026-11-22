@@ -142,12 +142,20 @@ void main() {
 
   testWidgets('horaire reprogrammé (valeur → autre valeur) → le rebours suit',
       (tester) async {
-    final opensAt =
-        await mount(tester, opensAt: DateTime.now().add(const Duration(minutes: 10)));
+    // Horaires volontairement HORS frontière de minute/heure : sous Windows,
+    // `DateTime.now()` a une résolution grossière — si le test et le widget
+    // lisent l'horloge dans le même tick, l'écart vaut exactement 10 min / 3 h
+    // et le rebours affiche « 10:00 » / « 03:00:00 » (test instable). Avec une
+    // marge, le texte attendu est stable quel que soit ce tick.
+    final opensAt = await mount(
+      tester,
+      opensAt: DateTime.now().add(const Duration(minutes: 9, seconds: 30)),
+    );
     expect(_countdown(tester), startsWith('09:'));
 
     // L'admin repousse le match : le rebours repart du nouvel horaire.
-    opensAt.value = DateTime.now().add(const Duration(hours: 3));
+    opensAt.value =
+        DateTime.now().add(const Duration(hours: 2, minutes: 55));
     await tester.pump();
     expect(_countdown(tester), startsWith('02:5'));
 
