@@ -34,6 +34,7 @@ import 'package:arena/features_admin_desktop/super_admin/desktop_revenue_page.da
 import 'package:arena/features_admin_desktop/super_admin/desktop_super_dashboard_page.dart';
 import 'package:arena/features_admin_desktop/super_admin/desktop_tutorial_banners_page.dart';
 import 'package:arena/features_admin_desktop/super_admin/desktop_users_page.dart';
+import 'package:arena/features_admin_desktop/super_admin/desktop_whatsapp_group_page.dart';
 import 'package:arena/features_shared/admin_route_policy.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -79,6 +80,7 @@ abstract final class AdminDesktopRoutes {
   static const superReintegration = '/super/reintegration';
   static const superSupport = '/super/support';
   static const superAppUpdate = '/super/app-update';
+  static const superWhatsAppGroup = '/super/whatsapp-group';
   static const superTutorialBanners = '/super/tutorial-banners';
   static const superGameRules = '/super/game-rules';
   static const superAntiCheat = '/super/anticheat';
@@ -341,6 +343,11 @@ final adminDesktopRouterProvider = Provider<GoRouter>((ref) {
             path: AdminDesktopRoutes.superAppUpdate,
             name: 'desktop.superAppUpdate',
             builder: (context, state) => const DesktopAppUpdatePage(),
+          ),
+          GoRoute(
+            path: AdminDesktopRoutes.superWhatsAppGroup,
+            name: 'desktop.superWhatsAppGroup',
+            builder: (context, state) => const DesktopWhatsAppGroupPage(),
           ),
           GoRoute(
             path: AdminDesktopRoutes.superTutorialBanners,

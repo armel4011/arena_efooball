@@ -154,6 +154,12 @@ const List<_NavEntry> _superEntries = [
     section: 'app_update',
   ),
   _NavEntry(
+    route: AdminDesktopRoutes.superWhatsAppGroup,
+    icon: FluentIcons.chat,
+    label: 'Groupe WhatsApp',
+    superAdminOnly: true,
+  ),
+  _NavEntry(
     route: AdminDesktopRoutes.superTutorialBanners,
     icon: FluentIcons.video,
     label: 'Bannières tuto',

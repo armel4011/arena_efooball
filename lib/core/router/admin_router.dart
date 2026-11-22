@@ -38,6 +38,7 @@ import 'package:arena/features_admin/super_admin/super_admin_support_inbox.dart'
 import 'package:arena/features_admin/super_admin/super_admin_support_thread.dart';
 import 'package:arena/features_admin/super_admin/super_admin_tutorial_video.dart';
 import 'package:arena/features_admin/super_admin/super_admin_users.dart';
+import 'package:arena/features_admin/super_admin/super_admin_whatsapp_group.dart';
 import 'package:arena/features_shared/admin_route_policy.dart';
 import 'package:arena/features_shared/presentation/dev_preview_page.dart';
 import 'package:arena/features_user/auth/auth_providers.dart';
@@ -98,6 +99,7 @@ abstract final class AdminRoutes {
   static const superAppUpdate = '/super/app-update';
   static const superAntiCheat = '/super/anticheat';
   static const superCollectors = '/super/collectors';
+  static const superWhatsAppGroup = '/super/whatsapp-group';
 
   static const devPreview = '/_dev/widgets';
   static const intro = '/intro';
@@ -408,6 +410,11 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
         path: AdminRoutes.superCollectors,
         name: 'admin.superCollectors',
         builder: (context, state) => const SuperAdminCollectorsPage(),
+      ),
+      GoRoute(
+        path: AdminRoutes.superWhatsAppGroup,
+        name: 'admin.superWhatsAppGroup',
+        builder: (context, state) => const SuperAdminWhatsAppGroup(),
       ),
       GoRoute(
         path: AdminRoutes.collectorConsole,

@@ -15,6 +15,7 @@ import 'package:arena/features_user/chat/messages_inbox_page.dart';
 import 'package:arena/features_user/competitions/competitions_list_page.dart';
 import 'package:arena/features_user/home/home_page.dart';
 import 'package:arena/features_user/home/update_available_dialog.dart';
+import 'package:arena/features_user/home/whatsapp_group_dialog.dart';
 import 'package:arena/features_user/profile/player_profile_page.dart';
 import 'package:arena/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -72,13 +73,19 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
   /// au trou de timing juste après l'inscription, où `currentProfileProvider`
   /// peut encore être en `AsyncLoading`. `_surveyPrompted` garantit un seul
   /// affichage par session.
+  ///
+  /// Enchaîne ensuite l'étape OBLIGATOIRE « groupe WhatsApp » (tous les
+  /// utilisateurs, dès que le super-admin a configuré un groupe) : après le
+  /// sondage s'il vient d'être rempli, directement sinon.
   Future<void> _maybePromptSurvey() async {
     if (_surveyPrompted) return;
     final profile = ref.read(currentProfileProvider).valueOrNull;
-    if (profile == null || profile.hasAnsweredGameInterests) return;
+    if (profile == null) return;
     _surveyPrompted = true;
-    if (!mounted) return;
-    await maybePromptGameInterests(context, ref);
+    if (!profile.hasAnsweredGameInterests && mounted) {
+      await maybePromptGameInterests(context, ref);
+    }
+    if (mounted) await maybePromptWhatsAppGroup(context, ref);
   }
 
   /// Best-effort : propose une mise à jour si une version plus récente est
