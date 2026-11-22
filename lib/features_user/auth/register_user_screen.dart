@@ -160,17 +160,33 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
   }
 
   /// Renvoie un nouveau code de confirmation à l'email saisi.
+  ///
+  /// `resendOtp` peut lever une `AuthFailure` typée (le cas le plus probable
+  /// est `RateLimitedFailure` quand on re-demande un code trop vite). On
+  /// capture l'erreur et on remet `_resending=false` dans un `finally` —
+  /// sinon le bouton resterait figé sur « Envoi… » à vie.
   Future<void> _resendOtp() async {
     if (_resending) return;
     setState(() => _resending = true);
-    await ref.read(signUpControllerProvider.notifier).resendOtp();
-    if (!mounted) return;
-    setState(() => _resending = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(AppLocalizations.of(context).resetCodeNewCodeSent),
-      ),
-    );
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(signUpControllerProvider.notifier).resendOtp();
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.resetCodeNewCodeSent)),
+      );
+    } on AuthFailure catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(authFailureToMessage(e, l10n))),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(l10n.authErrUnknown)));
+    } finally {
+      if (mounted) setState(() => _resending = false);
+    }
   }
 
   Future<void> _submitGoogle() async {
