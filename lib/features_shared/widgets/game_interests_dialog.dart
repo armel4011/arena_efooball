@@ -1,5 +1,6 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/competition_enums.dart';
+import 'package:arena/data/repositories/game_settings_repository.dart';
 import 'package:arena/data/repositories/profile_repository.dart';
 import 'package:arena/features_shared/auth_common/shared_auth_providers.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
@@ -158,7 +159,8 @@ class _GameInterestsDialogState extends ConsumerState<_GameInterestsDialog> {
                   style: ArenaText.body.copyWith(color: ArenaColors.silver),
                 ),
                 const SizedBox(height: ArenaSpacing.lg),
-                for (final game in GameType.values) ...[
+                // Seulement les jeux actifs (réglage super-admin).
+                for (final game in enabledGamesOf(ref)) ...[
                   _GameTile(
                     label: game.label,
                     color: _colorFor(game),

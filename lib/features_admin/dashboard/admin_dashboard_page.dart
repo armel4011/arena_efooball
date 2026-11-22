@@ -271,6 +271,13 @@ class AdminDashboardPage extends ConsumerWidget {
                   ),
                   const SizedBox(height: ArenaSpacing.xs),
                   ArenaButton(
+                    label: '🎮 JEUX',
+                    fullWidth: true,
+                    variant: ArenaButtonVariant.secondary,
+                    onPressed: () => context.push(AdminRoutes.superGames),
+                  ),
+                  const SizedBox(height: ArenaSpacing.xs),
+                  ArenaButton(
                     label: '💬 GROUPE WHATSAPP',
                     fullWidth: true,
                     variant: ArenaButtonVariant.secondary,

@@ -5,6 +5,7 @@ import 'package:arena/data/models/competition.dart';
 import 'package:arena/data/models/competition_enums.dart';
 import 'package:arena/data/models/tutorial_video.dart';
 import 'package:arena/data/repositories/competition_repository.dart';
+import 'package:arena/data/repositories/game_settings_repository.dart';
 import 'package:arena/data/repositories/payment_repository.dart';
 import 'package:arena/features_shared/widgets/arena_screen_background.dart';
 import 'package:arena/features_shared/widgets/empty_state.dart';
@@ -29,11 +30,30 @@ import 'package:go_router/go_router.dart';
 ///
 /// Le rendu des cards et la logique des filtres (enums `StatusBucket` /
 /// `PricingBucket`) sont extraits dans `widgets/`.
-class CompetitionsListPage extends StatefulWidget {
+///
+/// Les onglets ne montrent que les jeux ACTIFS (réglage super-admin) ; si un
+/// jeu est (dés)activé, la clé change et les onglets sont reconstruits avec un
+/// TabController de la bonne longueur.
+class CompetitionsListPage extends ConsumerWidget {
   const CompetitionsListPage({super.key});
 
   @override
-  State<CompetitionsListPage> createState() => _CompetitionsListPageState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final games = enabledGamesOf(ref, order: _orderedGames);
+    return _GameTabs(
+      key: ValueKey(games.map((g) => g.value).join(',')),
+      games: games,
+    );
+  }
+}
+
+class _GameTabs extends StatefulWidget {
+  const _GameTabs({required this.games, super.key});
+
+  final List<GameType> games;
+
+  @override
+  State<_GameTabs> createState() => _CompetitionsListPageState();
 }
 
 /// Ordre d'affichage des onglets — **Dames en 1er**, eFootball en 2e, EA FC
@@ -55,12 +75,14 @@ Color _gameAccent(GameType g) => switch (g) {
       GameType.dreamLeague => ArenaColors.gameDream,
     };
 
-class _CompetitionsListPageState extends State<CompetitionsListPage>
+class _CompetitionsListPageState extends State<_GameTabs>
     with SingleTickerProviderStateMixin {
+  List<GameType> get _games => widget.games;
+
   // Un onglet par jeu. (Le « Prochain match » vit désormais sur chaque page
   // de compétition, pas ici.)
   late final TabController _tab =
-      TabController(length: _orderedGames.length, vsync: this);
+      TabController(length: _games.length, vsync: this);
 
   @override
   void initState() {
@@ -84,7 +106,7 @@ class _CompetitionsListPageState extends State<CompetitionsListPage>
 
   @override
   Widget build(BuildContext context) {
-    final accent = _gameAccent(_orderedGames[_tab.index]);
+    final accent = _gameAccent(_games[_tab.index]);
     return ArenaScreenBackground(
       child: Column(
         children: [
@@ -100,10 +122,10 @@ class _CompetitionsListPageState extends State<CompetitionsListPage>
             labelStyle: ArenaText.button,
             unselectedLabelStyle: ArenaText.button,
             tabs: [
-              for (var i = 0; i < _orderedGames.length; i++)
+              for (var i = 0; i < _games.length; i++)
                 Tab(
                   child: Text(
-                    _tabLabel(_orderedGames[i]),
+                    _tabLabel(_games[i]),
                     style: ArenaText.button.copyWith(
                       color: _tab.index == i
                           ? accent
@@ -117,7 +139,7 @@ class _CompetitionsListPageState extends State<CompetitionsListPage>
             child: TabBarView(
               controller: _tab,
               children: [
-                for (final g in _orderedGames)
+                for (final g in _games)
                   _CompetitionTab(key: ValueKey(g), game: g),
               ],
             ),

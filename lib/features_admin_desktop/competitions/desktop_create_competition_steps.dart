@@ -164,9 +164,19 @@ mixin _StepBuilders on ConsumerState<DesktopCreateCompetitionPage> {
             ComboBox<GameType>(
               value: _game,
               isExpanded: true,
+              // Seulement les jeux ACTIFS (+ le jeu courant s'il a été
+              // désactivé depuis, marqué) — garde serveur en plus.
               items: [
                 for (final g in GameType.values)
-                  ComboBoxItem<GameType>(value: g, child: Text(g.label)),
+                  if (enabledGamesOf(ref).contains(g) || g == _game)
+                    ComboBoxItem<GameType>(
+                      value: g,
+                      child: Text(
+                        enabledGamesOf(ref).contains(g)
+                            ? g.label
+                            : '${g.label} (désactivé)',
+                      ),
+                    ),
               ],
               onChanged: (v) => setState(() {
                 final ng = v ?? _game;

@@ -27,6 +27,7 @@ import 'package:arena/features_admin_desktop/streams/desktop_watch_stream_page.d
 import 'package:arena/features_admin_desktop/super_admin/desktop_anticheat_page.dart';
 import 'package:arena/features_admin_desktop/super_admin/desktop_app_update_page.dart';
 import 'package:arena/features_admin_desktop/super_admin/desktop_game_rules_page.dart';
+import 'package:arena/features_admin_desktop/super_admin/desktop_games_page.dart';
 import 'package:arena/features_admin_desktop/super_admin/desktop_invitations_page.dart';
 import 'package:arena/features_admin_desktop/super_admin/desktop_promo_banner_page.dart';
 import 'package:arena/features_admin_desktop/super_admin/desktop_reintegration_page.dart';
@@ -81,6 +82,7 @@ abstract final class AdminDesktopRoutes {
   static const superSupport = '/super/support';
   static const superAppUpdate = '/super/app-update';
   static const superWhatsAppGroup = '/super/whatsapp-group';
+  static const superGames = '/super/games';
   static const superTutorialBanners = '/super/tutorial-banners';
   static const superGameRules = '/super/game-rules';
   static const superAntiCheat = '/super/anticheat';
@@ -348,6 +350,11 @@ final adminDesktopRouterProvider = Provider<GoRouter>((ref) {
             path: AdminDesktopRoutes.superWhatsAppGroup,
             name: 'desktop.superWhatsAppGroup',
             builder: (context, state) => const DesktopWhatsAppGroupPage(),
+          ),
+          GoRoute(
+            path: AdminDesktopRoutes.superGames,
+            name: 'desktop.superGames',
+            builder: (context, state) => const DesktopGamesPage(),
           ),
           GoRoute(
             path: AdminDesktopRoutes.superTutorialBanners,

@@ -1,11 +1,13 @@
 import 'package:arena/core/theme/arena_theme.dart';
 import 'package:arena/data/models/competition_enums.dart';
+import 'package:arena/data/repositories/game_settings_repository.dart';
 import 'package:arena/features_shared/admin/competition_labels.dart';
 import 'package:arena/features_shared/prize_ranks.dart';
 import 'package:arena/features_shared/widgets/arena_button.dart';
 import 'package:arena/features_shared/widgets/arena_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 /// Widgets utilitaires du wizard de création de compétition (PHASE 11.A8).
@@ -21,20 +23,28 @@ import 'package:intl/intl.dart';
 /// [FormatPicker] et par le rendu Review du wizard.
 // formatLabel → competitionFormatLabel (features_shared/admin/competition_labels.dart)
 
-class GamePicker extends StatelessWidget {
+/// Choix du jeu : seulement les jeux ACTIFS (réglage super-admin), plus le
+/// jeu courant s'il a été désactivé depuis (marqué) — la création sur un jeu
+/// désactivé est de toute façon refusée côté serveur.
+class GamePicker extends ConsumerWidget {
   const GamePicker({required this.current, required this.onChanged, super.key});
   final GameType current;
   final ValueChanged<GameType> onChanged;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final enabled = enabledGamesOf(ref);
+    final games = [
+      for (final g in GameType.values)
+        if (enabled.contains(g) || g == current) g,
+    ];
     return Wrap(
       spacing: ArenaSpacing.xs,
       runSpacing: ArenaSpacing.xs,
       children: [
-        for (final g in GameType.values)
+        for (final g in games)
           _OptionChip(
-            label: g.label,
+            label: enabled.contains(g) ? g.label : '${g.label} (désactivé)',
             active: g == current,
             onTap: () => onChanged(g),
           ),
