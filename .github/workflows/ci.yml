@@ -47,6 +47,10 @@ jobs:
           # `stable` tracking est suffisamment stable pour ARENA, et
           # évite de devoir bumper la CI à chaque release.
           channel: stable
+          # Épinglé : le canal `stable` non pinné a tiré une Flutter exigeant
+          # Gradle ≥ 9.3.1 (projet pinné 8.14) → builds natifs cassés. 3.41.6
+          # = version locale connue-bonne (Dart ≥ 3.8 pour app_usage OK).
+          flutter-version: 3.41.6
           cache: true
 
       - name: Print versions
@@ -189,6 +193,10 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+          # Épinglé : le canal `stable` non pinné a tiré une Flutter exigeant
+          # Gradle ≥ 9.3.1 (projet pinné 8.14) → builds natifs cassés. 3.41.6
+          # = version locale connue-bonne (Dart ≥ 3.8 pour app_usage OK).
+          flutter-version: 3.41.6
           cache: true
 
       - name: Stub .env (CI uses placeholders, no real secrets)
@@ -245,6 +253,10 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+          # Épinglé : le canal `stable` non pinné a tiré une Flutter exigeant
+          # Gradle ≥ 9.3.1 (projet pinné 8.14) → builds natifs cassés. 3.41.6
+          # = version locale connue-bonne (Dart ≥ 3.8 pour app_usage OK).
+          flutter-version: 3.41.6
           cache: true
 
       - name: Stub .env (CI uses placeholders, no real secrets)
