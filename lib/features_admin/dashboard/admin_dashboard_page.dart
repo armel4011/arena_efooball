@@ -270,6 +270,14 @@ class AdminDashboardPage extends ConsumerWidget {
                         context.push(AdminRoutes.superCollectors),
                   ),
                   const SizedBox(height: ArenaSpacing.xs),
+                  ArenaButton(
+                    label: '💬 GROUPE WHATSAPP',
+                    fullWidth: true,
+                    variant: ArenaButtonVariant.secondary,
+                    onPressed: () =>
+                        context.push(AdminRoutes.superWhatsAppGroup),
+                  ),
+                  const SizedBox(height: ArenaSpacing.xs),
                   if (adminCanSection(profile, 'revenue')) ...[
                     ArenaButton(
                       label: 'REVENUE PLATEFORME',
