@@ -55,6 +55,16 @@ android {
         versionName = flutter.versionName
     }
 
+    // AGP 9.3.1 + KGP 2.4 : le lint « vital » des builds release plante en
+    // interne sur les plugins (NoSuchMethodError JavaDocParser.parseDataItem —
+    // conflit de classpath DANS Lint, pas un défaut du code ; vu sur
+    // :google_sign_in_android en CI). On ne le lance plus en release : le code
+    // Dart reste couvert par `flutter analyze` (CI). À réactiver quand
+    // AGP/Lint corrige le conflit.
+    lint {
+        checkReleaseBuilds = false
+    }
+
     // AGP 9 : `resValues` est désactivé par défaut — requis par les
     // `resValue("string", "app_name", …)` des flavors user/admin ci-dessous.
     buildFeatures {
