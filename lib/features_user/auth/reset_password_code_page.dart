@@ -72,8 +72,16 @@ class _ResetPasswordCodePageState extends ConsumerState<ResetPasswordCodePage> {
         .sendResetEmail(widget.email);
     if (!mounted) return;
     setState(() => _resending = false);
+    // `sendResetEmail` passe par AsyncValue.guard (ne lève pas) : on consulte
+    // l'état pour ne PAS afficher « code envoyé » si l'envoi a échoué
+    // (ex. rate-limit) — sinon message de succès trompeur.
+    final l10n = AppLocalizations.of(context);
+    final resetState = ref.read(forgotPasswordControllerProvider);
+    final msg = resetState.hasError
+        ? authFailureToMessage(_asFailure(resetState.error), l10n)
+        : l10n.resetCodeNewCodeSent;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(AppLocalizations.of(context).resetCodeNewCodeSent)),
+      SnackBar(content: Text(msg)),
     );
   }
 
