@@ -4,8 +4,10 @@ publish_to: 'none'
 version: 1.0.15+15
 
 environment:
-  sdk: ^3.5.0
-  flutter: ">=3.24.0"
+  # Flutter 3.50 / Dart 3.14 : freezed 4 exige sdk >= 3.13, et json_serializable
+  # 6.15 génère des « null-aware elements » (`'k': ?v`, langage >= 3.8).
+  sdk: ^3.13.0
+  flutter: ">=3.50.0"
 
 # ─────────────────────────────────────────────────────────────────
 # NOTE — Stratégie de dépendances
@@ -18,7 +20,7 @@ environment:
 #   - PHASE 2   : google_sign_in, sign_in_with_apple, reactive_forms
 #   - PHASE 2bis: otp, qr_flutter
 #   - PHASE 6   : agora_rtm
-#   - PHASE 8a (active) : agora_rtc_engine, flutter_screen_recording,
+#   - PHASE 8a (active) : agora_rtc_engine,
 #                 flutter_overlay_window, installed_apps, app_usage,
 #                 flutter_foreground_task, permission_handler, file_picker
 #   - PHASE 8b (Apple Dev requis) : live_activities
@@ -46,8 +48,8 @@ dependencies:
   go_router: ^14.2.7
 
   # ─── Models & serialization (utilisé partout) ──────────────
-  freezed_annotation: ^2.4.4
-  json_annotation: ^4.9.0
+  freezed_annotation: ^3.1.0
+  json_annotation: ^4.12.0
   meta: ^1.15.0   # @immutable (moteur de dames pur Dart)
 
   # ─── HTTP / API ────────────────────────────────────────────
@@ -71,7 +73,7 @@ dependencies:
   # `connectivity_plus` : detection du status reseau (online/offline,
   #     wifi vs mobile). Utilise par NetworkStatusService pour driver
   #     le banner UI et la sync queue.
-  connectivity_plus: ^6.0.5
+  connectivity_plus: ^7.0.0
 
   # ─── Deep links (auth + reset password) — PHASE 2 ──────────
   app_links: ^6.3.2
@@ -107,11 +109,16 @@ dependencies:
 
   # ─── PHASE 8 — Anti-cheat + Streaming Agora sélectif ───────
   agora_rtc_engine: ^6.6.3
-  flutter_screen_recording: ^2.0.25
+  # flutter_screen_recording RETIRÉ (migration Flutter 3.50 / Gradle 9) :
+  # plus aucun import Dart depuis le passage au recorder natif
+  # (ArenaRecorderService.kt via MethodChannel `arena/native`), et son
+  # build.gradle appelait jcenter() (supprimé dans Gradle 9). Ses permissions
+  # manifest (WAKE_LOCK, SYSTEM_ALERT_WINDOW, RECEIVE_BOOT_COMPLETED) restent
+  # fournies par callkit / foreground_task / overlay_window.
   # Anti-triche dual : capture LiveKit (publish-only) + Track Egress, en
   # parallèle du recorder natif (filet de sécurité). Cf. _anticheat_ref/.
   # 2.5.x : compatible connectivity_plus ^6 (2.6+ exige ^7, conflit projet).
-  livekit_client: ^2.5.4
+  livekit_client: ^2.11.0
   flutter_overlay_window: ^0.5.0
   installed_apps: ^2.1.1
   app_usage: ^4.1.0
@@ -202,6 +209,12 @@ dependencies:
 dependency_overrides:
   ffi: ^2.1.0
   js: ^0.7.1
+  # AGP 9 (Flutter 3.50) : flutter_inappwebview_android 1.1.3 (dernière stable)
+  # appelle getDefaultProguardFile('proguard-android.txt'), refusé par AGP 9.
+  # La 6.2.0-beta.3 corrige « [Android] Upgrade to AGP 9 » (#2765). Transitif
+  # via youtube_player_flutter 9.1.3 (moteur vidéo validé MIUI) — à retirer
+  # dès qu'une 6.2.x stable sort.
+  flutter_inappwebview: 6.2.0-beta.3
 
 dev_dependencies:
   flutter_test:
@@ -221,9 +234,9 @@ dev_dependencies:
   # those packages catch up. Project works without them.
 
   # ─── Code generation ───────────────────────────────────────
-  build_runner: ^2.4.13
-  freezed: ^2.5.7
-  json_serializable: ^6.8.0
+  build_runner: ^2.17.1
+  freezed: ^4.0.3
+  json_serializable: ^6.15.2
   # riverpod_generator removed — pulls custom_lint_core which is
   # incompatible with analyzer 7.6 (needs 7.7+ APIs). We write providers
   # manually, no codegen needed for Riverpod.

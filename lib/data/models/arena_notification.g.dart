@@ -6,9 +6,8 @@ part of 'arena_notification.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-_$ArenaNotificationImpl _$$ArenaNotificationImplFromJson(
-        Map<String, dynamic> json) =>
-    _$ArenaNotificationImpl(
+_ArenaNotification _$ArenaNotificationFromJson(Map<String, dynamic> json) =>
+    _ArenaNotification(
       id: json['id'] as String,
       userId: json['user_id'] as String,
       type: json['type'] as String,
@@ -27,20 +26,16 @@ _$ArenaNotificationImpl _$$ArenaNotificationImplFromJson(
           : DateTime.parse(json['created_at'] as String),
     );
 
-Map<String, dynamic> _$$ArenaNotificationImplToJson(
-        _$ArenaNotificationImpl instance) =>
+Map<String, dynamic> _$ArenaNotificationToJson(_ArenaNotification instance) =>
     <String, dynamic>{
       'id': instance.id,
       'user_id': instance.userId,
       'type': instance.type,
       'title': instance.title,
-      if (instance.body case final value?) 'body': value,
-      if (instance.imageUrl case final value?) 'image_url': value,
+      'body': ?instance.body,
+      'image_url': ?instance.imageUrl,
       'data': instance.data,
-      if (instance.readAt?.toIso8601String() case final value?)
-        'read_at': value,
-      if (instance.sentAt?.toIso8601String() case final value?)
-        'sent_at': value,
-      if (instance.createdAt?.toIso8601String() case final value?)
-        'created_at': value,
+      'read_at': ?instance.readAt?.toIso8601String(),
+      'sent_at': ?instance.sentAt?.toIso8601String(),
+      'created_at': ?instance.createdAt?.toIso8601String(),
     };

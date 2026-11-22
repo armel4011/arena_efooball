@@ -6,8 +6,8 @@ part of 'invitation_code.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-_$InvitationCodeImpl _$$InvitationCodeImplFromJson(Map<String, dynamic> json) =>
-    _$InvitationCodeImpl(
+_InvitationCode _$InvitationCodeFromJson(Map<String, dynamic> json) =>
+    _InvitationCode(
       id: json['id'] as String,
       code: json['code'] as String,
       role: json['role'] == null
@@ -35,25 +35,19 @@ _$InvitationCodeImpl _$$InvitationCodeImplFromJson(Map<String, dynamic> json) =>
           : DateTime.parse(json['created_at'] as String),
     );
 
-Map<String, dynamic> _$$InvitationCodeImplToJson(
-        _$InvitationCodeImpl instance) =>
+Map<String, dynamic> _$InvitationCodeToJson(_InvitationCode instance) =>
     <String, dynamic>{
       'id': instance.id,
       'code': instance.code,
-      if (const UserRoleConverter().toJson(instance.role) case final value?)
-        'role': value,
-      if (instance.generatedBy case final value?) 'generated_by': value,
-      if (instance.targetEmail case final value?) 'target_email': value,
-      if (instance.expiresAt?.toIso8601String() case final value?)
-        'expires_at': value,
+      'role': ?const UserRoleConverter().toJson(instance.role),
+      'generated_by': ?instance.generatedBy,
+      'target_email': ?instance.targetEmail,
+      'expires_at': ?instance.expiresAt?.toIso8601String(),
       'max_uses': instance.maxUses,
       'uses_count': instance.usesCount,
-      if (instance.usedAt?.toIso8601String() case final value?)
-        'used_at': value,
-      if (instance.usedBy case final value?) 'used_by': value,
-      if (instance.allowedCountryCodes case final value?)
-        'allowed_country_codes': value,
-      if (instance.allowedSections case final value?) 'allowed_sections': value,
-      if (instance.createdAt?.toIso8601String() case final value?)
-        'created_at': value,
+      'used_at': ?instance.usedAt?.toIso8601String(),
+      'used_by': ?instance.usedBy,
+      'allowed_country_codes': ?instance.allowedCountryCodes,
+      'allowed_sections': ?instance.allowedSections,
+      'created_at': ?instance.createdAt?.toIso8601String(),
     };
